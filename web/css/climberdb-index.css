@@ -1,0 +1,115 @@
+
+
+body { 
+  background-image: url('../imgs/signin_page_bg.jpg');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center; 
+  background-size: cover;
+  position: absolute;
+  bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#sign-in-form-container {
+  height: 350px;
+  width: 450px;
+  padding: 25px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (prefers-reduced-transparency) {
+  /* Give it a bg color if the user doesn't want transparency*/
+  #sign-in-form-container {
+    background-color: #023047;
+  }
+}
+
+#nps-logo {
+  height: 100%;
+  padding-right: 1.25rem;
+  max-height: 200px;
+  animation: 0.75s ease-out 0s fadeIn;
+}
+
+.index-button {
+  height: 50px;
+  line-height: 50px;
+  width: 250px;
+  max-width: calc(50% - 10px);
+  animation: 0.5s ease-out 0.4s slideInFromBottom;
+  border-radius: 12px;
+  -moz-box-shadow:    6px 7px 20px 3px rgba(0, 0, 0, 0.3);
+  -webkit-box-shadow: 6px 7px 20px 3px rgba(0, 0, 0, 0.3);
+  box-shadow:         6px 7px 20px 3px rgba(0, 0, 0, 0.3);
+}
+
+#index-button-row {
+  top: 85%;
+  position: absolute;
+  height: 60px;
+  width: calc(100% - 50px);
+  margin-left: 25px;
+  display: flex;
+  justify-content: center;
+}
+
+#index-button-container {
+  width: 650px;
+  min-width: 460px;
+  display: flex;
+  justify-content: space-around;
+}
+
+#sign-in-form-footer {
+  display: flex;
+  justify-content: space-between;
+}
+#sign-in-form-footer .default-container {
+  justify-content: space-between;
+  align-items: center;
+}
+#sign-in-form-footer .request-access-container {
+  justify-content: center;
+}
+
+#request-access-toggle-button-container {
+  margin-top: 1rem;
+}
+#request-access-toggle-button-container > .text-only-button{
+  color: #FB8500;
+  padding: 0;
+}
+
+.input-field {
+  border-bottom: 2px solid rgba(255,255,255);
+  color: white;
+  margin: 0;
+}
+.input-field::placeholder {
+  color: rgb(145, 145, 145);
+}
+#sign-in-form-container .input-field:hover,
+#sign-in-form-container .input-field:not(textarea):focus{
+  border-bottom: 2px solid #FB8500 !important;
+}
+#sign-in-form-container .input-field:focus {
+  color: white;
+}
+
+#sign-in-form-container .field-label:not(.checkbox-label) {
+  color: #FB8500;
+}
+.input-field::placeholder,
+.field-label:not(.checkbox-label) {
+  text-transform: uppercase;
+}
+.field-label.checkbox-label {
+  color: white;
+}

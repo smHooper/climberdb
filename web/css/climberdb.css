@@ -1,0 +1,1047 @@
+:root {
+  --ui-primary-color: #219EBC;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Lato', sans-serif;
+}
+
+.generic-button  {
+  min-width: 150px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  border: none;
+  background-color: #219EBC; 
+  color: white;
+  border-radius: 12px;
+  -moz-box-shadow:    5px 5px 20px 3px rgba(0, 0, 0, 0.15);
+  -webkit-box-shadow: 5px 5px 20px 3px rgba(0, 0, 0, 0.15);
+  box-shadow:         5px 5px 20px 3px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: font-weight 0.2s ease; 
+}
+.generic-button:hover {
+  text-decoration: none !important; /*keep <a> tags from looking like links */
+  color: white !important;
+}
+.generic-button:not(.disabled, .icon-button):focus{
+  font-weight: 600;
+   -moz-box-shadow:    5px 5px 20px 3px rgba(0, 0, 0, 0.25);
+  -webkit-box-shadow: 5px 5px 20px 3px rgba(0, 0, 0, 0.25);
+  box-shadow:         5px 5px 20px 3px rgba(0, 0, 0, 0.25);
+}
+.generic-button[disabled] {
+  background-color: hsl(211 25% 60%);
+  -moz-box-shadow:    none;
+  -webkit-box-shadow: none;
+  box-shadow:         none;
+  cursor: initial;
+}
+
+.danger-button {
+  background-color: hsl(0deg 75% 46%);
+}
+
+.secondary-button {
+  background-color: hsl(231deg 3% 50%);
+}
+
+.modal-button {
+  min-width: 75px;
+  border-radius: 0.5rem;
+  margin-bottom: 0px;
+}
+
+.icon-button, .text-only-button {
+  background-color: rgba(0,0,0,0);
+  border: none;
+  -moz-box-shadow:    none;
+  -webkit-box-shadow: none;
+  box-shadow:         none;
+  cursor: pointer;
+  transition: opacity 0.15s linear;
+}
+.icon-button:hover {
+  opacity: 1;
+}
+
+.modal-header-container .icon-button {
+  height: 100%;
+}
+
+/* remove default boostrap styling */
+button.generic-button:focus, 
+button.icon-button:focus, 
+button.text-only-button:focus,
+img.modal-img:focus,
+video.modal-img:focus,
+audio.modal-img:focus,
+input.query-option-operator:focus,
+input.query-option-input-field:focus,
+input.slider-value:focus {
+  -webkit-box-shadow: none;
+  outline: -webkit-focus-ring-color auto 0px;
+}
+
+button > img {
+  height: 100%;
+  max-width: 100%;
+}
+/* Custom checkbox*/
+/* The container */
+.checkmark-container {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  /*padding-left: 35px;
+  padding-right: 50px;*/
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  height: 25px;
+  background-color: rgba(0,0,0,0);
+  transition: 0.2s all;
+}
+
+/* Hide the browser's default checkbox */
+.checkmark-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Create a custom checkbox */
+.checkmark {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: none;
+  border: 3px solid #219EBC;
+  vertical-align: center;
+  horizontal-align: center;
+  transition: 0.2s all;
+}
+
+/*When the checkbox is checked, fill in background*/ 
+.checkmark-container input:checked ~ .checkmark {
+  background-color: #219EBC;
+  border: none;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkmark:after {
+  content: "";
+  position: absolute;
+  /*display: none;*/
+  opacity: 0;
+  transition: 0.2s all;
+}
+
+/* Show the checkmark when checked */
+.checkmark-container input:checked ~ .checkmark:after {
+  /*display: block;*/
+  opacity: 1;
+}
+
+/* Style the checkmark/indicator */
+.checkmark-container .checkmark:after {
+  left: 8.5px;
+  top: 2.25px;
+  width: 8px;
+  height: 15px;
+  border: 2px solid white;
+  border-width: 0 3px 3px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+  vertical-align: center;
+}
+
+.checkmark-container input[type="checkbox"]:focus + span::before {
+  outline: rgb(0, 0, 0) auto 5px;
+  box-shadow: 0 0 0 5px #ffbf47;
+}
+
+.checkbox-label {
+  margin-left: 30px;
+  font-size: 1rem;
+}
+
+
+/*---Utility classes--- */
+
+.shadow-on-hover {
+  -webkit-transition: all 0.2s ease 0.15s;
+          transition: all 0.2s ease 0.15s;
+}
+.shadow-on-hover:hover {
+  -moz-box-shadow:    8px 8px 20px 6px rgba(0, 0, 0, 0.4);
+  -webkit-box-shadow: 8px 8px 20px 6px rgba(0, 0, 0, 0.4);
+  box-shadow:         8px 8px 20px 6px rgba(0, 0, 0, 0.4);
+  transform: scale(1.025, 1.005);
+}
+@media (prefers-reduced-motion) {
+  .shadow-on-hover:hover {
+    transform: none;
+  }
+}
+
+.slide-up-on-hover {
+  -webkit-transition: all 0.2s ease 0.15s;
+          transition: all 0.2s ease 0.15s;
+}
+
+.slide-up-on-hover:hover {
+  transform: translate(0px, -7px);
+  position: relative;
+}
+
+.vertical-scroll {
+  overflow-y: auto;
+}
+
+.hidden {
+  display: none;
+}
+.transparent {
+  opacity: 0;
+  pointer-events: none;
+}
+.invisible {
+  visibility: hidden;
+}
+
+.blur {
+  -webkit-filter: blur(5px); /* Chrome, Safari, Opera */
+  filter: blur(5px);
+}
+
+.bg-blur-100 {
+  backdrop-filter: blur(100px);
+}
+
+.bottom-pinned {
+  bottom: 0px;
+}
+
+.background-blur {
+  backdrop-filter: blur(8px);
+}
+
+.centered-text {
+  text-align: center;
+}
+
+.right-text {
+  text-align: right;
+}
+
+
+/*------- input stuff -------*/
+.input-field {
+    margin-right: 20px;
+    max-width: 100%;
+    flex: 1 1 auto;
+    height: 30px;
+    background-color: rgba(0,0,0,0);
+    outline: -webkit-focus-ring-color auto 0px;
+    -webkit-box-shadow: none;
+    border-color: rgba(0,0,0,0);
+    font-size: 16px;
+    transition: all 0.3s ease-out;
+    border-bottom: 2px solid rgba(0,0,0,0.2);
+    text-indent: 5px;
+}
+
+.input-field.large-field {
+  width: 100%;
+}
+.input-field.small-field {
+  max-width: 50%;
+}
+
+.input-field:not(textarea):hover {
+  /*background-color: hsla(1, 0%, 100%, 0.3);*/
+  border-bottom: 2px solid rgba(0,0,0,0.5);
+  /*color: rgba(0,0,0,0.6);*/
+}
+
+/*.input-field:not(textarea):hover::placeholder {
+  color: rgba(0,0,0,0.5);
+}*/
+
+.input-field:not(textarea):focus {
+  /*background-color: hsla(1, 0%, 100%, 0.7);
+  box-shadow: inset 0px 1px 6px 0px hsla(1, 0%, 100%, 0.3);*/
+  border-bottom: 2px solid rgba(0,0,0,0.7) !important;
+  color: black;
+  /*font-size: 15px;*/
+}
+/*input.input-field:focus {
+  font-size: 15px;
+}
+select.input-field:focus::placeholder {
+  font-size: 15px;
+}*/
+
+.input-field.error {
+  border: 2px solid rgba(255, 0, 0, 0.3);
+  box-shadow: 0px 0px 7px 2px hsl(0deg 62% 43% / 50%);
+}
+
+.input-field.disabled,
+.field-container.disabled,
+.field-container.hidden,
+.field-container.collapse.show.disabled {
+  /*utility class to turn off fields that aren't relevant*/
+  display: none !important;
+}
+
+.input-field.text-right-when-valid:not(:placeholder-shown) {
+  text-align: right;
+}
+
+.field-container, .field-container-row {
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  width: 100%;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.field-container.small-field {
+  max-width: 50%;
+  /*flex: 1 0 auto;*/
+}
+
+.field-container.inline {
+  display: inline-flex;
+  max-width: 49%;
+}
+
+.field-container .col-3, 
+.field-container .col-4, 
+.field-container .col-6,
+.field-container .col,
+.field-container.col,
+.field-container.col-6,
+.field-container.col-4,
+.field-container.col-3 {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.flex-field-container {
+    max-width: calc(100% - 90px);
+    flex: 1 1 auto;
+    display: flex;
+    flex-wrap: wrap;
+}
+.flex-field-container > .input-field {
+  margin-right:  10px;
+}
+
+.units-field-container, .mini-field {
+    max-width: 70px;
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: 20px;
+}
+.units-field-container > .input-field {
+  text-indent: 0px;
+}
+
+.field-container.error {
+  background-color: rgba(255, 0, 0, 0.3);
+}
+
+/*set display property for fields that are shown/hidden based on input from another field*/
+.field-container.collapse {
+  display: none;
+}
+.field-container.collapse.show {
+  display: inline-flex;
+}
+
+.field-container.single-line-field {
+  height: 60px;
+}
+
+.field-label {
+  width: 100%;
+  height: 20px;
+  transition: all 0.1s ease-out;
+  font-size: 16px;
+  visibility: visible;
+  padding-left: 4px;
+}
+
+.field-label.checkbox-label {
+  width: calc(100% - 30px);
+}
+.field-container.checkbox-field-container {
+  align-items: center;
+}
+.field-label.inline-label {
+  width: auto;
+  margin-right: 20px;
+  line-height: 30px;
+  padding-left: 0;
+}
+
+.input-field:placeholder-shown ~ .field-sub-label, 
+.input-field:placeholder-shown ~ .field-label,
+select.input-field.default ~ .field-label {
+  visibility: hidden;
+  transform: translateY(-10px);
+  color: hsl(1, 0%, 50%);
+}
+
+select.input-field.default,
+.input-field::placeholder,
+textarea.narrative-field::placeholder {
+  color: hsl(1, 0%, 40%);
+}
+
+.required-indicator {
+  color: #b70606;
+  position: absolute;
+  /*
+  Use flex order to make sure it's always first
+    The reason it's not first in the DOM is so 
+    that the + sibling combinator will work to 
+    not show the indicator when the text field 
+    is no longer empty
+  */
+  order: -1;
+  transition: opacity 0.5s;
+}
+
+input.input-field:valid + .required-indicator,
+select.input-field:not(.default) + .required-indicator,
+textarea.input-field:valid + .required-indicator {
+  opacity: 0;
+}
+/* -------------------------------------------*/
+
+/*--- modal stuff ---*/
+.modal-background {
+  z-index: 8998;
+  margin: 0;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.modal-background-light {
+  background-color: rgb(255,255,255); /* Fallback color */
+  background-color: rgba(255,255,255,0.4); /* White w/ opacity */
+}
+
+.modal-background-dark {
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+  -webkit-animation-name: fadeIn;
+  -webkit-animation-duration: 0.4s;
+  animation-name: fadeIn;
+  animation-duration: 0.4s;
+}
+
+.bhims-modal {
+  position: fixed;
+  z-index: 8999;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 16px;
+  -webkit-animation-name: modalSlideInFromRight;
+  -webkit-animation-duration: 0.3s;
+  animation-name: modalSlideInFromRight;
+  animation-duration: 0.3s;
+  display: block;
+  padding: 25px;
+}
+
+.modal-light {
+  width: 600px;
+  height: 330px;
+  background-color: rgb(233, 239, 241);
+}
+
+.modal.lightbox-modal{
+    -webkit-transition: opacity .2s linear, none;
+    -moz-transition: opacity .2s linear, none;
+    -ms-transition: opacity .2s linear, none;
+    -o-transition: opacity .2s linear, none;
+    transition: opacity .2s linear, none;
+    z-index: 10000;
+}
+
+.modal.lightbox-modal.fade .modal-dialog {
+  /* turn off slide effect of the "fade" class*/
+  transition: none;
+  transform: none;
+
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+.lightbox-modal .modal-content {
+  background-color: rgba(0,0,0,0);
+  border: none;
+  height: 80%;
+  /* display: flex; */
+  width: 80%;
+  justify-content: center;
+  align-items: center;
+  margin-top: -3rem; /*adjust for header height*/
+}
+
+.modal-img-body {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.modal-img-header {
+  padding: 0;
+}
+
+.modal-img-header .close,
+.modal-img-body-header .close {
+  color: white;
+}
+.modal-img-body-header .close img {
+  filter: invert(100%);/*makes black SVG imgs white*/
+}
+.modal-img-body {
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.modal-header-container {
+  width: 100%;
+  height: 3rem;
+  display: flex;
+  justify-content: center;
+}
+
+.modal-img-body-header {
+  width: 100%;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-img-body-header > .close {
+  color: white;
+  font-size: 2rem;
+}
+
+.modal-img {
+  width: 100%;
+  height: calc(100% - 20px - 1rem);
+  object-fit: contain;
+}
+
+video.modal-img,
+audio.modal-img {
+  
+}
+
+audio.modal-img {
+  height: 40px;
+  max-width: 500px;
+}
+
+/*------- -------*/
+
+
+/*-- Tooltip --*/
+.tooltipped {
+  display: flex;
+  position: relative;
+}
+
+.tooltipped .tip {
+  min-width: 100px;
+  min-height: 40px;
+  top: -20px;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  padding: 8px 20px;
+  color: black;
+  background-color: hsl(89 20% 58%);/*#9da990;*/
+  font-weight: normal;
+  border-radius: 40px;
+  position: absolute;
+  z-index: 99999999;
+  box-sizing: border-box;
+  box-shadow: 2px 5px 10px 1px rgba(0,0,0,0.4);
+  opacity: 0; 
+  visibility: hidden; /*prevents :hover event on the .tip*/
+  transition: opacity 0.8s;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.tooltipped:hover .tip {
+  opacity: 1; 
+  visibility: visible;
+  transition-delay: 0.3s;
+}
+
+.tooltipped .tip h6 {
+  margin: 0;
+}
+
+.tooltipped .tip .tooltip-arrow {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -12px;
+  width: 24px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.tooltipped .tip .tooltip-arrow::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 50%;
+  transform: translate(-50%,-50%) rotate(45deg);
+  background-color: #9da990;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.5);
+}
+
+.tip.tip-right {
+  top: 50%;
+  left: 100%;
+  margin-left: 10px;
+  transform: translate(0, -50%);
+}
+
+.tip.tip-right .tooltip-arrow {
+  top: 50%;
+  left: 0;
+  margin-top: -20px;
+  margin-left: -16px;
+  width: 18px;
+  height: 40px;
+}
+
+.tip.tip-right .tooltip-arrow::after {
+  left: 125%;
+  top: 50%;
+  transform: translate(-75%,-50%)  rotate(-22.5deg) skew(45deg);
+  width: 18px;
+}
+
+.tip.tip-left {
+  top: 50%;
+  left: -100%;
+  margin-right: 10px;
+  transform: translate(0, -50%);
+}
+
+.tip.tip-left .tooltip-arrow {
+  top: 50%;
+  right: 0;
+  margin-top: -20px;
+  margin-right: -16px;
+  width: 18px;
+  height: 40px;
+}
+
+.tip.tip-left .tooltip-arrow::after {
+  left: 125%;
+  top: 50%;
+  transform: translate(75%,-50%)  rotate(22.5deg) skew(45deg);
+  width: 18px;
+}
+
+/*---Side and top nav bar template stuff---*/
+.bhims-header-menu {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: black;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1000;
+}
+.header-menu-item-group {
+    height: 100%;
+    display: flex;
+    padding-left: 20px;
+    padding-right: 20px;
+    align-items: center;
+}
+.home-button {
+  height: 45px;
+  width: 45px;
+  border: none;
+  margin-right: 40px;
+}
+.home-button > img {
+  height: 45px;
+  width: 45px;
+}
+.page-title {
+  color: hsl(0deg 0% 69%);;
+}
+.flex-float-right {
+  align-self: flex-end;
+}
+#username-container > span, #username-container > img {
+    padding-right: 10px;
+    height: 25px;
+    font-weight: 500;
+    line-height: 60px;
+
+}
+#username-container {
+  opacity: 0.6;
+}
+
+main.dashboard-main {
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  width: 100vw;
+
+  background-image: url(../imgs/bhims_dashboard_background.jpg);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
+
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.main-container-with-sidebar {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  padding-top: 60px; /*for header menu bar*/
+}
+
+.main-content-wrapper {
+  /*position: relative;
+  top: 60px;
+  width: calc(100vw - 250px);*/
+  flex: auto;
+  max-width: 100%;
+  padding: 10px 15px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+  float: right;
+}
+
+nav.sidebar {
+  /*position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 100; /* Behind the navbar 
+  left: 0;*/
+  width: 250px;
+  flex:  0 0 auto; /*sidebar will shrink slightly flex-shrink is not set to 0*/
+  padding: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  transition: 0.4s ease-in-out all;
+}
+nav.sidebar.collapsed {
+  width: 60px;
+}
+nav.sidebar .nav-item .sidebar-nav-item-icon,
+nav.sidebar .nav-item .sidebar-nav-item-label {
+  transition: 0.15s linear all;
+  opacity: 1;
+}
+nav.sidebar.collapsed .nav-item .sidebar-nav-item-icon {
+  margin-left: 0;
+}
+nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
+  opacity: 0;
+}
+.sidebar-sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 60px; /* Height of navbar */
+  height: calc(100vh - 60px);
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+  background-color:  #292929;/*#364a36;*/
+}
+.sidebar-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background-image: url(../imgs/bhims_index_bg_1200.jpg);
+  background-size: cover;
+  opacity: 0.2;
+}
+.sidebar-nav-group {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  list-style: none;
+  padding-left: 0px;
+}
+.nav-item {
+    padding: 15px;
+    position: relative;
+}
+.nav-item.selected {
+  /*box-shadow: inset -1px -7px 20px 1px rgb(0 0 0 / 70%);*/
+  box-shadow: inset -1px -7px 20px 1px rgba(0,0,0,0.3)/*hsl(120deg 17% 18% / 80%)*/;
+}
+.nav-item a {
+  display: block;
+  white-space: nowrap;
+  color: white;
+  transition: 0.3s all;
+  width: 100%;
+}
+.nav-item a > span {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+.sidebar .nav-item img {
+  height: 30px;
+  width: 30px;
+  margin-left: 20px;
+}
+.nav-item:hover {
+  background-image: radial-gradient(circle at bottom 50% right 70%, rgba(0,0,0,0.15), rgba(0,0,0,0.6));
+  /*background-image: radial-gradient(circle at bottom 50% right 70%, hsl(120deg 17% 18% / 15%), hsl(120deg 17% 18% / 90%));*/
+}
+.nav-item a:hover, .nav-item.selected a {
+  text-decoration: none;
+  color: hsl(198deg 84% 46%);
+  color: hsl(198deg 100% 50%);
+  color:  hsl(188deg 100% 50%);
+}
+.nav-item a:hover > img, .nav-item.selected img {
+  filter: drop-shadow(0px 0px 5px hsl(188deg 84% 60%));
+}
+/*show a caret pointing to the selected item*/
+.sidebar-nav-group .nav-item.selected > a::after {
+  border-right: 15px solid rgb(204, 204, 204);
+  border-top: 15px solid transparent;
+  border-bottom: 15px solid transparent;
+  content: "";
+  display: inline-block;
+  position: absolute;
+  right: -17px;
+  opacity: 1;
+  top: 7px;
+  transition: opacity .15s ease-in, transform 0.4s ease-in-out;
+  transform: translate(-15px, 7px);
+  box-shadow: inset -1px -7px 20px 1px rgba(0,0,0,0.3)
+ }
+.sidebar.collapsed .nav-item.selected > a::after {
+  transform: translate(-160px, 7px);
+}
+.sidebar-collapse-button {
+  height: 100%;
+  width: 15px;
+  padding: 15px 0;
+  margin: 5px 20px 5px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  /*transition: 0.2s ease-in-out 0.2s;*/
+}
+.sidebar-collapse-button.collapsed {
+  width: 30px;
+  margin-right: 20px;
+}
+/*Show as vertically aligned dots. When the menu is collapsed, 
+the button lines are expanded to show the action that will occur 
+when the user clicks the button*/
+.sidebar-collapse-button > .sidebar-collapse-button-line {
+  height: 7px;
+  width: 7px;
+  border-radius: 2px;
+  background-color: white;
+  opacity: 1;
+  transition: 0.2s ease-in-out all;
+}
+/*show as lines (i.e., hanburger menu)*/
+.sidebar-collapse-button.collapsed > .sidebar-collapse-button-line {
+  height: 3px;
+  width: 100%;
+  border-radius: 3px;
+}
+/*@keyframes collapse-sidebar-button {
+  0% {
+    height: 3px;
+    border-radius: 3px;
+    width: 100%;
+  }
+  60% {
+    width: 10px;
+    height: 10px;
+    border-radius: 10px;
+  }
+}
+@keyframes collapse-sidebar-button-icon {
+  0% {
+    height: 3px;
+    border-radius: 3px;
+    width: 100%;
+  }
+  100% {
+    width: 10px;
+    height: 10px;
+    border-radius: 10px;
+  }
+}*/
+
+/*--- */
+.blink {
+    -webkit-animation: blink 2s ease-in-out infinite;
+    -moz-animation: blink 2s ease-in-out infinite;
+    animation: blink 2s ease-in-out infinite;
+}
+
+
+/*---Loading indicator---*/
+#loading-indicator {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 10001;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  border: 16px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 16px solid hsl(89 20% 58%);/*hsl(211deg 68% 52%);*/
+  width: 120px;
+  height: 120px;
+  -webkit-animation: spin 2s linear infinite;
+  animation: spin 2s cubic-bezier(0.7, 0.25, 0.25, 0.7) infinite;
+}
+
+
+#loading-indicator-background {
+  z-index: 10000;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* safari */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+/*------- -------*/
+
+
+/*---Animations--- */
+@-webkit-keyframes slideInFromTop {
+  from {transform: translateY(-50%); opacity: 0}
+  to {transform: translateY(0); opacity: 1;}
+}
+@keyframes slideInFromTop {
+  from {transform: translateY(-50%); opacity: 0}
+  to {transform: translateY(0); opacity: 1;}
+}
+
+@-webkit-keyframes slideInFromBottom {
+  from {transform: translateY(50%); opacity: 0}
+  to {transform: translateY(0); opacity: 1;}
+}
+@keyframes slideInFromBottom {
+  from {transform: translateY(50%); opacity: 0}
+  to {transform: translateY(0); opacity: 1;}
+}
+
+@-webkit-keyframes modalSlideInFromRight {
+  from {transform: translate(-25%, -50%); opacity: 0}
+  to {transform: translate(-50%, -50%); opacity: 1;}
+}
+@keyframes modalSlideInFromRight {
+  from {transform: translate(-25%, -50%); opacity: 0}
+  to {transform: translate(-50%, -50%); opacity: 1;}
+}
+
+@-webkit-keyframes fadeIn {
+  from {opacity: 0} 
+  to {opacity: 1}
+}
+
+@keyframes fadeIn {
+  from {opacity: 0} 
+  to {opacity: 1}
+}
+
+@keyframes blink {
+  0% { opacity: 0.1; }
+  50% { opacity: 1; }
+  100% { opacity: 0.1; }
+}
+@-webkit-keyframes blink {
+  0% { opacity: 0.1; }
+  50% { opacity: 1; }
+  100% { opacity: 0.1; }
+}
+
+/*------- -------*/
+
+
+/*---- Remove arrows from number inputs -- */
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/**** leaflet stuff *****/
+
+.leaflet-popup .leaflet-popup-content-wrapper {
+  font-family: 'Barlow', sans-serif;
+}

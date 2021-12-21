@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8'>
+	<meta name="viewport" content="width=device-width,height=device-height, user-scalable=no" />
+	<title>DENA Climbing Permit Portal</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+	
+	<!--bootstap-->
+	<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css"/>
+	<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+	<!--fonts -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+	<link rel="stylesheet" href="css/climberdb.css">
+	<link rel="stylesheet" href="css/climberdb-index.css">
+</head>
+
+<body>
+	<div id="sign-in-form-container">
+		<div class="field-container">
+			<input id="username-input" class="input-field" name="username" placeholder="Username">
+			<label class="field-label" for="username-input">Username</label>
+		</div>
+		<div class="field-container default-field">
+			<input id="password-input" class="input-field" name="password" type="password" placeholder="Password">
+			<label class="field-label" for="password-input">Password</label>
+		</div>
+		<div class="field-container request-field hidden" aria-hidden=true>
+			<input id="first-name-input" class="input-field" name="first_name" placeholder="Fist name">
+			<label class="field-label" for="password-input">First name</label>
+		</div>
+		<div class="field-container request-field hidden" aria-hidden=true>
+			<input id="last-name-input" class="input-field" name="last_name" placeholder="Last name">
+			<label class="field-label" for="password-input">Last name</label>
+		</div>
+		<div id="sign-in-form-footer" class="field-container col">
+			<div class="field-container default-container">
+				<div class="field-container checkbox-field-container col-6">
+					<label class="checkmark-container">
+						<input id="retain-login-checkbox" class="input-field input-checkbox" type="checkbox" name="retain-login">
+						<span class="checkmark data-input-checkmark"></span>
+						<!-- stay signed in -->
+					</label>
+					<label class="field-label checkbox-label" for="retain-login-checkbox">Stay signed in</label>
+				</div>
+				<button id="sign-in-button" class="generic-button">sign in</button>
+			</div>
+			<div class="field-container request-access-container">
+				<button id="request-access-button" class="generic-button hidden" aria-hidden=true>request access</button>
+			</div>
+			<div id="request-access-toggle-button-container" class="field-container">
+				<button class="text-only-button">No account? No problem! Request access here</button>
+			</div>
+		</div>
+
+	</div>
+	
+	<script src="js/climberdb.js"></script>
+
+	<script>
+		$(document).ready(function(){
+			$.ajax({
+				url: 'climberdb.php',
+				method: 'POST',
+				data: {action: 'getUser'},
+				cache: false
+			}).done(function(resultString) {
+				if (queryReturnedError(resultString)) {
+					throw 'User role query failed: ' + resultString;
+				} else {
+					const result = $.parseJSON(resultString);
+					if (result.length) {
+						$('#username-input').val(result[0].ad_username);
+						$('#password-input').focus();
+						//$('#request-access-toggle-button-container').ariaHide(true);
+					}
+				}
+			});
+
+			// Show the "request access" fields when the button is clicked
+			$('#request-access-toggle-button-container button').click((e) => {
+				$('.default-field').ariaHide(true);
+				$('#sign-in-button').ariaHide(true);
+				$('#retain-login-checkbox').closest('.field-container').ariaHide(true);
+				$(e.target).ariaHide(true);
+
+				$('.request-field, #request-access-button').ariaHide(false);
+			});
+
+			$('#sign-in-button').click((e) => {
+
+			});
+		});
+	</script>
+
+</body>
+
+
+
+</html>
