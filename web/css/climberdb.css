@@ -6,6 +6,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   font-family: 'Lato', sans-serif;
+  color: #023047;;
 }
 
 .generic-button  {
@@ -81,7 +82,9 @@ video.modal-img:focus,
 audio.modal-img:focus,
 input.query-option-operator:focus,
 input.query-option-input-field:focus,
-input.slider-value:focus {
+input.slider-value:focus,
+input.fuzzy-search-bar:focus,
+.query-result-list-item:focus {
   -webkit-box-shadow: none;
   outline: -webkit-focus-ring-color auto 0px;
 }
@@ -210,7 +213,7 @@ button > img {
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
 .transparent {
   opacity: 0;
@@ -248,18 +251,21 @@ button > img {
 
 /*------- input stuff -------*/
 .input-field {
-    margin-right: 20px;
-    max-width: 100%;
-    flex: 1 1 auto;
-    height: 30px;
-    background-color: rgba(0,0,0,0);
-    outline: -webkit-focus-ring-color auto 0px;
-    -webkit-box-shadow: none;
-    border-color: rgba(0,0,0,0);
-    font-size: 16px;
-    transition: all 0.3s ease-out;
-    border-bottom: 2px solid rgba(0,0,0,0.2);
-    text-indent: 5px;
+  /*margin-right: 20px;*/
+  /*margin-right doesn't work when parent container is too small
+    but calc() should work every time*/
+  max-width: calc(100% - 20px);
+  flex: 1 1 auto;
+  height: 30px;
+  color: #023047;
+  background-color: rgba(0,0,0,0);
+  outline: -webkit-focus-ring-color auto 0px;
+  -webkit-box-shadow: none;
+  border-color: rgba(0,0,0,0);
+  border-bottom: 2px solid rgba(0,0,0,0.2);
+  font-size: 16px;
+  transition: all 0.3s ease-out;
+  text-indent: 5px;
 }
 
 .input-field.large-field {
@@ -268,7 +274,14 @@ button > img {
 .input-field.small-field {
   max-width: 50%;
 }
-
+textarea.input-field {
+  min-height: 100px;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+textarea.input-field::placeholder {
+  color: rgb(170, 170, 170);
+}
 .input-field:not(textarea):hover {
   /*background-color: hsla(1, 0%, 100%, 0.3);*/
   border-bottom: 2px solid rgba(0,0,0,0.5);
@@ -317,6 +330,11 @@ select.input-field:focus::placeholder {
   width: 100%;
   flex-wrap: wrap;
   position: relative;
+  padding: 0;
+}
+
+.field-container-row {
+  margin-bottom: 20px;
 }
 
 .field-container.small-field {
@@ -384,6 +402,7 @@ select.input-field:focus::placeholder {
   font-size: 16px;
   visibility: visible;
   padding-left: 4px;
+  color: #00679b;/*#219ebc;*/
 }
 
 .field-label.checkbox-label {
@@ -403,7 +422,8 @@ select.input-field:focus::placeholder {
 .input-field:placeholder-shown ~ .field-label,
 select.input-field.default ~ .field-label {
   visibility: hidden;
-  transform: translateY(-10px);
+  transform: translateY(-28px);
+  padding-left: 10px;
   color: hsl(1, 0%, 50%);
 }
 
@@ -459,7 +479,7 @@ textarea.input-field:valid + .required-indicator {
   animation-duration: 0.4s;
 }
 
-.bhims-modal {
+.climberdb-modal {
   position: fixed;
   z-index: 8999;
   top: 50%;
@@ -687,13 +707,13 @@ audio.modal-img {
 }
 
 /*---Side and top nav bar template stuff---*/
-.bhims-header-menu {
+.climberdb-header-menu {
   position: sticky;
   top: 0;
   left: 0;
   right: 0;
   height: 60px;
-  background-color: black;
+  background-color: #023047;
   color: white;
   display: flex;
   justify-content: space-between;
@@ -718,17 +738,17 @@ audio.modal-img {
   width: 45px;
 }
 .page-title {
-  color: hsl(0deg 0% 69%);;
+  color: hsl(0deg 0% 80%);
+  margin-bottom: 0;
 }
 .flex-float-right {
   align-self: flex-end;
 }
 #username-container > span, #username-container > img {
-    padding-right: 10px;
-    height: 25px;
-    font-weight: 500;
-    line-height: 60px;
-
+  padding-right: 10px;
+  height: 35px;
+  font-weight: 500;
+  line-height: 60px;
 }
 #username-container {
   opacity: 0.6;
@@ -740,7 +760,7 @@ main.dashboard-main {
   height: 100vh;
   width: 100vw;
 
-  background-image: url(../imgs/bhims_dashboard_background.jpg);
+  background-image: url(../imgs/climberdb_dashboard_background.jpg);
   background-repeat: no-repeat;
   background-attachment: fixed;
   background-position: center;
@@ -762,7 +782,7 @@ main.dashboard-main {
   width: calc(100vw - 250px);*/
   flex: auto;
   max-width: 100%;
-  padding: 10px 15px;
+  padding: 10px 15px 0 15px;
   height: calc(100vh - 60px);
   overflow-y: auto;
   float: right;
@@ -777,7 +797,6 @@ nav.sidebar {
   width: 250px;
   flex:  0 0 auto; /*sidebar will shrink slightly flex-shrink is not set to 0*/
   padding: 0;
-  background-color: rgba(0, 0, 0, 0.75);
   transition: 0.4s ease-in-out all;
 }
 nav.sidebar.collapsed {
@@ -802,7 +821,7 @@ nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
   width: 100%;
   overflow-x: hidden;
   overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-  background-color:  #292929;/*#364a36;*/
+ background-color: #023047;
 }
 .sidebar-background {
   position: absolute;
@@ -810,9 +829,10 @@ nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
   left: 0;
   height: 100%;
   width: 100%;
-  background-image: url(../imgs/bhims_index_bg_1200.jpg);
+  background-image: url(../imgs/sidebar_bg.jpg);
   background-size: cover;
-  opacity: 0.2;
+  background-position: center;
+  opacity: 0.15;
 }
 .sidebar-nav-group {
   display: flex;
@@ -826,8 +846,8 @@ nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
     position: relative;
 }
 .nav-item.selected {
-  /*box-shadow: inset -1px -7px 20px 1px rgb(0 0 0 / 70%);*/
-  box-shadow: inset -1px -7px 20px 1px rgba(0,0,0,0.3)/*hsl(120deg 17% 18% / 80%)*/;
+  /*box-shadow: inset -1px -7px 20px 1px rgba(0,0,0,0.3);*/
+  box-shadow: inset -1px -7px 20px 1px #023047;
 }
 .nav-item a {
   display: block;
@@ -846,18 +866,25 @@ nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
   margin-left: 20px;
 }
 .nav-item:hover {
-  background-image: radial-gradient(circle at bottom 50% right 70%, rgba(0,0,0,0.15), rgba(0,0,0,0.6));
+  background-image: radial-gradient(circle at bottom 50% right 70%, #02304701, #023047);
   /*background-image: radial-gradient(circle at bottom 50% right 70%, hsl(120deg 17% 18% / 15%), hsl(120deg 17% 18% / 90%));*/
 }
 .nav-item a:hover, .nav-item.selected a {
   text-decoration: none;
-  color: hsl(198deg 84% 46%);
-  color: hsl(198deg 100% 50%);
-  color:  hsl(188deg 100% 50%);
 }
-.nav-item a:hover > img, .nav-item.selected img {
-  filter: drop-shadow(0px 0px 5px hsl(188deg 84% 60%));
+.nav-item.selected a {
+  color: hsl(188deg 84% 60%);
 }
+.nav-item.selected img {
+  filter: drop-shadow(0px 0px 5px hsl(188deg 84% 60%));/*hsl(188deg 84% 60%));*/
+}
+.nav-item a:hover {
+  color: #ffb600;
+}
+.nav-item a:hover > img {
+  filter: drop-shadow(0px 0px 5px #ffb600);
+}
+
 /*show a caret pointing to the selected item*/
 .sidebar-nav-group .nav-item.selected > a::after {
   border-right: 15px solid rgb(204, 204, 204);
@@ -951,7 +978,7 @@ when the user clicks the button*/
   margin: -75px 0 0 -75px;
   border: 16px solid #f3f3f3;
   border-radius: 50%;
-  border-top: 16px solid hsl(89 20% 58%);/*hsl(211deg 68% 52%);*/
+  border-top: 16px solid #f28100;/*hsl(211deg 68% 52%);*/
   width: 120px;
   height: 120px;
   -webkit-animation: spin 2s linear infinite;

@@ -21,7 +21,7 @@ function runQuery($ipAddress, $port, $dbName, $username, $password, $queryStr, $
 	  	return array();
 	}
 
-	$resultArray = pg_fetch_all($result) ? pg_fetch_all($result) : array("query returned an empty result");
+	$resultArray = pg_fetch_all($result) ? pg_fetch_all($result) : [];//array("query returned an empty result");
 	return $resultArray;
 }
 
@@ -194,7 +194,7 @@ if (isset($_POST['action'])) {
 		// Check if the query result is valid. If not, the user probably doesn't exist in the table yet
 		$resultValid = false;
 		if (is_array($userRole)) {
-			$resultValid = isset($userRole[0]['username']);
+			$resultValid = isset($userRole[0]['ad_username']);
 		}
 		if (!$resultValid) {
 			// Add the user

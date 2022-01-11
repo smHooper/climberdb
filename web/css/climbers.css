@@ -1,0 +1,468 @@
+
+.fuzzy-search-bar-container {
+	display: flex;
+	height: 80px;
+	width: 100%;
+}
+.fuzzy-search-bar {
+	height: 60px;
+	line-height: 60px;
+	max-width: 800px;
+	width: 80px;
+	border: none;
+	border-bottom: solid 3px #219ebc;
+	background-color: rgba(255, 255, 255, 0);
+	transition: 0.3s ease;
+	cursor: pointer;
+	margin-left: -60px;
+	text-indent: 60px;
+	font-size: 20px;
+	color: #023047;
+}
+.fuzzy-search-bar:focus {
+	cursor: unset;
+	background-color: rgba(255, 255, 255, 0.4);
+}
+.fuzzy-search-bar:focus,
+.fuzzy-search-bar:not(:placeholder-shown) {
+	width: unset;
+	flex: 1 1 auto;
+	border-radius: 5px;
+}
+.fuzzy-search-bar::placeholder {
+	color: rgba(0, 0, 0, 0);
+}
+.fuzzy-search-bar-container > img {
+	position: relative;
+	height: 60px;
+	width: 60px;
+	padding: 15px;
+	z-index: -1; /* place behind input so the whole input is clickable*/
+	order: -1; /*has to be placed after search bar to use the sibling combinator*/
+}
+.fuzzy-search-bar:focus ~ img {
+	z-index: 1; /* place in front when background of input is transulcent */
+}
+
+.empty-result-message {
+	width: 100%;
+	height: 100%;
+	vertical-align: center;
+	text-align: center;
+	display: block;
+	font-size: 30px;
+	color: #00679b;
+}
+
+.query-result-container {
+	display: flex;
+	width: 100%;
+	height: calc(100% - 80px);
+	overflow-y: auto;
+}
+
+.query-result-pane {
+	height: 100%;
+}
+#result-navigation-header {
+	display: flex;
+	width: 100%;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	color: #00679b;
+	font-size: 14px;
+}
+#result-navigation-header i {
+	color: #00679b;
+}
+.result-navigation-container {
+	width: 250px;
+	height: 40px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+.result-navigation-container > * {
+	margin-bottom: 0;
+	text-align: center;
+}
+.show-previous-result-set-button, 
+.show-next-result-set-button {
+	padding: 12px;
+	height: 40px;
+	width: 40px;
+	transition: 0.5s all;
+}
+.result-navigation-container > button:disabled {
+	opacity: 0.5;
+	pointer-events: none;
+}
+.result-navigation-container > button:not(:disabled):hover, 
+.result-navigation-container > button:not(:disabled):focus{
+	border-radius: 40px;
+	background-color: rgba(255, 255, 255, 0.3);
+}
+.query-result-pane.result-summary-pane {
+	order: -1; /*DOM order is switched so ~ can be used for detecting .row-details-pain.collapsed*/
+	display: flex;
+	flex-wrap: wrap;
+	padding-left: 0;
+	width: 50%;
+	flex: 1 1 auto;
+}
+.query-result-pane:not(.collapsed) ~ .result-summary-pane .result-summary-label:last-of-type  {
+	display: none;
+}
+/*.query-result-pane:not(.collapsed) ~ .result-summary-pane {
+	max-width: 50%;
+}*/
+.result-summary-container {
+	width: 100%;
+	height: 50%;
+}
+.query-result-list-container {
+	display: flex;
+	flex-wrap: wrap;
+	flex:  1 1 auto;
+	overflow-y: auto;
+	height: calc(100% - 65px);
+}
+.query-result-list {
+	list-style: none;
+	padding: 5px 10px 10px 0px;
+	width: 100%;
+}
+.query-result-list > .query-result-list-item {
+	padding: 0 15px;
+	position: relative;
+	height: 80px;
+	width:  100%;
+	margin-bottom: 2px;
+	margin-left: 5px;
+	background-color: #f28100;
+	border-radius: 10px;
+	color: white;
+	font-size: 20px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+	z-index: 0;
+	transition: 0.5s all;
+	display: flex;
+	align-items: center;
+}
+.query-result-list > .query-result-list-item,
+.query-result-list > .query-result-list-item * {
+	cursor: pointer;
+}
+#result-summary-header-row {
+	display: flex;
+	background: none;
+	height: 20px;
+	font-weight: 600;
+	color: #00679b;
+	width: 100%;
+	padding: 0 10px;
+}
+.query-result-list > .query-result-list-item:not(.selected):hover {
+	background-color: #f69800;
+}
+.query-result-list > .query-result-list-item.selected {
+	box-shadow: 1px 4px 5px 3px rgb(0 0 0 / 15%);
+	background-color: #faaf00;
+	z-index: 1;
+	padding: 10px 15px;
+	justify-content: space-between;
+/*	cursor: unset;
+	pointer-events: none;*/
+}
+.query-result-list > .query-result-list-item.selected, 
+.query-result-list > .query-result-list-item.selected > label {
+}
+.query-result-list-item > label {
+	margin-bottom: 0;
+	width: 100%;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.query-result-list-item > label * {
+	text-overflow: ellipsis;
+}
+.query-result-list-item > .result-summary-label:first-of-type {
+
+}
+.query-result-list-item > .result-summary-label:nth-of-type(2) {
+
+}
+.query-result-list-item > .result-summary-label:last-of-type {
+
+}
+.query-result-edit-button-container {
+	height: 60px;
+	width: 100%;
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+}
+.query-result-edit-button-container > .query-result-edit-button {
+	margin: 0 10px;
+	color: #e77a00;
+	transition: .3s all;
+	pointer-events: all;
+}
+.query-result-edit-button-container > .query-result-edit-button:hover {
+	color: #f28100;
+}
+
+.query-result-pane.result-details-pane {
+	max-width: 100%;
+	overflow-y: auto;
+	padding-top: 60px;
+	padding-right: 0;
+	flex: 1 1 auto;
+	width: 50%;
+	flex: 0 0 auto;
+	padding: 0;
+	padding-left: 16px;
+	transition: 0.4s ease-in-out all;
+}
+.result-details-pane .close-button-container {
+	width: 100%;
+	justify-content: flex-end;
+	font-size: 30px;
+	padding: 15px 30px 0 0;
+}
+.result-details-pane > .accordion {
+	background: rgb(230, 230, 230);
+	border-radius: 20px;
+	height: calc(100% - 60px);
+	overflow-y: auto;
+	padding-bottom: 20px
+}
+.result-details-header-container {
+	width: 100%;
+}
+.result-details-header-container > * {
+	padding: 0 20px;
+}
+.result-details-title-container {
+	height: 60px;
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	color: #219ebc;
+}
+.result-details-badges-container {
+	display: flex;
+	height: 100%;
+	justify-content: flex-end;
+}
+.result-details-header-badge {
+	height: 100%;
+	padding: 7px 5px;
+}
+.result-details-summary-container {
+	width: 100%;
+	display: flex;
+	flex-wrap: wrap;
+	font-size: 14px;
+}
+.result-details-summary-item {
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+}
+.result-details-summary-label,
+.result-details-summary-value {
+	width: 100%;
+}
+.result-details-summary-label {
+	color: rgb(160,160,160);
+	margin-bottom: 0px;
+}
+.result-details-summary-value {
+	color: rgb(100,100,100);
+}
+
+section.card {
+	background-color: transparent;
+	border: none;
+	padding: 6px;
+}
+.card-header.row-details-card-header {
+	height: 70px;
+	box-shadow: none;
+	background: none;
+}
+.result-details-pane .card-body {
+	background: none;
+	padding-bottom: 0;
+}
+.card-link {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.card-link-content {
+	height: 100%;
+	line-height: 100%;
+	/*display: inline-flex;*/
+}
+
+.card-link-content.row-details-card-link-content > * {
+	height: 100%;
+	line-height: 45px;
+	display: inline-flex;
+}
+
+.card-link-label.row-details-card-link-label {
+/*.card-link-content.row-details-card-card-link-content .fa,
+.card-link-content.row-details-card-card-link-content .fas {
+*/	
+	color: #00679b;
+	font-weight: 200;
+}
+.card-link-chevron {
+	width: 12px;
+	height: 12px;
+	border: solid #00679b;
+	border-width: 0 1px 1px 0;
+	-webkit-transform: rotate(45deg);
+	-ms-transform: rotate(45deg);
+	transform: rotate(45deg);	
+	vertical-align: center;
+	transition: .3s transform ease-in-out;
+	margin: 25px 15px;
+}
+.card-link.collapsed .card-link-chevron {
+	transform: rotate(135deg);
+}
+
+/******** Style inputs for toggling editablity ****************/
+.query-result-pane.result-details-pane .input-field,
+.query-result-pane.result-details-pane .field-label {
+	transition: .3s all;
+}
+.query-result-pane.result-details-pane.uneditable .field-container-row {
+	/*too much space between rows so get rid of the margin*/
+	margin-bottom: 0;
+}
+.query-result-pane.result-details-pane.uneditable .checkbox-field-container {
+	/*checkboxes and their labels are on a single row, so add a margin*/
+	margin-bottom: 20px;
+}
+.query-result-pane.result-details-pane.uneditable .checkmark {
+	border: solid 3px rgb(125, 125, 125);
+}
+.query-result-pane.result-details-pane.uneditable .checkmark-container input:checked ~ .checkmark {
+	/*checkboxes and their labels are on a single row, so add a margin*/
+	border: none;
+	background-color: rgb(125, 125, 125);
+}
+
+.query-result-pane.result-details-pane.uneditable .input-field,
+.query-result-pane.result-details-pane.uneditable .null-input-indicator,
+.query-result-pane.result-details-pane.uneditable .checkmark-container,
+.query-result-pane.result-details-pane .uneditable-units-text {
+	border-bottom: solid 2px rgba(0, 0, 0, 0);
+	text-indent: 0;
+	margin-bottom: .75rem;
+	appearance: none;
+	pointer-events: none;
+	cursor: default;
+	text-align: left !important;/*necessary to override bootstrap .text-right*/
+	font-style: italic;
+}
+/*make sure $ does not overlap input for money fields*/
+.query-result-pane.result-details-pane .input-field.money-field.uneditable .unit-symbol-left{
+	margin-left: 5px;
+	width: calc(100% - 35px);
+}
+.query-result-pane.result-details-pane.uneditable .field-container {
+	margin-left: 0;
+}
+/*make sure narrative field extends 100% of width*/
+.query-result-pane.result-details-pane.uneditable textarea.input-field {
+	width: 100%;
+	background-color: rgba(0,0,0,0);
+}
+/*override disabled color styling for selects*/
+.query-result-pane.result-details-pane.uneditable select.input-field:disabled {
+	color: black;
+}
+/*place field labels above fields and set them to bold*/
+.query-result-pane.result-details-pane.uneditable .input-field ~ .field-label:not(.checkbox-label),
+.query-result-pane.result-details-pane.uneditable .field-container .field-label:not(.checkbox-label) {
+	order: -2;
+	font-size: 15px;
+	font-weight: 500;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+	margin-bottom: 0;
+	padding-left: 0;
+	transform: unset;
+}
+/* hide all required indicators*/
+.query-result-pane.result-details-pane.uneditable .required-indicator {
+	display: none;
+}
+/*hide any fields that are blank and show as <null>*/
+.query-result-pane.result-details-pane.uneditable .input-field:placeholder-shown,
+.query-result-pane.result-details-pane.uneditable select.input-field.default,
+.query-result-pane.result-details-pane.uneditable .input-field:placeholder-shown ~ .unit-symbol,
+.query-result-pane.result-details-pane.uneditable .flex-field-container ~ .units-field-container {
+	display: none;
+}
+/* styling for any elements that are shown only when editing is disabled*/
+.null-input-indicator,
+.uneditable-units-text {
+	display: none;
+	font-style: italic;
+	font-size: 14px;
+	line-height: 30px;
+}
+.query-result-pane.result-details-pane.uneditable .flex-field-container {
+	max-width: 100%;
+}
+.query-result-pane.result-details-pane.uneditable .input-field:placeholder-shown ~ .null-input-indicator,
+.query-result-pane.result-details-pane.uneditable select.input-field.default ~ .null-input-indicator,
+.query-result-pane.result-details-pane.uneditable .uneditable-units-text {
+	display: block;
+}
+.query-result-pane.result-details-pane.uneditable .input-field:placeholder-shown ~ .field-label:not(.checkbox-label),
+.query-result-pane.result-details-pane.uneditable select.input-field.default ~ .field-label:not(.checkbox-label)  {
+	/*padding-left: .5rem;*/
+	visibility: visible;
+	color: #00679b;
+	/*padding-top: .75rem;*/
+}
+/* handle units fields that should be right-justified*/
+.query-result-pane.result-details-pane.uneditable .input-with-unit-symbol.text-right,
+.query-result-pane.result-details-pane.uneditable .input-field.text-right-when-valid {
+	margin-right: 0;
+	flex: 0 1 auto;
+}
+.query-result-pane.result-details-pane.uneditable .unit-symbol,
+.query-result-pane.result-details-pane.uneditable .uneditable-units-text {
+	max-width: 100%;
+	flex: 1 1 auto;
+}
+
+.query-result-pane.collapsed {
+	width: 0;
+	overflow: hidden;
+	padding-left: 0;
+}
+
+#alert-modal {
+  background: rgba(0,0,0,0.5);
+  z-index: 10000;
+}
