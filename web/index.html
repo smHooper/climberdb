@@ -47,10 +47,10 @@
 					</label>
 					<label class="field-label checkbox-label" for="retain-login-checkbox">Stay signed in</label>
 				</div>
-				<button id="sign-in-button" class="generic-button">sign in</button>
+				<button id="sign-in-button" class="generic-button index-button">sign in</button>
 			</div>
 			<div class="field-container request-access-container">
-				<button id="request-access-button" class="generic-button hidden" aria-hidden=true>request access</button>
+				<button id="request-access-button" class="generic-button index-button hidden" aria-hidden=true>request access</button>
 			</div>
 			<div id="request-access-toggle-button-container" class="field-container">
 				<button class="text-only-button">No account? No problem! Request access here</button>
@@ -62,24 +62,17 @@
 	<script src="js/climberdb.js"></script>
 
 	<script>
+		var climberDB;
 		$(document).ready(function(){
-			$.ajax({
-				url: 'climberdb.php',
-				method: 'POST',
-				data: {action: 'getUser'},
-				cache: false
-			}).done(function(resultString) {
-				if (queryReturnedError(resultString)) {
-					throw 'User role query failed: ' + resultString;
-				} else {
-					const result = $.parseJSON(resultString);
-					if (result.length) {
-						$('#username-input').val(result[0].ad_username);
+			climberDB = new ClimberDB();
+			$.when(...climberDB.init({addMenu: false}))
+				.done(function(resultString) {
+					if (Object.keys(climberDB.userInfo).length) {
+						$('#username-input').val(climberDB.userInfo.ad_username);
 						$('#password-input').focus();
 						//$('#request-access-toggle-button-container').ariaHide(true);
 					}
-				}
-			});
+				}); 
 
 			// Show the "request access" fields when the button is clicked
 			$('#request-access-toggle-button-container button').click((e) => {
@@ -94,6 +87,8 @@
 			$('#sign-in-button').click((e) => {
 
 			});
+
+
 		});
 	</script>
 
