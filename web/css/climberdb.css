@@ -15,7 +15,7 @@ html, body {
   line-height: 40px;
   text-align: center;
   border: none;
-  background-color: #219EBC; 
+  background-color: #f28100;/*#219EBC;*/ 
   color: white;
   border-radius: 12px;
   -moz-box-shadow:    5px 5px 20px 3px rgba(0, 0, 0, 0.15);
@@ -249,6 +249,25 @@ button > img {
 }
 
 
+/*------- accordion cards -------*/
+.accordion > .card {
+  background: rgba(255, 255, 255, 0.4);
+}
+.accordion > .card > .card-header {
+  box-shadow: 1px 4px 8px rgb(0 0 0 / 15%);
+}
+.card-link .fa-chevron-down {
+  transition: 0.3s transform;
+}
+.accordion > .card > .card-header > .card-link.collapsed .fa-chevron-down {
+  /* rotate chevron when collapsed*/
+  transform: rotate(90deg);
+}
+.accordion > .card > .card-collapse {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+
 /*------- input stuff -------*/
 .input-field {
   /*margin-right: 20px;*/
@@ -426,7 +445,6 @@ select.input-field.default ~ .field-label {
   padding-left: 10px;
   color: hsl(1, 0%, 50%);
 }
-
 select.input-field.default,
 .input-field::placeholder,
 textarea.narrative-field::placeholder {
@@ -452,7 +470,17 @@ select.input-field:not(.default) + .required-indicator,
 textarea.input-field:valid + .required-indicator {
   opacity: 0;
 }
+
+.add-card-container {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+.uneditable .add-card-button {
+  display: none;
+}
 /* -------------------------------------------*/
+
 
 /*--- modal stuff ---*/
 .modal-background {

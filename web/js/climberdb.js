@@ -3,6 +3,7 @@
 class ClimberDB {
 	constructor() {
 		this.userInfo = {};
+		this.tableInfo = {};
 	}
 
 	getUserInfo() {
@@ -526,10 +527,34 @@ class ClimberDB {
 		}).done()
 	}
 
+
+	getTableInfo() {
+		return this.queryDB(`
+			SELECT 
+				column_name, table_name, data_type, character_maximum_length 
+			FROM information_schema.columns  
+			WHERE 
+				table_schema='public' AND 
+				table_name NOT LIKE '%_codes'
+			ORDER BY table_name, column_name
+			;
+		`).done(resultString => {
+			// the only way this query could fail is if I changed DBMS, 
+			//	so I won't bother to check that the result is valid
+			for (const info of $.parseJSON(resultString)) {
+				const tableName = info.tableName;
+				if (!(tableName in this.tableInfo)) {
+					this.tableInfo[tableName] = {};
+				}
+				this.tableInfo[tableName][info.column_name] = {...info};
+			}
+		})
+	}
+
 	/* Return any Deferreds so anything that has to happen after these are done can wait */
-	init() {
-		this.configureMenu();
-		return [this.getUserInfo()];
+	init({addMenu=true}={}) {
+		if (addMenu) this.configureMenu();
+		return [this.getUserInfo(), this.getTableInfo()];
 	}
 };
 
