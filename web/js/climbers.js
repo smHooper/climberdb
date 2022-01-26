@@ -185,9 +185,6 @@ class ClimberForm {
 													<h6 class="card-link-label row-details-card-link-label climber-info-card-link-label"></h6>
 												</div>
 												<div class="card-link-content">
-													<button class="delete-button delete-card-button icon-button" type="button" data-item-name="route for this climber" aria-label="Delete route for this climber">
-														<i class="fas fa-trash fa-lg"></i>
-													</button>
 													<i class="fa fa-chevron-down pull-right"></i>
 												</div>
 											</a>
@@ -288,7 +285,7 @@ class ClimberForm {
 													<h5 class="card-link-label row-details-card-link-label climber-info-card-link-label">New Emergency Contact</h5>
 												</div>
 												<div class="card-link-content">
-													<button class="delete-button delete-card-button icon-button" type="button" data-item-name="route for this climber" aria-label="Delete route for this climber">
+													<button class="delete-button delete-card-button icon-button hidden" type="button" data-item-name="emergency contact" aria-hidden="true" aria-label="Delete emergency contact">
 														<i class="fas fa-trash fa-lg"></i>
 													</button>
 													<i class="fa fa-chevron-down pull-right"></i>
@@ -445,6 +442,8 @@ class ClimberForm {
 		$('#save-button').click(e => {
 			this.saveEdits()
 		});
+
+		$('.delete-card-button').click(this.onDeleteCardButtonClick);
 	}
 
 
@@ -644,8 +643,8 @@ class ClimberForm {
 			data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
 			cache: false
 		}).done(queryResultString => {
-			if (climberDB.queryReturnedError(queryResultString)) {
-				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}.\n\nTry reloading the page. The data you entered will be automatically reloaded (except for attachments).`, 'Unexpected error');
+			if (climberDB.queryReturnedError(queryResultString)) { 
+				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
 				return;
 			} else {
 				const returnedIDs = $.parseJSON(queryResultString);
@@ -664,7 +663,7 @@ class ClimberForm {
 
 			}
 		}).fail((xhr, status, error) => {
-			showModal(`An unexpected error occurred while saving data to the database: ${error}. \n\nMake sure you're still connected to the NPS network and try again.`, 'Unexpected error');
+			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
 		}).always(() => {
 			climberDB.hideLoadingIndicator();
 		});
@@ -672,6 +671,7 @@ class ClimberForm {
 
 
 	/*
+	Prompt user to confirm or discard edits via modal
 	*/
 	confirmSaveEdits(afterActionCallbackStr='') {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
@@ -688,12 +688,83 @@ class ClimberForm {
 		// climberDB is a global instance of ClimberDB or its subclasses that should be instantiated in each page
 		// 	this is a little un-kosher because the ClimberForm() instance is probably a property of climberDB, but
 		//	the only alternative is to make showModal a global function 
-		climberDB.showModal(
+		showModal(
 			'You have unsaved edits to this encounter. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this encounter.',
 			'Save edits?',
 			'alert',
 			footerButtons
 		);
+	}
+
+	/*
+	Delete each 
+	*/
+	deleteCard(cardID) {
+		// If this is a new card, just remove it because there are no database edits to confirm. Otherwise, confirm with the user 
+		const $card = $('#' + cardID);
+		if ($card.is('.new-card')) {
+			$card.fadeOut(500, () => {$card.remove()})
+		} else {
+			climberDB.showLoadingIndicator('deleteCard');
+			var tablesToDeleteFrom = [];
+			var deleteStatements = [];
+			for (const el of $card.find('.input-field')) {
+				const $input = $(el);
+				const tableName = $input.data('table-name');
+				const dbID = $input.data('table-id');
+				if (!tablesToDeleteFrom.includes(tableName) && tableName && dbID != undefined) {
+					tablesToDeleteFrom.push(tableName);
+					deleteStatements.push(`DELETE FROM ${tableName} WHERE id=${dbID} RETURNING id, '${tableName}' AS table_name`);
+				}
+			}
+
+			return climberDB.queryDB(deleteStatements)
+				.done(queryResultString => {
+					if (climberDB.queryReturnedError(queryResultString)) {
+						showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}.`, 'Unexpected error');
+						return;
+					} else {
+						const failedDeletes = [];
+						for (const {id, tableName} of $.parseJSON(queryResultString)) {
+							if (id == null) {
+								failedDeletes.push(tableName);
+							}
+						}
+						if (failedDeletes.length) {
+							showModal(
+								`There was a problem deleting objects from the table${failedDeletes.length > 1 ? 's' : ''} ${failedDeletes.join(', ')}.` +
+									`Contact your database adminstrator to resolve this issue.<br><br>Attempted SQL statements:<br>${deleteStatements.join('<br>')}`, 
+								'Database Error')
+						} else {
+							$card.fadeOut(500, () => {$card.remove()});
+						}
+					}
+				}).fail((xhr, status, error) => {
+					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+				}).always(() => {
+					climberDB.hideLoadingIndicator();
+				});
+
+		}
+		
+	}
+
+
+	onDeleteCardButtonClick(e, afterActionCallbackStr='') {
+		const $button = $(e.target).closest('.delete-card-button');
+		const $card = $button.closest('.card');
+		const itemName = $button.data('item-name') || $card.data('item-name');
+		const onConfirmClick = `
+			climberDB.climberForm.deleteCard('${$card.attr('id')}');
+			${afterActionCallbackStr} 
+		`;
+		
+		const footerButtons = `
+			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
+		`;
+		showModal(`Are you sure you want to delete this ${itemName}?`, `Delete ${itemName}?`, 'confirm', footerButtons);
+
 	}
 
 
@@ -707,7 +778,7 @@ class ClimberForm {
 		if (!allowEdits && $('.climber-form .input-field.dirty').length && confirm) {
 			this.confirmSaveEdits();
 		} else {
-			$('.save-edits-button, .delete-climber-button').ariaHide(!allowEdits);
+			$('.save-edits-button, .delete-climber-button, .climber-form .delete-card-button').ariaHide(!allowEdits);
 			$detailsPane.toggleClass('uneditable', !allowEdits);
 		}
 	}

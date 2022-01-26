@@ -207,8 +207,33 @@ if (isset($_POST['action'])) {
 	if ($_POST['action'] == 'query') {
 
 		if (isset($_POST['queryString'])) {
-			$result = runQuery($dbhost, $dbport, $dbname, $username, $password, $_POST['queryString']);
-			echo json_encode($result);
+			if (gettype($_POST['queryString']) == 'array') {
+				$conn = pg_connect("hostaddr=$dbhost port=$dbport dbname=$dbname user=$username password=$password");
+				if (!$conn) {
+					echo "ERROR: Could not connect DB";
+					exit();
+				}
+
+				// Begin transaction
+				pg_query($conn, 'BEGIN');
+
+				$resultArray = array();
+				for ($i = 0; $i < count($_POST['queryString']); $i++) {
+					$result = runQueryWithinTransaction($conn, $_POST['queryString'][$i]);
+					if (strpos(json_encode($result), 'ERROR') !== false) {
+						// roll back the previous queries
+						pg_query($conn, 'ROLLBACK');
+						echo $result, " from the query $i ", $_POST['queryString'][$i];
+						exit();
+					}
+
+					$resultArray[$i] = count($result) == 1 ? $result[0] : $result;
+				}
+				echo json_encode($resultArray);
+			} else {
+				$result = runQuery($dbhost, $dbport, $dbname, $username, $password, $_POST['queryString']);
+				echo json_encode($result);
+			}
 		} else {
 			echo "ERROR: no query given";//false;
 		}
@@ -271,44 +296,6 @@ if (isset($_POST['action'])) {
 			}
 		} else {
 			echo "either sqlStatements and/or sqlParameters not given";//false;
-		}
-	}
-
-	if ($_POST['action'] == 'deleteEncounter') {
-		if (isset($_POST['encounterID'])) {//$dbhost, $dbport, $dbname
-			$conn = pg_connect("hostaddr=$dbhost port=$dbport dbname=$dbname user=$username password=$password");
-			if (!$conn) {
-				echo "ERROR: Could not connect DB";
-				exit();
-			}
-			$result = pg_delete($conn, 'encounters', array('id' => $_POST['encounterID']));
-			if (!$result) {
-				echo "ERROR: could not delete encounter";
-			} else {
-				echo $result;
-			}
-		}
-	}
-
-	if ($_POST['action'] == 'readTextFile') {
-		if (isset($_POST['textPath'])) {
-			echo file_get_contents($_POST['textPath']);
-		}
-	}
-
-	if ($_POST['action'] == 'readAttachment') {
-		if (isset($_POST['filePath'])) {
-			echo readfile($_POST['filePath']);
-		}
-	}
-
-	if ($_POST['action'] == 'deleteFile') {
-		if (isset($_POST['filePath'])) {
-			$fileName = basename($_POST['filePath']);
-			$attachmentDirPath = getAttachmentDir();
-			echo deleteFile("$attachmentDirPath.$fileName") ? 'true' : 'false';
-		} else {
-			echo 'false';
 		}
 	}
 
