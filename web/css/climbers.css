@@ -152,10 +152,6 @@
 	display: flex;
 	align-items: center;
 }
-.query-result-list > .query-result-list-item,
-.query-result-list > .query-result-list-item * {
-	cursor: pointer;
-}
 #result-summary-header-row {
 	display: flex;
 	background: none;
@@ -199,6 +195,7 @@
 .query-result-list-item > .result-summary-label:last-of-type {
 
 }
+
 .query-result-edit-button-container {
 	height: 60px;
 	width: 100%;
@@ -206,18 +203,26 @@
 	justify-content: flex-end;
 	align-items: center;
 }
+#add-new-climber-button {
+	position: absolute;
+}
+
 .editing-buttons-container {
 	font-size: 2rem;
 }
 .query-result-edit-button-container > .query-result-edit-button,
 .editing-buttons-container > .query-result-edit-button {
 	margin: 0 10px;
-	color: #e77a00;
+	color: #219ebc;/*#e77a00;*/
 	transition: .3s all;
 	pointer-events: all;
 }
 .query-result-edit-button-container > .query-result-edit-button:hover {
 	color: #f28100;
+}
+.uneditable .editing-buttons-container > .delete-climber-button, 
+.uneditable .editing-buttons-container > .save-edits-button {
+	display: none;
 }
 
 .query-result-pane.result-details-pane {
@@ -232,6 +237,7 @@
 	padding-left: 16px;
 	transition: 0.4s ease-in-out all;
 }
+
 .result-details-pane .close-button-container {
 	width: 100%;
 	display: flex;
@@ -242,14 +248,43 @@
 	width: 30px;
 	height: 30px;
 }
-.result-details-pane > .climber-form {
+.climber-form {
+	width: 100%;
+	height: calc(100% - 60px);
+}
+.climber-form-content {
 	background: rgb(230, 230, 230);
 	border-radius: 20px;
-	height: calc(100% - 60px);
-	overflow-y: auto;
+	height: 100%;
+	width: 100%;
 	padding: 20px;
-	padding-bottom: 0;
+	overflow-y: auto;
 }
+/*show as modal*/
+.climber-form.climberdb-modal {
+	position: absolute;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 1000;
+	padding-top: 70px; /*10 px below header menu*/
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	border-radius: 0;
+}
+.climber-form.climberdb-modal .climber-form-content {
+	position: relative;
+	z-index: 1001;
+	max-width: 50%;
+	max-height: calc(100vh - 80px);
+}
+.climber-form.climberdb-modal #climber-history-list-item {
+	display: none;
+}
+/*.climber-form.climberdb-modal .close-button-container {
+	justify-content: flex-end;
+}*/
+
 .result-details-header-container {
 	width: 100%;
 }
@@ -262,7 +297,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	color: #219ebc;
+	color: #00679b;/*#219ebc;*/
 }
 .result-details-badges-container {
 	display: flex;
@@ -327,7 +362,8 @@ section.card {
 .card-link-content {
 	height: 100%;
 	line-height: 100%;
-	/*display: inline-flex;*/
+	display: inline-flex;
+	align-items: center;
 }
 
 .card-link-content.row-details-card-link-content > * {

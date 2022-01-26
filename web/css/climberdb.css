@@ -15,12 +15,12 @@ html, body {
   line-height: 40px;
   text-align: center;
   border: none;
-  background-color: #f28100;/*#219EBC;*/ 
+  background-color: #219EBC;/*#f28100;*/ 
   color: white;
   border-radius: 12px;
-  -moz-box-shadow:    5px 5px 20px 3px rgba(0, 0, 0, 0.15);
-  -webkit-box-shadow: 5px 5px 20px 3px rgba(0, 0, 0, 0.15);
-  box-shadow:         5px 5px 20px 3px rgba(0, 0, 0, 0.15);
+  -moz-box-shadow:    0px 4px 6px 1px rgb(0 0 0 / 15%);
+  -webkit-box-shadow: 0px 4px 6px 1px rgb(0 0 0 / 15%);
+  box-shadow:         0px 4px 6px 1px rgb(0 0 0 / 15%);
   cursor: pointer;
   transition: font-weight 0.2s ease; 
 }
@@ -58,6 +58,7 @@ html, body {
 
 .icon-button, .text-only-button {
   background-color: rgba(0,0,0,0);
+  color: #00679b;
   border: none;
   -moz-box-shadow:    none;
   -webkit-box-shadow: none;
@@ -84,7 +85,8 @@ input.query-option-operator:focus,
 input.query-option-input-field:focus,
 input.slider-value:focus,
 input.fuzzy-search-bar:focus,
-.query-result-list-item:focus {
+.query-result-list-item:focus,
+button.close {
   -webkit-box-shadow: none;
   outline: -webkit-focus-ring-color auto 0px;
 }
@@ -250,11 +252,17 @@ button > img {
 
 
 /*------- accordion cards -------*/
+.accordion {
+  width: 100%;
+}
 .accordion > .card {
   background: rgba(255, 255, 255, 0.4);
 }
 .accordion > .card > .card-header {
   box-shadow: 1px 4px 8px rgb(0 0 0 / 15%);
+  height: 60px;
+  display: flex;
+  align-items: center;
 }
 .card-link .fa-chevron-down {
   transition: 0.3s transform;

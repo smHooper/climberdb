@@ -247,7 +247,7 @@ if (isset($_POST['action'])) {
 						exit();
 					}
 
-					$resultArray[$i] = $result;
+					$resultArray[$i] = $result[0];
 				}
 
 				// COMMIT the transaction

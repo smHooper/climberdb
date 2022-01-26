@@ -1,387 +1,718 @@
 
 /* helper class to create a climber form inside the given parent selector*/
 class ClimberForm {
-	constructor(parentID) {
-		const $parent = $(parentID);
+	constructor(parent) {
+		this.$el; // the jquery .climber-form object
+		this.edits = {
+			updates: {}
+		};
+		this.selectedClimberInfo = {}; // used for rolling back edits
+
+		const $parent = $(parent);
 		$parent.append(`
-			<div class="climber-form">
-				<div class="close-button-container">
-					<div class="editing-buttons-container">
-						<button id="save-button" class="query-result-edit-button icon-button save-edits-button hidden" type="button" aria-label="Save edits" title="Save edits">
-							<i class="fas fa-save"></i>
-						</button>
-						<button id="delete-button" class="query-result-edit-button icon-button delete-climber-button hidden" type="button" aria-label="Delete selected climber" title="Delete climber">
-							<i class="fas fa-trash"></i>
-						</button>
-						<button id="edit-button" class="query-result-edit-button icon-button toggle-editing-button" type="button" aria-label="Edit selected climber" title="Edit climber">
-							<i class="fas fa-edit"></i>
-						</button>
-					</div>
-					<button type="button" class="close" aria-label="Close">
-						<span>&times;</span>
-					</button>
-				</div>
-				<div class="result-details-header-container">
-					<div class="result-details-title-container">
-						<h3 id="result-details-header-title"></h3>
-						<div class="result-details-badges-container">
-							<img id="pro-pin-badge" class="result-details-header-badge hidden" src="imgs/pro_pin_icon_100px.svg" title="Pro Pin">
-							<img id="guide-badge" class="result-details-header-badge hidden" src="imgs/guide_icon_100px.svg" title="Commerical guide">
-							<img id="7-day-badge" class="result-details-header-badge hidden" src="imgs/7_day_icon_100px.svg" title="Qualifies for 7 Day rule">
+			<div class="climber-form" autocomplete="off">
+				<div class="climber-form-content">
+					<div class="close-button-container">
+						<div class="editing-buttons-container">
+							<button id="save-button" class="query-result-edit-button icon-button save-edits-button hidden" type="button" aria-label="Save edits" title="Save edits">
+								<i class="fas fa-save"></i>
+							</button>
+							<button id="delete-button" class="query-result-edit-button icon-button delete-climber-button hidden" type="button" aria-label="Delete selected climber" title="Delete climber">
+								<i class="fas fa-trash"></i>
+							</button>
+							<button id="edit-button" class="query-result-edit-button icon-button toggle-editing-button" type="button" aria-label="Edit selected climber" title="Edit climber">
+								<i class="fas fa-edit"></i>
+							</button>
 						</div>
+						<button type="button" class="close" aria-label="Close">
+							<span>&times;</span>
+						</button>
 					</div>
-					<div class="result-details-summary-container">
-						<div id="expedition-name-result-summary-item" class="result-details-summary-item col">
-							<label class="result-details-summary-label">Most recent/next expedition</label>
-							<label class="result-details-summary-value"></label>
-						</div>								
-						<div id="entered-by-result-summary-item" class="result-details-summary-item col">
-							<div id="entered-by-result-summary-item" class="col">
-								<label class="result-details-summary-label">Entered by</label>
+					<div class="result-details-header-container">
+						<div class="result-details-title-container">
+							<h3 id="result-details-header-title"></h3>
+							<div class="result-details-badges-container">
+								<img id="pro-pin-badge" class="result-details-header-badge hidden" src="imgs/pro_pin_icon_100px.svg" title="Pro Pin">
+								<img id="guide-badge" class="result-details-header-badge hidden" src="imgs/guide_icon_100px.svg" title="Commerical guide">
+								<img id="7-day-badge" class="result-details-header-badge hidden" src="imgs/7_day_icon_100px.svg" title="Qualifies for 7 Day rule">
+							</div>
+						</div>
+						<div class="result-details-summary-container">
+							<div id="expedition-name-result-summary-item" class="result-details-summary-item col">
+								<label class="result-details-summary-label">Most recent/next expedition</label>
 								<label class="result-details-summary-value"></label>
-							</div>
-							<div id="entry-time-result-summary-item" class="col">
-								<label class="result-details-summary-label">Entry date</label>
-								<label class="result-details-summary-value"></label>
+							</div>								
+							<div id="entered-by-result-summary-item" class="result-details-summary-item col">
+								<div id="entered-by-result-summary-item" class="col">
+									<label class="result-details-summary-label">Entered by</label>
+									<label class="result-details-summary-value"></label>
+								</div>
+								<div id="entry-time-result-summary-item" class="col">
+									<label class="result-details-summary-label">Entry date</label>
+									<label class="result-details-summary-value"></label>
+								</div>
 							</div>
 						</div>
 					</div>
-				</div>
-				<ul class="tabs" role="tablist">
-					<li>
-						<input id="climber-info-tab" class="tab-button" type="radio" name="tabs" checked="true">
-						<label for="climber-info-tab" class="tab-label" role="tab" aria-selected="true" aria-controls="climber-info-tab-content" tabindex="0">
-							Climber Info
-						</label>
-						<div id="climber-info-tab-content" class="tab-content" role="tabpanel" aria-labelledby="climber-info-tab" aria-hidden="false">
-							<div class="field-container-row">
-								<div class="field-container col-sm-6">
-									<input id="input-first_name" class="input-field" name="first_name" data-table-name="climbers" placeholder="First name" title="First name" type="text" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-first_name">First name</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>
-								<div class="field-container col-sm-6">
-									<input id="input-last_name" class="input-field" name="last_name" data-table-name="climbers" placeholder="Last name" title="Last name" type="text" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-last_name">Last name</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>
-							</div>
-							<div class="field-container-row">
-								<div class="field-container col">
-									<input id="input-address" class="input-field" name="address" data-table-name="climbers" placeholder="Address" title="Address" type="text" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-address">Address</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-							</div>
-							<div class="field-container-row">
-								<div class="field-container col-sm-6">
-									<select id="input-country" class="input-field default" name="country_code" data-table-name="climbers" placeholder="Country" title="Country" type="text" required=""></select>
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-country">Country</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-								<div class="field-container col-sm-6">
-									<input id="input-postal_code" class="input-field" name="postal_code" data-table-name="climbers" placeholder="Postal code" title="Postal code" type="text" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-postal_code">Postal code</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-							</div>
-							<div class="field-container-row">
-								<div class="field-container col-sm-6">
-									<input id="input-city" class="input-field" name="city" data-table-name="climbers" placeholder="City" title="City" type="text" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-city">City</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-								<div class="field-container col-sm-6">
-									<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State" title="State" type="text" required=""></select>
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-state">State</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-							</div>
-							<div class="field-container-row">
-								<div class="field-container col-sm-6">
-									<input id="input-phone" class="input-field" name="phone" data-table-name="climbers" placeholder="Phone" title="Phone" type="text" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-phone">Phone</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-								<div class="field-container col-sm-6">
-									<input id="input-email" class="input-field default" name="email_address" data-table-name="climbers" placeholder="Email" title="Email" type="text" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-email">Email</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-							</div>
-							<div class="field-container-row">
-								<div class="field-container col-sm-4">
-									<input id="input-dob" class="input-field" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-dob">D.O.B.</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-								<div class="field-container col-sm-2">
-									<input id="input-age" class="input-field" name="age" data-table-name="climbers" placeholder="Age" title="Age" type="text" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-age">Age</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-								<div class="field-container col-sm-6">
-									<select id="input-sex" class="input-field default" name="sex_code" data-table-name="climbers" placeholder="Sex" title="Sex" type="text" required=""></select>
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-sex">Sex</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-							</div>
-							<div class="field-container-row">
-								<div class="field-container checkbox-field-container col-sm">
-									<label class="checkmark-container">
-										<input id="input-is_guide" class="input-field input-checkbox" type="checkbox" name="is_guide">
-										<span class="checkmark data-input-checkmark"></span>
-									</label>
-									<label class="field-label checkbox-label" for="input-is_guide">Commercial guide</label>
-								</div>
-								<div class="field-container checkbox-field-container col-sm">
-									<label class="checkmark-container">
-										<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin">
-										<span class="checkmark data-input-checkmark"></span>
-									</label>
-									<label class="field-label checkbox-label" for="input-received_pro_pin">Received Pro Pin</label>
-								</div>
-							</div>
-							<div class="field-container-row">
-								<div class="field-container col">
-									<label class="field-label" for="input-internal_notes">Notes about this climber</label>
-									<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="climbers" placeholder="Enter notes about climber that other rangers should see" title="Notes about this climber" type="text" required=""></textarea>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>
-							</div>
-						</div>
-					</li>
-
-					<li>
-						<input id="climber-history-tab" class="tab-button" type="radio" name="tabs">
-						<label for="climber-history-tab" class="tab-label" role="tab" aria-selected="true" aria-controls="climber-history-tab-content" tabindex="0">
-							Climber History
-						</label>
-						<div id="climber-history-tab-content" class="tab-content" role="tabpanel" aria-labelledby="climber-history-tab" aria-hidden="false">
-							<div id="climber-history-accordion" class="accordion">
-								<div id="cloneable-card-climber-history" class="card cloneable hidden">
-									<div class="card-header" id="cardHeader-climber-history-cloneable">
-										<a class="card-link" data-toggle="collapse" href="#collapse-climber-history-cloneable" data-target="collapse-climber-history-cloneable">
-											<div class="card-link-content">
-												<h6 class="card-link-label row-details-card-link-label climber-info-card-link-label"></h6>
-											</div>
-											<div class="card-link-content">
-												<button class="delete-button delete-card-button icon-button" type="button" data-item-name="route for this climber" aria-label="Delete route for this climber">
-													<i class="fas fa-trash fa-lg"></i>
-												</button>
-												<i class="fa fa-chevron-down pull-right"></i>
-											</div>
-										</a>
+					<ul class="tabs" role="tablist">
+						<li id="climber-info-list-item">
+							<input id="climber-info-tab" class="tab-button" type="radio" name="tabs" checked="true">
+							<label for="climber-info-tab" class="tab-label" role="tab" aria-selected="true" aria-controls="climber-info-tab-content" tabindex="0">
+								Climber Info
+							</label>
+							<div id="climber-info-tab-content" class="tab-content" role="tabpanel" aria-labelledby="climber-info-tab" aria-hidden="false">
+								<div class="field-container-row">
+									<div class="field-container col-sm-6">
+										<input id="input-first_name" class="input-field climber-form-title-field" name="first_name" data-table-name="climbers" placeholder="First name" title="First name" type="text" autocomplete="off" required="">
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-first_name">First name</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
-									<div id="collapse-climber-history-cloneable" class="collapse card-collapse show" aria-labelledby="cardHeader-climber-history-cloneable" data-parent="#climber-history-accordion">
-										<div class="card-body">
-											<div class="field-container-row">
-												<div class="field-container col">
-													<a class="expedition-link" href="#" target="_blank"></a>
+									<div class="field-container col-sm-6">
+										<input id="input-last_name" class="input-field climber-form-title-field" name="last_name" data-table-name="climbers" placeholder="Last name" title="Last name" type="text" autocomplete="off" required="">
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-last_name">Last name</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>
+								</div>
+								<div class="field-container-row">
+									<div class="field-container col">
+										<input id="input-address" class="input-field" name="address" data-table-name="climbers" placeholder="Address" title="Address" type="text" autocomplete="off" required="">
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-address">Address</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+								</div>
+								<div class="field-container-row">
+									<div class="field-container col-sm-6">
+										<select id="input-country" class="input-field default" name="country_code" data-table-name="climbers" placeholder="Country" title="Country" type="text" autocomplete="off" required=""></select>
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-country">Country</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+									<div class="field-container col-sm-6">
+										<input id="input-postal_code" class="input-field" name="postal_code" data-table-name="climbers" placeholder="Postal code" title="Postal code" type="text" autocomplete="off" required="">
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-postal_code">Postal code</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+								</div>
+								<div class="field-container-row">
+									<div class="field-container col-sm-6">
+										<input id="input-city" class="input-field" name="city" data-table-name="climbers" placeholder="City" title="City" type="text" autocomplete="off" required="">
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-city">City</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+									<div class="field-container col-sm-6">
+										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State" title="State" type="text" autocomplete="off" required=""></select>
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-state">State</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+								</div>
+								<div class="field-container-row">
+									<div class="field-container col-sm-6">
+										<input id="input-phone" class="input-field" name="phone" data-table-name="climbers" placeholder="Phone" title="Phone" type="text" autocomplete="off" required="">
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-phone">Phone</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+									<div class="field-container col-sm-6">
+										<input id="input-email" class="input-field default" name="email_address" data-table-name="climbers" placeholder="Email" title="Email" type="text" autocomplete="off" required="">
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-email">Email</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+								</div>
+								<div class="field-container-row">
+									<div class="field-container col-sm-4">
+										<input id="input-dob" class="input-field" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" autocomplete="off" required="">
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-dob">D.O.B.</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+									<div class="field-container col-sm-2">
+										<input id="input-age" class="input-field" name="age" data-table-name="climbers" placeholder="Age" title="Age" type="text" autocomplete="off" required="">
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-age">Age</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+									<div class="field-container col-sm-6">
+										<select id="input-sex" class="input-field default" name="sex_code" data-table-name="climbers" placeholder="Sex" title="Sex" type="text" autocomplete="off" required=""></select>
+										<span class="required-indicator">*</span>
+										<label class="field-label" for="input-sex">Sex</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>	
+								</div>
+								<div class="field-container-row">
+									<div class="field-container checkbox-field-container col-sm">
+										<label class="checkmark-container">
+											<input id="input-is_guide" class="input-field input-checkbox" type="checkbox" name="is_guide" data-table-name="climbers" data-badge-target="#guide-badge" data-badge-target-value="t">
+											<span class="checkmark data-input-checkmark"></span>
+										</label>
+										<label class="field-label checkbox-label" for="input-is_guide">Commercial guide</label>
+									</div>
+									<div class="field-container checkbox-field-container col-sm">
+										<label class="checkmark-container">
+											<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin" data-table-name="climbers" data-badge-target="#pro-pin-badge" data-badge-target-value="t">
+											<span class="checkmark data-input-checkmark"></span>
+										</label>
+										<label class="field-label checkbox-label" for="input-received_pro_pin">Received Pro Pin</label>
+									</div>
+								</div>
+								<div class="field-container-row">
+									<div class="field-container col">
+										<label class="field-label" for="input-internal_notes">Notes about this climber</label>
+										<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="climbers" placeholder="Enter notes about climber that other rangers should see" title="Notes about this climber" type="text" autocomplete="off"></textarea>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>
+								</div>
+							</div>
+						</li>
+
+						<li id="climber-history-list-item">
+							<input id="climber-history-tab" class="tab-button" type="radio" name="tabs">
+							<label for="climber-history-tab" class="tab-label" role="tab" aria-selected="true" aria-controls="climber-history-tab-content" tabindex="0">
+								Climber History
+							</label>
+							<div id="climber-history-tab-content" class="tab-content" role="tabpanel" aria-labelledby="climber-history-tab" aria-hidden="false">
+								<div id="climber-history-accordion" class="accordion">
+									<div id="cloneable-card-climber-history" class="card cloneable hidden">
+										<div class="card-header" id="cardHeader-climber-history-cloneable">
+											<a class="card-link" data-toggle="collapse" href="#collapse-climber-history-cloneable" data-target="collapse-climber-history-cloneable">
+												<div class="card-link-content">
+													<h6 class="card-link-label row-details-card-link-label climber-info-card-link-label"></h6>
+												</div>
+												<div class="card-link-content">
+													<button class="delete-button delete-card-button icon-button" type="button" data-item-name="route for this climber" aria-label="Delete route for this climber">
+														<i class="fas fa-trash fa-lg"></i>
+													</button>
+													<i class="fa fa-chevron-down pull-right"></i>
+												</div>
+											</a>
+										</div>
+										<div id="collapse-climber-history-cloneable" class="collapse card-collapse show" aria-labelledby="cardHeader-climber-history-cloneable" data-parent="#climber-history-accordion">
+											<div class="card-body">
+												<div class="field-container-row">
+													<div class="field-container col">
+														<a class="expedition-link" href="#" target="_blank"></a>
+													</div>
+												</div>
+												<div class="field-container-row">
+													<div class="field-container col-sm-6">
+														<input id="input-highest_elevation_ft" class="input-field" name="highest_elevation_ft" data-table-name="expedition_members" data-table-id="" placeholder="Highest Elevation (ft)" title="Highest Elevation in feet" type="number" autocomplete="off">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-highest_elevation_ft">Highest Elevation (ft)</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
+													<div class="field-container col-sm-6">
+														<select id="input-frostbite_severity" class="input-field default" name="frostbite_severity_code" data-table-name="expedition_members" placeholder="Frostbite severity" title="Frostbite severity"></select>
+														<label class="field-label" for="input-frostbite_severity_code">Frostbite severity</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>		
+												</div>
+												<div class="field-container-row">
+													<div class="field-container col">
+														<input id="input-frostbite_details" class="input-field" name="frostbite_details" data-table-name="expedition_members" data-table-id="" placeholder="Frostbite details" title="Frostbite details" type="text" autocomplete="off">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-frostbite_details">Frostbite details</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
+												</div>
+												<div class="field-container-row">
+													<div class="field-container checkbox-field-container col-sm-4">
+														<label class="checkmark-container">
+															<input id="input-had_ams" class="input-field input-checkbox" type="checkbox" name="had_ams" data-table-name="expedition_members" title="Climber had AMS">
+															<span class="checkmark data-input-checkmark"></span>
+														</label>
+														<label class="field-label checkbox-label" for="input-had_ams">AMS</label>
+													</div>
+													<div class="field-container checkbox-field-container col-sm-4">
+														<label class="checkmark-container">
+															<input id="input-had_hace" class="input-field input-checkbox" type="checkbox" name="had_hace" data-table-name="expedition_members" title="Climber had HACE">
+															<span class="checkmark data-input-checkmark"></span>
+														</label>
+														<label class="field-label checkbox-label" for="input-had_hace">HACE</label>
+													</div>
+													<div class="field-container checkbox-field-container col-sm-4">
+														<label class="checkmark-container">
+															<input id="input-had_hape" class="input-field input-checkbox" type="checkbox" name="had_hape" data-table-name="expedition_members" title="Climber had HAPE">
+															<span class="checkmark data-input-checkmark"></span>
+														</label>
+														<label class="field-label checkbox-label" for="input-had_hape">HAPE</label>
+													</div>
+												</div>
+												<div class="field-container-row">
+													<div class="field-container col">
+														<label class="field-label" for="input-medical_notes">Medical notes</label>
+														<textarea id="input-medical_notes" class="input-field" name="medical_notes" data-table-name="expedition_members" placeholder="Enter notes about medical issues that occurred during this climb" title="Medical notes" type="text" autocomplete="off"></textarea>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>
+												</div>													
+												<div class="field-container-row">
+													<div class="field-container col">
+														<label class="field-label" for="input-internal_notes">Internal notes about this climb</label>
+														<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="expedition_members" placeholder="Enter notes for other rangers to see about this climb" title="Internal notes" type="text" autocomplete="off"></textarea>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>
+												</div>													
+												<div class="field-container-row">
+													<div class="field-container col">
+														<label class="field-label" for="input-climber_comments">Climber comments</label>
+														<textarea id="input-climber_comments" class="input-field" name="climber_comments" data-table-name="expedition_members" placeholder="Enter comments from the climber" title="Climber comments" type="text" autocomplete="off"></textarea>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>
 												</div>
 											</div>
-											<div class="field-container-row">
-												<div class="field-container col-sm-6">
-													<input id="input-highest_elevation_ft" class="input-field" name="highest_elevation_ft" data-table-name="planned_routes" data-table-id="" placeholder="Highest Elevation (ft)" title="Highest Elevation in feet" type="number">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-highest_elevation_ft">Highest Elevation (ft)</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>	
-												<div class="field-container col-sm-6">
-													<select id="input-frostbite_severity" class="input-field default" name="frostbite_severity_code" data-table-name="climbers" placeholder="Frostbite severity" title="Frostbite severity"></select>
-													<label class="field-label" for="input-frostbite_severity_code">Frostbite severity</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>		
-											</div>
-											<div class="field-container-row">
-												<div class="field-container col">
-													<input id="input-frostbite_details" class="input-field" name="frostbite_details" data-table-name="expedition_members" data-table-id="" placeholder="Frostbite details" title="Frostbite details" type="text">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-frostbite_details">Frostbite details</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>	
-											</div>
-											<div class="field-container-row">
-												<div class="field-container checkbox-field-container col-sm-4">
-													<label class="checkmark-container">
-														<input id="input-had_ams" class="input-field input-checkbox" type="checkbox" name="had_ams" data-table-name="expedition_members" title="Climber had AMS">
-														<span class="checkmark data-input-checkmark"></span>
-													</label>
-													<label class="field-label checkbox-label" for="input-had_ams">AMS</label>
+										</div>
+									</div> <!-- card -->
+								</div> <!-- climber-history-accordion -->
+							</div> <!-- tab content -->
+						</li> <!-- collapse -->
+
+						<li id="emergency-contacts-list-item">
+							<input id="emergency-contacts-tab" class="tab-button" type="radio" name="tabs">
+							<label for="emergency-contacts-tab" class="tab-label" role="tab" aria-selected="true" aria-controls="emergency-contacts-tab-content" tabindex="0">
+								Emergency Contacts
+							</label>
+							<div id="emergency-contacts-tab-content" class="tab-content" role="tabpanel" aria-labelledby="emergency-contacts-tab" aria-hidden="false">
+								<div class="add-card-container">
+									<button class="generic-button add-card-button" data-target="#emergency-contacts-accordion">Add contact</button>
+								</div>
+								<div id="emergency-contacts-accordion" class="accordion" data-table-name="emergency_contacts">
+									<div class="card cloneable hidden" id="cloneable-card-emergency-contacts" data-label-template="first_name last_name, relationship">
+										<div class="card-header" id="cardHeader-emergency-contacts-cloneable">
+											<a class="card-link" data-toggle="collapse" href="#collapse-emergency-contacts-cloneable" data-target="collapse-emergency-contacts-cloneable">
+												<div class="card-link-content">
+													<h5 class="card-link-label row-details-card-link-label climber-info-card-link-label">New Emergency Contact</h5>
 												</div>
-												<div class="field-container checkbox-field-container col-sm-4">
-													<label class="checkmark-container">
-														<input id="input-had_hace" class="input-field input-checkbox" type="checkbox" name="had_hace" data-table-name="expedition_members" title="Climber had HACE">
-														<span class="checkmark data-input-checkmark"></span>
-													</label>
-													<label class="field-label checkbox-label" for="input-had_hace">HACE</label>
+												<div class="card-link-content">
+													<button class="delete-button delete-card-button icon-button" type="button" data-item-name="route for this climber" aria-label="Delete route for this climber">
+														<i class="fas fa-trash fa-lg"></i>
+													</button>
+													<i class="fa fa-chevron-down pull-right"></i>
 												</div>
-												<div class="field-container checkbox-field-container col-sm-4">
-													<label class="checkmark-container">
-														<input id="input-had_hape" class="input-field input-checkbox" type="checkbox" name="had_hape" data-table-name="expedition_members" title="Climber had HAPE">
-														<span class="checkmark data-input-checkmark"></span>
-													</label>
-													<label class="field-label checkbox-label" for="input-had_hape">HAPE</label>
+											</a>
+										</div>
+										<div id="collapse-emergency-contacts-cloneable" class="collapse card-collapse" aria-labelledby="cardHeader-emergency-contacts-cloneable" data-parent="#emergency-contacts-accordion">
+											<div class="card-body">
+												<div class="field-container-row">
+													<div class="field-container col-sm-6">
+														<input id="input-relationship" class="input-field card-label-field" name="relationship" data-table-name="emergency_contacts" placeholder="Relationship to climber" title="Relationship to climber" type="text" autocomplete="off">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-relationship">Relationship to climber</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>		
 												</div>
-											</div>
-											<div class="field-container-row">
-												<div class="field-container col">
-													<label class="field-label" for="input-medical_notes">Medical notes</label>
-													<textarea id="input-medical_notes" class="input-field" name="medical_notes" data-table-name="expedition_members" placeholder="Enter notes about medical issues that occurred during this climb" title="Medical notes" type="text"></textarea>
-													<span class="null-input-indicator">&lt; null &gt;</span>
+												<div class="field-container-row">
+													<div class="field-container col-sm-6">
+														<input id="input-first_name_contact" class="input-field card-label-field" name="first_name" data-table-name="emergency_contacts" placeholder="First name" title="First name" type="text" autocomplete="off" required="">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-first_name">First name</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>
+													<div class="field-container col-sm-6">
+														<input id="input-last_name_contact" class="input-field card-label-field" name="last_name" data-table-name="emergency_contacts" placeholder="Last name" title="Last name" type="text" autocomplete="off" required="">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-last_name">Last name</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>
 												</div>
-											</div>													
-											<div class="field-container-row">
-												<div class="field-container col">
-													<label class="field-label" for="input-internal_notes">Internal notes about this climb</label>
-													<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="expedition_members" placeholder="Enter notes for other rangers to see about this climb" title="Internal notes" type="text"></textarea>
-													<span class="null-input-indicator">&lt; null &gt;</span>
+												<div class="field-container-row">
+													<div class="field-container col">
+														<input id="input-address_contact" class="input-field" name="address" data-table-name="emergency_contacts" placeholder="Address" title="Address" type="text" autocomplete="off" required="">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-address">Address</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
 												</div>
-											</div>													
-											<div class="field-container-row">
-												<div class="field-container col">
-													<label class="field-label" for="input-climber_comments">Climber comments</label>
-													<textarea id="input-climber_comments" class="input-field" name="climber_comments" data-table-name="expedition_members" placeholder="Enter comments from the climber" title="Climber comments" type="text"></textarea>
-													<span class="null-input-indicator">&lt; null &gt;</span>
+												<div class="field-container-row">
+													<div class="field-container col-sm-6">
+														<select id="input-country_contact" class="input-field default" name="country_code" data-table-name="emergency_contacts" placeholder="Country" title="Country" type="text" autocomplete="off" required=""></select>
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-country">Country</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
+													<div class="field-container col-sm-6">
+														<input id="input-postal_code_contact" class="input-field" name="postal_code" data-table-name="emergency_contacts" placeholder="Postal code" title="Postal code" type="text" autocomplete="off" required="">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-postal_code">Postal code</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
+												</div>
+												<div class="field-container-row">
+													<div class="field-container col-sm-6">
+														<input id="input-city_contact" class="input-field" name="city" data-table-name="emergency_contacts" placeholder="City" title="City" type="text" autocomplete="off" required="">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-city">City</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
+													<div class="field-container col-sm-6">
+														<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State" title="State" type="text" autocomplete="off" required=""></select>
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-state">State</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
+												</div>
+												<div class="field-container-row">
+													<div class="field-container col-sm-6">
+														<input id="input-phone_contact" class="input-field" name="primary_phone" data-table-name="emergency_contacts" placeholder="Phone" title="Phone" type="text" autocomplete="off" required="">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-phone">Phone</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
+													<div class="field-container col-sm-6">
+														<input id="input-email_contact" class="input-field default" name="email_address" data-table-name="emergency_contacts" placeholder="Email" title="Email" type="text" autocomplete="off" required="">
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-email">Email</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
+												</div>
+												<div class="field-container-row">
+													<div class="field-container col">
+														<label class="field-label" for="input-internal_notes">Notes about this contact</label>
+														<textarea id="input-internal_notes_contact" class="input-field" name="internal_notes" data-table-name="emergency_contacts" placeholder="Enter notes about this emergency contact that other rangers should see" title="Notes about this contact" type="text" autocomplete="off" required=""></textarea>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>
 												</div>
 											</div>
 										</div>
 									</div>
-								</div> <!-- card -->
-							</div> <!-- climber-history-accordion -->
-						</div> <!-- tab content -->
-					</li> <!-- collapse -->
-
-					<li>
-						<input id="emergency-contacts-tab" class="tab-button" type="radio" name="tabs">
-						<label for="emergency-contacts-tab" class="tab-label" role="tab" aria-selected="true" aria-controls="emergency-contacts-tab-content" tabindex="0">
-							Emergency Contacts
-						</label>
-						<div id="emergency-contacts-tab-content" class="tab-content" role="tabpanel" aria-labelledby="emergency-contacts-tab" aria-hidden="false">
-							<div class="add-card-container">
-								<button class="generic-button add-card-button" data-target="#emergency-contacts-accordion">Add contact</button>
-							</div>
-							<div id="emergency-contacts-accordion" class="accordion">
-								<div class="card cloneable hidden" id="cloneable-card-emergency-contacts" data-label-template="first_name last_name, relationship">
-									<div class="card-header" id="cardHeader-emergency-contacts-cloneable">
-										<a class="card-link" data-toggle="collapse" href="#collapse-emergency-contacts-cloneable" data-target="collapse-emergency-contacts-cloneable">
-											<div class="card-link-content">
-												<h6 class="card-link-label row-details-card-link-label climber-info-card-link-label"></h6>
-											</div>
-											<div class="card-link-content">
-												<button class="delete-button delete-card-button icon-button" type="button" data-item-name="route for this climber" aria-label="Delete route for this climber">
-													<i class="fas fa-trash fa-lg"></i>
-												</button>
-												<i class="fa fa-chevron-down pull-right"></i>
-											</div>
-										</a>
-									</div>
-									<div id="collapse-emergency-contacts-cloneable" class="collapse card-collapse" aria-labelledby="cardHeader-emergency-contacts-cloneable" data-parent="#emergency-contacts-accordion">
-										<div class="card-body">
-											<div class="field-container-row">
-												<div class="field-container col-sm-6">
-													<input id="input-relationship" class="input-field card-label-field" name="relationship" data-table-name="emergency_contacts" placeholder="Relationship to climber" title="Relationship to climber" type="text">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-relationship">Relationship to climber</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>		
-											</div>
-											<div class="field-container-row">
-												<div class="field-container col-sm-6">
-													<input id="input-first_name_contact" class="input-field card-label-field" name="first_name" data-table-name="emergency_contacts" placeholder="First name" title="First name" type="text" required="">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-first_name">First name</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>
-												<div class="field-container col-sm-6">
-													<input id="input-last_name_contact" class="input-field card-label-field" name="last_name" data-table-name="emergency_contacts" placeholder="Last name" title="Last name" type="text" required="">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-last_name">Last name</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>
-											</div>
-											<div class="field-container-row">
-												<div class="field-container col">
-													<input id="input-address_contact" class="input-field" name="address" data-table-name="emergency_contacts" placeholder="Address" title="Address" type="text" required="">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-address">Address</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>	
-											</div>
-											<div class="field-container-row">
-												<div class="field-container col-sm-6">
-													<select id="input-country_contact" class="input-field default" name="country_code" data-table-name="emergency_contacts" placeholder="Country" title="Country" type="text" required=""></select>
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-country">Country</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>	
-												<div class="field-container col-sm-6">
-													<input id="input-postal_code_contact" class="input-field" name="postal_code" data-table-name="emergency_contacts" placeholder="Postal code" title="Postal code" type="text" required="">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-postal_code">Postal code</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>	
-											</div>
-											<div class="field-container-row">
-												<div class="field-container col-sm-6">
-													<input id="input-city_contact" class="input-field" name="city" data-table-name="emergency_contacts" placeholder="City" title="City" type="text" required="">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-city">City</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>	
-												<div class="field-container col-sm-6">
-													<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State" title="State" type="text" required=""></select>
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-state">State</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>	
-											</div>
-											<div class="field-container-row">
-												<div class="field-container col-sm-6">
-													<input id="input-phone_contact" class="input-field" name="primary_phone" data-table-name="emergency_contacts" placeholder="Phone" title="Phone" type="text" required="">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-phone">Phone</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>	
-												<div class="field-container col-sm-6">
-													<input id="input-email_contact" class="input-field default" name="email_address" data-table-name="emergency_contacts" placeholder="Email" title="Email" type="text" required="">
-													<span class="required-indicator">*</span>
-													<label class="field-label" for="input-email">Email</label>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>	
-											</div>
-											<div class="field-container-row">
-												<div class="field-container col">
-													<label class="field-label" for="input-internal_notes">Notes about this contact</label>
-													<textarea id="input-internal_notes_contact" class="input-field" name="internal_notes" data-table-name="emergency_contacts" placeholder="Enter notes about this emergency contact that other rangers should see" title="Notes about this contact" type="text" required=""></textarea>
-													<span class="null-input-indicator">&lt; null &gt;</span>
-												</div>
-											</div>
-										</div>
-									</div>
 								</div>
-							</div>
-						</div> <!-- tab content -->
-					</li> <!-- collapse -->
-				</ul>
+							</div> <!-- tab content -->
+						</li> <!-- collapse -->
+					</ul>
+				</div> <!--climber-form-content-->
 			</div> <!--climber-form-->
 		`);
 		
-		return $parent.find('.climber-form');
+		this.$el = $parent.find('.climber-form');
+
+
+		// Add event handlers that can be added here with the given scope. Some handlers related to the form 
+		//	either reference properties of the ClimberDB (or subclass thereof) or otherwise reference variables 
+		//	outside the scope of the ClimberForm class
+		$('.climber-form-content button.close').click(e => {
+			const $button = $(e.target).closest('button.close');
+			
+			// Collapse the result-details-pane so the climber result list is full-width
+			const $resultPane = $('.result-details-pane');
+			$resultPane.addClass('collapsed');
+			
+
+			const $climberForm = $button.closest('.climber-form');
+			const climberFormWasModal = $climberForm.is('.climberdb-modal');
+
+			// Show climber form in its non-modal form
+			$climberForm.removeClass('climberdb-modal');
+			
+			// Show the edit button again and hide the save button
+			this.$el.find('#edit-button').ariaHide(false);
+			if (climberFormWasModal) $('#save-button').ariaHide(true);
+
+			// Show the currently selected climber (and show the climber info tab)
+			if (climberFormWasModal) {
+				$('.query-result-list-item.selected').click();
+				$('.climber-info-tab').prop('checked', true);
+				$resultPane.addClass('uneditable');
+			}
+
+			// Unhide the expedition name
+			$('#expedition-name-result-summary-item').ariaHide(false);
+		});
+
+		$('.climber-form-title-field').change(e => {
+			/*const allValid = $('.climber-form-title-field')
+				.map((_, el) => el.value)
+				.get()
+				.every(val => val);*/
+			const firstName = $('#input-first_name').val();
+			const lastName = $('#input-last_name').val();
+
+			if (firstName && lastName) $('#result-details-header-title').text(`${lastName}, ${firstName}`);
+		});
+
+		// When a .input-field changes, register the change in the .edits object
+		$('.climber-form .input-field').change(e => {
+			this.onInputChange(e);
+		});
+
+		$('.toggle-editing-button').click(e => {
+			this.toggleEditing($('.result-details-pane').is('.uneditable'));
+		});
+
+		$('#save-button').click(e => {
+			this.saveEdits()
+		});
+	}
+
+
+	/*
+	Helper method to fill an input field. The 'name' attribute needs to 
+	correspond to a key in the values object
+	*/
+	fillInputField(el, values, {dbID=null, triggerChange=false}={}) {
+		el.value = null; // clear value regardless
+		
+		const $el = $(el);
+		// If this is being called to roll back edits, the table-id should already be filled
+		if (dbID === null) dbID = $el.data('table-id');
+
+		const isSelect = $el.is('select');
+		const fieldName = el.name.replace(/-\d+$/g, '');
+		const value = values[fieldName];
+		if (fieldName in values) {
+			if ($el.is('.input-checkbox')) {
+				$el.prop('checked', value === 't'); //bool vals from postgres are returned as either 't' or 'f'
+			} else {
+				el.value = value;
+				if (isSelect) {
+					$el.removeClass('default')
+				}
+			}
+		} else if (isSelect) {
+			$el.addClass('default')
+		}
+
+		// Record initial data to easily enable rolling back edits
+		const tableName = $el.data('table-name');
+		const info = this.selectedClimberInfo;
+		if (!(tableName in info)) info[tableName] = {};
+		if (!(dbID in info[tableName])) info[tableName][dbID] = {};
+		info[tableName][dbID][fieldName] = value;
+
+		$el.data('table-id', dbID);
+
+		const badgeTarget = $el.data('badge-target');
+		if (badgeTarget && $el.data('badge-target-value') == value) $(badgeTarget).ariaHide(false);
+		
+		if (triggerChange) $el.change();
+	}
+
+
+	/*
+	When an input field changes, 
+	*/
+	onInputChange(e) {
+		const $input = $(e.target).addClass('dirty');
+		// This is an insert if it's a descendant of either a .new-card or modal .climber-form. In that case,
+		//	changes will be captured when the save button is clicked
+		if ($input.closest('.new-card, .climber-form.climberdb-modal').length) return;
+
+		// Get data attributes
+		const tableName = $input.data('table-name');
+		const fieldName = $input.attr('name');//.replace(/-\d+$/g, ''); //card inputs 
+		let dbID = $input.data('table-id');
+
+		const editObject = this.edits.updates; // get reference for shorthand
+		if (!(tableName in editObject)) editObject[tableName] = {};
+		if (!(dbID in editObject[tableName])) editObject[tableName][dbID] = {};
+		editObject[tableName][dbID][fieldName] = this.getInputFieldValue($input);
+	}
+
+
+	/*
+
+	*/
+	discardEdits() {
+		const climberInfo = this.selectedClimberInfo;
+		const $dirtyInputs = $('.input-field.dirty');
+		for (const input of $dirtyInputs) {
+			const $input = $(input);
+			
+			if ($input.closest('.card.cloneable').length) continue;
+			
+			const tableName = $input.data('table-name');
+			const dbID = $input.data('table-id');
+			const fieldName = input.name;
+			$input.val(climberInfo[tableName][dbID][fieldName]); 
+		}
+
+		$('.result-details-pane').addClass('uneditable');
+		$dirtyInputs.removeClass('dirty');
+
+		// Remove any new cards
+		$('.new-card').remove();
+
+	}
+
+	/*
+	Helper method to get the value of in input depedning on whether or not its a checkbox
+	*/
+	getInputFieldValue($input) {
+		return $input.is('.input-checkbox') ? $input.prop('checked') : $input.val();
+	}
+
+	saveEdits() {
+
+		climberDB.showLoadingIndicator('saveEdits');
+
+		var sqlStatements = [];
+		var sqlParameters = [];
+		const now = getFormattedTimestamp();
+		const userName = climberDB.userInfo.ad_username;
+		
+		// **** check for required fields in any inserts
+		// **** need to make sure that left-side tables are inserted before right-side
+
+		// All inserts should be descendants of either .new-cards or modal .climber-forms
+		// Get the fields that aren't inside cards first
+		/*for (const el of $(' .input-field.dirty')) {
+			const $input = $(el);
+			const tableName = $input.data('table-name');
+			const fieldName = el.name;
+
+			let inserts = this.edits.inserts;
+			if (!(tableName in inserts)) inserts[tableName] = [{}];//inserts == {tableName: [ {field1: val1, field2: val2...},  ],}
+			inserts[tableName][0][fieldName] = this.getInputFieldValue($input);
+		}*/
+		let inserts = [];
+		for (const container of $('.climberdb-modal #climber-info-list-item, .new-card:not(.cloneable)')) {
+			let tableParameters = {}
+			for (const el of $(container).find('.input-field.dirty')) {
+				const $input = $(el);
+				const tableName = $input.data('table-name');
+				const fieldName = el.name;
+
+				if (!(tableName in tableParameters)) tableParameters[tableName] = {fields: [], values: []};
+				tableParameters[tableName].fields.push(fieldName);
+				tableParameters[tableName].values.push(this.getInputFieldValue($input));
+			}
+			for (const tableName in tableParameters) {
+				const columnInfo = climberDB.tableInfo[tableName].columns;
+				let values = tableParameters[tableName].values;
+				let fields = tableParameters[tableName].fields;
+				if ('entered_by' in columnInfo) {
+					values = values.concat([now, userName]);
+					fields = fields.concat(['entry_time', 'entered_by']);
+				}
+				if ('last_modified_by' in columnInfo) {
+					values = values.concat([now, userName]);
+					fields = fields.concat(['last_modified_time', 'last_modified_by']);
+				}
+				const foreignColumnInfo = climberDB.tableInfo[tableName].foreignColumns || [];
+				if (foreignColumnInfo.length) {
+					// find the ID
+					for (const {foreignTable, column} of foreignColumnInfo) {
+						var foreignID;
+						for (const el of $('.input-field')) {
+							const $el = $(el);
+							if ($el.data('table-name') === foreignTable && $el.data('table-id') !== undefined) {
+								foreignID = $el.data('table-id');
+								break;
+							}
+						}
+						if (foreignID === undefined) {
+							showModal(`Foreign row ID could not be found for the table '${tableName}' and column '${column}' with foreign table '${foreignTable}'`, 'Database Error')
+							return;
+						} else {
+							values.push(foreignID);
+							fields.push(column);
+						}
+
+					}
+				}
+				sqlStatements.push(`INSERT INTO ${tableName} (${fields.join(', ')}) VALUES (${fields.map(f => '$' + (fields.indexOf(f) + 1)).join(', ')}) RETURNING id`);
+				sqlParameters.push(values);
+				// Record so table-id data attribute can be set from RETURNING statement
+				inserts.push({container: container, tableName: tableName});
+			}
+		}
+
+		// collect updates
+		const updates = this.edits.updates;
+		for (const tableName in updates) {
+			const columnInfo = climberDB.tableInfo[tableName].columns;
+			const hasLastModifiedBy = 'last_modified_by' in columnInfo;
+			for (const id in updates[tableName]) {
+				let parameters = hasLastModifiedBy ? [now, userName] : [];
+				let parametized = hasLastModifiedBy ? ['last_modified_time=$1', 'last_modified_by=$2'] : [];
+				for (const fieldName in updates[tableName][id]) {
+					parameters.push(updates[tableName][id][fieldName]);
+					parametized.push(`${fieldName}=$${parametized.length + 1}`);
+				}
+				
+				sqlStatements.push(`UPDATE ${tableName} SET ${parametized.join(', ')} WHERE id=${id} RETURNING id`);
+				sqlParameters.push(parameters);
+			}
+		}
+
+		$.ajax({
+			url: 'climberdb.php',
+			method: 'POST',
+			data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
+			cache: false
+		}).done(queryResultString => {
+			if (climberDB.queryReturnedError(queryResultString)) {
+				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}.\n\nTry reloading the page. The data you entered will be automatically reloaded (except for attachments).`, 'Unexpected error');
+				return;
+			} else {
+				const returnedIDs = $.parseJSON(queryResultString);
+				for (const i in inserts) {
+					const id = returnedIDs[i].id;
+					if (id == null || id === '') continue;
+
+					// Set the card's class and inputs' attributes so it changes will register as updates
+					const {container, tableName} = inserts[i];
+					$(container)
+						.removeClass('new-card')
+						.find('.input-field')
+							.data('table-name', tableName)
+							.data('table-id', id);
+				}
+
+			}
+		}).fail((xhr, status, error) => {
+			showModal(`An unexpected error occurred while saving data to the database: ${error}. \n\nMake sure you're still connected to the NPS network and try again.`, 'Unexpected error');
+		}).always(() => {
+			climberDB.hideLoadingIndicator();
+		});
+	}
+
+
+	/*
+	*/
+	confirmSaveEdits(afterActionCallbackStr='') {
+		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
+		const onConfirmClick = `
+			showLoadingIndicator();
+			climberDB.climberForm.saveEdits(); 
+		`;
+		
+		const footerButtons = `
+			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
+			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.climberForm.discardEdits();${afterActionCallbackStr}">Discard</button>
+			<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}${afterActionCallbackStr}">Save</button>
+		`;
+		// climberDB is a global instance of ClimberDB or its subclasses that should be instantiated in each page
+		// 	this is a little un-kosher because the ClimberForm() instance is probably a property of climberDB, but
+		//	the only alternative is to make showModal a global function 
+		climberDB.showModal(
+			'You have unsaved edits to this encounter. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this encounter.',
+			'Save edits?',
+			'alert',
+			footerButtons
+		);
+	}
+
+
+	/* 
+	Helper method to turn editing mode on or off
+	*/
+	toggleEditing(allowEdits, {confirm=true}={}) {
+		const $detailsPane = this.$el.closest('.result-details-pane');
+		
+		// If editing is being disabled, check for .dirty inputs and make the user decide if they want to discard or save edits
+		if (!allowEdits && $('.climber-form .input-field.dirty').length && confirm) {
+			this.confirmSaveEdits();
+		} else {
+			$('.save-edits-button, .delete-climber-button').ariaHide(!allowEdits);
+			$detailsPane.toggleClass('uneditable', !allowEdits);
+		}
 	}
 }
+
 
 class ClimberDBClimbers extends ClimberDB {
 	
@@ -392,10 +723,11 @@ class ClimberDBClimbers extends ClimberDB {
 		this.stateCodes = {};
 		this.routeCodes = {};
 		this.emergencyContacts = {}; //db id -> emergency contact pairs
-		this.lastSearchQuery = new Date().getTime();
+		this.lastSearchQuery = (new Date()).getTime();
 		this.totalResultCount;
 		this.recordsPerSet = 50; /* how many climbers to show at once */
 		this.currentRecordSetIndex = 0;
+		this.climberForm;
 
 		return this;
 	}
@@ -444,7 +776,7 @@ class ClimberDBClimbers extends ClimberDB {
 			</div>
 		`);
 		
-		const climberForm = new ClimberForm('.query-result-pane.result-details-pane');
+		this.climberForm = new ClimberForm('.query-result-pane.result-details-pane');
 
 		// Set tab indices
 		var liTabIndex = this.getNextTabIndex();
@@ -453,9 +785,7 @@ class ClimberDBClimbers extends ClimberDB {
 			liTabIndex++;
 		}
 
-		$('.result-details-pane button.close').click(e => {
-			$('.result-details-pane').addClass('collapsed');
-		})
+
 
 		// When a user types anything in the search bar, filter the climber results.
 		$('.fuzzy-search-bar').keyup(() => {
@@ -503,19 +833,54 @@ class ClimberDBClimbers extends ClimberDB {
 			$('#guide-badge').ariaHide(!$(e.target).prop('checked'));
 		});
 
-		$('.toggle-editing-button').click(e => {
-			const $detailsPane = $('.result-details-pane');
-			const allowEdits = $detailsPane.is('.uneditable');
-			$('.save-edits-button, .delete-climber-button').ariaHide(!allowEdits);
-			$detailsPane.toggleClass('uneditable', !allowEdits);
-		});
-
 		$('.add-card-button').click(e => {
 			const $button = $(e.target).closest('button');
 			const $accordion = $($button.data('target'));
-			this.addNewCard($accordion, {cardLinkText: 'New Emergency Contact'})
+			const $card = this.addNewCard($accordion, {cardLinkText: 'New Emergency Contact'});
+			// Signify that this is a new card and any changes to input fields will be inserts
+			$card.addClass('new-card');
 		});
+
+		$('#add-new-climber-button').click(e => {
+
+			const $climberForm = this.climberForm.$el;
+			if ($climberForm.find('.input-field.dirty').length) {
+				this.confirmSaveEdits('climberDB.showModalClimberForm()');
+			} else {
+				this.showModalClimberForm($climberForm);
+			}
+
+		})
 	}
+
+
+	/*
+	*/
+	showModalClimberForm($climberForm=null) {
+		
+		if ($climberForm === null) $climberForm = $('.climber-form');
+
+		$climberForm.addClass('climberdb-modal');
+
+		$('.result-details-pane')
+			.removeClass('uneditable')
+			.addClass('collapsed');
+		this.clearInputFields({parent: $climberForm});
+		$climberForm.find('#edit-button, #delete-button').ariaHide(true);
+
+		$('#save-button').ariaHide(false);
+
+		$('#result-details-header-title').text('New Climber');
+		$('#expedition-name-result-summary-item').ariaHide(true);
+		$('#entered-by-result-summary-item > .result-details-summary-value').text(this.userInfo.ad_username);
+		$('#entry-time-result-summary-item > .result-details-summary-value').text(
+			(new Date()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year:'numeric'})
+		);
+
+		this.addNewCard($('#emergency-contacts-accordion'));
+	}
+
+
 
 
 	/*
@@ -531,31 +896,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	/*
-	Helper method to fill an input field. The 'name' attribute needs to 
-	correspond to a key in the values object
-	*/
-	fillInputField(el, values) {
-		el.value = null; // clear value regardless
-		const $el = $(el);
-		const isSelect = $el.is('select');
-		if (el.name in values) {
-			if ($el.is('.input-checkbox')) {
-				$el.prop('checked', values[el.name] === 't'); //bool vals from postgres are returned as either 't' or 'f'
-			} else {
-				el.value = values[el.name];
-				if (isSelect) {
-					$el.removeClass('default')
-				}
-			}
-		} else if (isSelect) {
-			$el.addClass('default')
-		}
-
-		$el.change();
-	}
-
-
-	/*
+	Select a climber from the list
 	*/
 	selectResultItem($item) {
 
@@ -570,7 +911,7 @@ class ClimberDBClimbers extends ClimberDB {
 		const climberInfo = this.climberInfo[climberIndex];
 		const $inputs = $('#climber-info-tab-content .input-field');
 		for (const el of $inputs) {
-			this.fillInputField(el, climberInfo);
+			this.climberForm.fillInputField(el, climberInfo, {dbID: climberID});
 		}
 
 		$('#result-details-header-title').text(`${climberInfo.last_name}, ${climberInfo.first_name}`);
@@ -591,6 +932,13 @@ class ClimberDBClimbers extends ClimberDB {
 		$('.result-details-pane')
 			.removeClass('collapsed')
 			.attr('aria-hidden', false);
+		
+		// .change() events on .input-fields will add dirty class
+		$('.climber-form .input-field').removeClass('dirty');
+
+		// Reset because this will get filled with the selected climber's data by fillInputField()
+		this.climberForm.selectedClimberInfo = {};
+		
 	}
 
 
@@ -717,7 +1065,7 @@ class ClimberDBClimbers extends ClimberDB {
 						$('.hidden-on-invalid-result').ariaHide(true);
 						$('.result-details-pane').addClass('collapsed');
 					} else { // some other problem
-						this.showModal('Retrieving climber info from the database failed because because ' + queryResultString, 'Database Error');
+						showModal('Retrieving climber info from the database failed because because ' + queryResultString, 'Database Error');
 					}
 				} else {  
 					const result = $.parseJSON(queryResultString);
@@ -768,7 +1116,7 @@ class ClimberDBClimbers extends ClimberDB {
 					
 				}
 			}).fail((xhr, status, error) => {
-				this.showModal('Retrieving climber info from the database failed because because ' + error, 'Database Error')
+				showModal('Retrieving climber info from the database failed because because ' + error, 'Database Error')
 			})
 	}
 
@@ -821,7 +1169,7 @@ class ClimberDBClimbers extends ClimberDB {
 				}
 			);
 			for (const el of $card.find('.input-field')) {
-				this.fillInputField(el, row);
+				this.climberForm.fillInputField(el, row);
 			}
 
 			// Set the anchor url to this group
@@ -846,6 +1194,9 @@ class ClimberDBClimbers extends ClimberDB {
 
 		$('#7-day-badge').toggleClass('hidden', !qualifiesFor7DayPermit);
 
+		// .change() events on .input-fields will add dirty class
+		$('.climber-form .input-field').removeClass('dirty');
+
 		// Check if any of this climber's expeditions were solo. If so, mark them as such
 		const $newCards = $accordion.find('.card:not(.cloneable)');
 		const soloSQL = `SELECT * FROM solo_climbs_view WHERE climber_id=${climberHistory[0].climber_id}`;
@@ -866,7 +1217,7 @@ class ClimberDBClimbers extends ClimberDB {
 				}
 			})
 			.fail((xhr, status, error) => {
-				this.showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
+				showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
 			});
 	}
 
@@ -890,9 +1241,12 @@ class ClimberDBClimbers extends ClimberDB {
 				}
 			);
 			for (const el of $card.find('.input-field')) {
-				this.fillInputField(el, row);
+				this.climberForm.fillInputField(el, row, {dbID: row.id});
 			}
 		}
+
+		// .change() events on .input-fields will add dirty class
+		$('.climber-form .input-field').removeClass('dirty');
 	}
 
 
@@ -924,30 +1278,27 @@ class ClimberDBClimbers extends ClimberDB {
 		;`;
 		const contactsSQL = `SELECT * FROM emergency_contacts WHERE climber_id=${climberID}`;
 
-		// Qualifies for 7 day
-		// Is a guide
-		// pro pin
 		const historyDeferred = this.queryDB(historySQL)
 			.done(resultString => {
 				if (this.queryReturnedError(resultString)) {
-					this.showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
+					showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
 				} else {
 					this.fillClimberHistory($.parseJSON(resultString));
 				}
 			})
 			.fail((xhr, status, error) => {
-				this.showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
+				showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
 			});
 		const contactsDeferred = this.queryDB(contactsSQL)
 			.done(resultString => {
 				if (this.queryReturnedError(resultString)) {
-					this.showModal('Retrieving emergency contact info from the database failed because because ' + resultString, 'Database Error');
+					showModal('Retrieving emergency contact info from the database failed because because ' + resultString, 'Database Error');
 				} else {
 					this.fillEmergencyContacts($.parseJSON(resultString));
 				}
 			})
 			.fail((xhr, status, error) => {
-				this.showModal('Retrieving emergency contact info from the database failed because because ' + error, 'Database Error')
+				showModal('Retrieving emergency contact info from the database failed because because ' + error, 'Database Error')
 			});
 
 
@@ -959,6 +1310,12 @@ class ClimberDBClimbers extends ClimberDB {
 		this.showLoadingIndicator('init');
 		var deferreds = super.init();
 		
+		$('.sidebar-nav-group > .nav-item.selected').removeClass('selected');
+		$('.sidebar-nav-group .nav-item > a')
+			.filter((_, el) => el.href.endsWith('climbers.html'))
+			.parent()
+				.addClass('selected');
+
 		// Do additional synchronous initialization stuff
 		this.configureMainContent();
 

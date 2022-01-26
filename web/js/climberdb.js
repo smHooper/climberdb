@@ -1,5 +1,65 @@
+/* Global functions */
+function getFormattedTimestamp(date) {
+
+	if (date === undefined) date = new Date();
+
+	// Get 0-padded minutes
+	const minutes = ('0' + date.getMinutes()).slice(-2)
+
+	return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${minutes}`;
+
+}
 
 
+function showModal(message, title, modalType='alert', footerButtons='') {
+
+	var modalID = title
+		.replace(/[^\w]/g, '-') // replace non-alphanumeric chars with '-'
+		.replace(/^-|-+$/g, '') // remove any hyphens from beginning or end
+
+	if (!footerButtons) {
+		switch(modalType) { 
+			case 'alert': 
+				footerButtons = '<button class="generic-button modal-button close-modal" data-dismiss="modal">Close</button>';
+				break;
+			case 'confirm':
+				footerButtons = `
+					<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>';
+					<button class="generic-button modal-button close-modal" data-dismiss="modal">OK</button>
+				`;
+				break;
+		}
+	}
+
+	const innerHTML = `
+	  <div class="modal-dialog" role="document">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <h5 class="modal-title">${title}</h5>
+	        <button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
+	          <span aria-hidden="true">&times;</span>
+	        </button>
+	      </div>
+	      <div class="modal-body">
+	        <p>${message}</p>
+	      </div>
+	      <div class="modal-footer">
+	      	${footerButtons}
+	      </div>
+	    </div>
+	  </div>
+	`;
+	const $modal = $('#alert-modal').empty()
+		.append($(innerHTML))
+		.modal();
+	
+	$modal.find('.close-modal').click(function() {
+		$modal.modal('hide');
+	})
+}
+
+
+/* ClimberDB base class*/
 class ClimberDB {
 	constructor() {
 		this.userInfo = {};
@@ -53,21 +113,21 @@ class ClimberDB {
 							<ul class="sidebar-nav-group">
 
 								<li class="nav-item selected">
-									<a href="climberdb-dashboard.html">
+									<a href="dashboard.html">
 										<img class="sidebar-nav-item-icon" src="imgs/home_icon_50px.svg">
 										<span class="sidebar-nav-item-label">home</span>
 									</a>
 								</li>
 
 								<li class="nav-item">
-									<a href="query.html">
+									<a href="climbers.html">
 										<img class="sidebar-nav-item-icon" src="imgs/climber_icon_50px.svg">
 										<span class="sidebar-nav-item-label">climbers</span>
 									</a>
 								</li>
 
 								<li class="nav-item">
-									<a href="query.html">
+									<a href="expeditions.html">
 										<img class="sidebar-nav-item-icon" src="imgs/groups_icon_50px.svg">
 										<span class="sidebar-nav-item-label">expeditions</span>
 									</a>
@@ -202,15 +262,17 @@ class ClimberDB {
 		
 		// For anonymous functions, the caller is undefined, so (hopefully) the 
 		//	function is called with the argument given
-		var thisCaller = caller == undefined ? showLoadingIndicator.caller.name : caller;
+		//caller = caller || this.showLoadingIndicator.caller.name;
 
-		var indicator = $('#loading-indicator').removeClass('hidden')
+		var indicator = $('#loading-indicator').removeClass('hidden');
 		$('#loading-indicator-background').removeClass('hidden');
 
 		// check the .data() to see if any other functions called this
-		indicator.data('callers', indicator.data('callers') === undefined ? 
-			[thisCaller] : indicator.data('callers').concat([thisCaller])
-		)
+		indicator.data('callers', 
+			indicator.data('callers') === undefined ? 
+				[caller] : 
+				indicator.data('callers').concat([caller])
+		);
 
 	}
 
@@ -239,7 +301,7 @@ class ClimberDB {
 
 	}
 
-
+	/* Add a card to an accordion by cloning a .cloneable template card */
 	addNewCard($accordion, {cardIndex=null, accordionName=null, cardLinkText='', updateIDs={}, show=true}={}) {
 
 		const $dummyCard = $accordion.find('.card.cloneable');
@@ -269,9 +331,10 @@ class ClimberDB {
 
 		const idSuffix = `${accordionName}-${cardIndex}`;
 
+		const newCardID = `card-${idSuffix}`;
 		const $newCard = $dummyCard.clone(true)//withDataAndEvents=true
 			.removeClass('cloneable hidden')
-			.attr('id', `card-${idSuffix}`);
+			.attr('id', newCardID);
 		
 		//Set attributes of children
 		const $newHeader = $newCard.find('.card-header');
@@ -281,31 +344,28 @@ class ClimberDB {
 				.attr('href', `#collapse-${idSuffix}`)
 				.attr('data-target', `#collapse-${idSuffix}`)
 				.find('.card-link-label')
-					.text(cardLinkText);
+					.text(cardLinkText || $dummyCard.find('.card-link-label').text());
 
 		const $newCollapse = $newCard.find('.card-collapse')
 			.attr('id', `collapse-${idSuffix}`)
 			.attr('aria-labelledby', `cardHeader-${idSuffix}`)
 			.addClass('validate-field-parent');
-
-		$newCollapse.find('.card-body')
-			.find('.input-field')
-			.each((i, el) => {
-				const $el = $(el);
-				const newID = `${el.id}-${cardIndex}`;
-				const dataTable = $el.data('table-name');
-				if (dataTable in updateIDs)  $el.data('db-id', updateIDs[dataTable]);
-				$el.data('dependent-target', `${$el.data('dependent-target')}-${cardIndex}`);
-				$el.attr('id', newID)
-					.siblings()
-					.find('.field-label')
-						.attr('for', newID);
-			})
-			.filter('.error')
-				.removeClass('error');
+				
 		
 		// Add to the accordion
 		$newCard.appendTo($accordion).fadeIn();
+
+		for (const el of $('#' + newCardID).find('.input-field')) {
+			const $el = $(el);
+			const newID = `${el.id}-${cardIndex}`;
+			const dataTable = $el.data('table-name');
+			$el.data('dependent-target', `${$el.data('dependent-target')}-${cardIndex}`);
+			$el.removeClass('error')
+				.attr('id', newID)
+				.siblings('.field-label')
+					.attr('for', newID);
+			if (dataTable in updateIDs)  $el.data('table-id', updateIDs[dataTable]);
+		}
 
 		// Open the card after a brief delay
 		//$newCard.find('.collapse:not(.show)').click();
@@ -386,72 +446,47 @@ class ClimberDB {
 	onCardLabelFieldChange($field) {
 
 		const $card = $field.closest('.card');
-		
+		if ($card.is('.cloneable')) return;
+
 		var names = {}
 		if ($card.data('label-template')) {
 			for (const el of $card.find('.card-label-field')) {
+				if (el.value == null) return;
 				names[el.name] = el.value;
 			}
 		} else {
-			names = $card.find('.card-label-field')
-			.map(function(_, el) {
-	    		return $(el).attr('name');
-			})
-			.get(); // get returns the underlying array
+			names = [];
+			for (const el of  $card.find('.card-label-field')) {
+				if (el.value == null) return;
+				names.push(el.value);
+			}
 		}
 		//const defaultText = $card.closest('.accordion').find('.card.cloneable.hidden .card-link-label').text();
 		const defaultText = $card.find('.card-link-label').text();
+
 
 		this.setCardLabel($card, names, defaultText);
 	}
 
 
-	showModal(message, title, modalType='alert', footerButtons='') {
 
-		var modalID = title
-			.replace(/[^\w]/g, '-') // replace non-alphanumeric chars with '-'
-			.replace(/^-|-+$/g, '') // remove any hyphens from beginning or end
-
-		if (!footerButtons) {
-			switch(modalType) { 
-				case 'alert': 
-					footerButtons = '<button class="generic-button modal-button close-modal" data-dismiss="modal">Close</button>';
-					break;
-				case 'confirm':
-					footerButtons = `
-						<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>';
-						<button class="generic-button modal-button close-modal" data-dismiss="modal">OK</button>
-					`;
-					break;
+	/**/
+	clearInputFields({parent='body', triggerChange=true}={}) {
+		for (const el of $(parent).find('*:not(.card.cloneable) .input-field')) {
+			const $el = $(el);
+			if ($el.is('.input-checkbox')) {
+				$el.prop('checked', false); //bool vals from postgres are returned as either 't' or 'f'
+			} else if ($el.is('select')) {
+					$el.addClass('default');
+					el.value = '';
+			} else {
+				el.value = null;
 			}
-		}
 
-		const innerHTML = `
-		  <div class="modal-dialog" role="document">
-		    <div class="modal-content">
-		      <div class="modal-header">
-		        <h5 class="modal-title">${title}</h5>
-		        <button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
-		          <span aria-hidden="true">&times;</span>
-		        </button>
-		      </div>
-		      <div class="modal-body">
-		        <p>${message}</p>
-		      </div>
-		      <div class="modal-footer">
-		      	${footerButtons}
-		      </div>
-		    </div>
-		  </div>
-		`;
-		const $modal = $('#alert-modal').empty()
-			.append($(innerHTML))
-			.modal();
-		
-		$modal.find('.close-modal').click(function() {
-			$modal.modal('hide');
-		})
+			if (triggerChange) $el.change();
+		}
 	}
+
 
 	/*
 	Helper function to check a Postgres query result for an error
@@ -529,24 +564,27 @@ class ClimberDB {
 
 
 	getTableInfo() {
-		return this.queryDB(`
-			SELECT 
-				column_name, table_name, data_type, character_maximum_length 
-			FROM information_schema.columns  
-			WHERE 
-				table_schema='public' AND 
-				table_name NOT LIKE '%_codes'
-			ORDER BY table_name, column_name
-			;
-		`).done(resultString => {
+		return this.queryDB('SELECT * FROM table_info_matview').done(resultString => {
 			// the only way this query could fail is if I changed DBMS, 
 			//	so I won't bother to check that the result is valid
 			for (const info of $.parseJSON(resultString)) {
-				const tableName = info.tableName;
+				const tableName = info.table_name;
 				if (!(tableName in this.tableInfo)) {
-					this.tableInfo[tableName] = {};
+					this.tableInfo[tableName] = {
+						foreignColumns: [],
+						columns: {}
+					};
 				}
-				this.tableInfo[tableName][info.column_name] = {...info};
+				if (info.column_name == 'climber_id') {
+					const a=1;
+				}
+				if (info.foreign_table_name) {
+					this.tableInfo[tableName].foreignColumns.push({
+						foreignTable: info.foreign_table_name,
+						column: info.column_name
+					})
+				}
+				this.tableInfo[tableName].columns[info.column_name] = {...info};
 			}
 		})
 	}
@@ -554,6 +592,13 @@ class ClimberDB {
 	/* Return any Deferreds so anything that has to happen after these are done can wait */
 	init({addMenu=true}={}) {
 		if (addMenu) this.configureMenu();
+		
+		// Bind events on dynamically (but not yet extant) elements
+		$(document).on('change', 'select.input-field', e => {
+			const $select = $(e.target);
+			$select.toggleClass('default', $select.val() == null);
+		});
+		
 		return [this.getUserInfo(), this.getTableInfo()];
 	}
 };
@@ -569,3 +614,5 @@ class ClimberDB {
 	}
  
 }( jQuery ));
+
+
