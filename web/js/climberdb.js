@@ -63,7 +63,10 @@ function showModal(message, title, modalType='alert', footerButtons='') {
 class ClimberDB {
 	constructor() {
 		this.userInfo = {};
-		this.tableInfo = {};
+		this.tableInfo = {
+			tables: {},
+			insertOrder: [] // comply with left-right orientation of table relationships
+		};
 	}
 
 	getUserInfo() {
@@ -186,11 +189,13 @@ class ClimberDB {
 		}
 	}
 
-	queryDB(sql) {
+	queryDB(sql, {returnTimestamp=false}={}) {
+		var requestData = {action: 'query', queryString: sql, db: 'climberdb'};
+		if (returnTimestamp) requestData.queryTime = (new Date()).getTime();
 		return $.ajax({
 			url: 'climberdb.php',
 			method: 'POST',
-			data: {action: 'query', queryString: sql, db: 'climberdb'},
+			data: requestData,
 			cache: false
 		});
 	}	
@@ -302,7 +307,7 @@ class ClimberDB {
 	}
 
 	/* Add a card to an accordion by cloning a .cloneable template card */
-	addNewCard($accordion, {cardIndex=null, accordionName=null, cardLinkText='', updateIDs={}, show=true}={}) {
+	addNewCard($accordion, {cardIndex=null, accordionName=null, cardLinkText='', updateIDs={}, show=true, newCardClass=''}={}) {
 
 		const $dummyCard = $accordion.find('.card.cloneable');
 		if ($dummyCard.length === 0) {
@@ -353,7 +358,7 @@ class ClimberDB {
 				
 		
 		// Add to the accordion
-		$newCard.appendTo($accordion).fadeIn();
+		$newCard.addClass(newCardClass).appendTo($accordion).fadeIn();
 
 		for (const el of $('#' + newCardID).find('.input-field')) {
 			const $el = $(el);
@@ -365,6 +370,9 @@ class ClimberDB {
 				.siblings('.field-label')
 					.attr('for', newID);
 			if (dataTable in updateIDs)  $el.data('table-id', updateIDs[dataTable]);
+			if ($el.is('select')) {
+				$el.val('').addClass('default');
+			}
 		}
 
 		// Open the card after a brief delay
@@ -483,6 +491,8 @@ class ClimberDB {
 				el.value = null;
 			}
 
+			$el.removeData('table-id');
+
 			if (triggerChange) $el.change();
 		}
 	}
@@ -567,10 +577,11 @@ class ClimberDB {
 		return this.queryDB('SELECT * FROM table_info_matview').done(resultString => {
 			// the only way this query could fail is if I changed DBMS, 
 			//	so I won't bother to check that the result is valid
+			var insertOrder = this.tableInfo.insertOrder;
 			for (const info of $.parseJSON(resultString)) {
 				const tableName = info.table_name;
-				if (!(tableName in this.tableInfo)) {
-					this.tableInfo[tableName] = {
+				if (!(tableName in this.tableInfo.tables)) {
+					this.tableInfo.tables[tableName] = {
 						foreignColumns: [],
 						columns: {}
 					};
@@ -579,13 +590,42 @@ class ClimberDB {
 					const a=1;
 				}
 				if (info.foreign_table_name) {
-					this.tableInfo[tableName].foreignColumns.push({
+					this.tableInfo.tables[tableName].foreignColumns.push({
 						foreignTable: info.foreign_table_name,
 						column: info.column_name
-					})
+					});
+
+					// Place this table in the insert order
+					var thisIndex = insertOrder.indexOf(tableName);
+					const foreignTableIndex = insertOrder.indexOf(info.foreign_table_name);
+					if (thisIndex < foreignTableIndex) thisIndex = foreignTableIndex + 1;
+					// If it's already in the inser order, remove it
+					if (insertOrder.includes(tableName)) insertOrder.splice(thisIndex, 1); 
+					// inset it in the next position to the right of the last foreign table it references
+					insertOrder.splice(thisIndex, 0, tableName); 
+
+				} else if (!insertOrder.includes(tableName)) {
+					// This table either doesn't participate in any foreign key relationships or it's all the way to the left. 
+					//	Either way, add table to the beginning of the insert order
+					insertOrder.unshift(tableName); 
 				}
-				this.tableInfo[tableName].columns[info.column_name] = {...info};
+				this.tableInfo.tables[tableName].columns[info.column_name] = {...info};
 			}
+			
+			/*for (tableName in this.tableInfo) {
+			    const foreignColumns = climberDB.tableInfo[tableName].foreignColumns;
+			    if (!foreignColumns.length && !insertOrder.includes(tableName)) {
+			        insertOrder.unshift(tableName); 
+			    } else {
+			        var thisIndex = insertOrder.indexOf(tableName);
+			        for (const {foreignTable} of foreignColumns) {
+			            const foreignTableIndex = insertOrder.indexOf(foreignTable);
+			            if (thisIndex < foreignTableIndex) thisIndex = foreignTableIndex + 1;
+			            if (insertOrder.includes(tableName)) insertOrder.splice(thisIndex, 1); // remove it
+			            insertOrder.splice(thisIndex, 0, tableName); // inset it in the next position to the right
+			        }
+			    }
+			}*/
 		})
 	}
 

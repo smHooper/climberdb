@@ -224,6 +224,9 @@
 .uneditable .editing-buttons-container > .save-edits-button {
 	display: none;
 }
+.climberdb-modal .editing-buttons-container > *{
+	display: none;
+}
 
 .query-result-pane.result-details-pane {
 	max-width: 100%;
@@ -251,11 +254,13 @@
 .climber-form {
 	width: 100%;
 	height: calc(100% - 60px);
+	display: flex;
+	flex-direction: column;
 }
 .climber-form-content {
 	background: rgb(230, 230, 230);
 	border-radius: 20px;
-	height: 100%;
+	flex: 1 1 100%;
 	width: 100%;
 	padding: 20px;
 	overflow-y: auto;
@@ -281,9 +286,17 @@
 .climber-form.climberdb-modal #climber-history-list-item {
 	display: none;
 }
-/*.climber-form.climberdb-modal .close-button-container {
-	justify-content: flex-end;
-}*/
+.modal-save-button-container {
+	width: 100%;
+	height: 80px;
+	justify-content: center;
+	align-items: center;
+	display: none;
+	column-gap: 40px;
+}
+.climber-form.climberdb-modal .modal-save-button-container {
+	display: flex;
+}
 
 .result-details-header-container {
 	width: 100%;

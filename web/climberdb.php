@@ -2,7 +2,7 @@
 
 <?php
 
- include '../../config/climberdb-config.php';
+include '../../config/climberdb-config.php';
 // error_reporting(-1);
 // ini_set('display_errors', 'On');
 
@@ -27,7 +27,6 @@ function runQuery($ipAddress, $port, $dbName, $username, $password, $queryStr, $
 
 
 function runQueryWithinTransaction($conn, $queryStr, $parameters=array()) {
-
 
 	$result = pg_query_params($conn, $queryStr, $parameters);
 	if (!$result) {
@@ -229,10 +228,12 @@ if (isset($_POST['action'])) {
 
 					$resultArray[$i] = count($result) == 1 ? $result[0] : $result;
 				}
+				pg_query($conn, 'COMMIT');
 				echo json_encode($resultArray);
 			} else {
 				$result = runQuery($dbhost, $dbport, $dbname, $username, $password, $_POST['queryString']);
-				echo json_encode($result);
+				$returnResult = isset($_POST['queryTime']) ? array('data' => $result, 'queryTime' => $_POST['queryTime']) : $result;
+				echo json_encode($returnResult);
 			}
 		} else {
 			echo "ERROR: no query given";//false;

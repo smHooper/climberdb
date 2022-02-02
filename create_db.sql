@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS climbers (
 	email_address VARCHAR(50),
 	phone VARCHAR(25),
 	sex_code INTEGER REFERENCES sex_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
-	solo_form_signed BOOLEAN,
 	received_pro_pin BOOLEAN,
+	is_guide BOOLEAN,
 	hx_of_frostbite INTEGER REFERENCES frostbite_severity_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	hx_of_ams BOOLEAN,
 	hx_of_hace BOOLEAN,
@@ -169,3 +169,67 @@ BEGIN
         EXECUTE 'UPDATE ' || table_record.table_name || ' SET sort_order=id, code=id;';
     END LOOP;
 END$$;
+
+
+-- VIEWS/MAT VIEWS
+-- climber info
+--CREATE MATERIALIZED VIEW climber_info_matview AS 
+CREATE VIEW climber_info_view AS
+SELECT DISTINCT ON (climbers.first_name, climbers.last_name, climbers.id)
+ 	climbers.first_name || ' ' || climbers.last_name AS full_name,
+    climbers.id,
+    climbers.first_name,
+    climbers.last_name,
+    climbers.address,
+    climbers.city,
+    climbers.state_code,
+    climbers.other_state_name,
+    climbers.country_code,
+    climbers.postal_code,
+    climbers.dob,
+    COALESCE(climbers.age, (now()::date - climbers.dob) / 365) AS age,
+    climbers.email_address,
+    climbers.phone,
+    climbers.sex_code,
+    climbers.solo_form_signed,
+    climbers.received_pro_pin,
+    climbers.is_guide, 
+    climbers.hx_of_frostbite,
+    climbers.hx_of_ams,
+    climbers.hx_of_hace,
+    climbers.hx_of_hape,
+    climbers.hx_notes,
+    climbers.internal_notes,
+    climbers.entered_by,
+   	to_char(climbers.entry_time, 'Mon DD, YYYY') AS entry_time,
+    climbers.last_modified_by,
+    to_char(climbers.last_modified_time, 'Mon DD, YYYY') AS last_modified_time,
+    expeditions.expedition_name,
+    to_char(coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date), 'Mon DD, YYYY') AS expedition_date
+   FROM climbers
+	 LEFT JOIN expedition_members ON climbers.id = expedition_members.climber_id
+     LEFT JOIN expeditions ON expeditions.id = expedition_members.expedition_id
+  ORDER BY climbers.first_name, climbers.last_name, climbers.id, abs(extract(epoch FROM planned_departure_date - now()));
+
+-- CREATE OR REPLACE FUNCTION refresh_climber_info_matview()
+-- RETURNS trigger language plpgsql
+-- AS $$
+-- BEGIN
+-- 	REFRESH MATERIALIZED VIEW climber_info_matview;
+-- 	return null;
+-- END $$;
+
+-- CREATE OR REPLACE TRIGGER on_climbers_change
+-- AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
+-- ON climbers FOR EACH STATEMENT 
+-- EXECUTE PROCEDURE refresh_climber_info_matview();
+
+-- CREATE OR REPLACE TRIGGER on_expeditions_change
+-- AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
+-- ON expeditions FOR EACH STATEMENT 
+-- EXECUTE PROCEDURE refresh_climber_info_matview();
+
+-- CREATE OR REPLACE TRIGGER on_expedition_members_change
+-- AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
+-- ON expedition_members FOR EACH STATEMENT 
+-- EXECUTE PROCEDURE refresh_climber_info_matview();
