@@ -19,6 +19,15 @@ CREATE TABLE IF NOT EXISTS route_codes(
 	sort_order INTEGER,
 	UNIQUE (mountain_code, name)
 );
+CREATE TABLE transaction_type_codes (
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(255),
+	short_name VARCHAR(50),
+	code INTEGER UNIQUE,
+	sort_order INTEGER,
+	is_credit BOOLEAN,
+	default_fee MONEY
+);
 CREATE TABLE IF NOT EXISTS user_role_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS user_status_codes (id SERIAL PRIMARY KEY, name varchar(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 
@@ -108,7 +117,7 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	is_checked_in BOOLEAN,
 	paid_registration_fee BOOLEAN,
 	paid_entrance_fee BOOLEAN,
-	reservation_status INTEGER REFERENCES group_status_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	reservation_status_code INTEGER REFERENCES group_status_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	is_illegal_guide BOOLEAN,
 	is_trip_leader BOOLEAN,
 	frostbite_severity_code INTEGER REFERENCES frostbite_severity_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -126,13 +135,25 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	last_modified_time TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS planned_routes (
+CREATE TABLE IF NOT EXISTS expedition_member_routes (
 	id SERIAL PRIMARY KEY,
 	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	route_code INTEGER REFERENCES route_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	route_order INTEGER,
 	route_was_climbed BOOLEAN, --a null summit_date could indicate that the route wasn't climbed, but I don't think you could rely on it
 	summit_date DATE 
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+	id SERIAL PRIMARY KEY,
+	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	transaction_type_code INTEGER REFERENCES transaction_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	transaction_value MONEY,
+	transaction_notes TEXT,
+	entered_by VARCHAR(50),
+	entry_time TIMESTAMP,
+	last_modified_by VARCHAR(50),
+	last_modified_time TIMESTAMP
 );
 
 -- I think most of the actual calendar building can happen in the app. This table just stores the breifing info
