@@ -125,13 +125,17 @@
 	display: flex;
 	flex-wrap: wrap;
 	flex:  1 1 auto;
-	overflow-y: auto;
+	/*overflow-y: auto;*/
 	height: calc(100% - 65px);
+	/*margin-top: -15px; for some reason there's a 15px gap between the header and the query-result-list*/
 }
 .query-result-list {
 	list-style: none;
 	padding: 5px 10px 10px 0px;
 	width: 100%;
+	height: 100%;
+	overflow-y: auto;
+	height: calc(100% - 20px);
 }
 .query-result-list > .query-result-list-item {
 	padding: 0 15px;
@@ -159,7 +163,7 @@
 	font-weight: 600;
 	color: #00679b;
 	width: 100%;
-	padding: 0 10px;
+	padding: 0 20px;
 }
 .query-result-list > .query-result-list-item:not(.selected):hover {
 	background-color: #f69800;
@@ -544,7 +548,6 @@ section.card {
 	pointer-events: none;
 	cursor: default;
 	text-align: left !important;/*necessary to override bootstrap .text-right*/
-	font-style: italic;
 }
 /*make sure $ does not overlap input for money fields*/
 .query-result-pane.result-details-pane .input-field.money-field.uneditable .unit-symbol-left{
@@ -573,7 +576,7 @@ section.card {
 	overflow: hidden;
 	white-space: nowrap;
 	margin-bottom: 0;
-	padding-left: 0;
+	/*padding-left: 0;*/
 	transform: unset;
 }
 /* hide all required indicators*/

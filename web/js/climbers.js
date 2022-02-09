@@ -24,7 +24,7 @@ class ClimberForm {
 								<i class="fas fa-edit"></i>
 							</button>
 						</div>
-						<button type="button" class="close" aria-label="Close">
+						<button id="climber-form-close-button" class="close" type="button" aria-label="Close">
 							<span>&times;</span>
 						</button>
 					</div>
@@ -397,7 +397,7 @@ class ClimberForm {
 		//	either reference properties of the ClimberDB (or subclass thereof) or otherwise reference variables 
 		//	outside the scope of the ClimberForm class
 		$('.climber-form button.close').click(e => {
-			this.closeClimberForm($(e.target).closest('button.close'));
+			this.confirmCloseClimberForm($(e.target).closest('button.close'));
 		});
 
 		$('.climber-form .close-modal-button').click(e => {
@@ -405,10 +405,6 @@ class ClimberForm {
 		});
 
 		$('.climber-form-title-field').change(e => {
-			/*const allValid = $('.climber-form-title-field')
-				.map((_, el) => el.value)
-				.get()
-				.every(val => val);*/
 			const firstName = $('#input-first_name').val();
 			const lastName = $('#input-last_name').val();
 
@@ -441,6 +437,10 @@ class ClimberForm {
 		el.value = null; // clear value regardless
 		
 		const $el = $(el);
+
+		// If this is a child of a cloneable card, skip it
+		if ($el.closest('.card.cloneable').length) return;
+
 		// If this is being called to roll back edits, the table-id should already be filled
 		if (dbID === null) dbID = $el.data('table-id');
 
@@ -531,10 +531,51 @@ class ClimberForm {
 		$('#climber-info-tab').click();
 	}
 
+
+	/*
+	Wrapper for closeClimberForm to conditionally ask the user to confirm their edits
+	*/
+	confirmCloseClimberForm($button) {
+		// If this form is being shown to add a new climbers, check for unfilled required fields.
+		// 	Check this by seeing if any inputs have their table-id set. If they do, this is an 
+		//	update and the form can just be collapsed/dismissed. Otherwise, it's an insert and 
+		//	any data entered will be lost
+		const isInsert = $('.climber-form .input-field').get().some(
+			el => {
+				const $el = $(el);
+				return $el.data('table-id') === undefined || $el.data('table-id') === ''
+			});
+		const closeCallbackString = `climberDB.climberForm.closeClimberForm($('#${$button.attr('id')}'));`
+		if ($('.climber-form .input-field.dirty').length) {
+			// Don't offer a save option, just discard and cancel
+			if (isInsert) {
+				const footerButtons = `
+					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
+					<button 
+						class="generic-button modal-button danger-button close-modal" 
+						data-dismiss="modal" 
+						onclick="${closeCallbackString}"
+					>Discard</button>
+				`;
+				const message = 
+					`You've made changes to the cliimber form. Are you sure you want to close` + 
+					' the form and discard these edits? To continue editing or save your edits, click cancel.';
+				showModal(message, 'Discard climber edits?', 'confirm', footerButtons)
+			} else {
+				// User can save, discard, or cancel
+				this.confirmSaveEdits(closeCallbackString);
+			}
+		} else {
+			this.closeClimberForm($button);
+		}
+	}
+
+
 	/*
 
 	*/
 	discardEdits() {
+		// Reset the values of inputs that were changed
 		const climberInfo = this.selectedClimberInfo;
 		const $dirtyInputs = $('.input-field.dirty');
 		for (const input of $dirtyInputs) {
@@ -554,6 +595,9 @@ class ClimberForm {
 		// Remove any new cards
 		$('.new-card').remove();
 
+		// Reset edits
+		this.edits.updates = {};
+
 	}
 
 	/*
@@ -563,6 +607,12 @@ class ClimberForm {
 		return $input.is('.input-checkbox') ? $input.prop('checked') : $input.val();
 	}
 
+
+	/*
+	Save edits to climber info. Edits are either changes to a climber's information 
+	or related records (climber history or emergency contacts) or completely new 
+	climber inserts (if the form is being shown as a modal)
+	*/
 	saveEdits({chainInserts=false}={}) {
 
 		climberDB.showLoadingIndicator('saveEdits');
@@ -572,6 +622,14 @@ class ClimberForm {
 		const now = getFormattedTimestamp();
 		const userName = climberDB.userInfo.ad_username;
 		
+		// Deep copy to be able to roll back changes to in-memory data (climberDB.climberInfo)
+		const originalDataValues = deepCopy(this.selectedClimberInfo.climbers);
+		const currentIndex = $('.query-result-list-item.selected').index();
+		var climberInfo = {};
+		if (climberDB.climberInfo) { // will be undefined if 
+			climberInfo = climberDB.climberInfo[currentIndex];
+		}
+
 		// **** check for required fields in any inserts
 		let inserts = [];
 		for (const container of $('.climberdb-modal #climber-info-list-item, .new-card:not(.cloneable)')) { 
@@ -617,7 +675,7 @@ class ClimberForm {
 						for (const el of $('.input-field')) {
 							const $el = $(el);
 							if ($el.data('table-name') === foreignTable && $el.data('table-id') !== undefined) {
-								foreignID = $el.data('table-id'); // the ID is set on an input, meaning this 
+								foreignID = parseInt($el.data('table-id')); // the ID is set on an input, meaning this 
 								break;
 							}
 						}
@@ -654,8 +712,11 @@ class ClimberForm {
 				let parameters = hasLastModifiedBy ? [now, userName] : [];
 				let parametized = hasLastModifiedBy ? ['last_modified_time=$1', 'last_modified_by=$2'] : [];
 				for (const fieldName in updates[tableName][id]) {
-					parameters.push(updates[tableName][id][fieldName]);
+					const value = updates[tableName][id][fieldName];
+					parameters.push(value);
 					parametized.push(`${fieldName}=$${parametized.length + 1}`);
+
+					if (fieldName in climberInfo) climberInfo[fieldName] = value;
 				}
 				
 				sqlStatements.push(`UPDATE ${tableName} SET ${parametized.join(', ')} WHERE id=${id} RETURNING id`);
@@ -671,6 +732,12 @@ class ClimberForm {
 		}).done(queryResultString => {
 			if (climberDB.queryReturnedError(queryResultString)) { 
 				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+				// roll back in-memory data
+				for (const dbID in updates.climbers) {
+					for (const fieldName in updates.climbers[dbID]) {
+						climberInfo[fieldName] = originalDataValues[dbID][fieldName];
+					}
+				}
 				return;
 			} else {
 				const returnedIDs = $.parseJSON(queryResultString);
@@ -687,10 +754,25 @@ class ClimberForm {
 							.data('table-id', id);
 				}
 
+				// Make sure the .selectedClimberInfo is updated
+				/*for (const tableName in updates) {
+					for (const dbID in updates[tableName]) {
+						for (const fieldName in updates[tableName][dbID]) {
+							this.selectedClimberInfo[tableName][dbID][fieldName] = updates[tableName][dbID][fieldName];
+						}
+					}
+				}*/
+
 				$('.climber-form .input-field.dirty').removeClass('dirty');
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+			// roll back in-memory data
+			for (const dbID in updates.climbers) {
+				for (const fieldName in updates.climbers[dbID]) {
+					climberInfo[dbID][fieldName] = updates.climbers[dbID];
+				}
+			}
 		}).always(() => {
 			climberDB.hideLoadingIndicator();
 		});
@@ -741,7 +823,7 @@ class ClimberForm {
 				const dbID = $input.data('table-id');
 				if (!tablesToDeleteFrom.includes(tableName) && tableName && dbID != undefined) {
 					tablesToDeleteFrom.push(tableName);
-					deleteStatements.push(`DELETE FROM ${tableName} WHERE id=${dbID} RETURNING id, '${tableName}' AS table_name`);
+					deleteStatements.push(`DELETE FROM ${tableName} WHERE id=${parseInt(dbID)} RETURNING id, '${tableName}' AS table_name`);
 				}
 			}
 
@@ -876,12 +958,13 @@ class ClimberDBClimbers extends ClimberDB {
 							</button>
 						</div>
 					</div>
-					<div id="result-summary-header-row" class="query-result-list-item header-row hidden-on-invalid-result" role="row">
-						<label class="result-summary-label col" role="gridcell">Full Name</label>
-						<label class="result-summary-label col" role="gridcell">Locale</label>
-						<label class="result-summary-label col" role="gridcell">Last Group Name</label>
-					</div>
+
 					<div class="query-result-list-container hidden-on-invalid-result">
+						<div id="result-summary-header-row" class="query-result-list-item header-row hidden-on-invalid-result" role="row">
+							<label class="result-summary-label col" role="gridcell">Full Name</label>
+							<label class="result-summary-label col" role="gridcell">Locale</label>
+							<label class="result-summary-label col" role="gridcell">Last Group Name</label>
+						</div>
 						<ul class="query-result-list" role="grid" aria-live="polite">
 						</ul>
 					</div>
@@ -1046,6 +1129,16 @@ class ClimberDBClimbers extends ClimberDB {
 	*/
 	selectResultItem($item) {
 
+		// Reset because this will get filled with the selected climber's data by fillInputField()
+		this.climberForm.selectedClimberInfo = {};
+		
+		//hide badges because they'll be shown later if necessary
+		$('.result-details-header-badge').ariaHide(true); 
+
+		// If currently editing (and this item is not currently selected, turn editing it off
+		if ($('.result-details-pane').is('*:not(.uneditable)') && $item.is('*:not(.selected)')) {
+			this.climberForm.toggleEditing(false); //turn editing off
+		}
 		// Deselect currently selected record
 		$('.query-result-list-item.selected').removeClass('selected');
 		
@@ -1081,12 +1174,19 @@ class ClimberDBClimbers extends ClimberDB {
 		
 		// .change() events on .input-fields will add dirty class
 		$('.climber-form .input-field').removeClass('dirty');
-
-		// Reset because this will get filled with the selected climber's data by fillInputField()
-		this.climberForm.selectedClimberInfo = {};
 		
 	}
 
+
+	confirmSelectResultItem($item) {
+
+		if ($('.climber-form .input-field.dirty').length) {
+			const afterActionCallbackStr = `climberDB.selectResultItem($('#${$item.attr('id')}'))`;
+			this.climberForm.confirmSaveEdits(afterActionCallbackStr);
+		} else {
+			this.selectResultItem($item)
+		}
+	}
 
 	/*
 	*/
@@ -1124,9 +1224,19 @@ class ClimberDBClimbers extends ClimberDB {
 
 		$('.query-result-list-item:not(.header-row)')
 			.click(e => {
-				this.selectResultItem($(e.target).closest('.query-result-list-item'))
-			}).focus(e => {
-				this.selectResultItem($(e.target));
+				// Only select the item if it isn't already selected
+				const $item = $(e.target).closest('.query-result-list-item');
+				if ($item.is('.selected')) {
+					this.selectResultItem($item);
+				} else {
+					this.confirmSelectResultItem($item);
+				}
+				e.stopImmediatePropagation(); // prevent focus
+			}).focus(e => { // user tabbed to another result-item
+				// Only select the item if it isn't already selected
+				const $item = $(e.target);
+				if ($item.is('.selected')) return;
+				this.confirmSelectResultItem($(e.target));
 			});
 
 		const $selectedItem = $('.query-result-list-item.selected');
@@ -1316,7 +1426,7 @@ class ClimberDBClimbers extends ClimberDB {
 						'climbers': row.climber_id,
 						'expeditions': row.expedition_id,
 						'expedition_members': row.expedition_member_id,
-						'planned_routes': row.planned_route_id
+						'expedition_member_routes': row.expedition_member_route_id
 					},
 					show: false
 				}
@@ -1412,16 +1522,16 @@ class ClimberDBClimbers extends ClimberDB {
 			SELECT 
 				expeditions.expedition_name, 
 				expeditions.permit_number,
-				planned_routes.*, 
-				planned_routes.id AS planned_route_id,
+				expedition_member_routes.*, 
+				expedition_member_routes.id AS expedition_member_route_id,
 				expedition_members.*, 
 				expeditions.sanitation_problems, 
 				expeditions.equipment_loss,
 				expeditions.actual_departure_date, 
 				expeditions.actual_return_date,
 				expeditions.group_status_code  
-			FROM planned_routes 
-				JOIN expedition_members ON planned_routes.expedition_member_id=expedition_members.id 
+			FROM expedition_member_routes 
+				JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id 
 				JOIN expeditions ON expedition_members.expedition_id=expeditions.id 
 				JOIN climbers ON expedition_members.climber_id=climbers.id 
 			WHERE 
@@ -1429,7 +1539,7 @@ class ClimberDBClimbers extends ClimberDB {
 				climbers.id=${climberID} 
 			ORDER BY 
 				expeditions.actual_departure_date DESC, 
-				planned_routes.route_order ASC
+				expedition_member_routes.route_order ASC
 		;`;
 		const contactsSQL = `SELECT * FROM emergency_contacts WHERE climber_id=${climberID}`;
 
@@ -1470,15 +1580,26 @@ class ClimberDBClimbers extends ClimberDB {
 			.done(queryResultString => {
 				if (!this.queryReturnedError(queryResultString)) {
 					const $item = $(`#item-${climberID}`);
-					const $nextItem = $item.next();
+					const $nextItem = $item.next().length ? $item.next() : $item.prev();
 					$item.fadeOut(500, () => {$item.remove()});
 					
 					if ($nextItem.length) {
 						this.selectResultItem($nextItem);
 						$nextItem[0].scrollIntoView();
-					} else {
+
+						// Adjust record set
+						const $minSpan = $('#min-record-index-span');
+						const $maxSpan = $('#max-record-index-span');
+						const $totalSpan = $('#total-records-span');
+						$maxSpan.text($maxSpan.text() - 1);
+						$totalSpan.text($totalSpan - 1);	
+					} else { // This was the last climber so get the next result set
 						$('.empty-result-message').ariaHide(false);
+						this.getResultSet();
 					}
+					
+		
+
 				}
 			})
 	}
@@ -1506,11 +1627,11 @@ class ClimberDBClimbers extends ClimberDB {
 		this.showLoadingIndicator('init');
 		var deferreds = super.init();
 		
-		$('.sidebar-nav-group > .nav-item.selected').removeClass('selected');
-		$('.sidebar-nav-group .nav-item > a')
-			.filter((_, el) => el.href.endsWith('climbers.html'))
-			.parent()
-				.addClass('selected');
+		// $('.sidebar-nav-group > .nav-item.selected').removeClass('selected');
+		// $('.sidebar-nav-group .nav-item > a')
+		// 	.filter((_, el) => el.href.endsWith('climbers.html'))
+		// 	.parent()
+		// 		.addClass('selected');
 
 		// Do additional synchronous initialization stuff
 		this.configureMainContent();
