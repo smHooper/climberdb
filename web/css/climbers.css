@@ -22,6 +22,7 @@
 .fuzzy-search-bar:focus {
 	cursor: unset;
 	background-color: rgba(255, 255, 255, 0.4);
+	outline: none;
 }
 .fuzzy-search-bar:focus,
 .fuzzy-search-bar:not(:placeholder-shown) {
@@ -376,7 +377,8 @@ section.card {
 	align-items: center;
 }
 
-.card-link-content {
+.card-link-content,
+.card-header-content-container {
 	height: 100%;
 	line-height: 100%;
 	display: inline-flex;

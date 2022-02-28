@@ -59,6 +59,76 @@ function showModal(message, title, modalType='alert', footerButtons='') {
 }
 
 
+function showLoadingIndicator(caller, timeout=15000) {
+
+	//set a timer to turn off the indicator after a max of 15 seconds because 
+	//  sometimes hideLoadingIndicator doesn't get called or there's some mixup 
+	//  with who called it
+	/*if (timeout) {
+		setTimeout(hideLoadingIndicator, timeout);
+	}*/
+	
+	// For anonymous functions, the caller is undefined, so (hopefully) the 
+	//	function is called with the argument given
+	//caller = caller || this.showLoadingIndicator.caller.name;
+
+	var indicator = $('#loading-indicator').removeClass('hidden');
+	$('#loading-indicator-background').removeClass('hidden');
+
+	// check the .data() to see if any other functions called this
+	indicator.data('callers', 
+		indicator.data('callers') === undefined ? 
+			[caller] : 
+			indicator.data('callers').concat([caller])
+	);
+
+}
+
+
+/*
+*/
+function hideLoadingIndicator(caller) {
+
+
+	var indicator = $('#loading-indicator')
+	// if no caller was given, just remove the indicator
+	if (caller === undefined || indicator.data('callers') == undefined) {
+		 indicator.data('callers', [])
+	} else if (indicator.data('callers').includes(caller)) {
+		indicator.data(
+			'callers', 
+			indicator.data('callers').filter(thisCaller => thisCaller != caller)
+		);
+	}
+
+	// Hide the indicator if there are no more callers
+	if (!indicator.data('callers').length) {
+		$('#loading-indicator-background').addClass('hidden');
+		indicator.addClass('hidden');
+	}
+
+}
+
+function deepCopy(inObject) {
+	let outObject, value, key;
+
+	if (typeof inObject !== "object" || inObject === null) {
+		return inObject; // Return the value if inObject is not an object
+	}
+
+	// Create an array or object to hold the values
+	outObject = Array.isArray(inObject) ? [] : {};
+
+	for (key in inObject) {
+		value = inObject[key];
+
+		// Recursively (deep) copy for nested objects, including arrays
+		outObject[key] = deepCopy(value);
+	}
+
+	return outObject;
+}
+
 /* ClimberDB base class*/
 class ClimberDB {
 	constructor() {
@@ -67,6 +137,7 @@ class ClimberDB {
 			tables: {},
 			insertOrder: [] // comply with left-right orientation of table relationships
 		};
+		this.entryMetaFields = ['entry_time', 'entered_by', 'last_modified_time', 'last_modified_by'];
 	}
 
 	getUserInfo() {
@@ -216,11 +287,14 @@ class ClimberDB {
 					//console.log(`error filling in ${selectElementID}: ${queryResultString}`);
 				}
 				if (queryResult) {
+					const $el = $('#' + selectElementID);
 					queryResult.forEach(function(object) {
-						$('#' + selectElementID).append(
+						$el.append(
 							`<option class="${optionClassName}" value="${object.value}">${object.name}</option>`
 						);
 					})
+					const defaultValue = $el.data('default-value');
+					if (defaultValue !== undefined) $el.val(defaultValue);
 				} else {
 					console.log(`error filling in ${selectElementID}: ${queryResultString}`);
 				}
@@ -258,56 +332,49 @@ class ClimberDB {
 	*/
 	showLoadingIndicator(caller, timeout=15000) {
 
-		//set a timer to turn off the indicator after a max of 15 seconds because 
-		//  sometimes hideLoadingIndicator doesn't get called or there's some mixup 
-		//  with who called it
-		/*if (timeout) {
-			setTimeout(hideLoadingIndicator, timeout);
-		}*/
-		
-		// For anonymous functions, the caller is undefined, so (hopefully) the 
-		//	function is called with the argument given
-		//caller = caller || this.showLoadingIndicator.caller.name;
-
-		var indicator = $('#loading-indicator').removeClass('hidden');
-		$('#loading-indicator-background').removeClass('hidden');
-
-		// check the .data() to see if any other functions called this
-		indicator.data('callers', 
-			indicator.data('callers') === undefined ? 
-				[caller] : 
-				indicator.data('callers').concat([caller])
-		);
-
+		showLoadingIndicator(caller, timeout);
 	}
 
 
 	/*
 	*/
 	hideLoadingIndicator(caller) {
-	
-
-		var indicator = $('#loading-indicator')
-		// if no caller was given, just remove the indicator
-		if (caller === undefined || indicator.data('callers') == undefined) {
-			 indicator.data('callers', [])
-		} else if (indicator.data('callers').includes(caller)) {
-			indicator.data(
-				'callers', 
-				indicator.data('callers').filter(thisCaller => thisCaller != caller)
-			);
-		}
-
-		// Hide the indicator if there are no more callers
-		if (!indicator.data('callers').length) {
-			$('#loading-indicator-background').addClass('hidden');
-			indicator.addClass('hidden');
-		}
-
+		hideLoadingIndicator(caller);
 	}
+
+
+	addNewListItem($ul, {dbID=null, newItemClass=''}={}) {
+
+		const $cloneable = $ul.find('li.cloneable');
+		const $newItem = $cloneable.clone(true)//withDataAndEvents=true
+			.removeClass('cloneable hidden')
+
+
+		var itemdIndex = $ul.find('li:not(.cloneable)').length;
+		var newItemID = `${$ul.attr('id')}-${itemdIndex}`;
+		if (isNaN(dbID)) {
+			while ($('#' + newItemID).length) {
+				itemdIndex++;
+				newItemID = `${$ul.attr('id')}-${itemdIndex}`;
+			}
+		} else {
+			newItemID = `${$ul.attr('id')}-${dbID}`;
+		}
+		$newItem.attr('id', newItemID);
+
+		for (const el of $newItem.find('.input-field')) {
+			el.id = `${el.id}-${dbID || itemdIndex}`;
+			if (!isNaN(dbID)) $(el).attr('table-id', dbID);
+		}
+
+		return $newItem.addClass(newItemClass).insertBefore($cloneable);
+	}
+
 
 	/* Add a card to an accordion by cloning a .cloneable template card */
 	addNewCard($accordion, {cardIndex=null, accordionName=null, cardLinkText='', updateIDs={}, show=true, newCardClass=''}={}) {
+		
+		$accordion = $($accordion);// In case selector string was given
 
 		const $dummyCard = $accordion.find('.card.cloneable');
 		if ($dummyCard.length === 0) {
@@ -316,16 +383,14 @@ class ClimberDB {
 		}
 
 		// Close any open cards
-		$accordion.find('.card:not(.cloneable) .collapse.show').each(
-			function() {$(this).siblings('.card-header').find('.card-link').click()}
-		);
+		$accordion.find('.card:not(.cloneable) .collapse.show').removeClass('show');/*.each(
+			function() {$(this)rem}
+		);*/
 
 		// Get ID suffix for all children elements. Suffix is the 
 		//	<element_identifier>-<section_index>-<card_index>.
 		//	This is necessary to distinguish elements from others in 
-		//	other form sections and other cards within the section
-		/*const sectionIndex = $accordion.closest('.form-page')
-			.data('page-index');*/
+		//	other cards within the section
 		accordionName = accordionName || $accordion.data('table-name');
 		if (!cardIndex) {
 			var cardIndex = $accordion.find('.card').length - 1;// - 1 because cloneable is 0th
@@ -456,16 +521,16 @@ class ClimberDB {
 		const $card = $field.closest('.card');
 		if ($card.is('.cloneable')) return;
 
-		var names = {}
+		var names = {};
 		if ($card.data('label-template')) {
 			for (const el of $card.find('.card-label-field')) {
-				if (el.value == null) return;
+				if (el.value == null || el.value === '') return;
 				names[el.name] = el.value;
 			}
 		} else {
 			names = [];
 			for (const el of  $card.find('.card-label-field')) {
-				if (el.value == null) return;
+				if (el.value == null || el.value === '') return;
 				names.push(el.value);
 			}
 		}
@@ -476,6 +541,81 @@ class ClimberDB {
 		this.setCardLabel($card, names, defaultText);
 	}
 
+	/*
+	Recursively hide/show input fields whose visibility should depend on the value of a select
+	*/
+	toggleDependentFields = function($select) {
+
+		const selectID = '#' + $select.attr('id');
+
+		// Get all the elements with a data-dependent-target 
+		const dependentElements = $(`
+			.collapse.field-container .input-field, 
+			.collapse.field-container-row .input-field,
+			.collapse.accordion, 
+			.collapse.add-item-container .add-item-button
+			`).filter((_, el) => {return $(el).data('dependent-target') === selectID});
+		//const dependentIDs = $select.data('dependent-target');
+		//var dependentValues = $select.data('dependent-value');
+		dependentElements.each((_, el) => {
+			const $thisField = $(el);
+			if (el.id == 'input-input-recovered_value-0') {
+				let a=0;
+			}
+			var dependentValues = $thisField.data('dependent-value').toString();
+			if (dependentValues) {
+				var $thisContainer = $thisField.closest('.collapse.field-container, .collapse.field-container-row, .collapse.accordion, .collapse.add-item-container');
+				
+				// If there's a ! at the beginning, 
+				const notEqualTo = dependentValues.startsWith('!');
+				dependentValues = dependentValues
+					.toString()
+					.replace('!', '')
+					.split(',').map((s) => {return s.trim()});
+				
+				var selectVal = ($select.val() || '').toString().trim();
+
+				var show = dependentValues.includes(selectVal) || 
+					(dependentValues[0] === '<blank>' && selectVal == '');
+				if (notEqualTo) show = !show;
+
+				if (show) {
+					$thisContainer.collapse('show');
+					this.toggleDependentFields($thisField)
+				} else {
+					$thisContainer.collapse('hide');
+					this.toggleDependentFields($thisField);
+				}
+			}
+		});
+	}
+
+
+	/*
+	Generic event handler for selects
+	*/
+	onSelectChange = function(e) {
+		// Set style depending on whether the default option is selected
+		const $select = $(e.target);
+
+		const value = $select.val();
+		if (value == null || value == '') {
+			$select.addClass('default');
+		} else {
+			$select.removeClass('default error');
+			// the user selected an actual option so remove the empty default option
+			/*for (const el of $select.find('option')) {//.each(function(){
+				const $option = $(el);
+				if ($option.val() == '') {
+					$option.remove();
+				}
+			}*/
+		}
+
+		// If there are any dependent fields that should be shown/hidden, 
+		//	toggle its visibility as necessary
+		this.toggleDependentFields($select);
+	}
 
 
 	/**/
@@ -629,15 +769,63 @@ class ClimberDB {
 		})
 	}
 
+	/*
+	Helper method to set the value of an input field. The 'name' attribute needs to 
+	correspond to a key in the values object. 
+	@parameter:
+	*/
+	fillInputField(el, values, {dbID=null, triggerChange=false}={}) {
+		el.value = null; // clear value regardless
+		
+		const $el = $(el);
+
+		// If this is a child of a cloneable card, skip it
+		if ($el.closest('.card.cloneable').length) return [$(null), null, null];
+
+		// If this is being called to roll back edits, the table-id should already be filled
+		if (dbID === null) dbID = $el.data('table-id');
+
+		const isSelect = $el.is('select');
+		const fieldName = el.name.replace(/-\d+$/g, '');
+		const value = values[fieldName];
+		if (fieldName in values) {
+			if ($el.is('.input-checkbox')) {
+				$el.prop('checked', value === 't'); //bool vals from postgres are returned as either 't' or 'f'
+			} else {
+				$el.val(value);
+				if (isSelect) {
+					$el.toggleClass('default', value == null || value == '');
+				}
+			}
+		} else if (isSelect) {
+			$el.addClass('default')
+		}
+
+		$el.data('table-id', dbID);
+
+		if (triggerChange) $el.change();
+
+		return [$el, fieldName, value];
+	}
+
+	
 	/* Return any Deferreds so anything that has to happen after these are done can wait */
 	init({addMenu=true}={}) {
 		if (addMenu) this.configureMenu();
 		
 		// Bind events on dynamically (but not yet extant) elements
 		$(document).on('change', 'select.input-field', e => {
-			const $select = $(e.target);
-			$select.toggleClass('default', $select.val() == null);
+			//const $select = $(e.target);
+			//$select.toggleClass('default', $select.val() == null);
+			this.onSelectChange(e);
 		});
+
+		// Show the right sidebar nav item as selected
+		$('.sidebar-nav-group > .nav-item.selected').removeClass('selected');
+		$('.sidebar-nav-group .nav-item > a')
+			.filter((_, el) => el.href.endsWith(window.location.href.split('/').pop()))
+			.parent()
+				.addClass('selected');
 		
 		return [this.getUserInfo(), this.getTableInfo()];
 	}

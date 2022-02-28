@@ -55,7 +55,7 @@ class ClimberForm {
 						</div>
 					</div>
 					<ul class="tabs" role="tablist">
-						<li id="climber-info-list-item">
+						<li id="climber-info-tab">
 							<input id="climber-info-tab" class="tab-button" type="radio" name="tabs" checked="true">
 							<label for="climber-info-tab" class="tab-label" role="tab" aria-selected="true" aria-controls="climber-info-tab-content" tabindex="0">
 								Climber Info
@@ -430,35 +430,14 @@ class ClimberForm {
 
 
 	/*
-	Helper method to fill an input field. The 'name' attribute needs to 
-	correspond to a key in the values object
+	Wrapper for ClimberDB.fillInputField to do any additional stuff necessary for this page
 	*/
 	fillInputField(el, values, {dbID=null, triggerChange=false}={}) {
-		el.value = null; // clear value regardless
-		
-		const $el = $(el);
 
-		// If this is a child of a cloneable card, skip it
-		if ($el.closest('.card.cloneable').length) return;
+		const [$el, fieldName, value] = climberDB.fillInputField(el, values, {dbID: dbID, triggerChange: triggerChange});
 
-		// If this is being called to roll back edits, the table-id should already be filled
-		if (dbID === null) dbID = $el.data('table-id');
-
-		const isSelect = $el.is('select');
-		const fieldName = el.name.replace(/-\d+$/g, '');
-		const value = values[fieldName];
-		if (fieldName in values) {
-			if ($el.is('.input-checkbox')) {
-				$el.prop('checked', value === 't'); //bool vals from postgres are returned as either 't' or 'f'
-			} else {
-				el.value = value;
-				if (isSelect) {
-					$el.removeClass('default')
-				}
-			}
-		} else if (isSelect) {
-			$el.addClass('default')
-		}
+		const badgeTarget = $el.data('badge-target');
+		if (badgeTarget && $el.data('badge-target-value') == value) $(badgeTarget).ariaHide(false);
 
 		// Record initial data to easily enable rolling back edits
 		const tableName = $el.data('table-name');
@@ -466,13 +445,6 @@ class ClimberForm {
 		if (!(tableName in info)) info[tableName] = {};
 		if (!(dbID in info[tableName])) info[tableName][dbID] = {};
 		info[tableName][dbID][fieldName] = value;
-
-		$el.data('table-id', dbID);
-
-		const badgeTarget = $el.data('badge-target');
-		if (badgeTarget && $el.data('badge-target-value') == value) $(badgeTarget).ariaHide(false);
-		
-		if (triggerChange) $el.change();
 	}
 
 
@@ -632,7 +604,7 @@ class ClimberForm {
 
 		// **** check for required fields in any inserts
 		let inserts = [];
-		for (const container of $('.climberdb-modal #climber-info-list-item, .new-card:not(.cloneable)')) { 
+		for (const container of $('.climberdb-modal #climber-info-tab, .new-card:not(.cloneable)')) { 
 			let tableParameters = {}
 			for (const el of $(container).find('.input-field.dirty')) {
 				const $input = $(el);
@@ -1257,11 +1229,11 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	/*Get climber data*/
-	queryClimbers({searchString='', minIndex=1} = {}) {
+	queryClimbers({searchString='', minIndex=1, climberID=null} = {}) {
 		
 		const withSearchString = !!searchString.length;
 		var maxIndex = minIndex + this.recordsPerSet - 1;
-		const whereClause = `WHERE row_number BETWEEN ${minIndex} AND ${maxIndex}`;
+		const whereClause = isNaN(climberID) ? `WHERE row_number BETWEEN ${minIndex} AND ${maxIndex}` : `WHERE id=${parseInt(climberID)}`;
 		const coreQuery = withSearchString ? 
 			`
 				SELECT *, 'first_name' AS search_column  FROM climber_info_view WHERE first_name ILIKE '${searchString}%' 
@@ -1349,33 +1321,37 @@ class ClimberDBClimbers extends ClimberDB {
 					this.fillResultList(this.climberInfo, !withSearchString);
 
 					// Update index
-					const rowNumbers = this.climberInfo.map(i => parseInt(i.row_number));
-					minIndex = minIndex || Math.min(...rowNumbers);
-					maxIndex = Math.max(...rowNumbers);
-					const countSQL = `SELECT count(*) FROM (${coreQuery}) t;`
-					// const countSQL = sql
-					// 	.replace(/\s+/g, ' ')
-					// 	.replace('(extract(epoch FROM now()) * 1000)::bigint AS query_time, row_number() over(), *', 'count(*)')
-					// 	.replace(whereClause, '')
-					// 	.split(' ORDER')[0]
-					this.queryDB(countSQL).done((resultString) => {
-						if (this.queryReturnedError(resultString)) {
+					if (isNaN(climberID)) {
+						const rowNumbers = this.climberInfo.map(i => parseInt(i.row_number));
+						minIndex = minIndex || Math.min(...rowNumbers);
+						maxIndex = Math.max(...rowNumbers);
+						const countSQL = `SELECT count(*) FROM (${coreQuery}) t;`
+						this.queryDB(countSQL).done((resultString) => {
+							if (this.queryReturnedError(resultString)) {
 
-						} else {
-							const countResult = $.parseJSON(resultString);
-							if (countResult.length) {
-								// Show the currently loaded range of climber results
-								const count = countResult[0].count;
-								$('#min-record-index-span').text(minIndex);
-								$('#max-record-index-span').text(Math.min(maxIndex, count));
-								$('#total-records-span').text(count);
-								$('.result-index-label').ariaHide(false);
-								$('.show-next-result-set-button').prop('disabled', maxIndex === parseInt(count));
-								$('.show-previous-result-set-button').prop('disabled', minIndex === 1);
+							} else {
+								const countResult = $.parseJSON(resultString);
+								if (countResult.length) {
+									// Show the currently loaded range of climber results
+									const count = countResult[0].count;
+									$('#min-record-index-span').text(minIndex);
+									$('#max-record-index-span').text(Math.min(maxIndex, count));
+									$('#total-records-span').text(count);
+									$('.result-index-label').ariaHide(false);
+									$('.show-next-result-set-button').prop('disabled', maxIndex === parseInt(count));
+									$('.show-previous-result-set-button').prop('disabled', minIndex === 1);
+								}
+
 							}
-
-						}
-					});
+						});
+					} else {
+						$('#min-record-index-span').text(1);
+						$('#max-record-index-span').text(1);
+						$('#total-records-span').text(1);
+						$('.result-index-label').ariaHide(false);
+						$('.show-next-result-set-button').prop('disabled', true);
+						$('.show-previous-result-set-button').prop('disabled', true);
+					}
 					
 				}
 			}).fail((xhr, status, error) => {
@@ -1383,6 +1359,17 @@ class ClimberDBClimbers extends ClimberDB {
 			})
 	}
 
+
+	queryClimberByID(climberID) {
+		const deferred = this.queryClimbers({climberID: climberID})
+			.done(queryResultString => {
+				if (!this.queryReturnedError(queryResultString)) {
+					this.currentRecordSetIndex = 1;
+				}
+			});
+		
+		return deferred;
+	}
 
 	/*
 	Helper method to get next (or previous) set of results
@@ -1665,7 +1652,20 @@ class ClimberDBClimbers extends ClimberDB {
 			)
 		} 
 		$.when(this.fillAllSelectOptions(), ...lookupDeferreds).then(() => {
-			this.getResultSet().always(()=>{
+			var urlParams = {};
+			if (window.location.search.length) {
+				urlParams = Object.fromEntries(
+					decodeURIComponent(window.location.search.slice(1))
+						.split('&')
+						.map(s => s.split('=')
+					)
+				);
+
+			} 
+			const queryDeferred = 'id' in urlParams ?
+				this.queryClimberByID(urlParams.id) :
+				this.getResultSet();
+			queryDeferred.always(()=>{
 				$.when(...deferreds).always(() => {this.hideLoadingIndicator()});
 			});
 		});
