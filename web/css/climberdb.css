@@ -89,16 +89,18 @@ input.fuzzy-search-bar:focus,
 button.close {*/
 button, 
 input.fuzzy-search-bar:focus,
+#climberdb-main-content .query-option-input-field:focus,
+#climberdb-main-content .query-option-operator:focus,
 .query-result-list-item:focus {
   -webkit-box-shadow: none;
   outline: -webkit-focus-ring-color auto 0px !important;
 }
-
 button > img {
   height: 100%;
   max-width: 100%;
 }
-/* Custom checkbox*/
+
+/*------Custom checkbox--------*/
 /* The container */
 .checkmark-container {
   display: inline-flex;
@@ -115,7 +117,6 @@ button > img {
   background-color: rgba(0,0,0,0);
   transition: 0.2s all;
 }
-
 /* Hide the browser's default checkbox */
 .checkmark-container input {
   position: absolute;
@@ -124,7 +125,6 @@ button > img {
   height: 0;
   width: 0;
 }
-
 /* Create a custom checkbox */
 .checkmark {
   position: absolute;
@@ -138,13 +138,11 @@ button > img {
   horizontal-align: center;
   transition: 0.2s all;
 }
-
 /*When the checkbox is checked, fill in background*/ 
 .checkmark-container input:checked ~ .checkmark {
   background-color: #219EBC;
   border: none;
 }
-
 /* Create the checkmark/indicator (hidden when not checked) */
 .checkmark:after {
   content: "";
@@ -153,13 +151,11 @@ button > img {
   opacity: 0;
   transition: 0.2s all;
 }
-
 /* Show the checkmark when checked */
 .checkmark-container input:checked ~ .checkmark:after {
   /*display: block;*/
   opacity: 1;
 }
-
 /* Style the checkmark/indicator */
 .checkmark-container .checkmark:after {
   left: 8.5px;
@@ -173,17 +169,108 @@ button > img {
   transform: rotate(45deg);
   vertical-align: center;
 }
-
 .checkmark-container input[type="checkbox"]:focus + span::before {
   outline: rgb(0, 0, 0) auto 5px;
   box-shadow: 0 0 0 5px #ffbf47;
 }
-
 .checkbox-label {
   margin-left: 30px;
   margin-bottom: 0;
   font-size: 1rem;
 }
+/*---------------------------------*/
+
+
+/*-------select2 styling--------*/
+.climberdb-main .select2-container--default 
+  .select2-selection--multiple,
+.climberdb-main .select2-container--default 
+  .select2-selection--single,
+.query-option-operator,
+.query-option-input-field  {
+  background-color: rgba(0, 0, 0, 0);
+  border: none;
+  border-bottom: solid rgba(0, 0, 0, 0.2) 2px;
+  border-radius: 0px;
+  transition: all 0.2s;
+}
+.climberdb-main .select2-container--default.select2-container--focus 
+  .select2-selection--multiple,
+.climberdb-main .select2-container--default.select2-container--focus 
+  .select2-selection--single,
+.query-option-operator:focus,
+.query-option-input-field:focus  { /*the select box*/
+  border: none;
+  border-bottom: solid rgba(0, 0, 0, 0.6) 2px;
+}
+.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice {/*the selected item pill*/
+  background: none;
+  border: solid rgb(40, 40, 40) 1.5px;
+  border-radius: 2rem;
+  transition: all .2s;
+}
+.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice:hover,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice:hover {
+  /*border: solid white 1.5px;*/
+
+}
+.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice__remove,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice__remove {
+  border: none;
+  color: white;
+  border-radius: 1.1em;
+  top: 0.25em;
+  width: 1.1rem;
+  height: 1.1rem;
+  transition: background 0.2s;
+  
+}
+.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice__remove:hover,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice__remove:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice__remove span,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice__remove span { /*the x*/
+  font-size: 1.5rem;
+  position: relative;
+  top: -.65rem;
+  left: -.05rem;
+}
+.query-option-operator,
+.query-option-input-field:not(.slider-container) {
+  min-height: 32px;
+}
+.query-option-operator,
+.query-option-input-field:not(.slider-container),
+.climberdb-main .select2-container--default .select2-search--inline 
+  .select2-search__field {
+  color: white;
+}
+.select2-container--open {
+  z-index: 5000;
+}
+.select2-container > .select2-dropdown {
+  background: rgb(0,0,0);
+  color: white;
+}
+.select2-container--default .bhims-query-select2-dropdown-container .select2-results__option--selected {
+  background: rgba(100,100,100,0.4);
+}
+.select2-container--default .bhims-query-select2-dropdown-container .select2-results__option--highlighted.select2-results__option--selectable {
+  background: hsl(211 68% 52%);
+}
+/*--------------*/
 
 /**** tabs *********/
 ul.tabs { 
@@ -882,7 +969,7 @@ audio.modal-img {
   opacity: 0.6;
 }
 
-main.dashboard-main {
+main.climberdb-main {
   position: fixed;
   top: 0;
   height: 100vh;

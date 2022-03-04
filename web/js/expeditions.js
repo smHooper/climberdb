@@ -5,11 +5,13 @@ class ClimberDBExpeditions extends ClimberDB {
 		super();
 		this.expeditionInfo = {};
 		this.routeCodes = {};
-		this.emergencyContacts = {}; //db id -> emergency contact pairs
+		this.cmcInfo = {
+			rfidTags: {}, // keys are RFID tag IDs, vals are db IDs
+			cmcCanIDs: {} // keys are db IDs, vals are can IDs
+		};
+		this.defaultTransactionFees = {};
 		this.lastSearchQuery = (new Date()).getTime();
 		this.totalResultCount;
-		this.recordsPerSet = 50; /* how many climbers to show at once */
-		this.currentRecordSetIndex = 0;
 		this.climberForm;
 
 		return this;
@@ -18,9 +20,88 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	configureMainContent() {
 		$('.main-content-wrapper').append(`
-			<div class="fuzzy-search-bar-container">
-				<input id="climber-search-bar" class="fuzzy-search-bar" placeholder="Search climbers" autocomplete="off">
-				<img src="imgs/search_icon_50px.svg">
+			<div class="main-content-header">
+				<div class="fuzzy-search-bar-container">
+					<select id="expedition-search-bar" class="fuzzy-search-bar no-option-fill" placeholder="Search climbers" title="Expedition search bar"></select>
+					<img src="imgs/search_icon_50px.svg">
+					<button class="show-query-options-button icon-button">
+						<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg">
+					</button>
+					<div class="search-option-drawer collapse">
+						<div class="search-option-drawer-content">
+							<div class="query-option-container col-4">
+								<div class="query-option-condition-header">
+									<label class="query-option-label" for="query-option-expedition_name">Expedition name</label>
+								</div>
+								<div class="query-option-condition-container">
+									<select class="query-option-operator string-match-query-option text-string-query-option" value="equals">
+										<option value="equals">equals</option>
+										<option value="startsWith">starts with</option>
+										<option value="endsWith">ends with</option>
+										<option value="contains">contains</option>
+									</select>
+									<input id="query-option-expedition_name" class="query-option-input-field string-match-query-option" type="text" data-field-name="expedition_name">
+								</div>
+							</div>
+
+							<div class="query-option-container col-4">
+								<div class="query-option-condition-header">
+									<label class="query-option-label" for="query-option-group_status">Group status</label>
+								</div>
+								<div class="query-option-condition-container checkbox-option-group">
+									<select id="query-option-group_status" class="input-field query-option-input-field select2-no-tag" multiple="multiple" data-field-name="group_status_code" data-lookup-table="group_status_codes">
+									</select>
+								</div>
+							</div>
+
+							<div class="w-100"></div>
+
+							<div class="query-option-container col-4">
+								<div class="query-option-condition-header">
+									<label class="query-option-label" for="query-option-planned_departure">Planned departure</label>
+								</div>
+							
+								<div class="query-option-condition-container">
+									<select class="query-option-operator datetime-query-option" value="equals">
+										<option value="=">equals</option>
+										<option value="<=">is before</option>
+										<option value=">=">is after</option>
+										<option value="BETWEEN">is between</option>
+									</select>
+									<input id="query-option-planned_departure" class="query-option-input-field single-value-field datetime-query-option" type="date" data-field-name="planned_departure_date">
+									<div class="query-option-double-value-container hidden">
+										<input class="query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" aria-hidden="true">
+										<span>and</span>
+										<input class="query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" aria-hidden="true">
+									</div>
+								</div>
+							</div>
+
+							<div class="query-option-container col-4">
+								<div class="query-option-condition-header">
+									<label class="query-option-label" for="query-option-planned_return">Planned return</label>
+								</div>
+							
+								<div class="query-option-condition-container">
+									<select class="query-option-operator datetime-query-option" value="equals">
+										<option value="=">equals</option>
+										<option value="<=">is before</option>
+										<option value=">=">is after</option>
+										<option value="BETWEEN">is between</option>
+									</select>
+									<input id="query-option-planned_return" class="query-option-input-field single-value-field datetime-query-option" type="date" data-field-name="planned_return_date">
+									<div class="query-option-double-value-container hidden">
+										<input class="query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="planned_return_date" aria-hidden="true">
+										<span>and</span>
+										<input class="query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="planned_return_date" aria-hidden="true">
+									</div>
+								</div>
+							</div>
+
+						</div>
+					</div>
+				</div>
+				<button id="add-new-expedition-button" class="generic-button">new expedition</button>
 			</div>
 			<div class="expedition-content">
 				<!-- expedition info --> 
@@ -147,7 +228,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<li class="nav-item" role="presentation">
 													<a id="expedition-info-tab-button" class="nav-link active" data-toggle="tab" href="#expedition-info-tab-pane" type="button" role="tab" aria-controls="expedition-info-tab-pane" aria-selected="true">Member info</a>
 												</li>
-												<li class="nav-item" role="presentation">
+												<li class="nav-item show-transaction-tab-button" role="presentation">
 													<a id="transactions-tab-button" class="nav-link" data-toggle="tab" href="#transactions-tab-pane" type="button" role="tab" aria-controls="transactions-tab-pane" aria-selected="false">Transactions</a>
 												</li>
 											</ul>
@@ -265,11 +346,11 @@ class ClimberDBExpeditions extends ClimberDB {
 														<ul id="transactions-list" class="data-list">
 															<li class="data-list-item cloneable hidden">
 																<div class="col-3">
-																	<select id="input-transaction_type" class="input-field" name="transaction_type_code" data-table-name="transactions" title="Transaction type"></select>
+																	<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" title="Transaction type"></select>
 																</div>
 																<div class="col-3">
 																	<span class="unit-symbol">$</span>
-																	<input id="input-transaction_value" class="input-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
+																	<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
 																</div>
 																<div class="col-6">
 																	<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
@@ -320,20 +401,20 @@ class ClimberDBExpeditions extends ClimberDB {
 											<div class="data-list-item data-list-item-header">
 												<label class="data-list-col data-list-header-label col-4"></label>
 												<label class="data-list-col data-list-header-label col-3 text-center">Summited?</label>
-												<label class="data-list-col data-list-header-label col-5">Summit date</label>
+												<label class="data-list-col data-list-header-label col-4">Summit date</label>
 											</div>
 											<ul id="route-member-list" class="data-list route-member-list">
 												<li class="data-list-item cloneable hidden">
-													<div class="col-4">
+													<div class="col-5">
 														<label class="data-list-header-label name-label"></label>
 													</div>
-													<div class="col-3 center-checkbox-col">
+													<div class="col-2 center-checkbox-col">
 														<label class="checkmark-container">
 															<input id="input-route_summited" class="input-field input-checkbox route-summited-checkbox" type="checkbox" name="route_was_summited" data-table-name="expedition_member_routes" title="Route summitted?">
 															<span class="checkmark data-input-checkmark"></span>
 														</label>
 													</div>
-													<div class="col-5">
+													<div class="col-4">
 														<input id="input-summit_date" class="input-field" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"> 
 													</div>
 												</li>
@@ -356,15 +437,99 @@ class ClimberDBExpeditions extends ClimberDB {
 					<div id="cmcs-data-container" class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<h3 id="expedition-data-header" class="expedition-data-header">CMCs</h3>
-							<div class="expedition-data-header-content"></div>
+							<button class="generic-button add-cmc-button" data-target="#cmc-list">Add CMC</button>
 						</div>
 						<div class="expedition-data-content-body">
+							<div class="data-list-item data-list-item-header">
+								<label class="data-list-col data-list-header-label col-2">CMC</label>
+								<label class="data-list-col data-list-header-label col-4">Checkout date</label>
+								<label class="data-list-col data-list-header-label col-4">Return date</label>
+								<label class="data-list-col data-list-header-label col-1"></label>
+							</div>
+							<ul id="cmc-list" class="data-list cmc-list">
+								<li class="data-list-item cloneable hidden">
+									<div class="col-2">
+										<select id="input-cmc_id" class="input-field no-option-fill" name="cmc_id" data-table-name="cmc_checkout" title="CMC ID"></select>
+									</div>
+									<div class="col-4">
+										<input id="input-checkout_date" class="input-field" name="checkout_date" type="date" data-table-name="cmc_checkout" title="CMC Checkout Date"> 
+									</div>
+									<div class="col-4">
+										<input id="input-return_date" class="input-field" name="return_date" type="date" data-table-name="cmc_checkout" title="CMC Return Date"> 
+									</div>
+									<div class="col-1">
+										<button class="icon-button delete-button delete-cmc-button">
+											<i class="fas fa-trash fa-lg"></i>
+										</button>
+									</div>
+								</li>
+							</ul>
 						</div>
 					</div>
 				</div>
 			</div>
 		`);
+		
+		$('.show-query-options-button').on('click', e => {
+			$('.search-option-drawer').collapse('toggle');
+		});
 
+		$('.add-new-expedition-button').click(e => {
+			this.clearExpeditionInfo();
+			$('#expedition-entered-by-result-summary-item .result-details-summary-value')
+				.text(this.userInfo.ad_username);
+			$('#expedition-entry-time-result-summary-item .result-details-summary-value')
+				.text((new Date()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year:'numeric'}));	
+		});
+
+		$('.accordion .card-collapse').on('shown.bs.collapse', e => {
+			const $collapse = $(e.target);
+			const $contentBody = $collapse.closest('.expedition-data-content-body');
+			const contentBodyElement = $contentBody[0]
+			if (contentBodyElement.scrollHeight > contentBodyElement.clientHeight) {
+				const $cardHeader = $collapse.closest('.card').find('.card-header');
+				const scrollToPosition = $contentBody.scrollTop() + $cardHeader.offset().top - $contentBody.offset().top - $cardHeader.height();
+				if (scrollToPosition > 0) contentBodyElement.scrollTo(0, scrollToPosition);
+			}
+		})
+		// ------------ Query stuff -------------------
+		// Set the default expedition query to only show this year's expeditions
+		const defaultDepartureQueryDate = new Date((new Date()).getFullYear() - 1, 0, 1);//new Date((new Date()).getFullYear(), 0, 1);
+		$('#query-option-planned_departure')
+			.val(getFormattedTimestamp(defaultDepartureQueryDate))
+			.siblings('.query-option-operator')
+				.val('>=');
+
+		$('.query-option-input-field, .query-option-operator').change(e => {
+			this.fillExpeditionSearchSelect();
+		});
+
+		$('.query-option-operator.datetime-query-option').change(e => {
+			/*toggle the double or single value field*/
+			const $target = $(e.target);
+			const operatorValue = $target.val();
+			const showDoubleValue = operatorValue === 'BETWEEN';
+			$target.siblings('.single-value-field')
+				.toggleClass('hidden', showDoubleValue)
+				.attr('aria-hidden', showDoubleValue);
+			$target.siblings('.query-option-double-value-container')
+				.toggleClass('hidden', !showDoubleValue)
+				.find('.double-value-field')
+					.attr('aria-hidden', !showDoubleValue);
+		});
+
+		$('#expedition-search-bar').change(e => {
+			const expeditionID = $(e.target).val();
+			if (expeditionID != '') {
+				$('.search-option-drawer').removeClass('show');
+				this.queryExpedition(expeditionID);
+			}
+		});
+		// Fill with this year's expeditions to start
+		this.fillExpeditionSearchSelect();
+		// ^^^^^^^^^ Query stuff ^^^^^^^^^^^^^^^^
+
+		// ---------- Members/transactions ----------
 		//$('select.input-field').change(e => {this.onSelectChange(e)})
 		$(document).on('click', '.add-transaction-button', e => {
 			this.addNewListItem($(e.target).closest('.transactions-tab-pane').find('.transaction-list'))
@@ -399,9 +564,29 @@ class ClimberDBExpeditions extends ClimberDB {
 			if (reservationStatuses.every(v => v == firstStatus || v == 6) && $groupStatusSelect.val() != firstStatus) { 
 				$groupStatusSelect.val(firstStatus).change();
 			}
-
 		});
 
+		$(document).on('change', '.transaction-type-field', e => {
+			const $select = $(e.target);
+			const $valueField = $select.closest('li').find('.transaction-amount-field');
+			const defaultAmount = this.defaultTransactionFees[$select.val()];
+			if ($valueField.val() === '' || $valueField.val() === null && defaultAmount !== null) {
+				$valueField.val(defaultAmount.replace(/\(/, '-').replace(/[$)]/g, ''));
+			}
+		});
+
+		$(document).on('change', '.transaction-amount-field', e => {
+			const $list = $(e.target).closest('.data-list');
+			const sum = $list.find('li:not(.cloneable) .transaction-amount-field')
+				.map((_, el) => el.value === '' ? 0 : parseFloat(el.value))
+				.get()
+				.reduce((runningTotal, value) => runningTotal + value)
+				.toFixed(2);
+			if (!isNaN(sum)) $list.siblings('.data-list-footer').find('.total-col .total-span').text(sum);
+		});
+		// ^^^^^^^^^^ Members/transactions ^^^^^^^^^^^
+
+		// ---------- Route stuff ----------
 		// Show modal to prompt user to enter summit date
 		$('.check-all-summitted-button').click(e => {
 			const $button = $(e.target);
@@ -426,13 +611,13 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			} else {
 				message = `<p>Do you want to mark all expedition members for the ${routeName} route` + 
-				` with the same summit date? This will overwrite any summit dates currently entered.` + 
-				` If so, enter the date below and click 'OK'. Otherwise just click 'OK' and all` + 
-				` expedition members will be marked as having summitted but the summit date(s) won't change.</p>
-				<div class="field-container col-8 single-line-field">
-						<label class="field-label inline-label" for="modal-summit-date-input">Summit date</label>
-						<input id="modal-summit-date-input" class="input-field modal-input" type="date">
-				</div>
+					` with the same summit date? This will overwrite any summit dates currently entered.` + 
+					` If so, enter the date below and click 'OK'. Otherwise just click 'OK' and all` + 
+					` expedition members will be marked as having summitted but the summit date(s) won't change.</p>
+					<div class="field-container col-8 single-line-field">
+							<label class="field-label inline-label" for="modal-summit-date-input">Summit date</label>
+							<input id="modal-summit-date-input" class="input-field modal-input" type="date">
+					</div>
 				`;
 				title = 'Enter summit date?';
 				onConfirmClick = `
@@ -456,8 +641,116 @@ class ClimberDBExpeditions extends ClimberDB {
 			const allChecked = $checkboxes.filter(':checked').length == $checkboxes.length;
 			$card.find('.check-all-summitted-button').text(allChecked ? 'uncheck all' : 'check all');
 		});
+		// ^^^^^^^^^^ Route stuff ^^^^^^^^^
+
+		// ------------ CMCs -------------------
+		$('.add-cmc-button').click(e => {
+			const $button = $(e.target);
+			const $ul = $($button.data('target'));
+			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item'});
+			const $checkoutDate = $listItem.find('.input-field').filter((_, el) => el.name === 'checkout_date');
+			$checkoutDate.val(getFormattedTimestamp());
+		});
+
+		// ask user to confirm removing CMC only if it already exists in the DB
+		$(document).on('click', '.delete-cmc-button', e => {
+			const $li = $(e.target).closest('li');
+			if ($li.is('.new-list-item')) {
+				$li.fadeOut(500, () => {$li.remove()});
+			} else {
+				const $cmcSelect = $li.find('select');
+				const dbID = $cmcSelect.data('table-id');
+				const tableName = $cmcSelect.data('table-name');
+				const cmcID = $cmcSelect.val();
+				const onConfirmClick = `climberDB.deleteListItem($('#${$li.attr('id')}'), '${tableName}', ${dbID})`
+				const footerButtons = `
+					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+					<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
+				`;
+				showModal(`Are you sure you want to delete this checkout record for CMC ${cmcID}?`, 'Delete CMC?', 'alert', footerButtons);
+			}
+		})
+		// ^^^^^^^^^^^ CMCs ^^^^^^^^^^^^^^^
 
 
+	}
+
+
+	queryOptionToWhereClause(field, operatorValue, searchValue) {
+		
+		var searchString;
+		switch (operatorValue) {
+			case 'equals':
+				searchString = `${field} = '${searchValue}'`;
+				break;
+			case 'startsWith':
+				searchString = `${field} LIKE '${searchValue}%'`;
+				break;
+			case 'endsWith':
+				searchString = `${field} LIKE '%${searchValue}'`;
+				break;
+			case 'contains': 
+				searchString = `${field} LIKE '%${searchValue}'%`; 
+				break;
+			case 'BETWEEN':
+				searchString = `${field} BETWEEN '${searchValue[0]}' AND '${searchValue[1]}'`;
+				break;
+			default:
+				searchString = `${field} ${operatorValue} '${searchValue}'`
+		}
+		return searchString;
+	}
+
+
+	fillExpeditionSearchSelect() {
+		var queryStrings = {};
+		for (const el of $('.query-option-container')) {
+			const $container = $(el);
+			const $inputs = $container.find('*:not(.hidden) > .query-option-input-field:not(.hidden)');
+			const fieldName = $inputs.first().data('field-name');
+			let searchValues = $inputs.map((_, el) => {
+				const value = el.value;
+				if (value !== null && value.length > 0) return el.value
+			}).get();
+			
+			if (searchValues.length === 0 || fieldName in queryStrings) continue; //2 value option (i.e. operaor === BETWEEN) and field already captured
+
+			const operator = $container.find('.query-option-operator').val();
+
+			if ($inputs.is('.datetime-query-option') && operator == 'BETWEEN') {
+				queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues));
+			} else if ($inputs.first().is('.string-match-query-option, .datetime-query-option')) {
+				queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues[0]));
+			} else if ($inputs.is('.select2-no-tag')) {
+				queryStrings[fieldName] = (`${fieldName} IN (${searchValues.join(',')})`)
+			}
+		}
+		
+		if (queryStrings.length === 0) return;
+
+		const searchBy = $('#search-by-select').val() || 'expedition_name';
+		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
+		const sql = `SELECT DISTINCT expedition_id, expedition_name, permit_number FROM expedition_info_view ${whereClause} ORDER BY ${searchBy}`;
+		this.queryDB(sql)
+			.done(queryResultString => {
+				if (this.queryReturnedError(queryResultString)) {
+
+				} else {
+					const result = $.parseJSON(queryResultString);
+					const $select = $('#expedition-search-bar').empty();
+					if (result.length) {
+						for (const row of result) {
+							$select.append(`<option value="${row.expedition_id}">${row[searchBy]}</option>`)
+						}
+					} else {
+						$select.append('<option value="">No expeditions match your search</option>')
+					}
+				}
+			})
+			.fail((xhr, status, error) => {
+				console.log('Failed to query expeditions for search select with sql ' + sql)
+			});
+		
 	}
 
 
@@ -525,6 +818,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			$transactionsList.siblings('.data-list-footer')
 				.find('.data-list-header-label.total-col .total-span')
 				.text(transactionTotal.toFixed(2));
+			//$card.find('.show-transaction-tab-button').ariaHide(Object.keys(transactions).length === 0);
 		}
 
 		// routes
@@ -553,19 +847,43 @@ class ClimberDBExpeditions extends ClimberDB {
 						this.fillInputField(el, memberRouteRecord, {dbID: memberRouteRecord.expedition_member_route_id});
 					}
 				}
-				
-				
+			}
+		}
+
+		const cmcs = this.expeditionInfo.cmcs;
+		const $cmcList = $('#cmc-list');
+		for (const cmcCheckoutID of cmcs.order) {
+			const thisCMC = cmcs.data[cmcCheckoutID];
+			const $listItem = this.addNewListItem($cmcList, {dbID: cmcCheckoutID});
+			for (const el of $listItem.find('.input-field')) {
+				this.fillInputField(el, thisCMC, {dbID: cmcCheckoutID});
 			}
 		}
 	}
+
+
+	clearExpeditionInfo() {
+		// Clear any previously loaded data
+		$('.accordion .card:not(.cloneable), .data-list li:not(.cloneable)').remove();
+
+		for (const el of $('.input-fields')) {
+			$(el).data('table-id', null)
+				.val(null);
+		}
+		for (const el of $('.result-details-summary-value')) {
+			$(el).text('');
+		}
+	}
+
 
 	queryExpedition(expeditionID) {
 		
 		this.expeditionInfo = {
 			expeditions: {}, // each field is a property
-			members: {data: {}, order: []}, // array of objects. For each object, each field is a prop 
-			routes: {data: {}, order: []}, // props are exp. member IDs and values are arrays
-			transactions: {}, // props are exp. member IDs and values are arrays
+			members: {data: {}, order: []}, 
+			routes: {data: {}, order: []},
+			transactions: {}, // props are exp. member IDs
+			cmcs: {data: {}, order: []}
 		}
 
 		const sql = `
@@ -584,6 +902,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					const result = $.parseJSON(queryResultString);
 					// Get expedition info
 					if (result.length) {
+						this.clearExpeditionInfo();
+
 						const firstRow = result[0];//there should only be one
 						for (const fieldName in this.tableInfo.tables.expeditions.columns) {
 							const queryField = this.entryMetaFields.includes(fieldName) ? 'expeditions_' + fieldName : fieldName;
@@ -598,6 +918,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					let members = this.expeditionInfo.members;
 					let transactions = this.expeditionInfo.transactions;
 					let routes = this.expeditionInfo.routes;
+					let cmcs = this.expeditionInfo.cmcs;
 					for (const row of result) {
 						// get expedition members
 						const memberID = row.expedition_member_id;
@@ -652,80 +973,72 @@ class ClimberDBExpeditions extends ClimberDB {
 							routes.data[routeCode][memberID].expedition_member_route_id = row.expedition_member_route_id;
 						}
 
+						const cmcCheckoutID = row.cmc_checkout_id;
+						if (!(cmcCheckoutID in cmcs.data) && row.cmc_id !== null) {
+							cmcs.data[cmcCheckoutID] = {};
+							cmcs.order.push(cmcCheckoutID);
+							for (const fieldName in this.tableInfo.tables.cmc_checkout.columns) {
+								cmcs.data[cmcCheckoutID][fieldName] = row[fieldName];
+							}
+						}
 						
 					}
 
 					this.fillFieldValues();
 				}
-			})
-		/*// Query each table separately since there are cascading one-to-many relationships
-		return $.when(
-			this.queryDB(`SELECT * FROM expeditions WHERE id=${parseInt(expeditionID)}`)
-				.done(queryResultString => {
-					if (this.queryReturnedError(queryResultString)) {
-						showModal(`An unexpected error occurred while querying data from the expeditions table: ${queryResultString.trim()}.`, 'Unexpected error');
-						return;
-					} else {
-						let result = $.parseJSON(queryResultString);
-						if (result.length) {
-							result = result[0];//there should only be one
-							this.expeditionInfo.expeditions = {...result};
-						} else {
-							showModal(`There are no expeditions with the database ID '${expeditionID}'.`, 'Unexpected error');
-						}
-					} 
-				}),
-			this.queryDB(`SELECT id AS expedition_member_id, * FROM expedition_members WHERE id=${parseInt(expeditionID)}`)
-				.done(queryResultString => {
-					if (this.queryReturnedError(queryResultString)) {
-						showModal(`An unexpected error occurred while querying data from the expedition_members table: ${queryResultString.trim()}.`, 'Unexpected error');
-						return;
-					} else {
-						const result = $.parseJSON(queryResultString);
-						for (const row of result) {
-							this.expeditionInfo.members[row.expedition_member_id] = {...row};
-						}
-					}
-				}),
-			this.queryDB(`
-				SELECT expedition_member_routes.* 
-				FROM expedition_member_routes JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id
-				WHERE expedition_id=${parseInt(expeditionID)}
-			`).done(queryResultString => {
+			});
+	}
+
+
+
+	deleteListItem($listItem, tableName, tableID) {
+		this.showLoadingIndicator('deleteListItem');
+		var sql = `DELETE FROM ${tableName} WHERE id=${parseInt(tableID)} RETURNING id, '${tableName}' AS table_name`;
+		return this.queryDB(sql)
+			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An unexpected error occurred while querying data from the expedition_member_routes table: ${queryResultString.trim()}.`, 'Unexpected error');
+					showModal(`An unexpected error occurred while delete data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
 					return;
 				} else {
-					const result = $.parseJSON(queryResultString);
-					let routes = this.expeditionInfo.routes;
-					for (const row of result) {
-						// Add the expedition member ID if it doesn't already exist. This will be an array of route info objects
-						if (!(row.expedition_member_id in routes)) routes[row.expedition_member_id] = [];
-						// Add all route fields
-						routes[row.expedition_member_id].push(row);
+					const failedDeletes = [];
+					for (const {id, tableName} of $.parseJSON(queryResultString)) {
+						if (id == null) {
+							failedDeletes.push(tableName);
+						}
+					}
+					if (failedDeletes.length) {
+						showModal(
+							`There was a problem deleting objects from the table '${tableName}'.` +
+								` Contact your database adminstrator to resolve this issue.<br><br>Attempted SQL:<br>${sql}`, 
+							'Database Error')
+					} else {
+						$listItem.fadeOut(500, () => {$listItem.remove()});
+						// ***** remove in-memory data *******
 					}
 				}
-			}),
-			this.queryDB(`
-				SELECT transactions.* 
-				FROM transactions JOIN expedition_members ON transactions.expedition_member_id=expedition_members.id
-				WHERE expedition_id=${parseInt(expeditionID)}
-			`).done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An unexpected error occurred while querying data from the transactions table: ${queryResultString.trim()}.`, 'Unexpected error');
-					return;
-				} else {
-					const result = $.parseJSON(queryResultString);
-					let transactions = this.expeditionInfo.expedition_member_routes;
-					for (const row of result) {
-						// Add the expedition member ID if it doesn't already exist. This will be an array of route info objects
-						if (!(row.expedition_member_id in transactions)) transactions[row.expedition_member_id] = [];
-						// Add all route fields
-						transactions[row.expedition_member_id].push(row);
-					}
+			}).fail((xhr, status, error) => {
+				showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+			}).always(() => {
+				this.hideLoadingIndicator();
+			});
+	}
+
+
+	getCMCInfo() {
+		const sql = 'SELECT id, cmc_can_identifier, rfid_tag_id FROM cmc_inventory';
+		const $select = $('#input-cmc_id') // this is the select from the .cloneable <li>
+			.append(`<option class="" value=""></option>`); 
+		return this.queryDB(sql)
+			.done(queryResultString => {
+				for (const row of $.parseJSON(queryResultString)) {
+					this.cmcInfo.cmcCanIDs[row.id] = row.cmc_can_identifier;
+					this.cmcInfo.rfidTags[row.rfid_taf_id] = row.id;
+					$select.append(`<option class="" value="${row.id}">${row.cmc_can_identifier}</option>`);
 				}
 			})
-		)*/
+			.fail((xhr, status, error) => {
+				console.log(`getCMCInfo() failed with status ${status} because ${error}`)
+			});
 	}
 
 
@@ -744,7 +1057,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Get route codes first if they haven't been queried yet.
 		//	This needs to happen before filling the result-summary-pane
 		//	because fillResultList() substitue state_codes for the short_name
-		const lookupDeferreds = [];
+		const lookupDeferreds = [this.getCMCInfo()];
 		if (Object.keys(this.routeCodes).length === 0) {
 			lookupDeferreds.push(
 				this.queryDB('SELECT * FROM route_codes')
@@ -757,9 +1070,22 @@ class ClimberDBExpeditions extends ClimberDB {
 					})
 			)
 		} 
-		// ******** get transaction default amounts
+		lookupDeferreds.push(
+			this.queryDB('SELECT code, default_fee FROM transaction_type_codes')
+				.done((queryResultString) => {
+					if (!this.queryReturnedError(queryResultString)) {
+						for (const row of $.parseJSON(queryResultString)) {
+							this.defaultTransactionFees[row.code] = row.default_fee;
+						}
+					}
+				})
+		);
 
-		$.when(this.fillAllSelectOptions(), initDeferreds, ...lookupDeferreds).then(() => {
+		$.when(
+			this.fillAllSelectOptions(), 
+			initDeferreds, 
+			...lookupDeferreds
+		).then(() => {
 			if (window.location.search.length) {
 				const params = Object.fromEntries(
 					decodeURIComponent(window.location.search.slice(1))
@@ -773,6 +1099,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			} else {
 
 			}
+			$('.select2-no-tag').select2({
+				width: '100%'
+			});
 		}).always(() => {
 			hideLoadingIndicator()
 		});

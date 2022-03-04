@@ -2,6 +2,7 @@ CREATE DATABASE climbing_permits;
 
 --Create lookup tables
 CREATE TABLE IF NOT EXISTS country_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS cmc_status_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS state_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS sex_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS frostbite_severity_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
@@ -163,17 +164,40 @@ CREATE TABLE IF NOT EXISTS briefing_times (
 	briefing_ranger_user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
-CREATE TABLE IF NOT EXISTS users ( id SERIAL PRIMARY KEY, ad_username VARCHAR
-(50), first_name VARCHAR(50), last_name VARCHAR(50), user_role_code INTEGER
-REFERENCES user_role_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
-user_status_code INTEGER REFERENCES user_status_codes(code) ON UPDATE CASCADE
-ON DELETE RESTRICT, UNIQUE (first_name, last_name), UNIQUE (ad_username) );
+CREATE TABLE IF NOT EXISTS cmc_inventory (
+	id SERIAL PRIMARY KEY, 
+	cmc_can_identifier VARCHAR(50) UNIQUE, 
+	cmc_status_code INTEGER 
+		DEFAULT 1 -- active 
+		REFERENCES cmc_status_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT, 
+	rfid_tag_id VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS cmc_checkout (
+	id SERIAL PRIMARY KEY, 
+	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+	cmc_id INTEGER REFERENCES cmc_inventory(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	issued_by VARCHAR(50),
+	checkout_date DATE,
+	checked_in_by VARCHAR(50),
+	return_date DATE
+);
+
+CREATE TABLE IF NOT EXISTS users ( 
+	id SERIAL PRIMARY KEY, ad_username VARCHAR(50), 
+	first_name VARCHAR(50), last_name VARCHAR(50), 
+	user_role_code INTEGER REFERENCES user_role_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	user_status_code INTEGER REFERENCES user_status_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT, 
+	UNIQUE (first_name, last_name), 
+	UNIQUE (ad_username) 
+);
 
 -- insert lookup info that won't get imported in Python script
 INSERT INTO sex_codes (name) VALUES ('Female'), ('Male'), ('Intersex'), ('Prefer not to say');
 INSERT INTO frostbite_severity_codes(name) VALUES ('superficial'), ('deep'), ('mild'), ('moderate'), ('severe');
 INSERT INTO user_role_codes (name) VALUES ('Data entry'), ('Ranger'), ('Admin');
 INSERT INTO mountain_codes (name) VALUES ('Denali'), ('Foraker');
+INSERT INTO cmc_status_codes (name) VALUES ('active'), ('lost'), ('damaged'));
 
 -- UPDATE codes and sort order
 DO $$
@@ -253,3 +277,21 @@ SELECT DISTINCT ON (climbers.first_name, climbers.last_name, climbers.id)
 -- AFTER INSERT OR UPDATE OR DELETE OR TRUNCATE
 -- ON expedition_members FOR EACH STATEMENT 
 -- EXECUTE PROCEDURE refresh_climber_info_matview();
+
+CREATE OR REPLACE FUNCTION get_group_status(group_id int)
+returns int
+language plpgsql
+as
+$$
+declare
+   group_status integer;
+BEGIN
+   SELECT min(reservation_status_code) 
+   into group_status
+   FROM expedition_members
+   WHERE reservation_status_code BETWEEN 0 AND 5
+   AND expedition_id=group_id;
+   
+   return coalesce(group_status, 6);
+END;
+$$;

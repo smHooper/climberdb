@@ -1,12 +1,16 @@
 /* Global functions */
-function getFormattedTimestamp(date) {
+function getFormattedTimestamp(date, {format='date'}={}) {
 
 	if (date === undefined) date = new Date();
 
 	// Get 0-padded minutes
 	const minutes = ('0' + date.getMinutes()).slice(-2)
-
-	return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${minutes}`;
+	const dateString = `${date.getFullYear()}-${('0' + (date.getMonth() + 1)).slice(-2)}-${('0' + date.getDate()).slice(-2)}`;
+	const timeString = `${date.getHours()}:${minutes}`;
+	return format === 'date' ? dateString : 
+		format === 'time' ? timeString :
+		format === 'datetime' ? dateString + ' ' + timeString :
+			dateString + ' ' + timeString;
 
 }
 
@@ -177,7 +181,7 @@ class ClimberDB {
 				</div>
 			</nav>
 
-			<main class="dashboard-main">
+			<main id="climberdb-main-content" class="climberdb-main">
 
 				<!-- nav sidebar -->
 				<div class="main-container-with-sidebar">
@@ -275,7 +279,7 @@ class ClimberDB {
 	/*
 	*/
 	fillSelectOptions(selectElementID, queryString, optionClassName='') {
-		let deferred = this.queryDB(queryString)
+		let deferred = this.queryDB(queryString);
 		deferred.done(queryResultString => {
 				
 				queryResultString = queryResultString.trim();
@@ -312,11 +316,13 @@ class ClimberDB {
 	*/
 	fillAllSelectOptions(noFillClass='.no-option-fill') {
 
-		return $('select').map( (_, el) => {
+		return $('select:not(.no-option-fill)').map( (_, el) => {
 			const $el = $(el);
 			const placeholder = $el.attr('placeholder');
 			const lookupTable = $el.data('lookup-table');
 			const lookupTableName = lookupTable ? lookupTable : $el.attr('name') + 's';
+			//const lookupCodeColumn = $el.data('lookup-code-column') || 'code';
+			//const lookupNameColumn = $el.data('lookup-name-column') || 'name';
 			const id = el.id;
 			if (lookupTableName != 'undefineds') {//if neither data-lookup-table or name is defined, lookupTableName === 'undefineds' 
 				if (placeholder) $('#' + id).append(`<option class="" value="">${placeholder}</option>`);
@@ -823,7 +829,7 @@ class ClimberDB {
 		// Show the right sidebar nav item as selected
 		$('.sidebar-nav-group > .nav-item.selected').removeClass('selected');
 		$('.sidebar-nav-group .nav-item > a')
-			.filter((_, el) => el.href.endsWith(window.location.href.split('/').pop()))
+			.filter((_, el) => el.href.endsWith(window.location.pathname.split('/').pop()))
 			.parent()
 				.addClass('selected');
 		
