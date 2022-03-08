@@ -370,7 +370,10 @@ class ClimberDB {
 
 		for (const el of $newItem.find('.input-field')) {
 			el.id = `${el.id}-${dbID || itemdIndex}`;
-			if (!isNaN(dbID)) $(el).attr('table-id', dbID);
+			const $el = $(el);
+			if ($el.data('dependent-target')) 
+				$el.data('dependent-target', `${$el.data('dependent-target')}-${dbID || itemdIndex}`);
+			if (!isNaN(dbID)) $el.attr('table-id', dbID);
 		}
 
 		return $newItem.addClass(newItemClass).insertBefore($cloneable);
@@ -435,7 +438,8 @@ class ClimberDB {
 			const $el = $(el);
 			const newID = `${el.id}-${cardIndex}`;
 			const dataTable = $el.data('table-name');
-			$el.data('dependent-target', `${$el.data('dependent-target')}-${cardIndex}`);
+			if ($el.data('dependent-target'))
+				$el.data('dependent-target', `${$el.data('dependent-target')}-${cardIndex}`);
 			$el.removeClass('error')
 				.attr('id', newID)
 				.siblings('.field-label')
@@ -555,7 +559,7 @@ class ClimberDB {
 		const selectID = '#' + $select.attr('id');
 
 		// Get all the elements with a data-dependent-target 
-		const dependentElements = $(`
+		const $dependentElements = $(`
 			.collapse.field-container .input-field, 
 			.collapse.field-container-row .input-field,
 			.collapse.accordion, 
@@ -563,11 +567,8 @@ class ClimberDB {
 			`).filter((_, el) => {return $(el).data('dependent-target') === selectID});
 		//const dependentIDs = $select.data('dependent-target');
 		//var dependentValues = $select.data('dependent-value');
-		dependentElements.each((_, el) => {
+		for (const el of $dependentElements) {
 			const $thisField = $(el);
-			if (el.id == 'input-input-recovered_value-0') {
-				let a=0;
-			}
 			var dependentValues = $thisField.data('dependent-value').toString();
 			if (dependentValues) {
 				var $thisContainer = $thisField.closest('.collapse.field-container, .collapse.field-container-row, .collapse.accordion, .collapse.add-item-container');
@@ -579,7 +580,7 @@ class ClimberDB {
 					.replace('!', '')
 					.split(',').map((s) => {return s.trim()});
 				
-				var selectVal = ($select.val() || '').toString().trim();
+				var selectVal = ($select.is('.input-checkbox') ? $select.prop('checked') : $select.val() || '').toString().trim();
 
 				var show = dependentValues.includes(selectVal) || 
 					(dependentValues[0] === '<blank>' && selectVal == '');
@@ -593,14 +594,14 @@ class ClimberDB {
 					this.toggleDependentFields($thisField);
 				}
 			}
-		});
+		}
 	}
 
 
 	/*
 	Generic event handler for selects
 	*/
-	onSelectChange = function(e) {
+	onSelectChange(e) {
 		// Set style depending on whether the default option is selected
 		const $select = $(e.target);
 
@@ -624,17 +625,26 @@ class ClimberDB {
 	}
 
 
+	/*
+	Generic event handler for input checkboxes
+	*/
+	onCheckboxChange(e) {
+		this.toggleDependentFields($(e.target));
+	}
+
+
 	/**/
 	clearInputFields({parent='body', triggerChange=true}={}) {
-		for (const el of $(parent).find('*:not(.card.cloneable) .input-field')) {
+		for (const el of $(parent).find('*:not(.cloneable) .input-field')) {
 			const $el = $(el);
+			const defaultValue = $el.data('default-value')
 			if ($el.is('.input-checkbox')) {
-				$el.prop('checked', false); //bool vals from postgres are returned as either 't' or 'f'
+				$el.prop('checked', defaultValue || false); //bool vals from postgres are returned as either 't' or 'f'
 			} else if ($el.is('select')) {
-					$el.addClass('default');
-					el.value = '';
+					el.value = defaultValue || '';
+					if (!defaultValue) $el.addClass('default');
 			} else {
-				el.value = null;
+				el.value = defaultValue || null;
 			}
 
 			$el.removeData('table-id');
@@ -815,6 +825,80 @@ class ClimberDB {
 	}
 
 	
+
+
+	/*
+	Helper methods to generate SQL statement for querying climber_info_view
+	*/
+	getCoreClimberSQL({searchString='', queryFields='*'} = {}) {
+		if (queryFields !== '*') {
+			if (!queryFields.includes('first_name')) queryFields = queryFields + ', first_name';
+			if (!queryFields.includes('last_name')) queryFields = queryFields + ', last_name';
+			if (!queryFields.includes('full_name')) queryFields = queryFields + ', full_name';
+		}
+		return  searchString.length > 0 ? 
+			`
+				SELECT ${queryFields}, 'first_name' AS search_column  FROM climber_info_view WHERE first_name ILIKE '${searchString}%' 
+				UNION ALL 
+				SELECT ${queryFields}, 'last_name' AS search_column FROM climber_info_view WHERE last_name ILIKE '${searchString}%' AND first_name NOT ILIKE '${searchString}%'
+				UNION ALL 
+				SELECT ${queryFields}, 'full_name' AS search_column FROM climber_info_view WHERE full_name ILIKE '%${searchString}%' AND first_name NOT ILIKE '${searchString}%' AND last_name NOT ILIKE '${searchString}%'
+			` :
+			`
+				SELECT 
+					* 
+				FROM climber_info_view 
+			`
+			;
+	}
+
+	getClimberQuerySQL({searchString='', minIndex=1, climberID=undefined, queryFields='*'} = {}) {
+		const withSearchString = searchString.length > 0;
+		const coreQuery = this.getCoreClimberSQL({searchString: searchString, queryFields: queryFields});
+		var maxIndex = minIndex + this.recordsPerSet - 1;
+		const whereClause = isNaN(maxIndex) ? 
+			'' : 
+			isNaN(climberID) ? 
+				`WHERE row_number BETWEEN ${minIndex} AND ${maxIndex}` : 
+				`WHERE id=${parseInt(climberID)}`
+		;
+
+		const sql = withSearchString ? 
+			`SELECT * FROM (
+				SELECT 
+					row_number() over(), 
+					* 
+				FROM 
+					(
+						${coreQuery}
+					) t 
+				ORDER BY 
+					CASE  
+						WHEN search_column='first_name' THEN '1' || first_name || last_name 
+						WHEN search_column='first_name' THEN '2' || last_name 
+						ELSE '3' 
+					END 
+			) t1 
+			${whereClause} 
+			ORDER BY row_number
+			;` : 
+			`SELECT * FROM (
+				SELECT 
+					row_number() over(),
+					* 
+				FROM (
+				${coreQuery}
+				) t 
+			) t1 
+			${whereClause}
+			ORDER BY row_number
+			`
+		;
+
+		return [sql, coreQuery];
+	}
+
+
 	/* Return any Deferreds so anything that has to happen after these are done can wait */
 	init({addMenu=true}={}) {
 		if (addMenu) this.configureMenu();
@@ -824,6 +908,11 @@ class ClimberDB {
 			//const $select = $(e.target);
 			//$select.toggleClass('default', $select.val() == null);
 			this.onSelectChange(e);
+		});		
+		$(document).on('change', '.input-checkbox', e => {
+			//const $select = $(e.target);
+			//$select.toggleClass('default', $select.val() == null);
+			this.onCheckboxChange(e);
 		});
 
 		// Show the right sidebar nav item as selected

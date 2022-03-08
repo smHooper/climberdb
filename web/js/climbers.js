@@ -24,10 +24,23 @@ class ClimberForm {
 								<i class="fas fa-edit"></i>
 							</button>
 						</div>
-						<button id="climber-form-close-button" class="close" type="button" aria-label="Close">
+						<button id="climber-form-close-button" class="close expedition-modal-hidden" type="button" aria-label="Close">
+							<span>&times;</span>
+						</button>	
+		
+						<button id="climber-form-modal-close-button" class="close expedition-modal-only hidden" type="button" aria-label="Close" aria-hidden="true">
 							<span>&times;</span>
 						</button>
 					</div>
+					<div class="expedition-modal-search-container expedition-modal-only hidden" aria-hidden="true">
+						<div class="fuzzy-search-bar-container col-6">
+							<input id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Climber name search" autocomplete="off">
+							<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
+						</div>	
+						<select id="modal-climber-select" class="fuzzy-search-bar default col-6">
+							<option value="">Search climbers to filter results</option>
+						</select>	
+					</div>	
 					<div class="result-details-header-container">
 						<div class="result-details-title-container">
 							<h3 id="result-details-header-title"></h3>
@@ -37,7 +50,7 @@ class ClimberForm {
 								<img id="7-day-badge" class="result-details-header-badge hidden" src="imgs/7_day_icon_100px.svg" title="Qualifies for 7 Day rule">
 							</div>
 						</div>
-						<div class="result-details-summary-container">
+						<div class="result-details-summary-container collapse show">
 							<div id="expedition-name-result-summary-item" class="result-details-summary-item col">
 								<label class="result-details-summary-label">Most recent/next expedition</label>
 								<label class="result-details-summary-value"></label>
@@ -55,7 +68,7 @@ class ClimberForm {
 						</div>
 					</div>
 					<ul class="tabs" role="tablist">
-						<li id="climber-info-tab">
+						<li id="climber-info-list-item">
 							<input id="climber-info-tab" class="tab-button" type="radio" name="tabs" checked="true">
 							<label for="climber-info-tab" class="tab-label" role="tab" aria-selected="true" aria-controls="climber-info-tab-content" tabindex="0">
 								Climber Info
@@ -191,7 +204,7 @@ class ClimberForm {
 										</div>
 										<div id="collapse-climber-history-cloneable" class="collapse card-collapse show" aria-labelledby="cardHeader-climber-history-cloneable" data-parent="#climber-history-accordion">
 											<div class="card-body">
-												<div class="field-container-row">
+												<div class="field-container-row expedition-link-row">
 													<div class="field-container col">
 														<a class="expedition-link" href="#" target="_blank"></a>
 													</div>
@@ -378,12 +391,14 @@ class ClimberForm {
 									</div>
 								</div>
 							</div> <!-- tab content -->
-						</li> <!-- collapse -->
+						</li> 
 					</ul>
 				</div> <!--climber-form-content-->
 				
 				<div class="modal-save-button-container">
-					<button id="modal-save-climber-button" class="generic-button">Save new climber</button>
+					<button id="modal-save-climber-button" class="generic-button expedition-modal-hidden">Save new climber</button>
+					<button id="modal-save-to-expedition-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true">Add to expedition</button>
+					<button id="modal-save-new-climber-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true">Save new climber</button>
 					<button class="generic-button close-modal-button">Cancel</button>
 				</div>
 			
@@ -396,7 +411,7 @@ class ClimberForm {
 		// Add event handlers that can be added here with the given scope. Some handlers related to the form 
 		//	either reference properties of the ClimberDB (or subclass thereof) or otherwise reference variables 
 		//	outside the scope of the ClimberForm class
-		$('.climber-form button.close').click(e => {
+		$('.climber-form button.close:not(.modal-close-button)').click(e => {
 			this.confirmCloseClimberForm($(e.target).closest('button.close'));
 		});
 
@@ -542,6 +557,208 @@ class ClimberForm {
 		}
 	}
 
+
+	fillClimberForm(climberID, climberInfo) {
+		
+		const $inputs = $('.climber-form-content .input-field');
+		for (const el of $inputs) {
+			this.fillInputField(el, climberInfo, {dbID: climberID});
+		}
+
+		$('#result-details-header-title').text(`${climberInfo.last_name}, ${climberInfo.first_name}`);
+
+		$('#expedition-name-result-summary-item > .result-details-summary-value')
+			.text(climberInfo.expedition_name + ' - ' + climberInfo.expedition_date);
+		$('#entered-by-result-summary-item > .result-details-summary-value').text(climberInfo.entered_by);
+		$('#entry-time-result-summary-item > .result-details-summary-value').text(climberInfo.entry_time);
+
+		const $formParent = this.$el.parent();
+		const $firstCollapse = $formParent.children('.accordion').find('.card-collapse').first();
+		if (!$firstCollapse.is('.show')) {
+			$firstCollapse.closest('.card').find('.card-link').click();
+		}
+
+		this.queryClimberHistory(climberID);
+
+		// Show the details pane
+		$formParent
+			.removeClass('collapsed')
+			.attr('aria-hidden', false);
+		
+		// .change() events on .input-fields will add dirty class
+		$('.climber-form .input-field').removeClass('dirty');
+	}
+
+
+	fillClimberHistory(climberHistory) {
+
+		//$('.result-details-header-badge').addClass('hidden');
+
+		const $accordion = $('#climber-history-accordion');
+		$accordion.find('.card:not(.cloneable)').remove();
+		const historyIndex = 0;
+		var expeditionMemberIDs = {};
+		var qualifiesFor7DayPermit = false;
+		const now = new Date();
+		for (const i in climberHistory) {
+			const row = climberHistory[i];
+			const formattedDeparture = (new Date(row.actual_departure_date)).toLocaleDateString();
+			const actualReturnDate = new Date(row.actual_return_date);
+			const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
+			const cardTitle = `${climberDB.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}`;
+			const $card = climberDB.addNewCard(
+				$accordion, 
+				{
+					accordionName: 'climber-history', 
+					cardLinkText: cardTitle, 
+					updateIDs: {
+						'climbers': row.climber_id,
+						'expeditions': row.expedition_id,
+						'expedition_members': row.expedition_member_id,
+						'expedition_member_routes': row.expedition_member_route_id
+					},
+					show: false
+				}
+			);
+			for (const el of $card.find('.input-field')) {
+				this.fillInputField(el, row);
+			}
+
+			// Set the anchor url to this group
+			$card.find('.expedition-link')
+				.attr('href', `expeditions.html?id=${row.expedition_id}`)
+				.text(`View expedition '${row.expedition_name}'`);
+
+			// Map expedition_member_id to index so the card can be retrieved from the member_id
+			expeditionMemberIDs[row.expedition_member_id] = i;
+
+			// If a previous climb didn't already qualify this climber as a 7-dayer, check that 
+			//	1. The return date is before now
+			//	2. formattedReturn is truthy because null value passed to Date() will return the unix epoch
+			// 	OR
+			//	the group status is "Checked back from mountain"
+			qualifiesFor7DayPermit = qualifiesFor7DayPermit || 
+				(
+					((actualReturnDate <= now && formattedReturn) || row.group_status_code == 3) && 
+					actualReturnDate.getFullYear() === now.getFullYear() - 1
+				)
+		}	
+
+		$('#7-day-badge').toggleClass('hidden', !qualifiesFor7DayPermit);
+
+		// .change() events on .input-fields will add dirty class
+		$('.climber-form .input-field').removeClass('dirty');
+
+		// Check if any of this climber's expeditions were solo. If so, mark them as such
+		if (climberHistory.length) {
+			const $newCards = $accordion.find('.card:not(.cloneable)');
+			const soloSQL = `SELECT * FROM solo_climbs_view WHERE climber_id=${climberHistory[0].climber_id}`;
+			const soloDeferred = climberDB.queryDB(soloSQL)
+				.done(resultString => {
+					if (climberDB.queryReturnedError(resultString)) {
+						console.log('could not get solo info because ' + resultString)
+					} else {
+						const result = $.parseJSON(resultString);
+						for (const row of result) {
+							// Mark the history card as a solo climb
+							const cardIndex = expeditionMemberIDs[row.expedition_member_id];
+							const $card = $newCards.eq(cardIndex);
+							$card.find('.card-link-label').text($card.find('.card-link').text() + ' - solo');
+
+							// Unhide the solo-climber badge
+						}
+					}
+				})
+				.fail((xhr, status, error) => {
+					showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
+				});
+		}
+	}
+
+
+	fillEmergencyContacts(emergencyContacts) {
+
+		const $accordion = $('#emergency-contacts-accordion');
+		$accordion.find('.card:not(.cloneable)').remove();
+		const historyIndex = 0;
+		for (const row of emergencyContacts) {
+			const $card = climberDB.addNewCard(
+				$accordion, 
+				{
+					accordionName: 'emergency-contacts', 
+					cardLinkText: `${row.first_name} ${row.last_name}, ${row.relationship || 'unknown relationship'}`, 
+					updateIDs: {
+						'climbers': row.climber_id,
+						'emergency_contacts': row.id
+					},
+					show: false
+				}
+			);
+			for (const el of $card.find('.input-field')) {
+				this.fillInputField(el, row, {dbID: row.id});
+			}
+		}
+
+		// .change() events on .input-fields will add dirty class
+		$('.climber-form .input-field').removeClass('dirty');
+	}
+
+
+	/*
+
+	*/
+	queryClimberHistory(climberID) {
+		const historySQL = `
+			SELECT 
+				expeditions.expedition_name, 
+				expeditions.permit_number,
+				expedition_member_routes.*, 
+				expedition_member_routes.id AS expedition_member_route_id,
+				expedition_members.*, 
+				expeditions.sanitation_problems, 
+				expeditions.equipment_loss,
+				expeditions.actual_departure_date, 
+				expeditions.actual_return_date,
+				expeditions.group_status_code  
+			FROM expedition_member_routes 
+				JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id 
+				JOIN expeditions ON expedition_members.expedition_id=expeditions.id 
+				JOIN climbers ON expedition_members.climber_id=climbers.id 
+			WHERE 
+				expeditions.actual_departure_date < now() AND 
+				climbers.id=${climberID} 
+			ORDER BY 
+				expeditions.actual_departure_date DESC, 
+				expedition_member_routes.route_order ASC
+		;`;
+		const contactsSQL = `SELECT * FROM emergency_contacts WHERE climber_id=${climberID}`;
+
+		const historyDeferred = climberDB.queryDB(historySQL)
+			.done(resultString => {
+				if (climberDB.queryReturnedError(resultString)) {
+					showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
+				} else {
+					this.fillClimberHistory($.parseJSON(resultString));
+				}
+			})
+			.fail((xhr, status, error) => {
+				showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
+			});
+		const contactsDeferred = climberDB.queryDB(contactsSQL)
+			.done(resultString => {
+				if (climberDB.queryReturnedError(resultString)) {
+					showModal('Retrieving emergency contact info from the database failed because because ' + resultString, 'Database Error');
+				} else {
+					this.fillEmergencyContacts($.parseJSON(resultString));
+				}
+			})
+			.fail((xhr, status, error) => {
+				showModal('Retrieving emergency contact info from the database failed because because ' + error, 'Database Error')
+			});
+
+
+		return [historyDeferred, contactsDeferred]
+	}
 
 	/*
 
@@ -906,7 +1123,7 @@ class ClimberDBClimbers extends ClimberDB {
 		$('.main-content-wrapper').append(`
 			<div class="fuzzy-search-bar-container">
 				<input id="climber-search-bar" class="fuzzy-search-bar" placeholder="Search climbers">
-				<img src="imgs/search_icon_50px.svg">
+				<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 			</div>
 			<div class="query-result-container">
 				<!-- order is switched betweeb result and details pane so I can use .collapsed ~ -->
@@ -949,7 +1166,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 		// Set tab indices
 		var liTabIndex = this.getNextTabIndex();
-		for (const el of $('.fuzzy-search-bar,  .result-navigation-container button')) {
+		for (const el of $('#climber-search-bar,  .result-navigation-container button')) {
 			el.tabIndex = liTabIndex;
 			liTabIndex++;
 		}
@@ -957,16 +1174,14 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 		// When a user types anything in the search bar, filter the climber results.
-		$('.fuzzy-search-bar').keyup(() => {
-			const $input = $('.fuzzy-search-bar');
+		$('#climber-search-bar').keyup(() => {
+			const $input = $('#climber-search-bar');
 			const value = $input.val();
 			
 			if (value.length >= 3 || value.length === 0) {
 				this.queryClimbers({searchString: value});
 				this.currentRecordSetIndex = 1;
 			}
-			//const intervalID = setInterval(this.onSearchKeyup.bind(this), 300, [...this.lastSearchKeystroke.intervalIDs])
-			//this.lastSearchKeystroke.intervalIDs.push(intervalID);
 		});
 
 		// Configure click events for the result nav buttons
@@ -1120,32 +1335,7 @@ class ClimberDBClimbers extends ClimberDB {
 		const climberID = $item.attr('id').replace('item-', '');
 		const climberIndex = this.climberIDs[climberID];
 		const climberInfo = this.climberInfo[climberIndex];
-		const $inputs = $('.climber-form-content .input-field');
-		for (const el of $inputs) {
-			this.climberForm.fillInputField(el, climberInfo, {dbID: climberID});
-		}
-
-		$('#result-details-header-title').text(`${climberInfo.last_name}, ${climberInfo.first_name}`);
-
-		$('#expedition-name-result-summary-item > .result-details-summary-value')
-			.text(climberInfo.expedition_name + ' - ' + climberInfo.expedition_date);
-		$('#entered-by-result-summary-item > .result-details-summary-value').text(climberInfo.entered_by);
-		$('#entry-time-result-summary-item > .result-details-summary-value').text(climberInfo.entry_time);
-
-		const $firstCollapse = $('.result-details-pane > .accordion .card-collapse').first();
-		if (!$firstCollapse.is('.show')) {
-			$firstCollapse.closest('.card').find('.card-link').click();
-		}
-
-		this.queryClimberHistory(climberID);
-
-		// Show the details pane
-		$('.result-details-pane')
-			.removeClass('collapsed')
-			.attr('aria-hidden', false);
-		
-		// .change() events on .input-fields will add dirty class
-		$('.climber-form .input-field').removeClass('dirty');
+		this.climberForm.fillClimberForm(climberID, climberInfo);
 		
 	}
 
@@ -1229,57 +1419,14 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	/*Get climber data*/
-	queryClimbers({searchString='', minIndex=1, climberID=null} = {}) {
-		
-		const withSearchString = !!searchString.length;
-		var maxIndex = minIndex + this.recordsPerSet - 1;
-		const whereClause = isNaN(climberID) ? `WHERE row_number BETWEEN ${minIndex} AND ${maxIndex}` : `WHERE id=${parseInt(climberID)}`;
-		const coreQuery = withSearchString ? 
-			`
-				SELECT *, 'first_name' AS search_column  FROM climber_info_view WHERE first_name ILIKE '${searchString}%' 
-				UNION ALL 
-				SELECT *, 'last_name' AS search_column FROM climber_info_view WHERE last_name ILIKE '${searchString}%' AND first_name NOT ILIKE '${searchString}%'
-				UNION ALL 
-				SELECT *, 'full_name' AS search_column FROM climber_info_view WHERE full_name ILIKE '%${searchString}%' AND first_name NOT ILIKE '${searchString}%' AND last_name NOT ILIKE '${searchString}%'
-			` :
-			`
-				SELECT 
-					* 
-				FROM climber_info_view 
-			`
-			;
-		const sql = withSearchString ? 
-			`SELECT * FROM (
-				SELECT 
-					row_number() over(), 
-					* 
-				FROM 
-					(
-						${coreQuery}
-					) t 
-				ORDER BY 
-					CASE  
-						WHEN search_column='first_name' THEN '1' || first_name || last_name 
-						WHEN search_column='first_name' THEN '2' || last_name 
-						ELSE '3' 
-					END 
-			) t1 
-			${whereClause} 
-			ORDER BY row_number
-			;` : 
-			`SELECT * FROM (
-				SELECT 
-					row_number() over(),
-					* 
-				FROM (
-				${coreQuery}
-				) t 
-			) t1 
-			${whereClause}
-			ORDER BY row_number
-			`
-		;
-
+	queryClimbers({searchString='', minIndex=1, climberID=undefined} = {}) {
+		const withSearchString = searchString.length > 0;
+		var minIndex = minIndex; // not sure why but for some reason this needs to be used here to be defined later
+		const [sql, coreQuery] = this.getClimberQuerySQL({
+			searchString: searchString, 
+			minIndex: minIndex, 
+			climberID: climberID
+		});
 		return this.queryDB(sql, {returnTimestamp: true})
 		//return this.queryDB(sql)
 			.done(queryResultString => {
@@ -1324,7 +1471,7 @@ class ClimberDBClimbers extends ClimberDB {
 					if (isNaN(climberID)) {
 						const rowNumbers = this.climberInfo.map(i => parseInt(i.row_number));
 						minIndex = minIndex || Math.min(...rowNumbers);
-						maxIndex = Math.max(...rowNumbers);
+						let maxIndex = Math.max(...rowNumbers);
 						const countSQL = `SELECT count(*) FROM (${coreQuery}) t;`
 						this.queryDB(countSQL).done((resultString) => {
 							if (this.queryReturnedError(resultString)) {
@@ -1380,181 +1527,11 @@ class ClimberDBClimbers extends ClimberDB {
 		const maxIndex = this.currentRecordSetIndex * this.recordsPerSet;
 		const minIndex = maxIndex - this.recordsPerSet + 1;
 
-		const $input = $('.fuzzy-search-bar');
+		const $input = $('#climber-search-bar');
 		const value = $input.val();
 		var searchString = value.length >= 3 || value.length === 0 ? value : '';
 
 		return this.queryClimbers({searchString: searchString, minIndex: minIndex});
-	}
-
-
-	fillClimberHistory(climberHistory) {
-
-		$('result-details-header-badge').addClass('hidden');
-
-		const $accordion = $('#climber-history-accordion');
-		$accordion.find('.card:not(.cloneable)').remove();
-		const historyIndex = 0;
-		var expeditionMemberIDs = {};
-		var qualifiesFor7DayPermit = false;
-		const now = new Date();
-		for (const i in climberHistory) {
-			const row = climberHistory[i];
-			const formattedDeparture = (new Date(row.actual_departure_date)).toLocaleDateString();
-			const actualReturnDate = new Date(row.actual_return_date);
-			const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
-			const cardTitle = `${this.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}`;
-			const $card = this.addNewCard(
-				$accordion, 
-				{
-					accordionName: 'climber-history', 
-					cardLinkText: cardTitle, 
-					updateIDs: {
-						'climbers': row.climber_id,
-						'expeditions': row.expedition_id,
-						'expedition_members': row.expedition_member_id,
-						'expedition_member_routes': row.expedition_member_route_id
-					},
-					show: false
-				}
-			);
-			for (const el of $card.find('.input-field')) {
-				this.climberForm.fillInputField(el, row);
-			}
-
-			// Set the anchor url to this group
-			$card.find('.expedition-link')
-				.attr('href', `expeditions.html?id=${row.expedition_id}`)
-				.text(`View expedition '${row.expedition_name}'`);
-
-			// Map expedition_member_id to index so the card can be retrieved from the member_id
-			expeditionMemberIDs[row.expedition_member_id] = i;
-
-			// If a previous climb didn't already qualify this climber as a 7-dayer, check that 
-			//	1. The return date is before now
-			//	2. formattedReturn is truthy because null value passed to Date() will return the unix epoch
-			// 	OR
-			//	the group status is "Checked back from mountain"
-			qualifiesFor7DayPermit = qualifiesFor7DayPermit || 
-				(
-					((actualReturnDate <= now && formattedReturn) || row.group_status_code == 3) && 
-					actualReturnDate.getFullYear() === now.getFullYear() - 1
-				)
-		}	
-
-		$('#7-day-badge').toggleClass('hidden', !qualifiesFor7DayPermit);
-
-		// .change() events on .input-fields will add dirty class
-		$('.climber-form .input-field').removeClass('dirty');
-
-		// Check if any of this climber's expeditions were solo. If so, mark them as such
-		if (climberHistory.length) {
-			const $newCards = $accordion.find('.card:not(.cloneable)');
-			const soloSQL = `SELECT * FROM solo_climbs_view WHERE climber_id=${climberHistory[0].climber_id}`;
-			const soloDeferred = this.queryDB(soloSQL)
-				.done(resultString => {
-					if (this.queryReturnedError(resultString)) {
-						console.log('could not get solo info because ' + resultString)
-					} else {
-						const result = $.parseJSON(resultString);
-						for (const row of result) {
-							// Mark the history card as a solo climb
-							const cardIndex = expeditionMemberIDs[row.expedition_member_id];
-							const $card = $newCards.eq(cardIndex);
-							$card.find('.card-link-label').text($card.find('.card-link').text() + ' - solo');
-
-							// Unhide the solo-climber badge
-						}
-					}
-				})
-				.fail((xhr, status, error) => {
-					showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
-				});
-		}
-	}
-
-
-	fillEmergencyContacts(emergencyContacts) {
-
-		const $accordion = $('#emergency-contacts-accordion');
-		$accordion.find('.card:not(.cloneable)').remove();
-		const historyIndex = 0;
-		for (const row of emergencyContacts) {
-			const $card = this.addNewCard(
-				$accordion, 
-				{
-					accordionName: 'emergency-contacts', 
-					cardLinkText: `${row.first_name} ${row.last_name}, ${row.relationship || 'unknown relationship'}`, 
-					updateIDs: {
-						'climbers': row.climber_id,
-						'emergency_contacts': row.id
-					},
-					show: false
-				}
-			);
-			for (const el of $card.find('.input-field')) {
-				this.climberForm.fillInputField(el, row, {dbID: row.id});
-			}
-		}
-
-		// .change() events on .input-fields will add dirty class
-		$('.climber-form .input-field').removeClass('dirty');
-	}
-
-
-	/*
-	*/
-	queryClimberHistory(climberID) {
-		const historySQL = `
-			SELECT 
-				expeditions.expedition_name, 
-				expeditions.permit_number,
-				expedition_member_routes.*, 
-				expedition_member_routes.id AS expedition_member_route_id,
-				expedition_members.*, 
-				expeditions.sanitation_problems, 
-				expeditions.equipment_loss,
-				expeditions.actual_departure_date, 
-				expeditions.actual_return_date,
-				expeditions.group_status_code  
-			FROM expedition_member_routes 
-				JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id 
-				JOIN expeditions ON expedition_members.expedition_id=expeditions.id 
-				JOIN climbers ON expedition_members.climber_id=climbers.id 
-			WHERE 
-				expeditions.actual_departure_date < now() AND 
-				climbers.id=${climberID} 
-			ORDER BY 
-				expeditions.actual_departure_date DESC, 
-				expedition_member_routes.route_order ASC
-		;`;
-		const contactsSQL = `SELECT * FROM emergency_contacts WHERE climber_id=${climberID}`;
-
-		const historyDeferred = this.queryDB(historySQL)
-			.done(resultString => {
-				if (this.queryReturnedError(resultString)) {
-					showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
-				} else {
-					this.fillClimberHistory($.parseJSON(resultString));
-				}
-			})
-			.fail((xhr, status, error) => {
-				showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
-			});
-		const contactsDeferred = this.queryDB(contactsSQL)
-			.done(resultString => {
-				if (this.queryReturnedError(resultString)) {
-					showModal('Retrieving emergency contact info from the database failed because because ' + resultString, 'Database Error');
-				} else {
-					this.fillEmergencyContacts($.parseJSON(resultString));
-				}
-			})
-			.fail((xhr, status, error) => {
-				showModal('Retrieving emergency contact info from the database failed because because ' + error, 'Database Error')
-			});
-
-
-		return [historyDeferred, contactsDeferred]
 	}
 
 

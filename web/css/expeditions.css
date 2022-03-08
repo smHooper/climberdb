@@ -10,8 +10,14 @@
 	position: relative;
 }
 .fuzzy-search-bar {
-	max-width: 100% !important;
-	width: 100% !important;
+	width: unset;
+	flex: 1 1 auto;
+	max-width: 100%;
+	/*width: 100%;*/
+}
+.fuzzy-search-bar.default,
+.climber-form .fuzzy-search-bar::placeholder {
+	color: #5d7785;
 }
 .fuzzy-search-bar > option {
 	font-size: 16px;
@@ -200,8 +206,6 @@
 }
 
 
-
-
 .expedition-content {
 	width: 100%;
 	display: flex;
@@ -242,6 +246,12 @@
 	background-color: rgba(255,255,255,0);
 	transition: 0.2s all;
 	color: #00679b;
+}
+.input-field.expedition-data-header::placeholder {
+	color: #00679b;
+}
+.input-field.expedition-data-header:focus::placeholder {
+	color: #969696;
 }
 .input-field.expedition-data-header:focus {
 	background-color: rgba(255,255,255, 0.4);
@@ -380,4 +390,37 @@
 .data-list .input-field:not(.field-with-units) {
 	width: 100%;
 	max-width: 100%;
+}
+
+/*-------modal climber form ---------*/
+/*override hidden climber history (hidden in climbers.css because modal is
+used to show climber form in "add climber" mode)*/
+.climber-form-modal-container > .climber-form.climberdb-modal #climber-history-list-item {
+    display: flex;
+}
+.expedition-modal-search-container {
+	display: flex;
+	flex-wrap: wrap;
+	column-gap: 20px;
+}
+.climber-form .fuzzy-search-bar {
+	font-size: 16px;
+	height: 40px;
+	width: unset;
+	flex: 1 1 auto;
+	margin-top: 20px;
+	text-indent: 40px;
+	margin-left: -40px;
+}
+.climber-form .fuzzy-search-bar-container > .search-bar-icon {
+	height: 40px;
+	width: 40px;
+	top: 20px;
+	padding: 5px;
+}
+.climber-form select.fuzzy-search-bar {
+	text-indent: 5px;
+}
+.result-details-summary-container.collapse {
+	display: none;
 }

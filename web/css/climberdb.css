@@ -486,7 +486,7 @@ textarea.input-field {
 textarea.input-field::placeholder {
   color: rgb(170, 170, 170);
 }
-.input-field:not(textarea):hover {
+.input-field:hover {
   /*background-color: hsla(1, 0%, 100%, 0.3);*/
   border-bottom: 2px solid rgba(0,0,0,0.5);
   /*color: rgba(0,0,0,0.6);*/
@@ -496,12 +496,16 @@ textarea.input-field::placeholder {
   color: rgba(0,0,0,0.5);
 }*/
 
-.input-field:not(textarea):focus {
+.input-field:focus {
   /*background-color: hsla(1, 0%, 100%, 0.7);
   box-shadow: inset 0px 1px 6px 0px hsla(1, 0%, 100%, 0.3);*/
   border-bottom: 2px solid rgba(0,0,0,0.7) !important;
   color: black;
   /*font-size: 15px;*/
+}
+textarea.input-field:hover,
+textarea.input-field:focus {
+  border-bottom: 1px solid rgba(0, 0, 0, 0) !important;
 }
 /*input.input-field:focus {
   font-size: 15px;

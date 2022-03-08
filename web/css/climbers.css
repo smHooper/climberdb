@@ -33,7 +33,7 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 .fuzzy-search-bar::placeholder {
 	color: rgba(0, 0, 0, 0);
 }
-.fuzzy-search-bar-container > img,
+.fuzzy-search-bar-container > img.search-bar-icon,
 .fuzzy-search-bar-container > button {
 	position: relative;
 	height: 60px;
@@ -42,7 +42,7 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 	z-index: -1; /* place behind input so the whole input is clickable*/
 	order: -1; /*has to be placed after search bar to use the sibling combinator*/
 }
-.fuzzy-search-bar:focus ~ img, 
+.fuzzy-search-bar:focus ~ img.search-bar-icon, 
 .fuzzy-search-bar:focus ~ button {
 	z-index: 1; /* place in front when background of input is transulcent */
 }
@@ -134,7 +134,7 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 }
 .query-result-list {
 	list-style: none;
-	padding: 5px 10px 10px 0px;
+	padding: 10px 0px;
 	width: 100%;
 	height: 100%;
 	overflow-y: auto;
@@ -146,7 +146,6 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 	height: 80px;
 	width:  100%;
 	margin-bottom: 2px;
-	margin-left: 5px;
 	background-color: #f28100;
 	border-radius: 10px;
 	color: white;
@@ -328,7 +327,8 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 	height: 100%;
 	padding: 7px 5px;
 }
-.result-details-summary-container {
+.result-details-summary-container, 
+.result-details-summary-container.collapse.show {
 	width: 100%;
 	display: flex;
 	flex-wrap: wrap;
@@ -415,7 +415,9 @@ section.card {
 .card-link.collapsed .card-link-chevron {
 	transform: rotate(135deg);
 }
-
+#climber-history-accordion .field-container-row.expedition-link-row {
+	margin-bottom: 20px;
+}
 
 /**** tabs *********/
 .result-details-pane .tabs { 
@@ -524,26 +526,26 @@ section.card {
 .query-result-pane.result-details-pane .field-label {
 	transition: .3s all;
 }
-.query-result-pane.result-details-pane.uneditable .field-container-row {
+.uneditable .field-container-row {
 	/*too much space between rows so get rid of the margin*/
 	margin-bottom: 0;
 }
-.query-result-pane.result-details-pane.uneditable .checkbox-field-container {
+.uneditable .checkbox-field-container {
 	/*checkboxes and their labels are on a single row, so add a margin*/
 	margin-bottom: 20px;
 }
-.query-result-pane.result-details-pane.uneditable .checkmark {
+.uneditable .checkmark {
 	border: solid 3px rgb(125, 125, 125);
 }
-.query-result-pane.result-details-pane.uneditable .checkmark-container input:checked ~ .checkmark {
+.uneditable .checkmark-container input:checked ~ .checkmark {
 	/*checkboxes and their labels are on a single row, so add a margin*/
 	border: none;
 	background-color: rgb(125, 125, 125);
 }
 
-.query-result-pane.result-details-pane.uneditable .input-field,
-.query-result-pane.result-details-pane.uneditable .null-input-indicator,
-.query-result-pane.result-details-pane.uneditable .checkmark-container,
+.uneditable .input-field,
+.uneditable .null-input-indicator,
+.uneditable .checkmark-container,
 .query-result-pane.result-details-pane .uneditable-units-text {
 	border-bottom: solid 2px rgba(0, 0, 0, 0);
 	text-indent: 0;
@@ -558,21 +560,21 @@ section.card {
 	margin-left: 5px;
 	width: calc(100% - 35px);
 }
-.query-result-pane.result-details-pane.uneditable .field-container {
+.uneditable .field-container {
 	margin-left: 0;
 }
 /*make sure narrative field extends 100% of width*/
-.query-result-pane.result-details-pane.uneditable textarea.input-field {
+.uneditable textarea.input-field {
 	width: 100%;
 	background-color: rgba(0,0,0,0);
 }
 /*override disabled color styling for selects*/
-.query-result-pane.result-details-pane.uneditable select.input-field:disabled {
+.uneditable select.input-field:disabled {
 	color: black;
 }
 /*place field labels above fields and set them to bold*/
-.query-result-pane.result-details-pane.uneditable .input-field ~ .field-label:not(.checkbox-label),
-.query-result-pane.result-details-pane.uneditable .field-container .field-label:not(.checkbox-label) {
+.uneditable .input-field ~ .field-label:not(.checkbox-label),
+.uneditable .field-container .field-label:not(.checkbox-label) {
 	order: -2;
 	font-size: 15px;
 	font-weight: 500;
@@ -584,14 +586,14 @@ section.card {
 	transform: unset;
 }
 /* hide all required indicators*/
-.query-result-pane.result-details-pane.uneditable .required-indicator {
+.uneditable .required-indicator {
 	display: none;
 }
 /*hide any fields that are blank and show as <null>*/
-.query-result-pane.result-details-pane.uneditable .input-field:placeholder-shown,
-.query-result-pane.result-details-pane.uneditable select.input-field.default,
-.query-result-pane.result-details-pane.uneditable .input-field:placeholder-shown ~ .unit-symbol,
-.query-result-pane.result-details-pane.uneditable .flex-field-container ~ .units-field-container {
+.uneditable .input-field:placeholder-shown,
+.uneditable select.input-field.default,
+.uneditable .input-field:placeholder-shown ~ .unit-symbol,
+.uneditable .flex-field-container ~ .units-field-container {
 	display: none;
 }
 /* styling for any elements that are shown only when editing is disabled*/
@@ -602,31 +604,35 @@ section.card {
 	font-size: 14px;
 	line-height: 30px;
 }
-.query-result-pane.result-details-pane.uneditable .flex-field-container {
+.uneditable .flex-field-container {
 	max-width: 100%;
 }
-.query-result-pane.result-details-pane.uneditable .input-field:placeholder-shown ~ .null-input-indicator,
-.query-result-pane.result-details-pane.uneditable select.input-field.default ~ .null-input-indicator,
-.query-result-pane.result-details-pane.uneditable .uneditable-units-text {
+.uneditable .input-field:placeholder-shown ~ .null-input-indicator,
+.uneditable select.input-field.default ~ .null-input-indicator,
+.uneditable .uneditable-units-text {
 	display: block;
 }
-.query-result-pane.result-details-pane.uneditable .input-field:placeholder-shown ~ .field-label:not(.checkbox-label),
-.query-result-pane.result-details-pane.uneditable select.input-field.default ~ .field-label:not(.checkbox-label)  {
+.uneditable .input-field:placeholder-shown ~ .field-label:not(.checkbox-label),
+.uneditable select.input-field.default ~ .field-label:not(.checkbox-label)  {
 	/*padding-left: .5rem;*/
 	visibility: visible;
 	color: #00679b;
 	/*padding-top: .75rem;*/
 }
 /* handle units fields that should be right-justified*/
-.query-result-pane.result-details-pane.uneditable .input-with-unit-symbol.text-right,
-.query-result-pane.result-details-pane.uneditable .input-field.text-right-when-valid {
+.uneditable .input-with-unit-symbol.text-right,
+.uneditable .input-field.text-right-when-valid {
 	margin-right: 0;
 	flex: 0 1 auto;
 }
-.query-result-pane.result-details-pane.uneditable .unit-symbol,
-.query-result-pane.result-details-pane.uneditable .uneditable-units-text {
+.uneditable .unit-symbol,
+.uneditable .uneditable-units-text {
 	max-width: 100%;
 	flex: 1 1 auto;
+}
+.uneditable .input-field::-webkit-calendar-picker-indicator {
+	display: none;
+	-webkit-appearance: none;
 }
 
 .query-result-pane.collapsed {
