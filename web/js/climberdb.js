@@ -15,6 +15,10 @@ function getFormattedTimestamp(date, {format='date'}={}) {
 	);
 }
 
+function print(i) {
+	console.log(i);
+}
+
 
 function showModal(message, title, modalType='alert', footerButtons='') {
 
@@ -360,13 +364,12 @@ class ClimberDB {
 		const $newItem = $cloneable.clone(true)//withDataAndEvents=true
 			.removeClass('cloneable hidden')
 
-
-		var itemdIndex = $ul.find('li:not(.cloneable)').length;
-		var newItemID = `${$ul.attr('id')}-${itemdIndex}`;
-		if (isNaN(dbID)) {
+		var itemIndex = $ul.find('li:not(.cloneable)').length;
+		var newItemID = `${$ul.attr('id')}-${itemIndex}`;
+		if (isNaN(dbID) || dbID === null) {
 			while ($('#' + newItemID).length) {
-				itemdIndex++;
-				newItemID = `${$ul.attr('id')}-${itemdIndex}`;
+				itemIndex++;
+				newItemID = `${$ul.attr('id')}-${itemIndex}`;
 			}
 		} else {
 			newItemID = `${$ul.attr('id')}-${dbID}`;
@@ -374,10 +377,10 @@ class ClimberDB {
 		$newItem.attr('id', newItemID);
 
 		for (const el of $newItem.find('.input-field')) {
-			el.id = `${el.id}-${dbID || itemdIndex}`;
+			el.id = `${el.id}-${dbID || itemIndex}`;
 			const $el = $(el);
 			if ($el.data('dependent-target')) 
-				$el.data('dependent-target', `${$el.data('dependent-target')}-${dbID || itemdIndex}`);
+				$el.data('dependent-target', `${$el.data('dependent-target')}-${dbID || itemIndex}`);
 			if (!isNaN(dbID)) $el.attr('table-id', dbID);
 		}
 

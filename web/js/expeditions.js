@@ -547,7 +547,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// ---------- Members/transactions ----------
 		//$('select.input-field').change(e => {this.onSelectChange(e)})
 		$(document).on('click', '.add-transaction-button', e => {
-			this.addNewListItem($(e.target).closest('.transactions-tab-pane').find('.transaction-list'))
+			this.addNewListItem($(e.target).closest('.transactions-tab-pane').find('.data-list'))
 		});
 
 		// When the leader input checkbox changes, set the transparent class appropriately
@@ -586,7 +586,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $valueField = $select.closest('li').find('.transaction-amount-field');
 			const defaultAmount = this.defaultTransactionFees[$select.val()];
 			if ($valueField.val() === '' || $valueField.val() === null && defaultAmount !== null) {
-				$valueField.val(defaultAmount.replace(/\(/, '-').replace(/[$)]/g, ''));
+				$valueField
+					.val(defaultAmount.replace(/\(/, '-').replace(/[$)]/g, ''))
+					.change();
 			}
 		});
 
@@ -664,7 +666,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $button = $(e.target);
 			const $ul = $($button.data('target'));
 			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item'});
-			const $checkoutDate = $listItem.find('.input-field').filter((_, el) => el.name === 'checkout_date');
+			const $checkoutDate = $listItem.find('.input-field').filter((_, el) => el.name === 'checkout_date'); //use css [name=] syntax
 			$checkoutDate.val(getFormattedTimestamp());
 		});
 
@@ -969,7 +971,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			el.id = el.id + cardID;
 		}
 		const $transactionsList = $newCard.find('.data-list');
-		$transactionsList.attr('id', $transactionsList.attr('id') + '-' + expeditionMemberID);
+		$transactionsList.attr('id', $transactionsList.attr('id') + '-' + climberID);
 		
 		// Fill inputs
 		if (expeditionMemberInfo) {
@@ -1071,6 +1073,16 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 		//$('#input-expedition_name').val('New Expedition Name');
 		$('#input-group_status').val(1);//=pending
+		
+		// Clear in-memory data
+		this.expeditionInfo = {
+			expeditions: {}, // each field is a property
+			members: {data: {}, order: []}, 
+			routes: {data: {}, order: []},
+			transactions: {}, // props are exp. member IDs
+			cmcs: {data: {}, order: []}
+		}
+
 	}
 
 
