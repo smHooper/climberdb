@@ -7,11 +7,12 @@ function getFormattedTimestamp(date, {format='date'}={}) {
 	const minutes = ('0' + date.getMinutes()).slice(-2)
 	const dateString = `${date.getFullYear()}-${('0' + (date.getMonth() + 1)).slice(-2)}-${('0' + date.getDate()).slice(-2)}`;
 	const timeString = `${date.getHours()}:${minutes}`;
-	return format === 'date' ? dateString : 
-		format === 'time' ? timeString :
-		format === 'datetime' ? dateString + ' ' + timeString :
-			dateString + ' ' + timeString;
-
+	return (
+		format === 'date' 		? dateString : 
+		format === 'time' 		? timeString :
+		format === 'datetime' 	? dateString + ' ' + timeString :
+			dateString + ' ' + timeString //default
+	);
 }
 
 
@@ -142,6 +143,10 @@ class ClimberDB {
 			insertOrder: [] // comply with left-right orientation of table relationships
 		};
 		this.entryMetaFields = ['entry_time', 'entered_by', 'last_modified_time', 'last_modified_by'];
+		this.config = {
+			max_people_per_briefing: 20,
+			default_briefing_length_hrs: 1.5
+		}
 	}
 
 	getUserInfo() {
@@ -478,7 +483,7 @@ class ClimberDB {
 			$card.find('.input-field.card-label-field').each((i, el) => {
 				const $el = $(el);
 				const thisValue = $el.is('select') && ($el.val() || '').trim() != '' ? 
-					$el.find('option').filter((_, option) => {return $(option).val() === $el.val()}).html() : 
+					$el.find(`option[value="${$el.val()}"]`).html() : 
 					$el.val();
 				if (!thisValue && thisValue !== '') {
 					console.log($el.attr('id'))
