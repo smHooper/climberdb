@@ -157,10 +157,11 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 
 -- I think most of the actual calendar building can happen in the app. This table just stores the breifing info
-CREATE TABLE IF NOT EXISTS briefing_times (
+CREATE TABLE IF NOT EXISTS briefings (
 	id SERIAL PRIMARY KEY,
 	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
-	breifing_datetime TIMESTAMP,
+	briefing_start TIMESTAMP,
+	briefing_end TIMESTAMP,
 	briefing_ranger_user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 

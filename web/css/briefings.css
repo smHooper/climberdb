@@ -1,0 +1,282 @@
+label {
+	margin-bottom: 0 !important;
+}
+
+.main-content-wrapper {
+	display: flex;
+	padding-right: 0;
+}
+/* ---- calendar --- */
+.calendar-container {
+	/*flex: 2 1 66.667%;*/
+	height: 100%;
+}
+.calendar-header-container {
+	width: 100%;
+}
+
+.month-navigation-container {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	color: #00679b;
+}
+.month-label {
+	text-align: center;
+	font-size: 20px;
+	margin: 0 20px; /*set space between nav buttons and label*/
+	line-height: 40px; /* center text vertically*/
+}
+.month-navigation-container > button {
+	padding: 12px;
+	height: 40px;
+	width: 40px;
+	transition: 0.5s all;
+}
+.month-navigation-container > button > i {
+	color: #00679b;
+	position: relative;
+    top: -4px; /* chevrons needs to be offset for some reason*/
+}
+.month-navigation-container > button:not(:disabled):hover, 
+.month-navigation-container > button:not(:disabled):focus{
+	border-radius: 40px;
+	background-color: rgba(255, 255, 255, 0.3);
+}
+
+.weekday-label-container {
+	width: 100%;
+	height: 40px;
+	display: inline-flex;
+	display: flex;
+    column-gap: 2px;
+}
+.weekday-label {
+	width: 13.8%;/* ~1/7 */
+	text-align: center;
+	font-size: 14px;
+	height: 100%;
+}
+.calendar-body-container {
+	display: flex;
+	flex-wrap: wrap;
+	width: 100%;
+	column-gap: 2px;
+	row-gap: 2px;
+}
+.calendar-cell {
+	display: flex;
+	flex-direction: column;
+	height: 110px;
+	width: 13.8%;
+	background-color: rgb(235,235,235);
+	color: #00679b;
+	cursor: pointer;
+	border: 2px solid rgba(0,0,0,0);
+	transition: 0.2s border;
+}
+.calendar-cell-date-label {
+	flex: 0 0 20px;
+	width: 100%;
+	text-align: right;
+	font-size: 12px;
+	padding-right: 5px;
+}
+.calendar-cell.disabled {
+	background-color: rgb(220,220,220);
+	pointer-events: none;
+	cursor: unset;
+}
+.calendar-cell.disabled,
+.calendar-cell.disabled .calendar-cell-date-label {
+	color: #626262;
+}
+.calendar-cell-body {
+	flex: 1 1 100%;
+	max-height: calc(100% - 20px);
+	width: 100%;
+}
+.calendar-cell.selected {
+	border: 3px solid #f28100;
+}
+.calendar-cell:not(.disabled):not(.selected):hover {
+	border: 2px solid #faaf00;
+}
+.briefing-calendar-entry {
+	text-overflow: ellipsis;
+	font-size: 12px;
+	margin-bottom: 5px;
+	padding: 0 5px;
+}
+.briefing-calendar-entry.summary {
+	font-weight: bold;
+}
+/*^^^^^^--calendar--^^^^^^*/
+
+
+/*------ details sidebar ----*/
+.briefing-details-sidebar {
+	/*flex: 1 1 33.333;*/
+	height: 100%;
+	background-color: rgb(235,235,235);
+	color: #00679b;
+	display: flex;
+	flex-direction: column;
+	padding: 10px 0px 0px 20px;
+}
+
+.briefing-details-sidebar-header {
+	width: 100%;
+	text-align: center;
+	flex: 0 0 auto;
+}
+
+.briefing-details-sidebar-body {
+	width: 100%;
+	flex: 1 1 100%;
+	display: flex;
+	overflow-y: auto;
+	padding-top: 10px;
+}
+.time-label-container {
+	height: 100%;
+	flex: 0 0 40px;
+	display: grid; /*the only display property that seems to vertically stack these correctly*/
+}
+.time-label {
+	font-size: 12px;
+	position: relative;
+	top: -17px;
+	cursor: pointer; /*make sure button still looks clickable*/
+}
+.schedule-container {
+	flex: 1 1 100%;
+}
+.schedule-background,
+.schedule-ui {
+	height: 100%;
+	width: 100%;
+}
+.half-hour-block {
+	width: 100%;
+	height: 30px;
+	color: unset;
+	padding: 0;
+}
+.schedule-background .half-hour-block:nth-child(odd) {
+	border-top: 1px solid rgb(185,185,185);
+}
+.schedule-background .half-hour-block:nth-child(even) {
+	border-top: 1px solid rgb(205,205,205);
+}
+.schedule-ui-container {
+	display: grid;
+	height: 100%;
+	width: 100%;
+	position: relative;
+	top: -100%; /*overlay with background*/
+	z-index: 2;
+	grid-template-columns: repeat(5, 1fr);
+	grid-template-rows: repeat(22, 30px); /*this should maybe be set at runtime based on open/close time user setting*/
+	grid-auto-columns: 1fr;
+}
+.briefing-appointment-container {
+	position: relative;
+	background-color: #f28100;
+	color: white;
+	border-radius: 7px;
+	grid-column-end: auto;
+	margin: 1px;
+	grid-column-end: span 4;
+	cursor: pointer;
+	padding: 10px;
+	transition: all 0.3s;
+}
+.briefing-appointment-container.selected {
+	z-index: 100;
+	box-shadow: 0px 2px 13px 2px rgb(0 0 0 / 30%);
+	background-color: #f69800;
+}
+.briefing-appointment-container:not(.selected):hover {
+	background-color: #f69800;
+}
+.briefing-appointment-header,
+.briefing-appointment-text {
+	font-size: 14px;
+	margin-bottom: 5px;
+	text-overflow: ellipsis;
+	width: calc(100%); /*calc allows text-overflow to work*/
+	overflow: hidden;
+	white-space: nowrap;
+	cursor: inherit;
+}
+.briefing-appointment-header {
+	width: 100%;
+	font-weight: bold;
+}
+.briefing-appointment-text {
+	font-size: 14px;
+}
+.potential-appointment-container {
+	border: 5px solid #219EBC;/*#43d8ef;*/
+	border-radius: 10px;
+	position: absolute;
+	height: 100%;
+	width: 100%;
+	z-index: 1000;
+	grid-column-end: auto;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	/*grid-column-end: span 4;*/
+}
+
+
+.appointment-details-drawer {
+	flex: 1 1 auto%;
+	height: 0px;
+	overflow: hidden; /* necessary to hide children when height is 0*/
+	flex-wrap: wrap;
+	margin-left: -20px; /*span the whole sidebar, including the time label gutter*/
+	box-shadow: -3px -1px 12px 2px rgb(0 0 0 / 0);
+	margin-top: 10px;
+	transition: all 0.3s;
+}
+
+.appointment-details-drawer.show {
+	height: 100%; /*will only be 50% because it's flexed*/
+	box-shadow: -3px -1px 12px 2px rgb(0 0 0 / 30%);
+	border: 2px solid #f28100;
+	border-top: none;
+}
+.appointment-details-header-container {
+	width: 100%;
+	height: 50px;
+	padding: 5px 10px;
+	display: flex;
+	justify-content: space-between;
+	color: white;
+	background-color: #f28100;
+}
+.appointment-details-header {
+	line-height: 40px;
+	flex: 1 1 100%;
+}
+.appointment-details-button-container {
+	color: white;
+	display: flex;
+	justify-content: flex-end;
+	flex: 1 1 0%; 
+}
+.appointment-details-button-container button {
+	margin-left: 10px;
+}
+.appointment-details-button-container button > .fas,
+.appointment-details-header-container button.close {
+	color: white;
+	opacity: 1;
+}
+.appointment-details-body {
+	padding: 10px 0px 10px 20px;
+}
+/*^^^^^^--details slider --^^^^^^*/

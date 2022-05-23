@@ -808,7 +808,7 @@ class ClimberForm {
 
 		var sqlStatements = [];
 		var sqlParameters = [];
-		const now = getFormattedTimestamp();
+		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
 		const userName = climberDB.userInfo.ad_username;
 		
 		// Deep copy to be able to roll back changes to in-memory data (climberDB.climberInfo)
@@ -869,6 +869,7 @@ class ClimberForm {
 							}
 						}
 						if (foreignID === undefined) {
+							// insert a value to get what will be the foreign table ID 
 							currvalClauseString += `, currval(pg_get_serial_sequence('${foreignTable}', 'id'))`;
 							currvalCount ++;
 							//showModal(`Foreign row ID could not be found for the table '${tableName}' and column '${column}' with foreign table '${foreignTable}'`, 'Database Error')
@@ -987,7 +988,7 @@ class ClimberForm {
 		// 	this is a little un-kosher because the ClimberForm() instance is probably a property of climberDB, but
 		//	the only alternative is to make showModal a global function 
 		showModal(
-			'You have unsaved edits to this encounter. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this encounter.',
+			`You have unsaved edits to this climber. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this climber's info.`,
 			'Save edits?',
 			'alert',
 			footerButtons
@@ -1306,7 +1307,7 @@ class ClimberDBClimbers extends ClimberDB {
 	getValueFromOption($select, code) {
 		return $select
 			.find('option')
-			.filter((_, el) => el.value == code)
+			.filter((_, el) => el.value == code) // user css [value=""]
 			.text();
 	}
 
