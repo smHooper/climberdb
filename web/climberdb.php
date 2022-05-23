@@ -187,7 +187,7 @@ if (isset($_POST['action'])) {
 			echo "ERROR: no auth_user";
 			exit();
 		}
-		$sql = "SELECT ad_username, user_role_code, user_status_code, first_name, last_name FROM users WHERE ad_username='$user'";
+		$sql = "SELECT id, ad_username, user_role_code, user_status_code, first_name, last_name FROM users WHERE ad_username='$user'";
 		$userRole = runQuery($dbhost, $dbport, $dbname, $username, $password, $sql);
 		
 		// Check if the query result is valid. If not, the user probably doesn't exist in the table yet
