@@ -373,6 +373,9 @@ ul.tabs input[type="radio"]:checked ~ .tab-content {
   .shadow-on-hover:hover {
     transform: none;
   }
+  .has-motion {
+    transition: height 0s, width 0s, transform 0s !important;
+  }
 }
 
 .slide-up-on-hover {
