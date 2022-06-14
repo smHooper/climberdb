@@ -358,7 +358,7 @@ class ClimberDB {
 	}
 
 
-	addNewListItem($ul, {dbID=null, newItemClass=''}={}) {
+	addNewListItem($ul, {dbID=null, parentDBID=null, newItemClass=''}={}) {
 
 		const $cloneable = $ul.find('li.cloneable');
 		const $newItem = $cloneable.clone(true)//withDataAndEvents=true
@@ -376,12 +376,14 @@ class ClimberDB {
 		}
 		$newItem.attr('id', newItemID);
 
+		if (parentDBID !== null) $newItem.data('parent-table-id', parentDBID);
+
 		for (const el of $newItem.find('.input-field')) {
 			el.id = `${el.id}-${dbID || itemIndex}`;
 			const $el = $(el);
 			if ($el.data('dependent-target')) 
 				$el.data('dependent-target', `${$el.data('dependent-target')}-${dbID || itemIndex}`);
-			if (!isNaN(dbID)) $el.attr('table-id', dbID);
+			if (!isNaN(dbID)) $el.data('table-id', dbID);
 		}
 
 		return $newItem.addClass(newItemClass).insertBefore($cloneable);
@@ -430,7 +432,7 @@ class ClimberDB {
 			.find('.card-link')
 				.attr('href', `#collapse-${idSuffix}`)
 				.attr('data-target', `#collapse-${idSuffix}`)
-				.find('.card-link-label')
+				.find('.card-link-label:not(select)')
 					.text(cardLinkText || $dummyCard.find('.card-link-label').text());
 
 		const $newCollapse = $newCard.find('.card-collapse')
@@ -662,6 +664,31 @@ class ClimberDB {
 	}
 
 
+	validateFields($parent, {focusOnField=true}={}) {
+		const $fields = $parent
+			.find('.field-container:not(.disabled)')
+			.find('.input-field:required, .required-indicator + .input-field')
+			.not('.hidden')
+			.each((_, el) => {
+				const $el = $(el);
+				const $hiddenParent = $el.parents('.collapse:not(.show, .card-collapse), .card.cloneable, .field-container.disabled, .hidden');
+				$el.toggleClass('error', !$el.val() && $hiddenParent.length === 0)
+			});
+
+		if ($fields.filter('.error').length) {
+			// If any are descendents of a card in an accordion, open the card
+			$fields.parents('.card-collapse:not(.show)')
+				.siblings('.card-header')
+				.find('.card-link')
+					.click();
+
+			if (focusOnField) $fields.first().focus();
+			return false;
+		} else {
+			return true;
+		}
+	}
+
 	/*
 	Helper function to check a Postgres query result for an error
 	*/
@@ -669,6 +696,10 @@ class ClimberDB {
 		return queryResultString.trim().startsWith('ERROR') || queryResultString.trim() === '["query returned an empty result"]';
 	}
 
+
+	parseURLQueryString(queryString) {
+		decodeURIComponent(window.location.search.slice(1))
+	}
 
 	/*
 	Copy specified text to the clipboard
@@ -726,6 +757,26 @@ class ClimberDB {
 		}, frameDuration );
 	}
 
+	/*
+	Run the animation on all elements with a class of ‘countup’
+	*/
+	runCountUpAnimations(animationDuration=500, framesPerSecond=60, easeFunction=(t) => t * ( 2 - t )) {
+		/*
+		From: https://jshakespeare.com/simple-count-up-number-animation-javascript-react/
+		animationDuration: How long you want the animation to take, in ms
+		framesPerSecond: number of times the number will change per second
+		easeFunction: 
+		*/
+
+		// Calculate how long each ‘frame’ should last if we want to update the animation 60 times per second
+		const frameDuration = 1000 / framesPerSecond;
+		// Use that to calculate how many frames we need to complete the animation
+		const nFrames = Math.round(animationDuration / frameDuration);
+		for (const el of $('.count-up')) {
+			this.animateCountUp(el, nFrames, frameDuration);
+		}
+	}
+
 
 	verifyPassword(clientPassword) {
 		return $.ajax({
@@ -744,6 +795,7 @@ class ClimberDB {
 			var insertOrder = this.tableInfo.insertOrder;
 			for (const info of $.parseJSON(resultString)) {
 				const tableName = info.table_name;
+				if (!insertOrder.includes(tableName)) insertOrder.push(tableName);
 				if (!(tableName in this.tableInfo.tables)) {
 					this.tableInfo.tables[tableName] = {
 						foreignColumns: [],
@@ -759,7 +811,7 @@ class ClimberDB {
 						column: info.column_name
 					});
 
-					// Place this table in the insert order
+					/*// Place this table in the insert order
 					var thisIndex = insertOrder.indexOf(tableName);
 					const foreignTableIndex = insertOrder.indexOf(info.foreign_table_name);
 					if (thisIndex < foreignTableIndex) thisIndex = foreignTableIndex + 1;
@@ -771,7 +823,7 @@ class ClimberDB {
 				} else if (!insertOrder.includes(tableName)) {
 					// This table either doesn't participate in any foreign key relationships or it's all the way to the left. 
 					//	Either way, add table to the beginning of the insert order
-					insertOrder.unshift(tableName); 
+					insertOrder.unshift(tableName); */
 				}
 				this.tableInfo.tables[tableName].columns[info.column_name] = {...info};
 			}
@@ -833,7 +885,13 @@ class ClimberDB {
 	}
 
 	
-
+	/*
+	Helper method to get the value of in input depedning on whether or not its a checkbox
+	*/
+	getInputFieldValue($input) {
+		return $input.is('.input-checkbox') ? $input.prop('checked') : $input.val();
+	}
+	
 
 	/*
 	Helper methods to generate SQL statement for querying climber_info_view

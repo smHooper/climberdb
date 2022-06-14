@@ -670,8 +670,15 @@ textarea.input-field:valid + .required-indicator {
   justify-content: flex-end;
   width: 100%;
 }
-.uneditable .add-card-button {
+.uneditable .add-card-button,
+.uneditable .add-data-button {
   display: none;
+}
+
+/*Only show error styling if in edit mode*/
+*:not(.uneditable) .input-field.error {
+  border: 2px solid rgba(255, 0, 0, 0.3);
+  box-shadow: 0px 0px 7px 2px hsl(0deg 62% 43% / 50%);
 }
 /* -------------------------------------------*/
 

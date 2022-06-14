@@ -1,0 +1,300 @@
+.main-content-wrapper {
+	padding: 10px 0 0 0;
+}
+
+.row.short-row {
+	height: 350px;
+}
+.row.tall-row {
+	/*min-height: 500px;*/
+	height: calc(100vh - 60px - 3rem);
+}
+.main-dashboard-container {
+	display: flex;
+	flex-wrap: wrap;
+	height: 100%;
+	overflow-y: auto;
+	gap: 30px;
+}
+.dashboard-col {
+	height: 100%;
+}
+
+.card.dashboard-card {
+	border-radius: 20px;
+	padding: 20px;
+	box-shadow: 1px 4px 8px rgba(0,0,0,0.4);
+	background-color: rgba(255, 255, 255, 0.3);
+	min-height: 500px;
+	height: 60%;
+	border-radius: 15px;
+	padding: 20px;
+	box-shadow: 1px 4px 8px rgb(0 0 0 / 20%);
+	background-color: rgba(255, 255, 255, 0.5);
+	flex-direction: column;
+	display: flex;
+}
+.dashboard-card .dashboard-card-header {
+	border: none;
+	background-color: transparent;
+	/*display: flex;*/
+	/*justify-content: space-around;*/
+	height: 1.75rem;
+	padding: 0;
+	align-items: center;
+}
+.dashboard-card-body {
+	justify-content: center;
+	/*align-items: center;*/
+	display: flex;
+	/*flex: 1 1 auto;*/
+}
+
+.climberdb-dashboard-table {
+	min-width: 300px;
+	font-size: 20px;
+	margin-top: 30px;
+}
+.climberdb-dashboard-table,
+.climberdb-dashboard-table th,
+.climberdb-dashboard-table td {
+	border: none;
+	padding: 0.5rem 1rem;
+}
+.climberdb-dashboard-table th {/*:not(:first-of-type) {*/
+	background-color: #f28100;
+	color: white;
+	font-weight: bold;
+}
+.climberdb-dashboard-table tbody tr {
+	height: 60px;
+}
+.climberdb-dashboard-table td:not(:first-of-type) {
+	text-align: center;
+}
+
+/*-----------group status grpah -----------*/
+.group-status-graph-container {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-evenly;
+}
+.group-status-row {
+	width: 100%;
+	height: 60px;
+	display: inline-flex;
+}
+.group-status-bar-container {
+	width: calc(100% - 200px);
+	background-color: rgba(0, 0, 0, 0);
+	transition: 0.2s all;
+	display: flex;
+	flex-wrap: nowrap;
+	position: relative;
+	margin-left: 20px;
+}
+.group-status-bar-container,
+.group-status-bar-container * {
+	cursor: pointer;
+}
+.group-status-bar-container.disabled,
+.group-status-bar-container.disabled .group-status-bar,
+.group-status-bar-container.disabled .group-status-bar-text {
+	pointer-events: none;
+	cursor: default;
+}
+.group-status-bar-container:hover {
+	background-color: rgba(0, 0, 0, 0.1);
+}
+.group-status-bar-label, 
+.group-status-bar-text {
+	width: 200px;
+	height: 100%;
+	line-height: 60px;
+	font-size: 20px;
+	text-align: right;
+	white-space: nowrap;
+}
+.group-status-bar-text {
+	width: 60px;
+	margin-left: 15px;
+	font-size: 30px;
+	text-align: left;
+}
+.group-status-bar {
+	height: 100%;
+	max-width: calc(100% - 90px);
+	width: 0;
+	transition: 0.4s width;
+}
+.group-status-row[data-status-code="1"] .group-status-bar {
+	background-color: #219EBC;
+}
+.group-status-row[data-status-code="2"] .group-status-bar {
+	background-color: #147390;
+}
+.group-status-row[data-status-code="3"] .group-status-bar {
+	background-color: #FD9E02;
+}
+.group-status-row[data-status-code="4"] .group-status-bar {
+	background-color: #fb8500;
+}
+.group-status-row[data-status-code="5"] .group-status-bar {
+	background-color: #BB3E03;
+}
+.group-status-row[data-status-code="6"] .group-status-bar {
+	background-color: #747572;
+}
+.group-status-bar-dropdown {
+	width: 100%;
+	position: absolute;
+	z-index: 100;
+	top: 60px;
+	height: 0;
+	transition: 0.3s height;
+	background-color: #023047;
+	color: white;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	overflow-y: auto;
+}
+.group-status-bar-dropdown.show {
+	height: 300px;
+	padding: 10px;
+}
+/*hide all content when the dropdown is collapsed*/
+.group-status-bar-dropdown * {
+	display: none;
+}
+.group-status-bar-dropdown.show * {
+	display: flex;
+}
+.group-status-bar-dropdown-header {
+	width: 100%;
+	height: 30px;
+	display: flex;
+	justify-content: flex-end;
+}
+.group-status-bar-dropdown-header > .close {
+	color:  white;
+	height: 100%;
+	margin-right: 15px;
+}
+.group-status-bar-dropdown-content {
+	max-width: 250px;
+	flex-wrap: wrap;
+}
+.group-status-link {
+	width: 100%;
+	font-size: 20px;
+	color: white;
+	margin-bottom: 10px;
+}
+/*^^^^^^^group status^^^^^^^^^^*/
+
+
+.huge-text {
+	font-size: 120px;
+	line-height: 100px;
+	white-space: nowrap;
+}
+.large-text {
+	font-size: 50px;
+}
+
+
+.review-bars-container {/*wrapper for both bars*/
+	width: 100%;
+	margin-top: 20px;
+}
+.needs-review-bar-container {
+	width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.needs-review-bar-label {
+	width: 100%;
+	font-size: 18px;
+}
+.review-bar-and-text-container {
+	width: 100%;
+	display: flex;
+	text-decoration: none !important;
+}
+.needs-review-text {
+	padding-left: 15px;
+	line-height: 40px;
+	color: black;
+	text-decoration: none;
+}
+.needs-review-bar{
+	height: 40px;
+	width: 0px;
+	max-width: calc(100% - 60px) !important;
+	transition: 0.5s all;
+}
+#needs-full-review-bar {
+	background-color: #f56761;
+}
+#needs-partial-review-bar {
+	background-color: #42d6e6;
+}
+
+.scrollable-chart-and-axis-wrapper {
+	position: relative;
+	width: 100%;
+	height: calc(100% - 1.5rem);
+}
+.scrollable-chart-and-axis-wrapper > canvas {
+	position: absolute;
+	left: 0;
+	top: 0;
+	pointer-events: none;
+}
+.scrollable-chart-outer-wrapper {
+    width: calc(100% - 15px);
+    float: right;
+	overflow-x: auto;
+	height: 100%;
+}
+.scrollable-chart-inner-wrapper {
+	height: calc(100% - 20px);
+	position: relative;
+}
+.climberdb-chart-tooltip {
+	background: rgba(255, 255, 255, 0.7); 
+	border-radius: 3px; 
+	color: white; 
+	position: absolute; 
+	transform: translate(-50%, 0px); 
+	transition: all 0.2s ease 0s; 
+	padding: 6px;
+}
+.climberdb-chart-tooltip .tooltip-arrow {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -12px;
+  width: 24px;
+  height: 12px;
+  overflow: hidden;
+}
+
+.climberdb-chart-tooltip .tooltip-arrow::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  left: 50%;
+  transform: translate(-50%,-50%) rotate(45deg);
+  background-color: rgba(255, 255, 255, 0.7);
+}
+.climberdb-chart-tooltip .tooltip-arrow.top {
+	top: -12px;
+	transform: rotate(180deg);
+}
+

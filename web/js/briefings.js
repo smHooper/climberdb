@@ -82,8 +82,33 @@ class ClimberDBBriefings extends ClimberDB {
 	}
 
 
+	getBriefingDateFromURL() {
+
+		// Default to today
+		var date = new Date();
+
+		const params = Object.fromEntries(
+			decodeURIComponent(window.location.search.slice(1))
+				.split('&')
+				.map(s => s.split('=')
+			)
+		);
+
+		// Try to create the date from the given params
+		const paramDate = new Date(params.date + ' 00:00'); //** not robust -- FIX
+
+		// Check that the date is valid. If it's not, return today
+		if (paramDate instanceof Date && !isNaN(paramDate.valueOf())) {
+			date = paramDate;
+		}
+
+		return date;
+	} 
+
 	configureMainContent() {
-		const now = new Date();
+
+		const calendarDate = window.location.search.length ? this.getBriefingDateFromURL() : new Date();
+
 		$('.main-content-wrapper').append(`
 			<div class="calendar-container col-9">
 				<div class="calendar-header-container">
@@ -91,7 +116,7 @@ class ClimberDBBriefings extends ClimberDB {
 						<button class="icon-button show-previous-month-button" role="button">
 							<i class="fa fa-chevron-left"></i>
 						</button>
-						<label id="current-month-label" class="month-label" aria-live="polite" data-current-date="${getFormattedTimestamp(now)}">${this.getFormattedMonth()}</label>
+						<label id="current-month-label" class="month-label" aria-live="polite" data-current-date="${getFormattedTimestamp(calendarDate)}">${this.getFormattedMonth(calendarDate)}</label>
 						<button class="icon-button show-next-month-button" role="button">
 							<i class="fa fa-chevron-right"></i>
 						</button>
@@ -112,7 +137,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 			</div>
 			<div class="briefing-details-sidebar col-3">
-				<h3 class="briefing-details-sidebar-header">${now.toLocaleDateString('en-us', {weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+				<h3 class="briefing-details-sidebar-header">${calendarDate.toLocaleDateString('en-us', {weekday: 'long', month: 'long', day: 'numeric' })}</h3>
 				<div class="briefing-details-sidebar-body">
 					<div class="time-label-container">
 						<button class="text-only-button half-hour-block">
@@ -200,10 +225,10 @@ class ClimberDBBriefings extends ClimberDB {
 							<button id="save-button" class="query-result-edit-button icon-button save-edits-button hidden" type="button" aria-label="Save edits" title="Save edits">
 								<i class="fas fa-lg fa-save"></i>
 							</button>
-							<button id="delete-button" class="query-result-edit-button icon-button delete-climber-button hidden" type="button" aria-label="Delete selected climber" title="Delete climber">
+							<button id="delete-button" class="query-result-edit-button icon-button delete-climber-button hidden" type="button" aria-label="Delete selected climber" title="Delete briefing">
 								<i class="fas fa-lg fa-trash"></i>
 							</button>
-							<button id="edit-button" class="query-result-edit-button icon-button toggle-editing-button" type="button" aria-label="Edit selected climber" title="Edit climber">
+							<button id="edit-button" class="query-result-edit-button icon-button toggle-editing-button" type="button" aria-label="Edit selected climber" title="Edit briefing">
 								<i class="fas fa-lg fa-edit"></i>
 							</button>
 							<button class="text-only-button close">x</button>
@@ -230,7 +255,7 @@ class ClimberDBBriefings extends ClimberDB {
 								<span class="null-input-indicator">&lt; null &gt;</span>
 							</div>
 							<div class="field-container col-sm-6">
-								<input id="input-briefing_date" class="input-field revert-on-invalid-briefing-time" name="briefing_date" data-table-name="briefings" placeholder="Date" title="Date" type="date" min="${now.getFullYear()}-1-1" max="${now.getFullYear()}-12-31" required="required">
+								<input id="input-briefing_date" class="input-field revert-on-invalid-briefing-time" name="briefing_date" data-table-name="briefings" placeholder="Date" title="Date" type="date" min="${calendarDate.getFullYear()}-1-1" max="${calendarDate.getFullYear()}-12-31" required="required">
 								<span class="required-indicator">*</span>
 								<label class="field-label" for="input-briefing_date">Date</label>
 								<span class="null-input-indicator">&lt; null &gt;</span>
@@ -260,7 +285,7 @@ class ClimberDBBriefings extends ClimberDB {
 		`);
 		
 		// Set calendar for this month
-		this.setCalendarDates(now.getMonth(), now.getFullYear());
+		this.setCalendarDates(calendarDate.getMonth(), calendarDate.getFullYear());
 
 		// Advance to next or previous month's calendar
 		$('.show-previous-month-button, .show-next-month-button').click(e => {
@@ -1180,8 +1205,10 @@ class ClimberDBBriefings extends ClimberDB {
 					}
 
 					this.fillCalendarBriefings();
+					
 					// Select today
-					const today = new Date((new Date()).toDateString()); // need to trim time to midnight
+					//const today = new Date((new Date()).toDateString()); // need to trim time to midnight
+					const today = window.location.search.length ? this.getBriefingDateFromURL() : new Date();
 					this.selectCalendarCell(year === today.getFullYear() ? today : new Date($('.calendar-cell:not(.disabled)').first().data('date')));
 				}
 			})
