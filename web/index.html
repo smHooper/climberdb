@@ -67,6 +67,13 @@
 			climberDB = new ClimberDB();
 			$.when(...climberDB.init({addMenu: false}))
 				.done(function(resultString) {
+					// If the user logged in before and their session is still active, go to the home page
+					const username = climberDB.userInfo.ad_username;
+					if (climberDB.loginInfo[username]) {
+						if (climberDB.loginInfo[username].expiration > new Date().getTime()) {
+							window.location.href = 'dashboard.html';
+						}
+					} 
 					if (Object.keys(climberDB.userInfo).length) {
 						$('#username-input').val(climberDB.userInfo.ad_username);
 						$('#password-input').focus();
@@ -85,7 +92,22 @@
 			});
 
 			$('#sign-in-button').click((e) => {
-
+				climberDB.verifyPassword($('#password-input').val())
+					.done((response)=> {
+						if (climberDB.queryReturnedError(response)) {
+							// show some invalid password response
+						} else {
+							const stayLoggedIn = $('#retain-login-checkbox').prop('checked');
+							const expiration = (new Date()).getTime() + 
+								(stayLoggedIn ? 
+									(1000 * 60 * 60 * 24 * 7) : // lasts 7 days 
+									(1000 * 60 * 60) // lasts 1 hour
+								); 
+							climberDB.loginInfo = {username: climberDB.userInfo.ad_username, expiration: expiration}
+							window.localStorage.setItem('login', JSON.stringify(climberDB.loginInfo));
+							window.location.href = 'dashboard.html';
+						}
+					});
 			});
 
 

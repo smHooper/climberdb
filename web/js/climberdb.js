@@ -20,7 +20,7 @@ function print(i) {
 }
 
 
-function showModal(message, title, modalType='alert', footerButtons='') {
+function showModal(message, title, modalType='alert', footerButtons='', dismissable=true) {
 
 	var modalID = title
 		.replace(/[^\w]/g, '-') // replace non-alphanumeric chars with '-'
@@ -40,14 +40,18 @@ function showModal(message, title, modalType='alert', footerButtons='') {
 		}
 	}
 
+	// expired session modal should not be dismissable so only add this if dismissable is false
+	const closeButton = `
+		<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
+			<span aria-hidden="true">&times;</span>
+		</button>
+	`
 	const innerHTML = `
 	  <div class="modal-dialog" role="document">
 	    <div class="modal-content">
 	      <div class="modal-header">
 	        <h5 class="modal-title">${title}</h5>
-	        <button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
-	          <span aria-hidden="true">&times;</span>
-	        </button>
+	        	${dismissable ? closeButton : ''}
 	      </div>
 	      <div class="modal-body">
 	        <p>${message}</p>
@@ -58,9 +62,10 @@ function showModal(message, title, modalType='alert', footerButtons='') {
 	    </div>
 	  </div>
 	`;
+	const options = dismissable ? {} : {backdrop: 'static', keyboard: false};
 	const $modal = $('#alert-modal').empty()
 		.append($(innerHTML))
-		.modal();
+		.modal(options);
 	
 	$modal.find('.close-modal').click(function() {
 		$modal.modal('hide');
@@ -151,6 +156,7 @@ class ClimberDB {
 			max_people_per_briefing: 20,
 			default_briefing_length_hrs: 1.5
 		}
+		this.loginInfo = {}; //{username: {expires: } }
 	}
 
 	getUserInfo() {
@@ -185,8 +191,14 @@ class ClimberDB {
 					<h4 class="page-title">DENA Climbing Permit Portal</h4>
 				</div>
 				<div class="header-menu-item-group" id="username-container">
-					<img id="username-icon" src="imgs/account_icon_50px.svg" alt="account icon">
-					<label id="username"></label>
+					<button id="show-user-options-button" class="generic-button icon-button">
+						<img id="username-icon" src="imgs/account_icon_50px.svg" alt="account icon">
+						<label id="username"></label>
+					</button>
+					<div class="user-account-dropdown" role="">
+						<button id="log-out-button" class="generic-button text-only-button w-100 centered-text account-button">Log out</button>
+						<button id="change-password-button" class="generic-button text-only-button w-100 centered-text account-button">Reset password</button>
+					</div>
 				</div>
 			</nav>
 
@@ -266,12 +278,40 @@ class ClimberDB {
 			$('.sidebar-collapse-button, nav.sidebar').toggleClass('collapsed');
 		});
 
+		$('#show-user-options-button').click(() => {
+			$('.user-account-dropdown').toggleClass('show');
+		});
+
+		$('#log-out-button').click(() => {
+			this.confirmLogout();
+		})
+
 		var tabIndex = 0;
 		for (const el of $('nav a, nav button')) {
 			el.tabIndex = tabIndex;
 			tabIndex ++;
 		}
 	}
+
+
+	/*
+	Ask user if they really want to log out and warn them that they'll lose unsaved data.
+	If they confirm, set the expiration of their login session to now and go to the sign-in page
+	*/
+	confirmLogout() {
+		// Set the expiration for the current user's session to now if they confirm. Then go to the sign-in page
+		const onConfirmClick = `
+			climberDB.loginInfo.expiration = ${new Date().getTime()};
+			window.localStorage.login = JSON.stringify(climberDB.loginInfo);
+			window.location.href='index.html';
+		`;
+		const footerButtons = `
+			<button class="generic-button modal-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
+			<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>';
+		`;
+		showModal('Are you sure you want to log out? Any unsaved data will be lost', 'Log out?', 'confirm', footerButtons);
+	}
+
 
 	queryDB(sql, {returnTimestamp=false}={}) {
 		var requestData = {action: 'query', queryString: sql, db: 'climberdb'};
@@ -784,7 +824,7 @@ class ClimberDB {
 			method: 'POST',
 			data: {action: 'verifyPassword', clientPassword: clientPassword},
 			cache: false
-		}).done()
+		});
 	}
 
 
@@ -967,8 +1007,11 @@ class ClimberDB {
 
 	/* Return any Deferreds so anything that has to happen after these are done can wait */
 	init({addMenu=true}={}) {
+
+		this.loginInfo = $.parseJSON(window.localStorage.getItem('login') || '{}');
+
 		if (addMenu) this.configureMenu();
-		
+
 		// Bind events on dynamically (but not yet extant) elements
 		$(document).on('change', 'select.input-field', e => {
 			//const $select = $(e.target);
@@ -988,7 +1031,20 @@ class ClimberDB {
 			.parent()
 				.addClass('selected');
 		
-		return [this.getUserInfo(), this.getTableInfo()];
+		const userDeferred = this.getUserInfo()
+			.done((response) => {
+				const result = $.parseJSON(response)[0];
+				const username = result.ad_username;
+				if (addMenu) {
+					if (this.loginInfo.username !== username || this.loginInfo.expiration < new Date().getTime()) {
+						$('#climberdb-main-content').empty();
+						hideLoadingIndicator();
+						const footerButtons = `<button class="generic-button modal-button close-modal" data-dismiss="modal" onclick="window.location.href='index.html'">OK</button>`;
+						showModal('Your session has expired. Click OK to log in again.', 'Session expired', 'alert', footerButtons, false);
+					}
+				}
+			});
+		return [userDeferred, this.getTableInfo()];
 	}
 };
 

@@ -24,7 +24,7 @@ html, body {
   cursor: pointer;
   transition: font-weight 0.2s ease; 
 }
-.generic-button:hover {
+.generic-button:not(.account-button):hover {
   text-decoration: none !important; /*keep <a> tags from looking like links */
   color: white !important;
 }
@@ -56,7 +56,8 @@ html, body {
   margin-bottom: 0px;
 }
 
-.icon-button, .text-only-button {
+.icon-button, 
+.text-only-button {
   background-color: rgba(0,0,0,0);
   color: #219EBC;
   border: none;
@@ -973,15 +974,56 @@ audio.modal-img {
 .flex-float-right {
   align-self: flex-end;
 }
-#username-container > span, #username-container > img {
+
+/*------ user account button----------*/
+#username-container {
+  position: relative;
+}
+#show-user-options-button {
+  width: 100%;
+  height: 100%;
+}
+#show-user-options-button:focus {
+  opacity: 1;
+}
+#show-user-options-button > * {
   padding-right: 10px;
   height: 35px;
   font-weight: 500;
   line-height: 60px;
-}
-#username-container {
+  transition: 0.3s opacity;
   opacity: 0.6;
+  color: white;
+  cursor: pointer;
 }
+#show-user-options-button:focus > *{
+  opacity: 1;
+}
+.user-account-dropdown {
+  position: absolute;
+  z-index: 100;
+  background-color: white;
+  width: 200px;
+  height: 0;
+  transition: 0.3s height;
+  top: 60px;
+  right: 0;
+}
+.user-account-dropdown.show {
+  height: 100px;
+}
+.user-account-dropdown * {
+  opacity: 0;
+  pointer-events: none;
+  font-size: 20px;
+}
+.user-account-dropdown.show * {
+  /*display: block;*/
+  opacity: 1;
+  pointer-events: all;
+}
+
+/*^^^^^^user account button ^^^^^^^^*/
 
 main.climberdb-main {
   position: fixed;
