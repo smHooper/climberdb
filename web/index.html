@@ -22,7 +22,7 @@
 <body>
 	<div id="sign-in-form-container">
 		<div class="field-container">
-			<input id="username-input" class="input-field" name="username" placeholder="Username">
+			<input id="username-input" class="input-field" name="username" placeholder="Username" autocomplete="off">
 			<label class="field-label" for="username-input">Username</label>
 		</div>
 		<div class="field-container default-field">
@@ -30,11 +30,11 @@
 			<label class="field-label" for="password-input">Password</label>
 		</div>
 		<div class="field-container request-field hidden" aria-hidden=true>
-			<input id="first-name-input" class="input-field" name="first_name" placeholder="Fist name">
+			<input id="first-name-input" class="input-field" name="first_name" placeholder="Fist name" autocomplete="off">
 			<label class="field-label" for="password-input">First name</label>
 		</div>
 		<div class="field-container request-field hidden" aria-hidden=true>
-			<input id="last-name-input" class="input-field" name="last_name" placeholder="Last name">
+			<input id="last-name-input" class="input-field" name="last_name" placeholder="Last name" autocomplete="off">
 			<label class="field-label" for="password-input">Last name</label>
 		</div>
 		<div id="sign-in-form-footer" class="field-container col">
@@ -47,7 +47,7 @@
 					</label>
 					<label class="field-label checkbox-label" for="retain-login-checkbox">Stay signed in</label>
 				</div>
-				<button id="sign-in-button" class="generic-button index-button">sign in</button>
+				<button id="sign-in-button" class="generic-button index-button" data-target="dashboard.html">sign in</button>
 			</div>
 			<div class="field-container request-access-container">
 				<button id="request-access-button" class="generic-button index-button hidden" aria-hidden=true>request access</button>
@@ -65,6 +65,16 @@
 		var climberDB;
 		$(document).ready(function(){
 			climberDB = new ClimberDB();
+
+			// If the user was bounced back to the sign-in page after trying to visit another page, 
+			//	the URL should have a query with the 
+			if (window.location.search.length) {
+				const params = climberDB.parseURLQueryString();
+				if ('referer' in params) {
+					$('#sign-in-button').data('target', encodeURI(params.referer));
+				}
+			}
+
 			$.when(...climberDB.init({addMenu: false}))
 				.done(function(resultString) {
 					// If the user logged in before and their session is still active, go to the home page
@@ -93,9 +103,9 @@
 
 			$('#sign-in-button').click((e) => {
 				climberDB.verifyPassword($('#password-input').val())
-					.done((response)=> {
-						if (climberDB.queryReturnedError(response)) {
-							// show some invalid password response
+					.done(isValid => {
+						if (!isValid) {
+							showModal('Password incorrect', 'Incorrect password');
 						} else {
 							const stayLoggedIn = $('#retain-login-checkbox').prop('checked');
 							const expiration = (new Date()).getTime() + 
@@ -105,7 +115,7 @@
 								); 
 							climberDB.loginInfo = {username: climberDB.userInfo.ad_username, expiration: expiration}
 							window.localStorage.setItem('login', JSON.stringify(climberDB.loginInfo));
-							window.location.href = 'dashboard.html';
+							window.location.href = $(e.target).data('target');
 						}
 					});
 			});

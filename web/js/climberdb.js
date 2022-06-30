@@ -161,16 +161,15 @@ class ClimberDB {
 
 	getUserInfo() {
 		return $.ajax({
-			url: 'climberdb.php',
+			url: 'flask/userInfo',
 			method: 'POST',
-			data: {action: 'getUser'},
 			cache: false
 		}).done((resultString) => {
 			if (this.queryReturnedError(resultString)) {
 				throw 'User role query failed: ' + resultString;
 			} else {
-				const result = $.parseJSON(resultString);
-				this.userInfo = {...result[0]};
+				const result = typeof resultString === 'object' ? resultString : $.parseJSON(resultString);
+				this.userInfo = {...result};
 				$('#username').text(`Hi, ${this.userInfo.first_name}!`);
 			}
 		});
@@ -733,12 +732,36 @@ class ClimberDB {
 	Helper function to check a Postgres query result for an error
 	*/
 	queryReturnedError(queryResultString) {
+		if (typeof queryResultString === 'object') {
+			if (Array.isArray(queryResultString)) {
+				return !queryResultString.length;
+			} else {
+				return queryResultString === null;
+			}
+		}
 		return queryResultString.trim().startsWith('ERROR') || queryResultString.trim() === '["query returned an empty result"]';
 	}
 
 
-	parseURLQueryString(queryString) {
-		decodeURIComponent(window.location.search.slice(1))
+	parseURLQueryString(queryString=window.location.search) {
+		//decodeURIComponent(window.location.search.slice(1))
+		return Object.fromEntries(
+			decodeURIComponent(queryString.slice(1))
+				.split('&')
+				.map(s => {
+					const match = s.match(/=/)
+					if (!match) {
+						return s
+					} else {
+						// Need to return [key, value]
+						return [
+							s.slice(0, match.index), 
+							s.slice(match.index + 1, s.length) //+1 to skip the = separator
+						]
+					}
+				}
+			)
+		);
 	}
 
 	/*
@@ -820,9 +843,10 @@ class ClimberDB {
 
 	verifyPassword(clientPassword) {
 		return $.ajax({
-			url: 'climberdb.php',
+			url: '/flask/checkPassword',
 			method: 'POST',
-			data: {action: 'verifyPassword', clientPassword: clientPassword},
+			dataType: 'JSON',
+			data: {clientPassword: clientPassword, username: this.userInfo.ad_username},
 			cache: false
 		});
 	}
@@ -1033,13 +1057,13 @@ class ClimberDB {
 		
 		const userDeferred = this.getUserInfo()
 			.done((response) => {
-				const result = $.parseJSON(response)[0];
+				const result = response;
 				const username = result.ad_username;
 				if (addMenu) {
 					if (this.loginInfo.username !== username || this.loginInfo.expiration < new Date().getTime()) {
 						$('#climberdb-main-content').empty();
 						hideLoadingIndicator();
-						const footerButtons = `<button class="generic-button modal-button close-modal" data-dismiss="modal" onclick="window.location.href='index.html'">OK</button>`;
+						const footerButtons = `<button class="generic-button modal-button close-modal" data-dismiss="modal" onclick="window.location.href='index.html?referer=${encodeURI(window.location.href)}'">OK</button>`;
 						showModal('Your session has expired. Click OK to log in again.', 'Session expired', 'alert', footerButtons, false);
 					}
 				}
