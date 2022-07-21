@@ -154,7 +154,8 @@ class ClimberDB {
 		this.entryMetaFields = ['entry_time', 'entered_by', 'last_modified_time', 'last_modified_by'];
 		this.config = {
 			max_people_per_briefing: 20,
-			default_briefing_length_hrs: 1.5
+			default_briefing_length_hrs: 1.5,
+			cancellation_fee: 100.0
 		}
 		this.loginInfo = {}; //{username: {expires: } }
 	}

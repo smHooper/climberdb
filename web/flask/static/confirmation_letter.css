@@ -1,0 +1,39 @@
+body { 
+    font: 11pt Times, serif;
+}
+
+
+@page { 
+    size: letter; 
+    margin: 0.5in; 
+}
+@media print {
+    nav { 
+        display: none ;
+    }
+}
+
+.letterhead {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+.letterhead-logo {
+    height: 100px;
+    width: 100px;
+}
+.letterhead-text {
+    text-align: center;
+    font-size: 12pt;
+}
+.letterhead-text .large-text {
+    font-size: 16pt;
+}
+.letterhead-text > *,
+.letterhead-text > .letterhead-address > * {
+    width: 100%;
+}
+.uppercase {
+    text-transform: uppercase;
+}

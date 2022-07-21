@@ -38,6 +38,32 @@
 
 	<!--alert/message modal -->
 	<div class="modal fade" id="alert-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
+	<div class="modal fade" id="exports-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+		    	<div class="modal-header">
+			    	<h5 class="modal-title">Export PDF</h5>
+					<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<div class="field-container col-6">
+						<select class="input-field no-option-fill col-6" id="input-export_type" name="export_type" value="confirmation_letter">
+							<option value="confirmation_letter" selected>Confirmation letter</option>
+							<option value="registration_card">Registration card</option>
+						</select>
+						<label class="field-label" for="input-export_type">Export type</label>
+					</div>
+					<button class="generic-button" id="create-pdf-button" title="Create PDF">Create PDF</button>
+					
+				</div>
+				<div class="modal-footer">
+					<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
 	
 <!-- 	<script type="text/javascript">
 		$('.modal.fade').after(`<script src="js/climbers.js?t=${(new Date).getTime()}"><\/script>`);
