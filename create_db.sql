@@ -118,6 +118,8 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	is_checked_in BOOLEAN,
 	reservation_status_code INTEGER REFERENCES group_status_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	is_illegal_guide BOOLEAN,
+	application_complete BOOLEAN,
+	psar_complete BOOLEAN,
 	is_trip_leader BOOLEAN,
 	frostbite_severity_code INTEGER REFERENCES frostbite_severity_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	frostbite_details VARCHAR(255),
@@ -192,6 +194,22 @@ CREATE TABLE IF NOT EXISTS users (
 	UNIQUE (first_name, last_name), 
 	UNIQUE (ad_username) 
 );
+
+CREATE DOMAIN config_data_type AS VARCHAR(25) CHECK (
+    VALUE IN (
+        'string',
+        'integer',
+        'float',
+        'boolean'
+    )
+);
+CREATE TABLE IF NOT EXISTS config (
+	id SERIAL PRIMARY KEY,
+	property VARCHAR(50) UNIQUE,
+	data_type config_data_type,
+	value VARCHAR(255)
+);
+
 
 -- insert lookup info that won't get imported in Python script
 INSERT INTO sex_codes (name) VALUES ('Female'), ('Male'), ('Intersex'), ('Prefer not to say');

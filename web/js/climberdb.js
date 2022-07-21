@@ -152,11 +152,7 @@ class ClimberDB {
 			insertOrder: [] // comply with left-right orientation of table relationships
 		};
 		this.entryMetaFields = ['entry_time', 'entered_by', 'last_modified_time', 'last_modified_by'];
-		this.config = {
-			max_people_per_briefing: 20,
-			default_briefing_length_hrs: 1.5,
-			cancellation_fee: 100.0
-		}
+		this.config = {};
 		this.loginInfo = {}; //{username: {expires: } }
 	}
 
@@ -174,6 +170,24 @@ class ClimberDB {
 				$('#username').text(`Hi, ${this.userInfo.first_name}!`);
 			}
 		});
+	}
+
+	loadConfigValues() {
+		this.queryDB('SELECT property, data_type, value FROM config')
+			.done(queryResultString => {
+				if (this.queryReturnedError(queryResultString)) {
+					print('Problem querying config values');
+				} else {
+					print(queryResultString)
+					for (const {property, data_type, value, ...rest} of $.parseJSON(queryResultString)) {
+						this.config[property] = 
+							data_type === 'integer' ? parseInt(value) : 
+							data_type === 'float' ? parseFloat(value) : 
+							data_type === 'boolean' ? value.toLowerCase().startsWith('t') :
+							value; // it's a string
+					}
+				}
+			})
 	}
 
 	configureMenu() {
@@ -1069,7 +1083,7 @@ class ClimberDB {
 					}
 				}
 			});
-		return [userDeferred, this.getTableInfo()];
+		return [userDeferred, this.getTableInfo(), this.loadConfigValues()];
 	}
 };
 
