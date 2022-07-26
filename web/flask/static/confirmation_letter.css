@@ -2,38 +2,43 @@ body {
     font: 11pt Times, serif;
 }
 
-
 @page { 
     size: letter; 
-    margin: 0.5in; 
-}
-@media print {
-    nav { 
-        display: none ;
-    }
+    margin: 0.5in .75in; 
 }
 
 .letterhead {
     width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    position: relative;
 }
 .letterhead-logo {
-    height: 100px;
-    width: 100px;
+    height: 80pt;
+    width: 80pt;
+}
+.img-container-left{
+    float:left;
+}
+.img-container-right{
+    float:right;
 }
 .letterhead-text {
     text-align: center;
     font-size: 12pt;
+    margin: 0 15pt;
+    width: calc(100% - 210pt);
 }
 .letterhead-text .large-text {
     font-size: 16pt;
 }
-.letterhead-text > *,
-.letterhead-text > .letterhead-address > * {
-    width: 100%;
+.letterhead-address {
+    margin-block-start: 0;
 }
 .uppercase {
     text-transform: uppercase;
+}
+.climber-list {
+    height: 60px;
+    list-style: none; 
+    column-fill: auto;
+    column-width: 150px;
 }
