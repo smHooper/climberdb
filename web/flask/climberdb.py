@@ -23,6 +23,12 @@ def load_weasyprint():
 weasyprint_thread = threading.Thread(target=load_weasyprint)
 weasyprint_thread.start()
 
+def wait_for_weasyprint():
+	'''
+	Helper function to wait for weasyprint to load for endpoints that require it
+	'''
+	weasyprint_thread.join()
+
 
 CONFIG_FILE = '//inpdenaterm01/climberdb/config/climberdb_config.json'
 
@@ -41,7 +47,18 @@ if not app.config.from_file(CONFIG_FILE, load=json.load):
 	raise IOError(f'Could not read CONFIG_FILE: {CONFIG_FILE}')
 
 # disable caching (this doesn't seem to work for some reason)
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+#app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+@app.after_request
+def add_header(response):
+    '''
+   	Add headers to force n
+    '''
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers["Expires"] = "0"
+    response.headers['Cache-Control'] = 'public, max-age=0'
+
+    return response
 
 ###############################################
 # ------------- Helper functions ------------ #
@@ -183,20 +200,11 @@ def hello_pdf(name):
     return render_pdf(HTML(string=html))
 
 
-@app.route('/flask/reports/confirmation_letter/<expedition_id>', methods=['POST'])
+@app.route('/flask/reports/confirmation_letter/<expedition_id>', methods=['GET', 'POST'])
 def get_confirmation_letter_html(expedition_id):
-	data = dict(request.form)
-	data['climber_list'] = json.loads(data['climber_list'])
-	return render_template('confirmation_letter.html', **data)
-
-
-@app.route('/flask/reports/confirmation_letter_<expedition_id>.pdf', methods=['GET', 'POST'])
-def get_confirmation_letter(expedition_id):
-	#data = dict(request.form)
-	
 	if request.method == 'GET':
 		data = json.loads('''
-			{"expedition_name":"Some expedition","leader_full_name":"Leader Name","planned_departure_date":"2022-1-1","total_payment":"$300.00","total_climbers":"2", "something":"1", "climber_names":"[\\"Climber 1\\",\\"Climber 2\\"]","cancellation_fee":"100.00"}
+			{"expedition_name":"Some expedition","leader_full_name":"Leader Name","planned_departure_date":"2022-1-1","total_payment":"300.00","total_climbers":"2", "something":"1", "climber_names":"[\\"Climber 1\\",\\"Climber 2\\"]","cancellation_fee":"100.00"}
 					''')
 	else:
 		data = dict(request.form)
@@ -209,9 +217,35 @@ def get_confirmation_letter(expedition_id):
 		).strftime('%B %#d, %Y')
 	
 	# Get HTML string
+	return render_template('confirmation_letter.html', **data)
+
+
+@app.route('/flask/reports/confirmation_letter/<expedition_id>.pdf', methods=['GET', 'POST'])
+def get_confirmation_letter(expedition_id):
+	#data = dict(request.form)
+	
+	if request.method == 'GET':
+		data = json.loads('''
+			{"expedition_name":"Some expedition","leader_full_name":"Leader Name","planned_departure_date":"2022-1-1","total_payment":"300.00","total_climbers":"5", "something":"1", "climber_names":"[\\"Climber 1\\",\\"Climber 2\\",\\"Climber 3\\",\\"Climber 4\\",\\"Climber 5\\",\\"Climber 5\\"]","cancellation_fee":"100.00"}
+					''')
+	else:
+		data = dict(request.form)
+
+
+	# For some stupid reason, the array comes in as a single value, so I encode it as a 
+	#	JSON string client side and it needs to be decoded here
+	data['climber_names'] = json.loads(data['climber_names'])
+	# Reformat date to be more human-readable
+	data['planned_departure_date'] = datetime.strptime(
+			data['planned_departure_date'], '%Y-%m-%d'
+		).strftime('%B %#d, %Y')
+	
+	# Get HTML string
 	html = render_template('confirmation_letter.html', **data)
 
 	# retunr HTML as PDF binary data
+	wait_for_weasyprint()
+
 	pdf_data = weasyprint.render_pdf(weasyprint.HTML(string=html))
 	return pdf_data
 
