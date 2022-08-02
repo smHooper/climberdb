@@ -204,13 +204,13 @@ def hello_pdf(name):
 def get_confirmation_letter_html(expedition_id):
 	if request.method == 'GET':
 		data = json.loads('''
-			{"expedition_name":"Some expedition","leader_full_name":"Leader Name","planned_departure_date":"2022-1-1","total_payment":"300.00","total_climbers":"2", "something":"1", "climber_names":"[\\"Climber 1\\",\\"Climber 2\\"]","cancellation_fee":"100.00"}
+			{"expedition_name":"Some expedition","leader_full_name":"Leader Name","planned_departure_date":"2022-1-1","total_payment":"300.00","total_climbers":"5", "something":"1", "climbers":"[{\\"full_name\\": \\"Climber 1\\"},{\\"full_name\\":\\"Climber 2\\"}]","cancellation_fee":"100.00"}
 					''')
 	else:
 		data = dict(request.form)
 	# For some stupid reason, the array comes in as a single value, so I encode it as a 
 	#	JSON string client side and it needs to be decoded here
-	data['climber_names'] = json.loads(data['climber_names'])
+	data['climbers'] = json.loads(data['climbers'])
 	# Reformat date to be more human-readable
 	data['planned_departure_date'] = datetime.strptime(
 			data['planned_departure_date'], '%Y-%m-%d'
@@ -226,15 +226,14 @@ def get_confirmation_letter(expedition_id):
 	
 	if request.method == 'GET':
 		data = json.loads('''
-			{"expedition_name":"Some expedition","leader_full_name":"Leader Name","planned_departure_date":"2022-1-1","total_payment":"300.00","total_climbers":"5", "something":"1", "climber_names":"[\\"Climber 1\\",\\"Climber 2\\",\\"Climber 3\\",\\"Climber 4\\",\\"Climber 5\\",\\"Climber 5\\"]","cancellation_fee":"100.00"}
+			{"expedition_name":"Some expedition","leader_full_name":"Leader Name","planned_departure_date":"2022-1-1","total_payment":"300.00","total_climbers":"5", "something":"1", "climbers":"[{\\"full_name\\": \\"Climber 1\\"},{\\"full_name\\":\\"Climber 2\\"}]","cancellation_fee":"100.00"}
 					''')
 	else:
 		data = dict(request.form)
 
-
 	# For some stupid reason, the array comes in as a single value, so I encode it as a 
 	#	JSON string client side and it needs to be decoded here
-	data['climber_names'] = json.loads(data['climber_names'])
+	data['climbers'] = json.loads(data['climbers'])
 	# Reformat date to be more human-readable
 	data['planned_departure_date'] = datetime.strptime(
 			data['planned_departure_date'], '%Y-%m-%d'
@@ -243,10 +242,58 @@ def get_confirmation_letter(expedition_id):
 	# Get HTML string
 	html = render_template('confirmation_letter.html', **data)
 
-	# retunr HTML as PDF binary data
+	# wait until the last moment to block for weasyprint to load
 	wait_for_weasyprint()
 
+	# return HTML as PDF binary data
 	pdf_data = weasyprint.render_pdf(weasyprint.HTML(string=html))
+	return pdf_data
+
+
+@app.route('/flask/reports/registration_card/<expedition_id>', methods=['POST'])
+def get_registration_card_html(expedition_id):
+	data = dict(request.form)
+
+	# For some stupid reason, arrays come in as a single value, so I encode it as a 
+	#	JSON string client side and it needs to be decoded here
+	data['climbers'] = json.loads(data['climbers'])
+	data['routes'] = json.loads(data['routes'])
+	for prop in data:
+		if prop.endswith('_date'):
+			data[prop] = datetime.strptime(
+					data[prop], '%Y-%m-%d'
+				).strftime('%#m/%#d/%Y')
+
+	data['checkmark_character'] = '\u2714';
+
+	# Get HTML string
+	html = render_template('registration_card.html', **data)
+
+	return html
+
+
+@app.route('/flask/reports/registration_card/<expedition_id>.pdf', methods=['POST'])
+def get_registration_card(expedition_id):
+	data = dict(request.form)
+
+	# For some stupid reason, the array comes in as a single value, so I encode it as a 
+	#	JSON string client side and it needs to be decoded here
+	data['climbers'] = json.loads(data['climbers'])
+	data['routes'] = json.loads(data['routes'])
+	for prop in data:
+		if prop.endswith('_date'):
+			data[prop] = datetime.strptime(
+					data[prop], '%Y-%m-%d'
+				).strftime('%#m/%#d/%Y')
+	data['checkmark_character'] = '\u2714';
+
+	# Get HTML string
+	html = render_template('registration_card.html', **data)
+
+
+	wait_for_weasyprint()
+	pdf_data = weasyprint.render_pdf(weasyprint.HTML(string=html))
+	
 	return pdf_data
 
 

@@ -1,0 +1,239 @@
+<!doctype html>
+<head>
+	<title>Registration Card - {{expedition_name}}</title>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+	<link rel=stylesheet href="{{ url_for('static', filename='registration_card.css') }}" />
+	<style>
+
+	</style>
+</head>
+
+<body>
+
+	<h2 class="title-text main-title">Registration Card</h2>
+	<section>
+		<table class="section-table header">
+			<tr>
+				<td class="label short">Expedition:</td>
+				<td class="value">{{ expedition_name }}</td>
+
+				<td class="label long"></td>
+				<td class="value"></td>
+
+				<td class="label long">Check-in ranger:</td>
+				<td class="value"></td>
+			</tr>
+			<tr>
+				<td class="label short">Departure:</td>
+				<td class="value">{{ actual_departure_date }}</td>
+
+				<td class="label long">Planned return:</td>
+				<td class="value"></td>
+
+				<td class="label long" style="white-space: nowrap;">Check-back ranger:</td> 
+				<td class="value"></td>
+			</tr>
+			<tr>
+				<td class="label short">Air taxi:</td>
+				<td class="value">{{ air_taxi }}</td>
+
+				<td class="label long"></td>
+				<td class="value"></td>
+
+				<td class="label long">Guide company:</td>
+				<td class="value">{{ guide_company }}</td>
+			</tr>
+		</table>
+
+		<table id="climber-route-list" class="section-table alternating-row-table">
+			<thead>
+				<tr>
+					<th class="leader-col">Leader</th>
+					<th class="name-col">Climber</th>
+					<th class="route-col">Route</th>
+					<th class="summit-col">Summit Date</th>
+					<th class="summit-col">Elevation</th>
+					<th class="summit-col">Pro Pin</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for route_info in routes %}
+					{% for climber_info in climbers %}
+						<tr>
+							{% if climber_info.is_trip_leader %}
+								<td class="leader-col unicode-character">{{"%s" % checkmark_character }}</td>
+							{% else %}
+								<td class="leader-col"></td>
+							{% endif %}
+							<td class="name-col">{{ climber_info.full_name }} </td>
+							<td class="route-col">{{ route_info.mountain}}, {{route_info.route}}</td>
+							<td class="summit-col"></td>
+							<td></td>
+							<td></td>
+						</tr>
+					{% endfor %}
+				{% endfor %}
+			</tbody>
+		</table>
+	</section>
+
+	<section>
+		<h3 class="title-text">Check-in and Orientation</h3>
+		<table id="orientation-table" class="section-table alternating-row-table">
+			<tbody>
+				<tr>
+					<td>Tent type:</td>
+					<td>Skis/snow shoes:</td>
+				</tr>
+					<td>Gallons of fuel:</td>
+					<td>Spot device? (owner name, ESN):</td>
+				</tr>
+					<td>Stove qty and type:</td>
+					<td>inReach:</td>
+				</tr>
+					<td>Days of food:</td>
+					<td>Sat phone? (Provider, number):</td>
+				</tr>
+					<td>Med kit (alti, pain?):</td>
+					<td>FRS/other comms:</td>
+				</tr>
+			</tbody>
+		</table>
+
+		<h4 class="sub-section-title">Orientation Checklist</h4>
+		<table id="orientation-checklist-table" class="section-table">
+			<tr>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Rescue/medical policy</label>
+				</td>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Equipment</label>
+				</td>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Weather</label>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Trash</label>
+				</td>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Route overview and hazards</label>
+				</td>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Fixed lines and camp etiquette</label>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Human waste</label>
+				</td>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Received NPS contact info</label>
+				</td>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Summit day and survival gear</label>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Conditions</label>
+				</td>
+				<td>
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Has valid Special Use Permit</label>
+				</td>
+				<td>
+					<!-- empty cell-->
+				</td>
+			</tr>
+		</table>
+	</section>
+
+	<section id="cmc-section">
+		<h4 class="sub-section-title">CMC Numbers</h4>
+	</section>
+
+	<section>
+		<h3 class="title-text">Check Back</h3>
+		<table id="check-back-table" class="section-table">
+			<tbody>
+				<tr>
+					<td class="col-50">Actual route(s) climbed (if different):</td>
+					<td class="col-25 text-align-right">Actual fly-in date:</td>
+					<td class="col-25"></td>
+				</tr>
+				<tr>
+					<td class="col-50"></td>
+					<td class="col-25 text-align-right">Actual fly-out date:</td>
+					<td class="col-25"></td>
+				</tr>
+				<tr class="row-40pt">
+					<td class="col-50">Notable sanitation problems(location and description):</td>
+					<td class="col-25 text-align-right">Loss or abandoned equipment:</td>
+					<td class="col-25"></td>
+				</tr>
+				<tr class="row-40pt">
+					<td class="col-50">Citations:</td>
+					<td class="col-25 text-align-right">Full pack-out (yes/no)?</td>
+					<td class="col-25"></td>
+				</tr>
+			</tbody>
+		</table>
+	</section>
+
+
+	<section>
+		<h3 class="title-text">Illness and Injuries</h3>
+		<table id="climber-route-list" class="section-table alternating-row-table">
+			<thead>
+				<tr>
+					<th class="col-20">Name</th>
+					<th class="col-10">Frostbite</th>
+					<th class="col-5">AMS</th>
+					<th class="col-5">HACE</th>
+					<th class="col-5">HAPE</th>
+					<th class="col-25">Medical notes</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for route_info in routes %}
+					{% for climber_info in climbers %}
+						<tr>
+							<td class="col-20">{{ climber_info.full_name }} </td>
+							<td class="col-10"></td>
+							<td class="col-5"></td>
+							<td class="col-5"></td>
+							<td class="col-5"></td>
+							<td class="col-25"></td>
+						</tr>
+					{% endfor %}
+				{% endfor %}
+			</tbody>
+		</table>
+	</section>
+
+	<section class="comments-section">
+		<h3 class="title-text">Climber comments</h3>
+	</section>
+
+	<section>
+		<h3 class="title-text">Ranger comments</h3>
+	</section>
+</body>
+
+</html>

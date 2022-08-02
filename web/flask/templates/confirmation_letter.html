@@ -14,7 +14,7 @@
 	    </div>
 	    <div class="letterhead-text">
 			<p class="letterhead-address">
-				<span class="large-text">United States Department of the Interio</span><br>
+				<span class="large-text">United States Department of the Interior</span><br>
 				<span class="uppercase">National Park Service</span><br>
 				<span>Demali National Park &amp; Preserve</span><br>
 				<span>Mile 237 Parks Highway</span><br>
@@ -39,8 +39,8 @@
 			Your payment of ${{ total_payment }} for {{ total_climbers }} climbers in your expedition has been processed. The
 			 climbers registered for your expedition are: 
 			 <ul class="climber-list">
-			     {% for climber in climber_names %}
-			         <li>{{ climber }}</li>
+			     {% for climber in climbers %}
+			         <li>{{ climber.full_name }}</li>
 			     {% endfor %}
 			 </ul>
 		</p>
