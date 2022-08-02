@@ -5,7 +5,7 @@
 	align-items: center;
 }
 .fuzzy-search-bar-container {
-	margin-right: 40px;
+	margin-right: 20px;
 	flex-wrap: wrap;
 	position: relative;
 }
@@ -206,6 +206,16 @@
 }
 
 
+.edit-button-container {
+	display: flex;
+	margin-right: 20px;
+}
+.edit-button-container > .expedition-edit-button {
+	margin: 0 7px;
+	transition: display 0s; /*toggle visibility immediately*/
+}
+
+
 .expedition-content {
 	width: 100%;
 	display: flex;
@@ -319,23 +329,48 @@
 	font-size: 20px;
 	margin-bottom: 0;
 }
-.expedition-card .card-header .leader-field-container {
+.card.expedition-card .card-header-content-container {
+	font-size: 14px;
+}
+.expedition-card .card-header .leader-checkbox-container {
 	transition: 0.3s all;
 }
-/*.expedition-card .card-header .leader-field-container.transparent {
+/*.expedition-card .card-header .leader-checkbox-container.transparent {
 	pointer-events: auto;
 }*/
-.expedition-card .card-header .leader-field-container.transparent .input-field {
+.expedition-card .card-header .leader-checkbox-container.transparent .input-field {
 	cursor: default;
 }
-.expedition-card .card-header:hover .leader-field-container.transparent {
+.expedition-card .card-header:hover .leader-checkbox-container.transparent {
 	opacity: 1;
 	pointer-events: all;
 }
-
 .card.expedition-card .card-header .checkbox-label {
 	color: white;
+	font-size: 14px;
+	line-height: 20px;
 }
+.card-header-content-container.member-card-header-chevron-container {
+	display: flex;
+	justify-content: flex-end;
+	flex: 1 1 auto;
+}
+.uneditable .input-field.card-link-label.route-code-header-input {
+	border:none;
+}
+.input-field.card-link-label.route-code-header-input {
+	border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+	/* border-radius: 7px; */
+}
+.input-field.card-link-label.route-code-header-input:focus {
+	background-color: rgba(255, 255, 255, 0.25);
+	border-bottom: none !important;
+	border-radius: 7px;
+}
+.input-field.card-link-label.route-code-header-input > option {
+	color: black;
+}
+
 #climber-data-container .card.expedition-card,
 #climber-data-container .card-body {
 	/*background-color: #e5d7c7;*/
@@ -392,6 +427,28 @@
 	max-width: 100%;
 }
 
+/*chevron is small for some reason*/
+.card-link ~ * > .fa-chevron-dow {
+	font-size: 20px;
+}
+/*only show the delete button when the user hovers over the card header*/
+.delete-card-button {
+	opacity: 0;
+	transition: 0.3s opacity;
+}
+.card-header:hover .delete-card-button {
+	opacity: 1;
+}
+/*hide the button when not in editing mode*/
+.uneditable .delete-card-button {
+	display: none;
+}
+.delete-card-button > .fa-trash {
+	font-size: 25px;
+}
+
+
+
 /*-------modal climber form ---------*/
 /*override hidden climber history (hidden in climbers.css because modal is
 used to show climber form in "add climber" mode)*/
@@ -403,10 +460,13 @@ used to show climber form in "add climber" mode)*/
 	flex-wrap: wrap;
 	column-gap: 20px;
 }
+.modal-climber-select-container {
+	flex: 1 1 auto;
+}
 .climber-form .fuzzy-search-bar {
 	font-size: 16px;
 	height: 40px;
-	width: unset;
+	width: 100%;
 	flex: 1 1 auto;
 	margin-top: 20px;
 	text-indent: 40px;
