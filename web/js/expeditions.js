@@ -422,7 +422,10 @@ class ClimberDBExpeditions extends ClimberDB {
 							<div id="routes-accordion" class="accordion">
 								<div id="cloneable-card-routes" class="card expedition-card cloneable hidden">
 									<div class="card-header" id="cardHeader-routes-cloneable">
-										<select id="route-code-header-input" class="input-field card-link-label route-code-header-input expedition-member-card-link-label">
+										<select id="mountain-code-header-input" class="input-field card-link-label route-code-header-input mountain-code-header-input expedition-member-card-link-label" name="mountain_code">
+											<option value="">Select mountain</option>
+										</select>
+										<select id="route-code-header-input" class="input-field card-link-label route-code-header-input expedition-member-card-link-label" name="route_code">
 											<option value="">Select route</option>
 										</select>
 										<a class="card-link" data-toggle="collapse" href="#collapse-routes-cloneable" data-target="collapse-routes-cloneable">
@@ -532,6 +535,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// Check if there are unsaved edits
 			if ($('.input-field.dirty:not(#input-export_type)').length) {
 				// ask user to save edits
+
 			}
 
 			this.makePDF();
@@ -732,10 +736,25 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$(document).on('change', '.route-code-header-input', e => {
-			const $select = $(e.target);
-			const routeCode = $select.val();
-			for (const el of $select.closest('.card').find('.input-field[name="route_code"]')) {
-				$(el).val(routeCode).change();
+			const $target = $(e.target);
+			var $select; 
+			if ($target.attr('name') === 'mountain_code') {
+				// Set the route code select options
+				const mountainCode = $target.val();
+				const $routeHeaderSelect = $target.siblings('.route-code-header-input')
+					.empty();//remove all options
+				const mountainRoutes = Object.values(this.routeCodes).filter(r => r.mountain_code == mountainCode);
+				for (const route of mountainRoutes) {
+					$routeHeaderSelect.append($(`<option value="${route.code}">${route.name}</option>`))
+				}
+				// Just set to the first one
+				$routeHeaderSelect.val(mountainRoutes[0].code).change();
+			} else {
+				// Set the hidden route code inputs in the card (which are the actual inputs tied to DB values)
+				const routeCode = $target.val();
+				for (const el of $target.closest('.card').find('.input-field:not(.route-code-header-input)[name="route_code"]')) {
+					$(el).val(routeCode).change();
+				}
 			}
 		});
 
@@ -907,7 +926,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				const $listItem = this.addNewListItem($(ul), {newItemClass: 'new-list-item'});
 				$listItem.find('.name-label').text(`${climberInfo.last_name}, ${climberInfo.first_name}`);
 				// Make sure the route is 
-				const routeCode = $listItem.closest('.card').find('select.route-code-header-input').val();
+				const routeCode = $listItem.closest('.card').find('select.route-code-header-input:not(.mountain-code-header-input)').val();
 				$listItem.find('.input-field[name="route_code"]').val(routeCode).addClass('dirty'); //.change() won't trigger event
 			}
 
@@ -1149,17 +1168,42 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Most of the necessary data will be in these two objects
 		var pdfData = {...this.expeditionInfo.expeditions, ...this.config};
 		
+		// Get human-readable values from selects
+		for (const property of Object.keys(climberDB.expeditionInfo.expeditions).filter(k => k.endsWith('_code'))) {
+			pdfData[property.replace('_code', '')] = $(`select.input-field[name="${property}"]`)
+				.find(`option[value="${pdfData[property]}"]`).text();
+		}
+
 		pdfData.cancellation_fee = pdfData.cancellation_fee.toFixed(2);
 
 		// Get climber and leader info
-		const climberNames = Object.values(this.expeditionInfo.members.data).map(info => {
+		const climbers = Object.values(this.expeditionInfo.members.data).flatMap(info => {
+			// Skip cancelled climbers
+			if (info.reservation_status_code == 6) return []; // flatmap will remove this
+
+			// destructure the climber's info and get just first_name and last_name
+			const climberInfo = (({ firt_name, last_name }) => ({ firt_name, last_name }))(info);
+			
+			// Get full name for ease of use
 			const fullName = info.first_name + ' ' + info.last_name;
+			climberInfo.full_name = fullName;
+
 			// Get leader info since we're looping through values anyway
-			if (info.is_trip_leader) pdfData.leader_full_name = fullName;
-            return fullName;
+			climberInfo.is_trip_leader = info.is_trip_leader === 't' || info.is_trip_leader === true;
+			if (climberInfo.is_trip_leader) pdfData.leader_full_name = fullName;
+			
+
+            return climberInfo;
+
+		}).sort((a, b) => {
+			return a.last_name < b.last_name ? -1 : //last name 1 is before last name 2
+				a.last_name > b.last_name ? 1 : 	//last name 1 is after last name 2
+				a.first_name < b.first_name ? -1 : 	// last names the same so compare first name
+				a.first_name > b.first_name ? 1 : 	// last names the same so compare first name
+				0 									// names are the same
 		});
-		pdfData.climber_names = JSON.stringify(climberNames.sort());
-		pdfData.total_climbers = climberNames.length;
+		pdfData.climbers = JSON.stringify(climbers);
+		pdfData.total_climbers = climbers.length;
 
 		// Get total payment
 		var totalPayment = 0;
@@ -1172,14 +1216,40 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Format string as float
 		pdfData.total_payment = totalPayment.toFixed(2);
 
+		if (exportType == 'registration_card') {
+			// Get route data: for each card, get the mountain name
+			pdfData.routes = [];
+			for (const card of  $('#routes-accordion > .card:not(.cloneable)')) {
+				const $card = $(card);
+				const route = this.routeCodes[$card.find('.route-code-header-input[name="route_code"]').val()];
+				const mountainName = $card.find(`.route-code-header-input[name="mountain_code"] option[value="${route.mountain_code}"]`).text();
+				pdfData.routes.push({mountain: mountainName, route: route.name});
+			} 	
+			// pdfData.routes = $('#routes-accordion > .card:not(.cloneable)').map(
+			// 	(_, card) => Object.fromEntries(
+			// 			new Map(
+			// 				$(card).find('.route-code-header-input')
+			// 					.get()
+			// 					.map(el => [el.name, el.value])
+			// 			)
+			// 		)
+			// ).get()
+		}
+		pdfData.routes = JSON.stringify(pdfData.routes);
+
+		this.showLoadingIndicator('makePDF');
+
+		print(pdfData);
+
 		return $.post({
-			url: `flask/${exportType}_${this.expeditionInfo.expeditions.id}.pdf`,
+			url: `flask/reports/${exportType}/${this.expeditionInfo.expeditions.id}.pdf`,
             data: pdfData,
         	xhrFields: {responseType: 'blob'}, 
 			cache: false
 		}).done(responseData => {
             var fileURL = URL.createObjectURL(responseData);
-            window.open(fileURL)
+            window.open(fileURL);
+            this.hideLoadingIndicator();
         });
 
 	}
@@ -1502,19 +1572,21 @@ class ClimberDBExpeditions extends ClimberDB {
 		for (const routeCode of routes.order) {
 			const thisRoute = routes.data[routeCode];
 			const routeName = this.routeCodes[routeCode].name;
+			const mountainCode = this.routeCodes[routeCode].mountain_code;
 			// add card
 			const $newCard = this.addNewCard($('#routes-accordion'), 
 				{
 					accordionName: 'routes'
 				}
 			);
-			$newCard.find('.route-code-header-input').val(routeCode).change();
+			$newCard.find('.mountain-code-header-input').val(mountainCode).change()
+				.siblings('.route-code-header-input').val(routeCode).change();
 
 			const $list = $newCard.find('.route-member-list');
 			$list.attr('id', $list.attr('id') + '-' + routeCode);
 			// List items should be in alphabetical order, so add them in order of the members
 			for (const memberID of members.order) {
-				// Not all expedition members climb necessarily climb all routes
+				// Not all expedition members necessarily climb all routes
 				if (memberID in thisRoute) {
 					const memberRouteRecord = thisRoute[memberID];
 					const memberRouteID = memberRouteRecord.expedition_member_route_id || null;
@@ -1759,7 +1831,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			lookupDeferreds.push(
 				this.queryDB('SELECT * FROM route_codes')
 					.done((queryResultString) => {
-						const $select = $('.route-code-header-input');
+						const $select = $('.route-code-header-input:not(.mountain-code-header-input)');
 						if (!this.queryReturnedError(queryResultString)) {
 							for (const route of $.parseJSON(queryResultString)) {
 								this.routeCodes[route.code] = {...route};

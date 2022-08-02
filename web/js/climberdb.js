@@ -624,10 +624,10 @@ class ClimberDB {
 
 		// Get all the elements with a data-dependent-target 
 		const $dependentElements = $(`
-			.collapse.field-container .input-field, 
-			.collapse.field-container-row .input-field,
-			.collapse.accordion, 
-			.collapse.add-item-container .add-item-button
+				.collapse.field-container .input-field, 
+				.collapse.field-container-row .input-field,
+				.collapse.accordion, 
+				.collapse.add-item-container .add-item-button
 			`).filter((_, el) => {return $(el).data('dependent-target') === selectID});
 		//const dependentIDs = $select.data('dependent-target');
 		//var dependentValues = $select.data('dependent-value');
@@ -659,6 +659,7 @@ class ClimberDB {
 				}
 			}
 		}
+		setTimeout(10);
 	}
 
 
@@ -699,7 +700,7 @@ class ClimberDB {
 
 	/**/
 	clearInputFields({parent='body', triggerChange=true}={}) {
-		for (const el of $(parent).find('*:not(.cloneable) .input-field')) {
+		for (const el of $(parent).find('*:not(.cloneable) .input-field:not(.no-option-fill)')) {
 			const $el = $(el);
 			const defaultValue = $el.data('default-value')
 			if ($el.is('.input-checkbox')) {
