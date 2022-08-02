@@ -29,6 +29,10 @@
 			<input id="password-input" class="input-field" name="password" type="password" placeholder="Password">
 			<label class="field-label" for="password-input">Password</label>
 		</div>
+		<div class="invalid-password-message-container">
+			<label id="incorrect-password-message" class="invalid-password-message hidden" aria-hidden="true">The password you entered is incorrect</label>
+			<label id="empty-password-message" class="invalid-password-message hidden" aria-hidden="true">You must enter a password to sign in</label>
+		</div>
 		<div class="field-container request-field hidden" aria-hidden=true>
 			<input id="first-name-input" class="input-field" name="first_name" placeholder="Fist name" autocomplete="off">
 			<label class="field-label" for="password-input">First name</label>
@@ -91,6 +95,11 @@
 					}
 				}); 
 
+			$('#password-input').keydown(() => {
+				$('#password-input').removeClass('invalid');
+				$('.invalid-password-message').ariaHide(true);
+			});
+
 			// Show the "request access" fields when the button is clicked
 			$('#request-access-toggle-button-container button').click((e) => {
 				$('.default-field').ariaHide(true);
@@ -102,10 +111,26 @@
 			});
 
 			$('#sign-in-button').click((e) => {
-				climberDB.verifyPassword($('#password-input').val())
+				// Hide in case the user didn't enter anything and clicked the sign-in button
+				$('.invalid-password-message').ariaHide(true);
+
+				const password = $('#password-input').val();
+				if (password.length === 0) {
+					$('#empty-password-message').ariaHide(false);
+					$('#password-input').addClass('invalid')
+						.val('')
+						.focus();
+					return;
+				}
+
+				climberDB.verifyPassword(password)
 					.done(isValid => {
 						if (!isValid) {
-							showModal('Password incorrect', 'Incorrect password');
+							//showModal('Password incorrect', 'Incorrect password');
+							$('#incorrect-password-message').ariaHide(false);
+							$('#password-input').addClass('invalid')
+								.val('')
+								.focus();
 						} else {
 							const stayLoggedIn = $('#retain-login-checkbox').prop('checked');
 							const expiration = (new Date()).getTime() + 

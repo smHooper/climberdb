@@ -89,6 +89,7 @@ body {
   border-bottom: 2px solid rgba(255,255,255);
   color: white;
   margin: 0;
+  transition: 0.25s all;
 }
 .input-field::placeholder {
   color: rgb(145, 145, 145);
@@ -105,9 +106,23 @@ body {
   color: #FB8500;
 }
 .input-field::placeholder,
-.field-label:not(.checkbox-label) {
+.field-label:not(.checkbox-label),
+.invalid-password-message {
   text-transform: uppercase;
 }
 .field-label.checkbox-label {
   color: white;
+}
+
+.input-field.invalid {
+  background: #faaf00;
+  border: none;
+  border-radius: 5px;
+}
+.invalid-password-message-container {
+  width: 100%;
+}
+.invalid-password-message {
+  color: #faaf00;
+  transform: translateY(-35px);
 }
