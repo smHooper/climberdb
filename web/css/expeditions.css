@@ -345,6 +345,10 @@
 	opacity: 1;
 	pointer-events: all;
 }
+.uneditable .expedition-card .card-header:hover .leader-checkbox-container.transparent {
+	opacity: 0;
+	pointer-events: none;
+}
 .card.expedition-card .card-header .checkbox-label {
 	color: white;
 	font-size: 14px;
