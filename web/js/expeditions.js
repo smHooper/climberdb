@@ -23,6 +23,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			updates: {},
 			inserts: {}
 		}
+		this.historyBuffer = []; // for keeping track of browser navigation via back and forward buttons
+		this.currentHistoryIndex = 0;
 
 		return this;
 	}
@@ -534,6 +536,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#save-expedition-button').click(e => {
+			showLoadingIndicator('saveEdits');
 			this.saveEdits();
 		});
 
@@ -584,6 +587,32 @@ class ClimberDBExpeditions extends ClimberDB {
 				if (scrollToPosition > 0) contentBodyElement.scrollTo(0, scrollToPosition);
 			}
 		});
+
+		// When the user clicks the back or forward browser nav buttons, check to see if there's a state entry with an ID associated. If so, load that expedition
+		window.onpopstate = (e) => {
+			const state = e.state;
+			if (state) {
+				if (state.id) {
+					// ask user to confirm/discard edits if there are any
+					if ($('.input-field.dirty').length) {
+						this.confirmSaveEdits({
+							afterActionCallbackStr: `
+								climberDB.loadExpedition(${state.id});
+								climberDB.currentHistoryIndex = ${state.historyIndex};
+							`,
+							afterCancelCallbackStr: `
+								const currentExpeditionID = $('#expedition-search-bar').val();
+								const historyIndex = climberDB.historyBuffer.indexOf(currentExpeditionID);
+								window.history.pushState({id: currentExpeditionID, historyIndex: historyIndex}, '', window.location.href)
+							`});
+					} else {
+						this.loadExpedition(state.id);
+						this.currentHistoryIndex = state.historyIndex;
+					}
+				}
+			}
+		}
+
 
 		$(document).on('click', '.delete-card-button', (e) => {
 			const $card = $(e.target).closest('.card');
@@ -671,17 +700,17 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#expedition-search-bar').change(e => {
-			const $select = $(e.target);
-			const expeditionID = $select.val();
-			if (expeditionID != '') {
-				$select.removeClass('default')
-				$('.search-option-drawer').removeClass('show');
-				this.queryExpedition(expeditionID);
-				$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
+			// If there are any unsaved edits, ask the user to save or discard them
+			if ($('.input-field.dirty').length) {
+				this.confirmSaveEdits({
+					afterActionCallbackStr: `climberDB.onExpeditionSearchBarChange({target: $('#${e.target.id}')})`,
+					afterCancelCallbackStr: `$('#${e.target.id}').val($('#${e.target.id}').data('current-value'))`
+				});
 			} else {
-				$select.addClass('default');
+				this.onExpeditionSearchBarChange(e);
 			}
 		});
+
 		// Fill with this year's expeditions to start
 		this.fillExpeditionSearchSelect();
 		// ^^^^^^^^^ Query stuff ^^^^^^^^^^^^^^^^
@@ -1015,14 +1044,61 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	toggleEditing(allowEdits=null) {
+	toggleEditing(forceEditingOn=null) {
 		const $content = $('.expedition-content');
-		if (allowEdits === null) allowEdits = $content.is('.uneditable');
-		$content.toggleClass('uneditable', !allowEdits);
-		$('#save-expedition-button, #delete-expedition-button').ariaHide(!allowEdits);
+
+		// if forceEditingOn is specified, don't confirm the choice. Just toggle editing accordingly
+		if (forceEditingOn != null) {
+			$content.toggleClass('uneditable', !forceEditingOn);
+			$('#save-expedition-button, #delete-expedition-button').ariaHide(!forceEditingOn);
+			if ($('.input-field.dirty').length) this.discardEdits();
+		} else {
+			const allowEdits = $content.is('.uneditable');
+			if (!allowEdits && $('.input-field.dirty').length) {
+				const afterActionCallbackStr = `
+					$('.expedition-content').addClass('uneditable');
+					$('#save-expedition-button, #delete-expedition-button').ariaHide(true);
+				`;
+				this.confirmSaveEdits({afterActionCallbackStr: afterActionCallbackStr});
+			} else {
+				$content.toggleClass('uneditable', !allowEdits);
+				$('#save-expedition-button, #delete-expedition-button').ariaHide(!allowEdits);
+			}
+		}
 	}
 
 
+	/*
+	Helper method to load expedition data. Used when either the searchbar val changes or the user clicks the browser back/forward buttons
+	*/
+	loadExpedition(expeditionID) {
+		const $select = $('#expedition-search-bar');
+		$select.removeClass('default');
+		$('.search-option-drawer').removeClass('show');
+		this.queryExpedition(expeditionID);
+		$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
+		this.toggleEditing(false);//make sure editting is turned off
+	}
+
+
+	onExpeditionSearchBarChange(e) {
+		const $select = $(e.target);
+		const expeditionID = $select.val();
+		if (expeditionID != '') {
+			this.loadExpedition(expeditionID);
+			// Update URL with new expedition ID and add a history entry so the back 
+			//	and forward buttons will move to and from expeditions
+			const url = new URL(window.location);
+			url.searchParams.set('id', expeditionID);
+			const previouslySelectedID = $select.data('current-value');
+			// Push the new entry here because loadExpedition() is also called when the user clicks the back or forward button, and adding a history entry then will muck up the history sequence 
+			this.historyBuffer.push(expeditionID);
+			window.history.pushState({id: expeditionID, historyIndex: this.currentHistoryIndex + 1}, '', url);
+		} else {
+			$select.addClass('default');
+		}
+		$select.data('current-value', expeditionID);
+	}
 
 	/*
 	Helper function to convert unordered parameters 
@@ -1034,8 +1110,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		var sortedFields = Object.keys(values).sort();
 		var parameters = sortedFields.map(f => values[f]);
 		
-
-
 		var returningClause = '', 
 			parametized = '',
 			currvalClauseString = '',
@@ -1136,23 +1210,23 @@ class ClimberDBExpeditions extends ClimberDB {
 		var sqlStatements = [];
 		var sqlParameters = [];
 		
-		const $insertParents = $(`
+		const $editParents = $(`
 				.data-list-item:not(.cloneable), 
-				.new-card:not(.cloneable) .tab-pane,
+				.card:not(.cloneable) .tab-pane,
+				#expedition-members-accordion .card:not(.cloneable) .card-header,
 				#expedition-data-container
 			`)
 			.has('.input-field.dirty');
-		if (!this.validateFields($insertParents)) {
+		if (!this.validateFields($editParents)) {
 			showModal('One or more required fields are not filled. All required fields must be filled before you can save your edits.', 'Required field is empty');
 			return;
 		};
 
-		if (!$insertParents.length) {
+		if (!$editParents.length) {
 			showModal('You have not made any edits to save yet.', 'No edits to save');
+			hideLoadingIndicator();
 			return;
 		}
-
-		showLoadingIndicator('saveEdits');
 
 		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
 		const userName = this.userInfo.ad_username;
@@ -1265,8 +1339,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			sqlStatements.push(sql);
 			sqlParameters.push(parameters);
 		}
-		print(sqlStatements);
-		print(sqlParameters);
 		
 		// update query now returns null and causes an error
 		
@@ -1338,7 +1410,9 @@ class ClimberDBExpeditions extends ClimberDB {
 					} else if (tableName === 'expedition_member_routes') {
 						// expedition member routes are organized by {data: {route_code: {expedition_memmber_id: {}}}, order: []}
 						//	order is route order and expedition members in route card are organized on the fly with expedition_members.order
-						const routeCode = $input.closest('.data-list-item').find('.input-field[name=route_code]').val();
+
+						const $listItem = $input.closest('.data-list-item');
+						const routeCode = $listItem.find('.input-field[name=route_code]').val();
 						let routeMembers = expeditionInfo.expedition_member_routes.data[routeCode];
 						if (!routeMembers) { // a new route was added
 							// add all expedition members
@@ -1348,8 +1422,12 @@ class ClimberDBExpeditions extends ClimberDB {
 							routeMembers = expeditionInfo.expedition_member_routes.data[routeCode];
 						}
 						const memberID = $input.data('foriegn-ids').expedition_member_id;
+
 						if (!routeMembers[memberID]) routeMembers[memberID] = {};
 						routeMembers[memberID][fieldName] = value;
+
+						// necessary for linking in-memory data to the list item later on (e.g., in discardEdits())
+						if (!$listItem.data('expedition-member-id')) $listItem.data('expedition-member-id', memberID);
 					} else { // expedition_members, or cmc_checkout
 						const $parent = $input.closest('#expedition-members-accordion').length ? 
 							$input.closest('.card') :
@@ -1380,11 +1458,73 @@ class ClimberDBExpeditions extends ClimberDB {
 	
 
 	discardEdits() {
+		
+		// remove any new cards or new list items. This means that only updates (not inserts) need to be reset
+		$('.new-card, .new-list-item').remove();
 
+		//expeditions
+		for (const el of $('#expedition-members-accordion .card:not(.cloneable) .input-field.dirty')) {
+			this.setInputFieldValue(el, this.expeditionInfo.expeditions);
+		}
+
+		// expedition_members
+		const $memberInputs = $('#expedition-members-accordion .card:not(.cloneable)')
+			.find('.card-header .input-field.dirty, .expedition-info-tab-pane .input-field.dirty');
+		for (const el of $memberInputs) {
+			const memberInfo = this.expeditionInfo.expedition_members.data[$(el).data('table-id')];
+			this.setInputFieldValue(el, memberInfo)
+		}
+
+		// transactions
+		const $transactionInputs = $('#expedition-members-accordion .card:not(.cloneable) .transactions-tab-pane .data-list > li.data-list-item:not(.cloneable) .input-field.dirty');
+		for (const el of $transactionInputs) {
+			const memberID = $(el).closest('card').data('table-id');
+			const transactionInfo = this.expeditionInfo.transactions.data[memberID];
+			this.setInputFieldValue(el, transactionInfo);
+		}
+
+		// routes
+		for (const el of $('#routes-accordion .card:not(.cloneable) .input-field.dirty')) {
+			const $listItem = $(el).closest('.data-list-item')
+			const routeCode = $listItem.find('.input-field[name=route_code]').val();
+			const memberID = $listItem.data('expedition-member-id');
+			const routeMemberInfo = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID];
+			this.setInputFieldValue(el, routeMemberInfo);
+		}
+
+		//cmcs
+		for (const el of $('#cmc-list li.data-list-item:not(.cloneable) .input-field.dirty')) {
+			const cmcInfo = this.expeditionInfo.cmc_checkout.data[$(el).data('table-id')];
+			this.setInputFieldValue(el, cmcInfo);
+		}
+
+		$('.input-field.dirty').removeClass('dirty');
 	}
 
-	confirmSaveEdits() {
 
+	/*
+	Ask the user to confirm/discard edits
+	*/
+	confirmSaveEdits({afterActionCallbackStr='', afterCancelCallbackStr=''}={}) {
+		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
+
+		const onConfirmClick = `
+			showLoadingIndicator();
+			climberDB.saveEdits(); 
+		`;
+		
+		const footerButtons = `
+			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal" onclick="${afterCancelCallbackStr}">Cancel</button>
+			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.discardEdits();${afterActionCallbackStr}">Discard</button>
+			<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}${afterActionCallbackStr}">Save</button>
+		`;
+
+		showModal(
+			`You have unsaved edits to this expedition. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this climber's info.`,
+			'Save edits?',
+			'alert',
+			footerButtons
+		);
 	}
 
 
@@ -1827,7 +1967,13 @@ class ClimberDBExpeditions extends ClimberDB {
 					const memberRouteID = memberRouteRecord.expedition_member_route_id || null;
 					const $listItem = this.addNewListItem($list, {dbID: memberRouteID});
 					const thisMember = members.data[memberID];
+					
+					// Set name of member
 					$listItem.find('.name-label').text(`${thisMember.last_name}, ${thisMember.first_name}`);
+
+					// Add the member ID to the list-item's data so the in-memory data can be linked back to the list item
+					$listItem.data('expedition-member-id', memberID); 
+
 					if (memberRouteID) {
 						for (const el of $listItem.find('.input-field')) {
 							this.setInputFieldValue(el, memberRouteRecord, {dbID: memberRouteID, triggerChange: true});
@@ -1894,6 +2040,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			FROM expedition_info_view 
 			WHERE expedition_id=${expeditionID} 
 		`
+		showLoadingIndicator('queryExpedition');
 
 		return this.queryDB(sql)
 			.done(queryResultString => {
@@ -1987,6 +2134,16 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 
 					this.fillFieldValues();
+
+					// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
+					const $select = $('#expedition-search-bar');
+					$select.val(
+						$select.find(`option[value=${expeditionID}]`).length ? 
+						expeditionID :
+						'' // set it to the null option
+					);
+
+					hideLoadingIndicator('queryExpedition');
 				}
 			});
 	}
@@ -2090,7 +2247,12 @@ class ClimberDBExpeditions extends ClimberDB {
 			if (window.location.search.length) {
 				const params = this.parseURLQueryString();
 				if ('id' in params) {
-					this.queryExpedition(params.id);
+					this.queryExpedition(params.id).done(() => {
+						// add to history buffer for keeping track of browser nav via back/forward buttons
+						this.historyBuffer.push(params.id);
+					});
+					window.history.replaceState({id: params.id, historyIndex: 0}, '', window.location.href);
+					$('#expedition-search-bar').data('current-value', params.id);
 				}
 			} else {
 
