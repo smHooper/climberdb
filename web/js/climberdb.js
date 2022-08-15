@@ -178,7 +178,6 @@ class ClimberDB {
 				if (this.queryReturnedError(queryResultString)) {
 					print('Problem querying config values');
 				} else {
-					print(queryResultString)
 					for (const {property, data_type, value, ...rest} of $.parseJSON(queryResultString)) {
 						this.config[property] = 
 							data_type === 'integer' ? parseInt(value) : 
@@ -199,7 +198,7 @@ class ClimberDB {
 						<div class="sidebar-collapse-button-line"></div>
 						<div class="sidebar-collapse-button-line"></div>
 					</button>
-					<a class="home-button" role="button" href="climberdb-index.html">
+					<a class="home-button" role="button" href="dashboard.html">
 						<img src="imgs/climberdb_icon_50px.svg" alt="home icon">
 					</a>
 					<h4 class="page-title">DENA Climbing Permit Portal</h4>
@@ -431,6 +430,7 @@ class ClimberDB {
 		$newItem.attr('id', newItemID);
 
 		if (parentDBID !== null) $newItem.data('parent-table-id', parentDBID);
+		if (dbID !== null) $newItem.data('table-id', dbID);
 
 		for (const el of $newItem.find('.input-field')) {
 			el.id = `${el.id}-${dbID || itemIndex}`;
@@ -513,6 +513,11 @@ class ClimberDB {
 				$el.val('').addClass('default');
 			}
 		}
+
+		// if the accordion's data-table-name attribute is in update IDs, 
+		//	add the table-id attribute to the card's data
+		const accordionTableName = $accordion.data('table-name');
+		if (accordionTableName in updateIDs) $newCard.data('table-id', updateIDs[accordionTableName]);
 
 		// Open the card after a brief delay
 		//$newCard.find('.collapse:not(.show)').click();
@@ -930,7 +935,7 @@ class ClimberDB {
 	correspond to a key in the values object. 
 	@parameter:
 	*/
-	fillInputField(el, values, {dbID=null, triggerChange=false}={}) {
+	setInputFieldValue(el, values, {dbID=null, triggerChange=false}={}) {
 		el.value = null; // clear value regardless
 		
 		const $el = $(el);

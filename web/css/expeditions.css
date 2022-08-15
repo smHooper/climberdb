@@ -451,7 +451,9 @@
 	font-size: 25px;
 }
 
-
+.cmc-col {
+	display: flex;
+}
 
 /*-------modal climber form ---------*/
 /*override hidden climber history (hidden in climbers.css because modal is

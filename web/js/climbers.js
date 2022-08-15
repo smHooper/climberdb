@@ -37,9 +37,11 @@ class ClimberForm {
 							<input id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Climber name search" autocomplete="off">
 							<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 						</div>	
-						<select id="modal-climber-select" class="fuzzy-search-bar default col-6">
-							<option value="">Search climbers to filter results</option>
-						</select>	
+						<div class="modal-climber-select-container collapse">
+							<select id="modal-climber-select" class="fuzzy-search-bar default">
+								<option value="">Search climbers to filter results</option>
+							</select>
+						</div>	
 					</div>	
 					<div class="result-details-header-container">
 						<div class="result-details-title-container">
@@ -426,11 +428,6 @@ class ClimberForm {
 			if (firstName && lastName) $('#result-details-header-title').text(`${lastName}, ${firstName}`);
 		});
 
-		// When a .input-field changes, register the change in the .edits object
-		$('.climber-form .input-field').change(e => {
-			this.onInputChange(e);
-		});
-
 		$('.toggle-editing-button').click(e => {
 			this.toggleEditing($('.result-details-pane').is('.uneditable'));
 		});
@@ -439,17 +436,17 @@ class ClimberForm {
 			this.saveEdits()
 		});
 
-		$('.delete-card-button').click(this.onDeleteCardButtonClick);
+		$('.climber-form .delete-card-button').click(this.onDeleteCardButtonClick);
 
 	}
 
 
 	/*
-	Wrapper for ClimberDB.fillInputField to do any additional stuff necessary for this page
+	Wrapper for ClimberDB.setInputFieldValue to do any additional stuff necessary for this page
 	*/
-	fillInputField(el, values, {dbID=null, triggerChange=false}={}) {
+	setInputFieldValue(el, values, {dbID=null, triggerChange=false}={}) {
 
-		const [$el, fieldName, value] = climberDB.fillInputField(el, values, {dbID: dbID, triggerChange: triggerChange});
+		const [$el, fieldName, value] = climberDB.setInputFieldValue(el, values, {dbID: dbID, triggerChange: triggerChange});
 
 		const badgeTarget = $el.data('badge-target');
 		if (badgeTarget && $el.data('badge-target-value') == value) $(badgeTarget).ariaHide(false);
@@ -562,7 +559,7 @@ class ClimberForm {
 		
 		const $inputs = $('.climber-form-content .input-field');
 		for (const el of $inputs) {
-			this.fillInputField(el, climberInfo, {dbID: climberID});
+			this.setInputFieldValue(el, climberInfo, {dbID: climberID});
 		}
 
 		$('#result-details-header-title').text(`${climberInfo.last_name}, ${climberInfo.first_name}`);
@@ -621,7 +618,7 @@ class ClimberForm {
 				}
 			);
 			for (const el of $card.find('.input-field')) {
-				this.fillInputField(el, row);
+				this.setInputFieldValue(el, row);
 			}
 
 			// Set the anchor url to this group
@@ -695,7 +692,7 @@ class ClimberForm {
 				}
 			);
 			for (const el of $card.find('.input-field')) {
-				this.fillInputField(el, row, {dbID: row.id});
+				this.setInputFieldValue(el, row, {dbID: row.id});
 			}
 		}
 
@@ -789,13 +786,6 @@ class ClimberForm {
 
 	}
 
-	/*
-	Helper method to get the value of in input depedning on whether or not its a checkbox
-	*/
-	getInputFieldValue($input) {
-		return $input.is('.input-checkbox') ? $input.prop('checked') : $input.val();
-	}
-
 
 	/*
 	Save edits to climber info. Edits are either changes to a climber's information 
@@ -815,11 +805,12 @@ class ClimberForm {
 		const originalDataValues = deepCopy(this.selectedClimberInfo.climbers);
 		const currentIndex = $('.query-result-list-item.selected').index();
 		var climberInfo = {};
-		if (climberDB.climberInfo) { // will be undefined if 
+		if (climberDB.climberInfo) { // will be undefined if this is a new climber
 			climberInfo = climberDB.climberInfo[currentIndex];
 		}
 
 		// **** check for required fields in any inserts
+		// collect inserts
 		let inserts = [];
 		for (const container of $('.climberdb-modal #climber-info-tab, .new-card:not(.cloneable)')) { 
 			let tableParameters = {}
@@ -864,7 +855,7 @@ class ClimberForm {
 						for (const el of $('.input-field')) {
 							const $el = $(el);
 							if ($el.data('table-name') === foreignTable && $el.data('table-id') !== undefined) {
-								foreignID = parseInt($el.data('table-id')); // the ID is set on an input, meaning this 
+								foreignID = parseInt($el.data('table-id')); // the ID is set on an input, meaning this field belongs to an existing record
 								break;
 							}
 						}
@@ -1172,7 +1163,11 @@ class ClimberDBClimbers extends ClimberDB {
 			liTabIndex++;
 		}
 
-
+		// When a .input-field changes, register the change in the .edits object
+		// 	add event handler here so that expeditions (which also adds a ClimberForm()) page doesn't register events twice
+		$('.climber-form .input-field').change(e => {
+			this.climberForm.onInputChange(e);
+		});
 
 		// When a user types anything in the search bar, filter the climber results.
 		$('#climber-search-bar').keyup(() => {
@@ -1317,7 +1312,7 @@ class ClimberDBClimbers extends ClimberDB {
 	*/
 	selectResultItem($item) {
 
-		// Reset because this will get filled with the selected climber's data by fillInputField()
+		// Reset because this will get filled with the selected climber's data by setInputFieldValue()
 		this.climberForm.selectedClimberInfo = {};
 		
 		//hide badges because they'll be shown later if necessary

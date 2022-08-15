@@ -469,7 +469,7 @@ class ClimberDBBriefings extends ClimberDB {
 				.filter(i => this.expeditionInfo.unscheduled.includes(i.expedition_id) || i.expedition_id == info.expedition_id);
 			this.fillExpeditionsSelectOptions(expeditionOptions);
 			for (const el of $('.appointment-details-drawer .input-field')) {
-				this.fillInputField(el, info)
+				this.setInputFieldValue(el, info)
 			}
 		} else {
 			const expeditionOptions = Object.values(this.expeditionInfo.expeditions)
