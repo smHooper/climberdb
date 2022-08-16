@@ -45,7 +45,7 @@ function showModal(message, title, modalType='alert', footerButtons='', dismissa
 		<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
 			<span aria-hidden="true">&times;</span>
 		</button>
-	`
+	`;
 	const innerHTML = `
 	  <div class="modal-dialog" role="document">
 	    <div class="modal-content">
@@ -1102,7 +1102,19 @@ class ClimberDB {
 		return this.toggleClass('hidden', isHiding)
 			.attr('aria-hidden', isHiding);
 	}
- 
+ 	
+ 	/* 
+ 	For late binding (i.e., delegated) events added with something like 
+ 	$(document).on('change', 'selector', (e)=>{...}),
+ 	add a function to trigger the event manually 
+ 	*/
+ 	$.fn.triggerDelegatedEvent = function(eventType, delegate=document) {
+ 		const e = $.Event(eventType);
+ 		e.target = this[0];
+ 		$(delegate).trigger(e);
+
+ 		return this;
+ 	}
 }( jQuery ));
 
 

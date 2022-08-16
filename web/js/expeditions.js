@@ -442,6 +442,9 @@ class ClimberDBExpeditions extends ClimberDB {
 												<!--<h6 class="card-link-label expedition-member-card-link-label"></h6>-->
 											</div>
 											<div class="card-link-content">
+												<button class="delete-card-button icon-button">
+													<i class="fa fa-trash"></i>
+												</button>
 												<i class="fa fa-chevron-down pull-right"></i>
 											</div>
 										</a>
@@ -727,7 +730,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		//$('select.input-field').change(e => {this.onSelectChange(e)})
 		$(document).on('click', '.add-transaction-button', e => {
 			const $newItem = this.addNewListItem($(e.target).closest('.transactions-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
-			$newItem.find('.input-field[name="transaction_type_code"]').change().addClass('.dirty');
+			$newItem.find('.input-field[name="transaction_type_code"]').triggerDelegatedEvent('change');
 		});
 
 		// When the leader input checkbox changes, set the transparent class appropriately
@@ -738,7 +741,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			if (isChecked) {
 				$(`.leader-checkbox-container .input-checkbox:not(#${$checkbox.attr('id')})`)
 					.prop('checked', false)
-					.change()
+					.triggerDelegatedEvent('change')
 					.closest('.leader-checkbox-container').addClass('transparent');
 			}
 			$checkbox.closest('.leader-checkbox-container').toggleClass('transparent', !isChecked);
@@ -773,7 +776,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			if ($valueField.val() === '' || $valueField.val() === null && defaultAmount !== null) {
 				$valueField
 					.val(defaultAmount.replace(/\(/, '-').replace(/[$)]/g, ''))
-					.change();
+					.triggerDelegatedEvent('change');
 			}
 		});
 
@@ -834,12 +837,12 @@ class ClimberDBExpeditions extends ClimberDB {
 					$routeHeaderSelect.append($(`<option value="${route.code}">${route.name}</option>`))
 				}
 				// Just set to the first one
-				$routeHeaderSelect.val(mountainRoutes[0].code).change();
+				$routeHeaderSelect.val(mountainRoutes[0].code).triggerDelegatedEvent('change');
 			} else {
 				// Set the hidden route code inputs in the card (which are the actual inputs tied to DB values)
 				const routeCode = $target.val();
 				for (const el of $target.closest('.card').find('.input-field:not(.route-code-header-input)[name="route_code"]')) {
-					$(el).val(routeCode).change();
+					$(el).val(routeCode).triggerDelegatedEvent('change');
 				}
 			}
 		});
@@ -983,7 +986,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item', parentDBID: $('#input-planned_departure_date').data('table-id')});
 			const $checkoutDate = $listItem.find('.input-field[name="checkout_date"]');//.filter((_, el) => el.name === 'checkout_date');
 			$checkoutDate.val(getFormattedTimestamp())
-				.addClass('dirty');
+				.triggerDelegatedEvent('change');
 		});
 
 		// ask user to confirm removing CMC only if it already exists in the DB
@@ -1175,11 +1178,11 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Make sure the route is set for the hidden input for this list item
 		const routeCode = $listItem.closest('.card').find('select.route-code-header-input:not(.mountain-code-header-input)').val();
-		$listItem.find('.input-field[name="route_code"]').val(routeCode).addClass('dirty'); //.change() won't trigger event
+		$listItem.find('.input-field[name="route_code"]').val(routeCode).triggerDelegatedEvent('change');
 
 		// set the route order because this field is only managed by order of the cards in the routes-accordion
 		const routeOrder = $listItem.closest('.card').index();
-		$listItem.find('.input-field[name="route_order"]').val(routeOrder).addClass('dirty').change();
+		$listItem.find('.input-field[name="route_order"]').val(routeOrder).triggerDelegatedEvent('change');
 
 		// Toggle the add-expedition-route-member-button If there are any expedition members that aren't assigned to a route
 		const nMembers = this.expeditionInfo.expedition_members.order.length;
@@ -1188,7 +1191,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			$card.find('.route-member-list .data-list-item:not(.cloneable)').length === nMembers 
 		);
 
-		$('#save-expedition-button').ariaHide(false);
+		$('#save-expedition-button').ariaHide(false); 
 	}
 
 
@@ -1743,7 +1746,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		if (climberID === '') {
 			$('.climber-form .result-details-summary-container.collapse').collapse('hide');
 		} else {
-			$select.change(); 
+			$select; 
 		}
 
 		$('.climber-form .expedition-modal-hidden').ariaHide(true);
@@ -1969,8 +1972,10 @@ class ClimberDBExpeditions extends ClimberDB {
 			// Set deault values for new members
 			$newCard.find('.input-field[name="reservation_status_code"]')
 				.val(1)//pending
-				.addClass('dirty');// .change() won't trigger event;
-			$newCard.find('.input-field[name="datetime_reserved"]').val(getFormattedTimestamp()).addClass('dirty');//.change();
+				.triggerDelegatedEvent('change');
+			$newCard.find('.input-field[name="datetime_reserved"]')
+				.val(getFormattedTimestamp())
+				.triggerDelegatedEvent('change');
 		}
 
 		return $newCard;
@@ -2027,8 +2032,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					accordionName: 'routes'
 				}
 			);
-			$newCard.find('.mountain-code-header-input').val(mountainCode).change()
-				.siblings('.route-code-header-input').val(routeCode).change();
+			$newCard.find('.mountain-code-header-input').val(mountainCode).triggerDelegatedEvent('change')
+				.siblings('.route-code-header-input').val(routeCode).triggerDelegatedEvent('change');
 
 			const $list = $newCard.find('.route-member-list');
 			$list.attr('id', $list.attr('id') + '-' + routeCode);
