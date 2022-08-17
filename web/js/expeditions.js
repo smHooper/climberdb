@@ -737,6 +737,19 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(document).on('change', '.leader-checkbox-container .input-checkbox', e => {
 			const $checkbox = $(e.target).closest('.input-checkbox');
 			const isChecked = $checkbox.prop('checked');
+
+			// If this checkbox was checked and it's now unchecked, tell the user they can't do that
+			if ($('#expedition-members-accordion .card:not(.cloneable) .input-checkbox[name=is_trip_leader]:checked').length === 0) {	
+				$checkbox.prop('checked', true);
+				const message =
+					'One expedition member must be selected as the leader. To change the leader' +
+					' for the expedition, hover over the member you want to designate as the leader' +
+					' and check the leader box that appears. The currently selected leader checkbox' +
+					' will automatically be unchecked.';
+				showModal(message, 'Invalid operation', 'alert');
+				return;
+			}
+
 			// If this chekcbox is being checked, hide all others
 			if (isChecked) {
 				$(`.leader-checkbox-container .input-checkbox:not(#${$checkbox.attr('id')})`)
