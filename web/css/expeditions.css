@@ -444,7 +444,10 @@
 	opacity: 1;
 }
 /*hide the button when not in editing mode*/
-.uneditable .delete-card-button {
+.uneditable .delete-card-button,
+.uneditable .delete-cmc-button, 
+.uneditable .delete-route-member-button,
+.uneditable .route-list-footer-button {
 	display: none;
 }
 .delete-card-button > .fa-trash {

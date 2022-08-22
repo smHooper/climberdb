@@ -428,13 +428,13 @@ class ClimberDBExpeditions extends ClimberDB {
 							<button class="generic-button add-card-button" data-target="#routes-accordion">Add route</button>
 						</div>
 						<div class="expedition-data-content-body">
-							<div id="routes-accordion" class="accordion">
-								<div id="cloneable-card-routes" class="card expedition-card cloneable hidden">
+							<div id="routes-accordion" class="accordion" data-table-name="expedition_member_routes" data-item-display-name="expedition route">
+								<div id="cloneable-card-routes" class="card expedition-card cloneable hidden" >
 									<div class="card-header" id="cardHeader-routes-cloneable">
-										<select id="mountain-code-header-input" class="input-field card-link-label route-code-header-input mountain-code-header-input expedition-member-card-link-label" name="mountain_code">
+										<select id="mountain-code-header-input" class="input-field card-link-label route-code-header-input mountain-code-header-input expedition-member-card-link-label col-2" name="mountain_code">
 											<option value="">Select mountain</option>
 										</select>
-										<select id="route-code-header-input" class="input-field card-link-label route-code-header-input expedition-member-card-link-label" name="route_code">
+										<select id="route-code-header-input" class="input-field card-link-label route-code-header-input expedition-member-card-link-label no-option-fill col-2" name="route_code">
 											<option value="">Select route</option>
 										</select>
 										<a class="card-link" data-toggle="collapse" href="#collapse-routes-cloneable" data-target="collapse-routes-cloneable">
@@ -442,7 +442,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<!--<h6 class="card-link-label expedition-member-card-link-label"></h6>-->
 											</div>
 											<div class="card-link-content">
-												<button class="delete-card-button icon-button">
+												<button class="delete-card-button icon-button delete-route-button">
 													<i class="fa fa-trash"></i>
 												</button>
 												<i class="fa fa-chevron-down pull-right"></i>
@@ -552,18 +552,17 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#open-reports-modal-button').click(e => {
-			$('#exports-modal').modal();
+			// Check if there are unsaved edits and ask the user to confirm
+			if ($('.input-field.dirty:not(#input-export_type)').length) {
+				const afterActionCallbackStr = `$('#exports-modal').modal();`
+				this.confirmSaveEdits({afterActionCallbackStr: afterActionCallbackStr});
+			} else {
+				$('#exports-modal').modal();
+			}
 		});
 
 		$('#create-pdf-button').click(e => {
-			// Check if there are unsaved edits
-			if ($('.input-field.dirty:not(#input-export_type)').length) {
-				// ask user to save edits
-
-			}
-
 			this.makePDF();
-
 		})
 
 		$(document).on('change', '.input-field:not(.route-code-header-input)', e => {
@@ -626,56 +625,90 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 		$(document).on('click', '.delete-card-button', (e) => {
+			e.stopPropagation(); // don't close or open the card
+
 			const $card = $(e.target).closest('.card');
+			const $accordion = $card.closest('.accordion');
+			const displayName = $accordion.data('item-display-name');
+			const tableName = $accordion.data('table-name');
+			const dbID = $card.data('table-id');
 			if ($card.is('.new-card')) {
-				const climberID = $card.data('climber-id');
-				$(`#routes-accordion .route-member-list .data-list-item[data-climber-id="${climberID}"`).remove();
-				$card.remove();
+				if (tableName === 'expedition_members') {
+					const climberID = $card.data('climber-id');
+					$(`#routes-accordion .route-member-list .data-list-item[data-climber-id="${climberID}"`).fadeRemove();
+				}
+				$card.fadeRemove();
 			} else {
 				// confirm delete
-				const $accordion = $card.closest('.accordion');
-				const displayName = $accordion.data('item-display-name');
-				const tableName = $accordion.data('table-name');
-				const dbID = $card.data('table-id');
-				var deleteDataStr ='';
+
+				var message = '',
+					onConfirmClick = '';
 
 				if  (tableName === 'expedition_members') { 
-					deleteDataStr = `
-						const $card = $('#${$card.attr('id')}');
-						delete climberDB.expeditionInfo.expedition_members.data[${dbID}];
-						climberDB.expeditionInfo.expedition_members.order = climberDB.expeditionInfo.expedition_members.order.filter(id => id != ${dbID});
-						delete climberDB.expeditionInfo.transactions[${dbID}];
-						const memberRoutes = climberDB.expeditionInfo.expedition_member_routes.data;
-						for (const routeCode in memberRoutes) {
-							const thisRoute = memberRoutes[routeCode];
-							delete thisRoute[${dbID}];
-						}
+					onConfirmClick = `
+						climberDB.queryDB('DELETE FROM expedition_members WHERE id=${dbID}')
+							.done(() => {
+								const $card = $('#${$card.attr('id')}');
+								delete climberDB.expeditionInfo.expedition_members.data[${dbID}];
+								// remove member from in-memory .order
+								climberDB.expeditionInfo.expedition_members.order = climberDB.expeditionInfo.expedition_members.order.filter(id => id != ${dbID});
+								delete climberDB.expeditionInfo.transactions[${dbID}];
+								const memberRoutes = climberDB.expeditionInfo.expedition_member_routes.data;
+								for (const routeCode in memberRoutes) {
+									const thisRoute = memberRoutes[routeCode];
+									delete thisRoute[${dbID}];
+								}
 
-						// remove expedition member from all route cards
-						const climberID = $card.data('climber-id');
-						$('#routes-accordion .route-member-list .data-list-item[data-climber-id=' + climberID + ']').remove();
+								// remove expedition member from all route cards
+								const climberID = $card.data('climber-id');
+								$('#routes-accordion .route-member-list .data-list-item[data-climber-id=' + climberID + ']').remove();
+
+								 $('#${$card.attr('id')}').fadeRemove();
+							})
+							.fail((xhr, status, error) => {
+								console.log('delete failed because ' + error)
+							});
 					`;
+					message = 
+						`Are you sure you want to delete this expedition member` +
+						` and all related transactions and routes for this member? This action` +
+						` is permanent and cannot be undone.`;
 				} else if (tableName === 'expedition_member_routes') {
-					deleteDataStr = `
-						const routeCode = $('#${$card.attr('id')}').find('.route-code-header-input:not(.mountain-code-header-input').val();
-						const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
-						if (routeDeleted) climberDB.expeditionInfo.expedition_member_routes.order = climberDB.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
+					// get DB IDs for all member route records that are saved in the DB
+					const memberRouteIDs = $card.find('.route-member-list .data-list-item:not(.cloneable):not(.new-list-item)')
+						.map((_, el) => $(el).data('table-id'))
+						.get()
+						.join(', ');
+					const $routeCodeInput = $card.find('.route-code-header-input:not(.mountain-code-header-input)');
+					const routeCode = $routeCodeInput.val();
+					onConfirmClick = `
+						const sql = 'DELETE FROM expedition_member_routes WHERE id IN (${memberRouteIDs})';
+						climberDB.queryDB(sql)
+							.done(queryResultString => {
+								if (climberDB.queryReturnedError(queryResultString)) {
+									showModal(
+										'And error occurred while attempting to delete this route: ' + queryResultString.trim() + 
+											'. Try again and contact your database adminstrator if the problem continues.', 
+										'Database Error'
+									);
+								} else {
+									const routeCode = ${routeCode};
+									const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
+									if (routeDeleted) {
+										// remove the route from in-memory .order
+										climberDB.expeditionInfo.expedition_member_routes.order = climberDB.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
+									}
+									$('#${$card.attr('id')}').fadeRemove();
+								}
+							}).fail((xhr, status, error) => {
+
+							})
 					`;
+					const routeName = $routeCodeInput.find(`option[value=${routeCode}]`).text();
+					message = `Are you sure you want to delete the ${routeName} route? This action` +
+						` is permanent and cannot be undone.`;
 				}
 
-				const onConfirmClick = `
-					climberDB.queryDB('DELETE FROM ${tableName} WHERE id=${dbID}')
-						.done(() => {
-							${deleteDataStr}
-							$('#${$card.attr('id')}').remove();
-						})
-						.fail((xhr, status, error) => {
-							console.log('delete failed because ' + error)
-						})`;
-				const message = 
-					`Are you sure you want to delete this ${displayName}` +
-					` and all related data (e.g., transactions)? This action` +
-					` is permanent and cannot be undone.`;
 				const footerButtons = `
 					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
 					<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
@@ -831,7 +864,9 @@ class ClimberDBExpeditions extends ClimberDB {
 				const $memberCard = $(el);
 				// if this expedition member isn't canceled, add a new row
 				if ($memberCard.find('.input-field[name="reservation_status_code"]').val() != 6) {
-					const $listItem = this.addNewListItem($list);
+					const $listItem = this.addNewListItem($list)
+						.attr('data-climber-id', $memberCard.data('climber-id'))
+						.data('parent-table-id', $memberCard.data('table-id'));
 					$listItem.find('.name-label').text($memberCard.find('.expedition-member-card-link-label').text());
 				}
 			}
@@ -852,12 +887,20 @@ class ClimberDBExpeditions extends ClimberDB {
 				// Just set to the first one
 				$routeHeaderSelect.val(mountainRoutes[0].code).change();
 			} else {
-				// Set the hidden route code inputs in the card (which are the actual inputs tied to DB values)
+				// Set the hidden route code and route order inputs in the card (which are the actual inputs tied to DB values)
 				const routeCode = $target.val();
-				for (const el of $target.closest('.card').find('.input-field:not(.route-code-header-input)[name="route_code"]')) {
-					$(el).val(routeCode).change();
+				const $card = $target.closest('.card');
+				$card.find('.data-list-item:not(.cloneable) .input-field:not(.route-code-header-input)[name="route_code"]')
+						.val(routeCode)
+						.change();
+				if ($card.is('.new-card')) {
+					$card.find('.data-list-item:not(.cloneable) .input-field:not(.route-code-header-input)[name="route_order"]')
+							.val($card.index() - 1) // -1 because .cloneable card is 0th
+							.change();
 				}
 			}
+			// Remove default placeholder option
+			$target.find('option[value=""]').remove();
 		});
 
 		$(document).on('click', '.add-expedition-route-member-button', e => {
@@ -974,7 +1017,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(document).on('click', '.delete-route-member-button', e => {
 			const $li = $(e.target).closest('li');
 			if ($li.is('.new-list-item')) {
-				$li.fadeOut(500, () => {$li.remove()});
+				$li.fadeRemove();
 			} else {
 				const $cmcSelect = $li.find('select');
 				const dbID = $li.data('table-id');
@@ -1006,7 +1049,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(document).on('click', '.delete-cmc-button', e => {
 			const $li = $(e.target).closest('li');
 			if ($li.is('.new-list-item')) {
-				$li.fadeOut(500, () => {$li.remove()});
+				$li.fadeRemove();
 			} else {
 				const $cmcSelect = $li.find('select');
 				const dbID = $cmcSelect.data('table-id');
@@ -1111,10 +1154,13 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	onInputChange(e) {
-		const $input = $(e.target).addClass('dirty');
-		$('#save-expedition-button').ariaHide(false);
+		const $input = $(e.target)
+		if (!$input.is('.ignore-changes')) {
+			$input.addClass('dirty');
+			$('#save-expedition-button').ariaHide(false);
+		}
 	}
-
+	
 
 	toggleEditing(forceEditingOn=null) {
 		const $content = $('.expedition-content');
@@ -1201,7 +1247,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const nMembers = this.expeditionInfo.expedition_members.order.length;
 		const $card = $list.closest('.card');
 		$card.find( $('.add-expedition-route-member-button') ).ariaHide(
-			$card.find('.route-member-list .data-list-item:not(.cloneable)').length === nMembers 
+			$card.find('.route-member-list .data-list-item:not(.cloneable)').length >= nMembers 
 		);
 
 		//$('#save-expedition-button').ariaHide(false); 
@@ -1249,9 +1295,9 @@ class ClimberDBExpeditions extends ClimberDB {
 					if (column in values) continue;
 
 					// if the foreignID is given, the parent db record already exists
-					const foriegnID = foreignIDs[foreignTable];
-					if (foriegnID) {
-						parameters.push(foriegnID);
+					const foreignID = foreignIDs[foreignTable];
+					if (foreignID) {
+						parameters.push(foreignID);
 					// if it doesn't, the ID value will have to be retrieved with a currval clause. This will only
 					//	work if the parent and child records are inserted in the proper order
 					} else {
@@ -1259,7 +1305,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						currvalClauseString += `, currval(pg_get_serial_sequence('${foreignTable}', 'id'))`;
 						currvalCount ++;
 					} 
-					// The foriegn column will have to be returned for INSERTs so the in-memory data (expeditionInfo) can be updated
+					// The foreign column will have to be returned for INSERTs so the in-memory data (expeditionInfo) can be updated
 					foreignColumnReturnString += `, ${column}`;
 					sortedFields.push(column);
 
@@ -1489,10 +1535,9 @@ class ClimberDBExpeditions extends ClimberDB {
 							.data('table-name', tableName)
 							.data('table-id', id);
 					const foreignIDs = Object.entries(returnedIDs).filter(([column, _]) => column !== 'id');
-					if (Object.keys(foreignIDs).length) $inputs.data('foriegn-ids', Object.fromEntries(foreignIDs));
+					if (Object.keys(foreignIDs).length) $inputs.data('foreign-ids', Object.fromEntries(foreignIDs));
 					
 				}
-
 
 				// update in-memory data for each edited input
 				const edits = this.edits;
@@ -1533,7 +1578,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							)
 							routeMembers = expeditionInfo.expedition_member_routes.data[routeCode];
 						}
-						const memberID = $input.data('foriegn-ids').expedition_member_id;
+						const memberID = $input.data('foreign-ids').expedition_member_id;
 
 						if (!routeMembers[memberID]) routeMembers[memberID] = {};
 						routeMembers[memberID][fieldName] = value;
@@ -1574,7 +1619,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	discardEdits() {
 		
 		// remove any new cards or new list items. This means that only updates (not inserts) need to be reset
-		$('.new-card, .new-list-item').remove();
+		$('.new-card, .new-list-item').fadeRemove();
 
 		//expeditions
 		for (const el of $('#expedition-members-accordion .card:not(.cloneable) .input-field.dirty')) {
@@ -1634,7 +1679,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		`;
 
 		showModal(
-			`You have unsaved edits to this expedition. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this climber's info.`,
+			`You have unsaved edits to this expedition. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this expedition.`,
 			'Save edits?',
 			'alert',
 			footerButtons
@@ -2021,7 +2066,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		const expeditionData = this.expeditionInfo.expeditions;
 		for (const el of $('#expedition-data-container .input-field')) {
-			this.setInputFieldValue(el, expeditionData, {dbID: expeditionData.id, triggerChange: triggerChange});
+			this.setInputFieldValue(el, expeditionData, {dbID: expeditionData.id, triggerChange: true});
 		}
 		$('#expedition-entered-by-result-summary-item > .result-details-summary-value').text(expeditionData.entered_by);
 		$('#expedition-entry-time-result-summary-item > .result-details-summary-value').text(expeditionData.entry_time);
@@ -2054,13 +2099,10 @@ class ClimberDBExpeditions extends ClimberDB {
 			$newCard.find('.mountain-code-header-input')
 				.val(mountainCode)
 				.removeClass('default')//set in addNewCard()
+				.change()
 					.siblings('.route-code-header-input, .input-field[name="route_code"]')
 					.val(routeCode)
 					.removeClass('default');
-			// if (triggerChange) {
-			// 	$mountainCodeInput.change()
-			// 	$routeCodeInput.change();
-			// }
 
 			const $list = $newCard.find('.route-member-list');
 			$list.attr('id', $list.attr('id') + '-' + routeCode);
@@ -2081,12 +2123,12 @@ class ClimberDBExpeditions extends ClimberDB {
 
 					if (memberRouteID) {
 						for (const el of $listItem.find('.input-field')) {
-							this.setInputFieldValue(el, memberRouteRecord, {dbID: memberRouteID, triggerChange: triggerChange});
+							// trigger change for dependent collpases
+							this.setInputFieldValue(el, memberRouteRecord, {dbID: memberRouteID, triggerChange: true});
 						}
 					}
 				}
 			}
-
 		}
 
 		const cmcs = this.expeditionInfo.cmc_checkout;
@@ -2102,6 +2144,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Show edit toggle button
 		$('#edit-expedition-button').ariaHide(false);
 
+		// .change() events trigger onInputChange() so undo that stuff
+		$('.input-field.dirty').removeClass('dirty');
+		$('#save-expedition-button').ariaHide(true);
 	}
 
 
@@ -2291,7 +2336,7 @@ class ClimberDBExpeditions extends ClimberDB {
 								` Contact your database adminstrator to resolve this issue.<br><br>Attempted SQL:<br>${sql}`, 
 							'Database Error')
 					} else {
-						$listItem.fadeOut(500, () => {$listItem.remove()});
+						$listItem.fadeRemove();
 						// ***** remove in-memory data *******
 					}
 				}

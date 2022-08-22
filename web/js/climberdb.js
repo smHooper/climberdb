@@ -376,9 +376,9 @@ class ClimberDB {
 	/*
 
 	*/
-	fillAllSelectOptions(noFillClass='.no-option-fill') {
+	fillAllSelectOptions(noFillClass='no-option-fill') {
 
-		return $('select:not(.no-option-fill)').map( (_, el) => {
+		return $(`select:not(.${noFillClass})`).map( (_, el) => {
 			const $el = $(el);
 			const placeholder = $el.attr('placeholder');
 			const lookupTable = $el.data('lookup-table');
@@ -388,9 +388,8 @@ class ClimberDB {
 			const id = el.id;
 			if (lookupTableName != 'undefineds') {//if neither data-lookup-table or name is defined, lookupTableName === 'undefineds' 
 				if (placeholder) $('#' + id).append(`<option class="" value="">${placeholder}</option>`);
-				if (!$el.is(noFillClass)) {
-					return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${lookupTableName} WHERE sort_order IS NOT NULL ORDER BY sort_order`);
-				}
+				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${lookupTableName} WHERE sort_order IS NOT NULL ORDER BY sort_order`);
+				
 			}
 		});
 	}
@@ -680,13 +679,12 @@ class ClimberDB {
 			$select.addClass('default');
 		} else {
 			$select.removeClass('default error');
-			// the user selected an actual option so remove the empty default option
-			/*for (const el of $select.find('option')) {//.each(function(){
-				const $option = $(el);
-				if ($option.val() == '') {
-					$option.remove();
-				}
-			}*/
+
+			// if the user selected an actual option, remove the empty default option
+			if (!$select.is('keep-default-option')) {
+				$select.find('option[value=""]').remove();
+			}
+		
 		}
 
 		// If there are any dependent fields that should be shown/hidden, 
@@ -1114,6 +1112,13 @@ class ClimberDB {
  		$(delegate).trigger(e);
 
  		return this;
+ 	}
+
+ 	/*
+ 	Helper function to remove a DOM element with a fade
+ 	*/
+ 	$.fn.fadeRemove = function(fadeTime=500) {
+ 		 return this.fadeOut(500, () => {this.remove()});
  	}
 }( jQuery ));
 
