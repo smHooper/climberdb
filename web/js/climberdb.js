@@ -933,7 +933,7 @@ class ClimberDB {
 	correspond to a key in the values object. 
 	@parameter:
 	*/
-	setInputFieldValue(el, values, {dbID=null, triggerChange=false}={}) {
+	setInputFieldValue(el, values, {dbID=null, triggerChange=false, elementData=null}={}) {
 		el.value = null; // clear value regardless
 		
 		const $el = $(el);
@@ -961,6 +961,12 @@ class ClimberDB {
 		}
 
 		$el.data('table-id', dbID);
+
+		if (elementData !== null) {
+			for (const property in elementData) {
+				$el.data(property, elementData[property]);
+			}
+		}
 
 		if (triggerChange) $el.change();
 

@@ -566,6 +566,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		})
 
 		$(document).on('change', '.input-field:not(.route-code-header-input)', e => {
+			if ($(e.target).closest('.cloneable').length) return;
 			this.onInputChange(e);
 		});
 
@@ -785,7 +786,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			// If this chekcbox is being checked, hide all others
 			if (isChecked) {
-				$(`.leader-checkbox-container .input-checkbox:not(#${$checkbox.attr('id')})`)
+				$(`.card:not(.cloneable) .leader-checkbox-container .input-checkbox:not(#${$checkbox.attr('id')})`)
 					.prop('checked', false)
 					.change()
 					.closest('.leader-checkbox-container').addClass('transparent');
@@ -1154,13 +1155,61 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	onInputChange(e) {
-		const $input = $(e.target)
+		const $input = $(e.target);
+
 		if (!$input.is('.ignore-changes')) {
-			$input.addClass('dirty');
-			$('#save-expedition-button').ariaHide(false);
+
+			// check if the value is different from in-memory data
+			var valueChanged = false;
+			// 	if it's inside a new card or list item, it has to be an insert
+			if ($input.closest('.new-list-item, .new-card').length) {
+				valueChanged = true;
+			} else {
+				var newValue = this.getInputFieldValue($input);
+				const dbID = $input.data('table-id');
+				const tableName = $input.data('table-name');
+				const fieldName = $input.attr('name');
+				var dbValue;
+				if (tableName === 'expeditions') {
+					dbValue = this.expeditionInfo.expeditions[fieldName];
+				} else if (tableName === 'expedition_members') {
+					dbValue = this.expeditionInfo.expedition_members.data[dbID][fieldName];
+				} else if (tableName === 'transactions') {
+					const expeditionMemberID = $input.closest('.card').data('table-id');
+					dbValue = this.expeditionInfo.transactions[expeditionMemberID].data[dbID][fieldName];
+				} else if (tableName === 'expedition_member_routes') {
+					const routeCode = $input
+						.closest('.data-list-item')
+							.find('.input-field[name=route_code]')
+								.val();
+					const foreignIDs = $input.data('foreign-ids') || {};
+					const memberInData =  						
+						Object.keys(this.expeditionInfo.expedition_member_routes.data).includes(routeCode) &&
+						Object.keys(foreignIDs).includes('expedition_member_id');
+					if (memberInData) {
+						const memberID = foreignIDs.expedition_member_id;
+						if (this.expeditionInfo.expedition_member_routes.data[routeCode][memberID]) {
+							dbValue = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID][fieldName];	
+						}
+					} else {
+						// If the route was changed, dbValue will be undefined and therefore similar to newValue
+						valueChanged = true;
+					}
+				} else if (tableName === 'cmc_checkout') {
+					dbValue = this.expeditionInfo.cmc_checkout.data[dbID][fieldName];
+				}
+
+				// If this is a checkbox, the new value needs to be converted to PostreSQL's boolean as intepreted by PHP
+				if ($input.is('.input-checkbox')) newValue = newValue ? 't' : 'f';
+
+				if (valueChanged || dbValue != newValue) valueChanged = true;
+			}
+
+			$input.toggleClass('dirty', valueChanged);
+			$('#save-expedition-button').ariaHide(!valueChanged);
 		}
 	}
-	
+
 
 	toggleEditing(forceEditingOn=null) {
 		const $content = $('.expedition-content');
@@ -2122,9 +2171,10 @@ class ClimberDBExpeditions extends ClimberDB {
 					$listItem.data('expedition-member-id', memberID); 
 
 					if (memberRouteID) {
+						const inputData = {'foreign-ids': {expedition_member_id: memberID}}
 						for (const el of $listItem.find('.input-field')) {
 							// trigger change for dependent collpases
-							this.setInputFieldValue(el, memberRouteRecord, {dbID: memberRouteID, triggerChange: true});
+							this.setInputFieldValue(el, memberRouteRecord, {dbID: memberRouteID, triggerChange: true, elementData: inputData});
 						}
 					}
 				}
