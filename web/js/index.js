@@ -73,8 +73,17 @@ class ClimberDBIndex extends ClimberDB {
 			$('#retain-login-checkbox').closest('.field-container').ariaHide(true);
 			$(e.target).ariaHide(true);
 
-			$('.request-field, #request-access-button').ariaHide(false);
+			$('.request-field, .request-access-button').ariaHide(false);
 		});
+
+		$('#hide-request-access-button').click(() => {
+			$('.default-field').ariaHide(false);
+			$('#sign-in-button').ariaHide(false);
+			$('#retain-login-checkbox').closest('.field-container').ariaHide(false);
+			$('#request-access-toggle-button-container button').ariaHide(false);
+
+			$('.request-field, .request-access-button').ariaHide(true);
+		})
 
 		$('#password-input').keydown(e => {
 			// if the user pressed enter, try to sign in

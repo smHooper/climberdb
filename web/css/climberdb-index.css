@@ -40,7 +40,7 @@ body {
 
 .index-button {
   max-width: calc(50% - 10px);
-  animation: 0.5s ease-out 0.4s slideInFromBottom;
+  /*animation: 0.5s ease-out 0.4s slideInFromBottom;*/
   border-radius: 12px;
   -moz-box-shadow:    6px 7px 20px 3px rgba(0, 0, 0, 0.3);
   -webkit-box-shadow: 6px 7px 20px 3px rgba(0, 0, 0, 0.3);
@@ -75,6 +75,9 @@ body {
 }
 #sign-in-form-footer .request-access-container {
   justify-content: center;
+}
+.request-access-container .generic-button{
+  margin-left: 30px;
 }
 
 #request-access-toggle-button-container {
