@@ -64,13 +64,15 @@
 	</div>
 	
 	<script src="js/climberdb.js"></script>
+	<script src="js/index.js"></script>
 
 	<script>
 		var climberDB;
 		$(document).ready(function(){
-			climberDB = new ClimberDB();
+			climberDB = new ClimberDBIndex();
+			climberDB.init();
 
-			// If the user was bounced back to the sign-in page after trying to visit another page, 
+			/*// If the user was bounced back to the sign-in page after trying to visit another page, 
 			//	the URL should have a query with the 
 			if (window.location.search.length) {
 				const params = climberDB.parseURLQueryString();
@@ -143,7 +145,7 @@
 							window.location.href = $(e.target).data('target');
 						}
 					});
-			});
+			});*/
 
 
 		});
