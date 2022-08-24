@@ -1,6 +1,7 @@
 import os
 import re
 import traceback
+import base64
 
 import sqlalchemy
 import bcrypt
@@ -10,6 +11,7 @@ import smtplib
 from datetime import datetime
 
 from flask import Flask, render_template, request, json, url_for
+from flask_mail import Mail, Message
 
 # Asynchronously load weasyprint because it takes forever and it will never need to be used immediately
 import threading
@@ -90,7 +92,10 @@ def validate_password(username, password):
 #---- global properties for all templates ----#
 @app.context_processor
 def get_global_properties():
-    return {'current_date': datetime.now().strftime('%B %#d, %Y')}
+    return {
+    	'current_date': datetime.now().strftime('%B %#d, %Y'),
+    	'db_admin_email': app.config['DB_ADMIN_EMAIL']
+    }
 
 # Disable caching for dynamic files
 @app.after_request
@@ -106,7 +111,7 @@ def add_header(response):
 # **for testing**
 @app.route('/flask/test', methods=['GET', 'POST'])
 def test():
-	return json.dumps(request.form)
+	return json.dumps(request.remote_user)
 
 
 # Get username and role
@@ -174,16 +179,44 @@ def check_password():
 
 
 # Send account request email
+@app.route('/flask/request_email.html')
+def request_email_test():
+	with open('imgs/climberdb_icon_100px.jpg', 'rb') as f:
+		base64_str = base64.b64encode(f.read())
+	data = {
+		'first_name': 'Sam',
+		'last_name': 'Hooper',
+		'logo_base64_string': 'data:image/jpg;base64,' + base64_str.decode('utf-8'),
+		'request_id': '11111',
+		'users_page_url': 'http://inpdenaterm01.nps.doi.net:9006/users.html'
+	}
+	html = render_template('request_email.html', **data)
+	return html
+
+
 @app.route('/flask/accountRequest', methods=['POST'])
 def send_account_request():
 	data = request.form
-	username = data['username']
-	first_name = data['first_name']
-	last_name = data['last_name']
+	data = dict(request.form)
 
-	message = f'''{first_name} {last_name} has requested a new DENA Climbing Permit Portal account. Click the button below to continue to the portal and create this account.'''
+	# get logo iimage data
+	with open('imgs/climberdb_icon_100px.jpg', 'rb') as f:
+		base64_str = base64.b64encode(f.read())
+	data['logo_base64_string'] = 'data:image/jpg;base64,' + base64_str.decode('utf-8')
+	data['request_id'] = '1094874'
+	data['users_page_url'] = 'http://inpdenaterm01.nps.doi.net:9006/users.html'
+	
+	html = render_template('account_request_email.html', **data)
+	mailer = Mail(app)
+	msg = Message(
+		subject='New climber permit portal account request',
+		recipients=app.config['PROGRAM_ADMIN_EMAIL'], #should get from users table
+		html=html,
+		reply_to=app.config['DB_ADMIN_EMAIL'])
+	mailer.send(msg)
 
-	return
+	return 'true';
+
 
 
 #--------------- Reports ---------------------#
@@ -290,7 +323,7 @@ def get_registration_card(expedition_id):
 	# Get HTML string
 	html = render_template('registration_card.html', **data)
 
-
+	# render pdf
 	wait_for_weasyprint()
 	pdf_data = weasyprint.render_pdf(weasyprint.HTML(string=html))
 	

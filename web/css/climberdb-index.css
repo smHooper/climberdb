@@ -110,7 +110,7 @@ body {
 }
 .input-field::placeholder,
 .field-label:not(.checkbox-label),
-.invalid-password-message {
+.invalid-input-message {
   text-transform: uppercase;
 }
 .field-label.checkbox-label {
@@ -122,10 +122,18 @@ body {
   border: none;
   border-radius: 5px;
 }
-.invalid-password-message-container {
+.invalid-input-message-container {
   width: 100%;
 }
-.invalid-password-message {
+.invalid-input-message {
   color: #faaf00;
-  transform: translateY(-35px);
+  transform: translateY(-30px);
+}
+
+#account-request-success-message {
+  background-color: rgba(2, 48, 71, 0.8);/*#023047*/
+  width: 450px;
+  padding: 100px 50px;
+  color: white;
+  font-size: 20px;
 }

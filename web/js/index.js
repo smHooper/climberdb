@@ -74,8 +74,13 @@ class ClimberDBIndex extends ClimberDB {
 			$(e.target).ariaHide(true);
 
 			$('.request-field, .request-access-button').ariaHide(false);
+
+			// Always hide error messages
+			$('.invalid-input-message').ariaHide(true);
+			$('.invalid').removeClass('invalid');
 		});
 
+		// Hide request access stuff when someone clicks the back-to-sign-in button
 		$('#hide-request-access-button').click(() => {
 			$('.default-field').ariaHide(false);
 			$('#sign-in-button').ariaHide(false);
@@ -83,16 +88,65 @@ class ClimberDBIndex extends ClimberDB {
 			$('#request-access-toggle-button-container button').ariaHide(false);
 
 			$('.request-field, .request-access-button').ariaHide(true);
+
+			// Always hide error messages
+			$('.invalid-input-message').ariaHide(true);
+			$('.invalid').removeClass('invalid');
 		})
 
-		$('#password-input').keydown(e => {
-			// if the user pressed enter, try to sign in
-			if (e.which === 13) {
+		// Send email to admins when someone requests access
+		$('#request-access-button').click(() => {
+			const username = $('#username-input').val();
+			const firstName = $('#first-name-input').val();
+			const lastName = $('#last-name-input').val();
+			if (firstName.length === 0) {
+				$('#empty-first-name-message').ariaHide(false);
+				$('#first-name-input').addClass('invalid')
+					.val('')
+					.focus();
+				return;
+			}			
+			if (lastName.length === 0) {
+				$('#empty-last-name-message').ariaHide(false);
+				$('#last-name-input').addClass('invalid')
+					.val('')
+					.focus();
+				return;
+			}
+
+			showLoadingIndicator('requestAccess');
+
+			$.post({
+				url: 'flask/accountRequest',
+				data: {
+					username: username,
+					first_name: firstName,
+					last_name: lastName
+				},
+				cache: false
+			}).done(response => {
+				if (response === 'true') {
+					$('#sign-in-form-container').ariaHide();
+					$('#account-request-success-message').ariaHide(false);
+				} else {
+					showModal('There was a problem submitting your request. Check your network connection and try again.', 'Unexpected error');
+				}
+			}).fail((xhr, status, error) => {
+				showModal(`There was a problem submitting your request: ${error}. Check your network connection and try again.`, 'Unexpected error');
+			}).always(() => {
+				hideLoadingIndicator()
+			})
+		});
+
+
+		$('.has-invalid-message').keydown(e => {
+			// For the password input, if the user pressed the enter key, sign in
+			if (e.which === 13 && $(e.target).is('#password-input')) {
 				this.signIn(e);
+			// otherwise, remove any indication of an invalid input
 			} else {
-				// otherwise, remove any indication of an invalid password
 				$('#password-input').removeClass('invalid');
-				$('.invalid-password-message').ariaHide(true);
+				$(`.invalid-input-message[for="${e.target.id}"]`).ariaHide(true);
 			}
 		});
 

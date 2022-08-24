@@ -26,20 +26,26 @@
 			<label class="field-label" for="username-input">Username</label>
 		</div>
 		<div class="field-container default-field">
-			<input id="password-input" class="input-field" name="password" type="password" placeholder="Password">
+			<input id="password-input" class="input-field has-invalid-message" name="password" type="password" placeholder="Password">
 			<label class="field-label" for="password-input">Password</label>
 		</div>
-		<div class="invalid-password-message-container">
-			<label id="incorrect-password-message" class="invalid-password-message hidden" aria-hidden="true">The password you entered is incorrect</label>
-			<label id="empty-password-message" class="invalid-password-message hidden" aria-hidden="true">You must enter a password to sign in</label>
+		<div class="invalid-input-message-container">
+			<label id="incorrect-password-message" class="invalid-input-message hidden" for="password-input" aria-hidden="true">The password you entered is incorrect</label>
+			<label id="empty-password-message" class="invalid-input-message hidden" for="password-input" aria-hidden="true">You must enter a password to sign in</label>
 		</div>
 		<div class="field-container request-field hidden" aria-hidden=true>
-			<input id="first-name-input" class="input-field" name="first_name" placeholder="Fist name" autocomplete="off">
-			<label class="field-label" for="password-input">First name</label>
+			<input id="first-name-input" class="input-field has-invalid-message" name="first_name" placeholder="Fist name" autocomplete="off">
+			<label class="field-label" for="first-name-input">First name</label>
+		</div>
+		<div class="invalid-input-message-container">
+			<label id="empty-first-name-message" class="invalid-input-message hidden" for="first-name-input" aria-hidden="true">You must enter your first name to request an account</label>
 		</div>
 		<div class="field-container request-field hidden" aria-hidden=true>
-			<input id="last-name-input" class="input-field" name="last_name" placeholder="Last name" autocomplete="off">
-			<label class="field-label" for="password-input">Last name</label>
+			<input id="last-name-input" class="input-field has-invalid-message" name="last_name" placeholder="Last name" autocomplete="off">
+			<label class="field-label" for="for-first-input">Last name</label>
+		</div>
+		<div class="invalid-input-message-container">
+			<label id="empty-last-name-message" class="invalid-input-message hidden" for="last-name-input" aria-hidden="true">You must enter your last name to request an account</label>
 		</div>
 		<div id="sign-in-form-footer" class="field-container col">
 			<div class="field-container default-container">
@@ -64,7 +70,43 @@
 		</div>
 
 	</div>
+
+	<p id="account-request-success-message" class="hidden" aria-hidden="True">Thanks! We received your account request. You'll get a confirmation email when your account is approved.</p>
 	
+
+	 <!-- loading indicator should be hidden and will only be shown when loading data -->
+	<div id="loading-indicator-background" class="modal-background modal-background-light hidden" ></div>
+	<div id="loading-indicator" class="hidden"></div>
+
+	<!--alert/message modal -->
+	<div class="modal fade" id="alert-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
+	<div class="modal centered-modal fade" id="exports-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+		    	<div class="modal-header">
+			    	<h5 class="modal-title">Export PDF</h5>
+					<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<div class="field-container col-6">
+						<select class="input-field no-option-fill ignore-changes col-6" id="input-export_type" name="export_type" value="confirmation_letter">
+							<option value="confirmation_letter" selected="selected">Confirmation letter</option>
+							<option value="registration_card">Registration card</option>
+						</select>
+						<label class="field-label" for="input-export_type">Export type</label>
+					</div>
+					<button class="generic-button" id="create-pdf-button" title="Create PDF">Create PDF</button>
+					
+				</div>
+				<div class="modal-footer">
+					<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<script src="js/climberdb.js"></script>
 	<script src="js/index.js"></script>
 
@@ -73,88 +115,9 @@
 		$(document).ready(function(){
 			climberDB = new ClimberDBIndex();
 			climberDB.init();
-
-			/*// If the user was bounced back to the sign-in page after trying to visit another page, 
-			//	the URL should have a query with the 
-			if (window.location.search.length) {
-				const params = climberDB.parseURLQueryString();
-				if ('referer' in params) {
-					$('#sign-in-button').data('target', encodeURI(params.referer));
-				}
-			}
-
-			$.when(...climberDB.init({addMenu: false}))
-				.done(function(resultString) {
-					// If the user logged in before and their session is still active, go to the home page
-					const username = climberDB.userInfo.ad_username;
-					if (climberDB.loginInfo[username]) {
-						if (climberDB.loginInfo[username].expiration > new Date().getTime()) {
-							window.location.href = 'dashboard.html';
-						}
-					} 
-					if (Object.keys(climberDB.userInfo).length) {
-						$('#username-input').val(climberDB.userInfo.ad_username);
-						$('#password-input').focus();
-						//$('#request-access-toggle-button-container').ariaHide(true);
-					}
-				}); 
-
-			$('#password-input').keydown(() => {
-				$('#password-input').removeClass('invalid');
-				$('.invalid-password-message').ariaHide(true);
-			});
-
-			// Show the "request access" fields when the button is clicked
-			$('#request-access-toggle-button-container button').click((e) => {
-				$('.default-field').ariaHide(true);
-				$('#sign-in-button').ariaHide(true);
-				$('#retain-login-checkbox').closest('.field-container').ariaHide(true);
-				$(e.target).ariaHide(true);
-
-				$('.request-field, #request-access-button').ariaHide(false);
-			});
-
-			$('#sign-in-button').click((e) => {
-				// Hide in case the user didn't enter anything and clicked the sign-in button
-				$('.invalid-password-message').ariaHide(true);
-
-				const password = $('#password-input').val();
-				if (password.length === 0) {
-					$('#empty-password-message').ariaHide(false);
-					$('#password-input').addClass('invalid')
-						.val('')
-						.focus();
-					return;
-				}
-
-				climberDB.verifyPassword(password)
-					.done(isValid => {
-						if (!isValid) {
-							//showModal('Password incorrect', 'Incorrect password');
-							$('#incorrect-password-message').ariaHide(false);
-							$('#password-input').addClass('invalid')
-								.val('')
-								.focus();
-						} else {
-							const stayLoggedIn = $('#retain-login-checkbox').prop('checked');
-							const expiration = (new Date()).getTime() + 
-								(stayLoggedIn ? 
-									(1000 * 60 * 60 * 24 * 7) : // lasts 7 days 
-									(1000 * 60 * 60) // lasts 1 hour
-								); 
-							climberDB.loginInfo = {username: climberDB.userInfo.ad_username, expiration: expiration}
-							window.localStorage.setItem('login', JSON.stringify(climberDB.loginInfo));
-							window.location.href = $(e.target).data('target');
-						}
-					});
-			});*/
-
-
 		});
 	</script>
 
 </body>
-
-
 
 </html>
