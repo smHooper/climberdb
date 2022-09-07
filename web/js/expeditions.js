@@ -291,10 +291,29 @@ class ClimberDBExpeditions extends ClimberDB {
 														</div>	
 														<div class="field-container checkbox-field-container col-sm-6">
 															<label class="checkmark-container">
+																<input id="input-flagged" class="input-field input-checkbox" type="checkbox" name="flagged" data-table-name="expedition_members" title="Flag this expedition member">
+																<span class="checkmark data-input-checkmark"></span>
+															</label>
+															<label class="field-label checkbox-label" for="input-flagged">Flag this expedition member</label>
+														</div>
+													</div>
+													<div class="field-container-row">
+														<div class="field-container col collapse">
+															<label class="field-label" for="input-flagged_reason">Reason for flagging this expedition member</label>
+															<textarea id="input-flagged_reason" class="input-field" name="flagged_reason" data-table-name="expedition_members" placeholder="Describe why you flagged this expedition member" title="Flagged reason" type="text" autocomplete="off" data-dependent-target="#input-flagged" data-dependent-value="true"></textarea>
+															<span class="null-input-indicator">&lt; null &gt;</span>
+														</div>	
+														<div class="field-container col-sm-6 hidden">
+															<input id="input-flagged_by" class="input-field" name="flagged_by" data-table-name="expedition_members" title="Flagged by" type="text">
+														</div>
+													</div>
+													<div class="field-container-row">
+														<div class="field-container checkbox-field-container col-sm-6">
+															<label class="checkmark-container">
 																<input id="input-is_illegal_guide" class="input-field input-checkbox" type="checkbox" name="is_illegal_guide" data-table-name="expedition_members" title="Illegal guide">
 																<span class="checkmark data-input-checkmark"></span>
 															</label>
-															<label class="field-label checkbox-label" for="input-is_illegal_guide">Illegal guide</label>
+															<label class="field-label checkbox-label" for="input-is_illegal_guide">Confirmed illegal guide</label>
 														</div>
 													</div>
 													<div class="field-container-row" style="">
@@ -362,14 +381,14 @@ class ClimberDBExpeditions extends ClimberDB {
 													</div>													
 													<div class="field-container-row">
 														<div class="field-container col">
-															<label class="field-label" for="input-internal_notes">Internal notes about this climb</label>
-															<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="expedition_members" placeholder="Enter notes for other rangers to see about this climb" title="Internal notes" type="text" autocomplete="off"></textarea>
+															<label class="field-label" for="input-internal_notes">Internal notes about this expedition member</label>
+															<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="expedition_members" placeholder="Enter notes for other rangers to see about this expedition member" title="Internal notes" type="text" autocomplete="off"></textarea>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 													</div>													
 													<div class="field-container-row">
 														<div class="field-container col">
-															<label class="field-label" for="input-climber_comments">Climber comments</label>
+															<label class="field-label" for="input-climber_comments">Climber's comments</label>
 															<textarea id="input-climber_comments" class="input-field" name="climber_comments" data-table-name="expedition_members" placeholder="Enter comments from the climber" title="Climber comments" type="text" autocomplete="off"></textarea>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
@@ -812,6 +831,15 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			if (reservationStatuses.every(v => v == firstStatus || v == 6) && $groupStatusSelect.val() != firstStatus) { 
 				$groupStatusSelect.val(firstStatus).change();
+			}
+		});
+
+		$(document).on('change', '.input-field[name="flagged"]', e => {
+			const $checkbox = $(e.target);
+			if ($checkbox.prop('checked')) {
+				$checkbox.closest('.card-body')
+					.find('.input-field[name="flagged_by"]')
+					.val(this.userInfo.ad_username).change();
 			}
 		});
 
@@ -1421,6 +1449,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			.has('.input-field.dirty');
 		if (!this.validateFields($editParents)) {
 			showModal('One or more required fields are not filled. All required fields must be filled before you can save your edits.', 'Required field is empty');
+			hideLoadingIndicator();
 			return;
 		};
 
@@ -1602,19 +1631,19 @@ class ClimberDBExpeditions extends ClimberDB {
 						expeditionInfo.expeditions[fieldName] = value;
 					} else if (tableName === 'transactions') {
 						const expeditionMemberID = $input.closest('.card').data('table-id');
-						let memmberTransactions = expeditionInfo.transactions[expeditionMemberID]
-						if (!memmberTransactions) { // new member was added
+						let memberTransactions = expeditionInfo.transactions[expeditionMemberID]
+						if (!memberTransactions) { // new member was added
 							const transactionOrder = $input.closest('.data-list')
 								.find('.data-list-item:not(.cloneable)')
 									.map((_, el) => $(el).data('table-id'))
 									.get();
 							expeditionInfo.transactions[expeditionMemberID] = {data: {}, order: transactionOrder};
-							memmberTransactions = expeditionInfo.transactions[expeditionMemberID];
+							memberTransactions = expeditionInfo.transactions[expeditionMemberID];
 						}
-						if (!memmberTransactions.data[dbID]) memmberTransactions.data[dbID] = {};
+						if (!memberTransactions.data[dbID]) memberTransactions.data[dbID] = {};
 						expeditionInfo.transactions[expeditionMemberID].data[dbID][fieldName] = value;
 					} else if (tableName === 'expedition_member_routes') {
-						// expedition member routes are organized by {data: {route_code: {expedition_memmber_id: {}}}, order: []}
+						// expedition member routes are organized by {data: {route_code: {expedition_member_id: {}}}, order: []}
 						//	order is route order and expedition members in route card are organized on the fly with expedition_members.order
 
 						const $listItem = $input.closest('.data-list-item');
@@ -2359,6 +2388,23 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 
 					hideLoadingIndicator('queryExpedition');
+
+					// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
+					const $flaggedCheckboxes = $('.input-checkbox[name="flagged"]:checked');
+					const nFlagged = $flaggedCheckboxes.length
+					if (nFlagged) {
+						const flaggedMemberListItems = $flaggedCheckboxes.map((_, el) => {
+							const $el = $(el);
+							//$el.closest('.card').find('.card-link').click();
+							const dbID = $el.data('table-id');
+							const info = this.expeditionInfo.expedition_members.data[dbID];
+							return `<li>${info.last_name}, ${info.first_name}</li>`;
+						}).get().join('')
+						const message = `${nFlagged} ${nFlagged === 1 ? ' member of this expedition has' : ' members of this expedition have'}` +
+							' been flagged. You might want to review the reason they were flagged. Flagged expedition member(s):\n' +
+							`<ul>${flaggedMemberListItems}</ul>`
+						showModal(message, 'Flagged expedition member(s)');
+					}
 				}
 			});
 	}

@@ -945,10 +945,11 @@ class ClimberDB {
 		if (dbID === null) dbID = $el.data('table-id');
 
 		const isSelect = $el.is('select');
+		const isCheckbox = $el.is('.input-checkbox');
 		const fieldName = el.name.replace(/-\d+$/g, '');
 		const value = values[fieldName];
 		if (fieldName in values) {
-			if ($el.is('.input-checkbox')) {
+			if (isCheckbox) {
 				$el.prop('checked', value === 't'); //bool vals from postgres are returned as either 't' or 'f'
 			} else {
 				$el.val(value);
@@ -968,7 +969,11 @@ class ClimberDB {
 			}
 		}
 
-		if (triggerChange) $el.change();
+		if (triggerChange) {
+			$el.change();
+		} else if (isSelect || isCheckbox) {
+			this.toggleDependentFields($el);
+		}
 
 		return [$el, fieldName, value];
 	}
