@@ -2,7 +2,7 @@ class ClimberDBDashboard extends ClimberDB {
 	
 	constructor() {
 		super();
-		this.newVar = 1;
+		this.flaggedExpeditionInfo = [];
 		return this;
 	}
 
@@ -27,8 +27,34 @@ class ClimberDBDashboard extends ClimberDB {
 						</table>
 					</div>
 				</div>
+				<div id="flagged-groups-card" class="card dashboard-card col-md">
+					<h2 class="dashboard-card-header">Flagged Expeditions</h2>
+					<div class="dashboard-card-body">
+						<table class="climberdb-dashboard-table">
+							<thead>
+								<tr>
+									<th>
+										<button class="text-only-button sort-column-button" data-field-name="expedition_name">
+											<span>Name</span>
+											<i class="fa fa-solid fa-sort"></i>
+										</button>
+									</th>
+									<th>
+										<button class="text-only-button sort-column-button sorted" data-field-name="departure">
+											<span>Departure</span>
+											<i class="fa fa-solid fa-sort"></i>
+										</button>
+									</th>
+									<th>Commments</th>
+								</th>
+							</thead>
+							<tbody>
+							</tbody>
+						</table>
+					</div>
+				</div>
 
-				<div id="#group-status-card" class="card dashboard-card col-md">
+				<div id="group-status-card" class="card dashboard-card col-md">
 					<h2 class="dashboard-card-header w-100 centered-text">Group Status</h2>
 					<div class="dashboard-card-body h-100">
 						<div class="group-status-graph-container">
@@ -137,10 +163,30 @@ class ClimberDBDashboard extends ClimberDB {
 			</div>
 		`);
 
-		$('.group-status-bar-container').click((e) => {
+		$('.group-status-bar-container').click(e => {
 			const $container = $(e.target).closest('.group-status-bar-container');
 			$container.find('.group-status-bar-dropdown').toggleClass('show');
-		})
+		});
+
+		$('.sort-column-button').click(e => {
+			const $button = $(e.target).closest('.sort-column-button');
+			// if the column was already sorted and descending, then make it ascending. 
+			//	Otherwise, the column will be sorted ascending
+			let sortAscending;
+			const isSorted = $button.is('.sorted');
+			if (isSorted) {
+				sortAscending = $button.is('.descending')
+			} else {
+				sortAscending = true;
+			}
+
+			const fieldName = $button.data('field-name');
+			this.sortFlaggedExpeditions({sortField: fieldName, ascending: sortAscending});
+
+			$('.sort-column-button').removeClass('sorted');
+			$button.addClass('sorted')
+				.toggleClass('descending', !sortAscending);
+		});
 	}
 
 	configureDailyMountainStats() {
@@ -329,6 +375,62 @@ class ClimberDBDashboard extends ClimberDB {
 		});
 	}
 
+
+	/*
+	Helper method to fill the flagged groups table. Called on load and whenever a column header 
+	in the flagged groups table is clicked
+	*/
+	sortFlaggedExpeditions({sortField=null, ascending=true}={}) {
+		
+		// Clear the table
+		const $tableBody = $('#flagged-groups-card .climberdb-dashboard-table tbody')
+			.empty();
+
+		if (sortField) {
+			this.flaggedExpeditionInfo = this.flaggedExpeditionInfo.sort((a, b) => {
+				return ((a[sortField] > b[sortField]) - (b[sortField] > a[sortField])) * (ascending ? 1 : -1);
+			})
+		}
+		for (const info of this.flaggedExpeditionInfo) {
+			$(`<tr>
+				<td><a href="expeditions.html?id=${info.expedition_id}" target="_blank">${info.expedition_name}</a></td>
+				<td class="centered-text">${info.departure}</td>
+				<td>${info.flagged_comments}</td>
+			</tr>`).appendTo($tableBody)
+		}
+	}
+
+	configureFlaggedGroups() {
+		const sql = `
+			SELECT 
+				expedition_name, 
+				to_char(planned_departure_date, 'Mon DD') AS departure, 
+				to_char(planned_return_date, 'Mon DD') AS return, 
+				gb.* 
+			FROM expeditions 
+			JOIN (
+				SELECT 
+					expedition_id, 
+					replace(string_agg(flagged_reason, ';'), ';;', ';') AS flagged_comments 
+				FROM expedition_members 
+				WHERE flagged 
+				GROUP BY expedition_id
+			) gb ON expeditions.id=expedition_id
+			WHERE planned_departure_date >= now()::date
+			ORDER BY planned_departure_date;`
+		
+		return this.queryDB(sql)
+			.done(queryResultString => {
+				if (this.queryReturnedError(queryResultString)) {
+					console.log('error querying flagged: ' + queryResultString)
+				} else {
+					
+					this.flaggedExpeditionInfo = $.parseJSON(queryResultString);
+					this.sortFlaggedExpeditions();
+				}
+			})
+	}
+
 	configureGroupStatusGraph() {
 
 		const year = (new Date()).getFullYear() - 1;
@@ -465,8 +567,8 @@ class ClimberDBDashboard extends ClimberDB {
 							labels: xlabels,
 							datasets: [{
 								data: data,
-								backgroundColor: '#f28100',
-								borderColor: '#f28100',
+								backgroundColor: '#f28100',//'#FFB600'//,
+								borderColor: '#f28100'//'#FFB600'//,
 							}],
 						},
 			            maintainAspectRatio: true,
@@ -574,7 +676,8 @@ class ClimberDBDashboard extends ClimberDB {
 			initDeferreds,
 			this.configureDailyMountainStats(),
 			this.configureGroupStatusGraph(),
-			this.configureDailyBriefingsChart()
+			this.configureDailyBriefingsChart(),
+			this.configureFlaggedGroups()
 		).always(() => {
 			hideLoadingIndicator();
 		});
