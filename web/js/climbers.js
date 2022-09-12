@@ -191,7 +191,7 @@ class ClimberForm {
 							<label for="climber-history-tab" class="tab-label" role="tab" aria-selected="true" aria-controls="climber-history-tab-content" tabindex="0">
 								Climber History
 							</label>
-							<div id="climber-history-tab-content" class="tab-content" role="tabpanel" aria-labelledby="climber-history-tab" aria-hidden="false">
+							<div id="climber-history-tab-content" class="tab-content uneditable" role="tabpanel" aria-labelledby="climber-history-tab" aria-hidden="false">
 								<div id="climber-history-accordion" class="accordion">
 									<div id="cloneable-card-climber-history" class="card cloneable hidden">
 										<div class="card-header" id="cardHeader-climber-history-cloneable">
@@ -438,6 +438,14 @@ class ClimberForm {
 
 		$('.climber-form .delete-card-button').click(this.onDeleteCardButtonClick);
 
+	}
+
+	
+	/*
+	Helper method to get the value of in input depedning on whether or not its a checkbox
+	*/
+	getInputFieldValue($input) {
+		return $input.is('.input-checkbox') ? $input.prop('checked') : $input.val();
 	}
 
 
@@ -812,7 +820,7 @@ class ClimberForm {
 		// **** check for required fields in any inserts
 		// collect inserts
 		let inserts = [];
-		for (const container of $('.climberdb-modal #climber-info-tab, .new-card:not(.cloneable)')) { 
+		for (const container of $('.climberdb-modal #climber-info-tab-content, .new-card:not(.cloneable)')) { 
 			let tableParameters = {}
 			for (const el of $(container).find('.input-field.dirty')) {
 				const $input = $(el);
@@ -904,6 +912,13 @@ class ClimberForm {
 				sqlParameters.push(parameters);
 			}
 		}
+
+
+		 if (!sqlStatements.length) {
+		 	showModal("You have not made any edits to save yet. Add or change this climber's information and then try to save it.", "No edits to save");
+		 	hideLoadingIndicator();
+		 	return $.Deferred().resolve('');
+		 }
 
 		return $.ajax({ 
 			url: 'climberdb.php',
@@ -1247,6 +1262,9 @@ class ClimberDBClimbers extends ClimberDB {
 			.removeClass('uneditable')
 			.addClass('collapsed');
 		this.clearInputFields({parent: $climberForm, triggerChange: false});
+
+		$('.result-details-header-badge').addClass('hidden');
+
 		//$climberForm.find('#edit-button, #delete-button').ariaHide(true);
 
 		//$('#save-button, .climber-form .delete-card-button').ariaHide(false);
@@ -1276,7 +1294,7 @@ class ClimberDBClimbers extends ClimberDB {
 	onSaveModalClimberClick(e) {
 		this.climberForm.saveEdits()
 			.done(resultString => {
-				if (!this.queryReturnedError(resultString)) {
+				if (!this.queryReturnedError(resultString) && resultString.length) {
 					const firstName = $('#input-first_name').val();
 					const lastName = $('#input-last_name').val();
 					const climberName = `${firstName} ${lastName}`;

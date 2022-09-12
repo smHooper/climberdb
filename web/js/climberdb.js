@@ -260,7 +260,7 @@ class ClimberDB {
 								</li>
 
 								<li class="nav-item">
-									<a href="manage-users.html">
+									<a href="users.html">
 										<img class="sidebar-nav-item-icon" src="imgs/user_icon_50px.svg">
 										<span class="sidebar-nav-item-label">manage users</span>
 									</a>
@@ -758,7 +758,7 @@ class ClimberDB {
 				return queryResultString === null;
 			}
 		}
-		return queryResultString.trim().startsWith('ERROR') || queryResultString.trim() === '["query returned an empty result"]';
+		return queryResultString.match(/Query failed: ERROR:/) || queryResultString.startsWith('ERROR:') || queryResultString.trim() === '["query returned an empty result"]';
 	}
 
 
