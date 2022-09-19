@@ -6,6 +6,8 @@ class ClimberForm {
 		this.edits = {
 			updates: {}
 		};
+		this.countryCodes = {};
+		this.stateCodes = {};
 		this.selectedClimberInfo = {}; // used for rolling back edits
 
 		const $parent = $(parent);
@@ -100,13 +102,13 @@ class ClimberForm {
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col-sm-6">
-										<select id="input-country" class="input-field default" name="country_code" data-table-name="climbers" placeholder="Country" title="Country" type="text" autocomplete="off" required=""></select>
+										<select id="input-country" class="input-field default zip-lookup-field" name="country_code" data-table-name="climbers" placeholder="Country" title="Country" type="text" autocomplete="off" required=""></select>
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-country">Country</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6">
-										<input id="input-postal_code" class="input-field" name="postal_code" data-table-name="climbers" placeholder="Postal code" title="Postal code" type="text" autocomplete="off" required="">
+										<input id="input-postal_code" class="input-field zip-lookup-field" name="postal_code" data-table-name="climbers" placeholder="Postal code" title="Postal code" type="text" autocomplete="off" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-postal_code">Postal code</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -119,8 +121,8 @@ class ClimberForm {
 										<label class="field-label" for="input-city">City</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
-									<div class="field-container col-sm-6">
-										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State" title="State" type="text" autocomplete="off" required=""></select>
+									<div class="field-container col-sm-6 collapse">
+										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State" title="State" type="text" autocomplete="off" required="" data-dependent-target="#input-country" data-dependent-value=236></select>
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-state">State</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -341,13 +343,13 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<select id="input-country_contact" class="input-field default" name="country_code" data-table-name="emergency_contacts" placeholder="Country" title="Country" type="text" autocomplete="off" required=""></select>
+														<select id="input-country_contact" class="input-field default zip-lookup-field" name="country_code" data-table-name="emergency_contacts" placeholder="Country" title="Country" type="text" autocomplete="off" required=""></select>
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-country">Country</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 													<div class="field-container col-sm-6">
-														<input id="input-postal_code_contact" class="input-field" name="postal_code" data-table-name="emergency_contacts" placeholder="Postal code" title="Postal code" type="text" autocomplete="off" required="">
+														<input id="input-postal_code_contact" class="input-field zip-lookup-field" name="postal_code" data-table-name="emergency_contacts" placeholder="Postal code" title="Postal code" type="text" autocomplete="off" required="">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-postal_code">Postal code</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -360,8 +362,8 @@ class ClimberForm {
 														<label class="field-label" for="input-city">City</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
-													<div class="field-container col-sm-6">
-														<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State" title="State" type="text" autocomplete="off" required=""></select>
+													<div class="field-container col-sm-6 collapse">
+														<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State" title="State" type="text" autocomplete="off" required="" data-dependent-target="#input-country_contact" data-dependent-value=236></select>
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-state">State</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -438,6 +440,36 @@ class ClimberForm {
 
 		$('.climber-form .delete-card-button').click(this.onDeleteCardButtonClick);
 
+		// Country/state lookup from postal code
+		$(document).on('change', '.zip-lookup-field', e => {this.onPostalCodeFieldChange(e)});
+		// Get country and state short_name/codes for city/state lookup from postal code
+		$.post({
+			url: 'climberdb.php',
+			data: {
+				action: 'query',
+				queryString: 'TABLE country_codes',
+				db: 'climberdb'
+			}
+		}).done(queryResultString => {
+			for (const row of $.parseJSON(queryResultString)) {
+				// Need to get abbreviation from code for API call
+				this.countryCodes[row.code] = row.short_name;
+			};
+		});		
+		$.post({
+			url: 'climberdb.php',
+			data: {
+				action: 'query',
+				queryString: 'TABLE state_codes',
+				db: 'climberdb'
+			}
+		}).done(queryResultString => {
+			for (const row of $.parseJSON(queryResultString)) {
+				// Need to get code from abbreviation for API response
+				this.stateCodes[row.short_name] = row.code;
+			};
+		});
+
 	}
 
 	
@@ -486,6 +518,34 @@ class ClimberForm {
 		if (!(tableName in editObject)) editObject[tableName] = {};
 		if (!(dbID in editObject[tableName])) editObject[tableName][dbID] = {};
 		editObject[tableName][dbID][fieldName] = this.getInputFieldValue($input);
+	}
+
+
+	onPostalCodeFieldChange(e) {
+		const $container = $(e.target).closest('.field-container-row').parent();
+		const postalCode = $container.find('.input-field[name=postal_code]').val();
+		const countryCode = $container.find('.input-field[name=country_code]').val();
+		if (!(countryCode && postalCode)) return;
+
+		const countryAbbreviation = this.countryCodes[countryCode]
+
+		$.get(`http://api.zippopotam.us/${countryAbbreviation}/${postalCode}`).done(response => {
+			// .get() response is JSON by default
+			if ('places' in response) {
+				const details = response.places[0];
+				if (('place name' in details)) {
+					const $cityInput = $container.find('.input-field[name=city]');
+					if ($cityInput.val().length === 0) $cityInput.val(details['place name']).change()
+					
+					const $stateInput = $container.find('.input-field[name=state_code]');
+					if ( countryAbbreviation == 'US' && ($stateInput.val() === '') ) {
+						const stateCode = this.stateCodes[details['state abbreviation']] || '';
+						$stateInput.val(stateCode).change();
+					}
+				}
+			}
+		});
+
 	}
 
 
