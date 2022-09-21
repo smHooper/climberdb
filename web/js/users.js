@@ -42,6 +42,10 @@ class ClimberDBUsers extends ClimberDB {
 			this.saveEdits();
 		});
 
+		$(document).on('click', '.reset-password-button', e => {
+			this.onResetPasswordButtonClick();
+		})
+
 		$(document).on('change', '.input-field', e => {
 			this.onInputChange(e);
 		})
@@ -99,7 +103,7 @@ class ClimberDBUsers extends ClimberDB {
 	onEditButtonClick(e) {
 		
 		const $tr = $(e.target).closest('tr');
-		const userID = $tr.data('table-id')
+		const userID = $tr.data('table-id');
 		const allowEdits = $tr.hasClass('uneditable');
 
 		if ($('.input-field.dirty').length) {
@@ -221,6 +225,11 @@ class ClimberDBUsers extends ClimberDB {
 				<td class="no-border">
 					<button class="icon-button save-button slide-up-on-focus has-motion" title="Save edits" tabindex=-1>
 						<i class="fa fa-save fa-lg"></i>
+					</button>
+				</td>
+				<td class="no-border">
+					<button class="icon-button reset-password-button slide-up-on-focus has-motion" title="Reset password" tabindex=-1>
+						<i class="fa fa-key fa-lg"></i>
 					</button>
 				</td>
 				<td class="no-border">
@@ -414,6 +423,58 @@ class ClimberDBUsers extends ClimberDB {
 			'alert',
 			footerButtons
 		);
+	}
+
+
+	/*
+	Helper method to send a password reset email. This really just makes the modal html code more legible
+	*/
+	sendPasswordResetEmail(username, userID) {
+		return $.post({
+			url: 'flask/notifications/resetPassword',
+			data: {
+				username: username,
+				user_id: userID
+			},
+			cache: false
+		}).done(resultString => {
+			const pythonError = this.pythonReturnedError(resultString);
+			if (pythonError !== false) {
+				showModal(`Password reset email failed to send with the error:\n${pythonError.trim()}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')
+			} else {
+				showModal(`A password reset email was sent to ${username}@nps.gov. The user's account will be inactive until they change their password.`, 'Password reset email sent');
+				$(`tr[data-table-id=${userID}]`).addClass('inactive')
+					.find('.input-field[name=user_status_code]')
+						.val(1) // set status to "inactive"
+						.change(); 
+			}
+		}).fail((xhr, status, error) => { 
+			showModal(`Password reset email failed to send with the error: ${error}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')
+		});
+	}
+
+
+	/*
+	Send a password reset email when the user confirms the choice to do so
+	*/
+	onResetPasswordButtonClick() {
+
+		const $tr = $('tbody tr:not(.uneditable)');
+		if ($tr.is('.new-user')) {
+			showModal('This is a new user so their password does not need to be reset. To send an activation email to the user, click the "Save" button', 'Invalid action');
+			return;
+		}
+
+		const firstName = $tr.find('.input-field[name="first_name"]').val();
+		const lastName = $tr.find('.input-field[name="last_name"]').val();
+		const username = $tr.find('.input-field[name="ad_username"]').val();
+		const userID = $tr.data('table-id');
+
+		const footerButtons = `
+			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+			<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="climberDB.sendPasswordResetEmail('${username}', '${userID}')">Yes</button>
+		`;
+		showModal(`Are you sure want to reset ${firstName}'s password? If you click 'Yes', ${firstName} will receive an email at ${username}@nps.gov with a link to reset their password, but their account will be suspended until they reset it.`, 'Send password reset email?', 'confirm', footerButtons);
 	}
 
 

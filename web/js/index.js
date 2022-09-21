@@ -81,15 +81,19 @@ class ClimberDBIndex extends ClimberDB {
 			});
 	}
 
-
-	onPasswordResetButtonClick() {
+	/*
+	Send an email to the user with a password reset link. The user has to confirm their username so that they're not accidentally sending a password reset link to someone else (i.e., if someone else is logged into the computer)
+	*/
+	onResetPasswordButtonClick() {
 		const $input = $('#reset-password-confirm-username-input');
 		const confirmedUsername = $input.val();
+		// Check that the user filled in the username confirmation field
 		if (confirmedUsername.length === 0) {
 			$('#password-reset-empty-username-message').ariaHide(false);
 			$input.addClass('invalid').focus();
 			return;
 		}
+		// Check that the username matches the username pulled from the server
 		if (confirmedUsername !== this.userInfo.ad_username) {
 			$('#password-reset-invalid-username-message').ariaHide(false);
 			$input.addClass('invalid').focus();
@@ -412,7 +416,7 @@ class ClimberDBIndex extends ClimberDB {
 		});
 
 		$('#reset-password-button').click(() => {
-			this.onPasswordResetButtonClick()
+			this.onResetPasswordButtonClick()
 		})
 
 		$('.toggle-password-visibility-button').click(e => {
