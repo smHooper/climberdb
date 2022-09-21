@@ -15,40 +15,115 @@
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
 
+	<!-- font awesome --> 
+	<link href="packages/fontawesome/css/all.min.css" rel="stylesheet">
+
 	<link rel="stylesheet" href="css/climberdb.css">
 	<link rel="stylesheet" href="css/climberdb-index.css">
 </head>
 
 <body>
 	<div id="sign-in-form-container">
-		<div class="field-container">
+		
+		<div class="field-container login-element request-access-element">
 			<input id="username-input" class="input-field" name="username" placeholder="Username" autocomplete="off">
 			<label class="field-label" for="username-input">Username</label>
 		</div>
-		<div class="field-container default-field">
-			<input id="password-input" class="input-field has-invalid-message" name="password" type="password" placeholder="Password">
+		<div class="field-container default-field login-element change-password-element">
+			<input id="password-input" class="input-field has-invalid-message password-input" name="password" type="password" placeholder="Password">
+			<button class="icon-button embedded-input-end-button toggle-password-visibility-button" title="Toggle passowrd visibility">
+				<i class="fa fa-regular fa-eye"></i>
+			</button>
 			<label class="field-label" for="password-input">Password</label>
+			<div class="invalid-input-message-container">
+				<label id="incorrect-password-message" class="invalid-input-message hidden" for="password-input" aria-hidden="true">The password you entered is incorrect</label>
+				<label id="empty-password-message" class="invalid-input-message hidden" for="password-input" aria-hidden="true">You must enter your current password to continue</label>
+			</div>
+			<div class="forgot-password-button-container">
+				<button id="forgot-password-button" class="text-only-button">Forgot password?</button>
+			</div>
 		</div>
-		<div class="invalid-input-message-container">
-			<label id="incorrect-password-message" class="invalid-input-message hidden" for="password-input" aria-hidden="true">The password you entered is incorrect</label>
-			<label id="empty-password-message" class="invalid-input-message hidden" for="password-input" aria-hidden="true">You must enter a password to sign in</label>
+
+		<div id="account_activation_fields" class="field-group-container activation-element mb-3 hidden" aria-hidden="true">
+			<div class="field-container">
+				<input id="confirm-username-input" class="input-field has-invalid-message password-input" name="confirm_username" type="text" placeholder="Confirm your username" title="Username" autocomplete="off">
+				<label class="field-label" for="password-input">Username</label>
+				<div class="invalid-input-message-container">
+					<label id="invalid-username-message" class="invalid-input-message hidden" for="confirm-username-input" aria-hidden="true">The username you entered does not match the Windows user currently logged in</label>
+					<label id="empty-username-message" class="invalid-input-message hidden" for="confirm-username-input" aria-hidden="true">You must enter your Windows username to verify your account ID</label>
+				</div>
+			</div>
+			<p class="activation-text">Enter a new password for your account. You password must: </p>
+			<ul id="password-criteria-list" class="activation-text">
+				<li data-property="length">be at least 8 characters long</li>
+				<li data-property="letter">have at least one letter</li>
+				<li data-property="number">have at least one number</li>
+				<li data-property="special">have at least one non-alphamumeric character such as !, @, #, etc.</li>
+			</ul>
+			<div class="field-container">
+				<input id="new-password-input" class="input-field has-invalid-message password-input" name="new_password" type="password" placeholder="Enter your new password">
+				<button class="icon-button embedded-input-end-button toggle-password-visibility-button" title="Toggle passowrd visibility" data-target="#new-password-input,#new-password-confirm-input">
+					<i class="fa fa-regular fa-eye"></i>
+				</button>
+				<label class="field-label" for="password-input">Enter your new password</label>
+				<div class="invalid-input-message-container">
+					<label id="invalid-password-message" class="invalid-input-message hidden" for="new-password-input" aria-hidden="true">The password you entered does not meet the above criteria</label>
+					<label id="same-password-message" class="invalid-input-message hidden" for="new-password-input" aria-hidden="true">Your new password musst be different from the old one</label>
+				</div>
+			</div>
+			<div class="field-container">
+				<input id="new-password-confirm-input" class="input-field has-invalid-message password-input" name="confirm_password" type="password" placeholder="Confirm your password">
+				<label class="field-label" for="password-input">Confirm your password</label>
+				<div class="invalid-input-message-container">
+					<label id="incorrect-confirm-password-message" class="invalid-input-message hidden" for="new-password-confirm-input" aria-hidden="true">The passwords do not match</label>
+				</div>
+			</div>
 		</div>
-		<div class="field-container request-field hidden" aria-hidden=true>
-			<input id="first-name-input" class="input-field has-invalid-message" name="first_name" placeholder="Fist name" autocomplete="off">
-			<label class="field-label" for="first-name-input">First name</label>
+
+		<div id="password_reset_fields" class="field-group-container reset-password-element mb-3 hidden" aria-hidden="true">
+			<p>To send a password reset link to your NPS email address, confirm your username and click the "reset password" button.</p>
+			<div class="field-container">
+				<input id="reset-password-confirm-username-input" class="input-field has-invalid-message password-input" name="confirm_username" type="text" placeholder="Confirm your username" title="Username" autocomplete="off">
+				<label class="field-label" for="password-input">Username</label>
+				<div class="invalid-input-message-container">
+					<label id="password-reset-invalid-username-message" class="invalid-input-message hidden" for="confirm-username-input" aria-hidden="true">The username you entered does not match the Windows user currently logged in</label>
+					<label id="password-reset-empty-username-message" class="invalid-input-message hidden" for="confirm-username-input" aria-hidden="true">You must enter your Windows username to verify your account ID</label>
+				</div>
+			</div>
 		</div>
-		<div class="invalid-input-message-container">
-			<label id="empty-first-name-message" class="invalid-input-message hidden" for="first-name-input" aria-hidden="true">You must enter your first name to request an account</label>
+
+		<div id="activation-error-message-container">
+			<div id="bad-url-activation-message" class="hidden" aria-hidden=true>
+				<h3>Bad Activation Link</h3>
+				<p>This activation URL is either expired or not in the correct format. Contact your system administrator to request a new activation link.</p>
+			</div>
+			<div id="incorrect-user-activation-message" class="hidden" aria-hidden=true>
+				<h3>Wrong Windows User</h3>
+				<p>This activation link is for a different user. Make sure you're logged into this computer with your NPS account and try the link again.</p>
+			</div>
 		</div>
-		<div class="field-container request-field hidden" aria-hidden=true>
-			<input id="last-name-input" class="input-field has-invalid-message" name="last_name" placeholder="Last name" autocomplete="off">
-			<label class="field-label" for="for-first-input">Last name</label>
+
+		<div id="account_request_fields" class="field-group-container request-access-element hidden" aria-hidden="true">
+			<div class="field-container request-field">
+				<input id="first-name-input" class="input-field has-invalid-message" name="first_name" placeholder="Fist name" autocomplete="off">
+				<label class="field-label" for="first-name-input">First name</label>
+				<div class="invalid-input-message-container">
+					<label id="empty-first-name-message" class="invalid-input-message hidden" for="first-name-input" aria-hidden="true">You must enter your first name to request an account</label>
+				</div>
+			</div>
+			<div class="field-container request-field">
+				<input id="last-name-input" class="input-field has-invalid-message" name="last_name" placeholder="Last name" autocomplete="off">
+				<label class="field-label" for="for-first-input">Last name</label>
+				<div class="invalid-input-message-container">
+					<label id="empty-last-name-message" class="invalid-input-message hidden" for="last-name-input" aria-hidden="true">You must enter your last name to request an account</label>
+				</div>
+			</div>
 		</div>
-		<div class="invalid-input-message-container">
-			<label id="empty-last-name-message" class="invalid-input-message hidden" for="last-name-input" aria-hidden="true">You must enter your last name to request an account</label>
-		</div>
-		<div id="sign-in-form-footer" class="field-container col">
-			<div class="field-container default-container">
+
+
+		<div id="sign-in-form-footer" class="field-container col login-element request-access-element activation-element reset-password-element">
+
+			<div class="field-container default-container login-element">
 				<div class="field-container checkbox-field-container col-6">
 					<label class="checkmark-container">
 						<input id="retain-login-checkbox" class="input-field input-checkbox" type="checkbox" name="retain-login">
@@ -59,19 +134,35 @@
 				</div>
 				<button id="sign-in-button" class="generic-button index-button" data-target="dashboard.html">sign in</button>
 			</div>
-
-			<div class="field-container request-access-container">
-				<button id="hide-request-access-button" class="generic-button index-button request-access-button hidden" aria-hidden=true>back to sign-in</button>
-				<button id="request-access-button" class="generic-button index-button request-access-button hidden" aria-hidden=true>request access</button>
-			</div>
-			<div id="request-access-toggle-button-container" class="field-container">
+			<div id="request-access-toggle-button-container" class="field-container login-element">
 				<button class="text-only-button">No account? No problem! Request access here</button>
+			</div>
+
+			<div class="field-container request-access-container request-access-element hidden" aria-hidden="true">
+				<button id="hide-request-access-button" class="generic-button index-button request-access-button back-to-sing-in-button">back to sign-in</button>
+				<button id="request-access-button" class="generic-button index-button request-access-button">request access</button>
+			</div>
+
+			<div class="field-container reset-password-footer-container reset-password-element hidden" aria-hidden="true">
+				<button id="hide-reset-password-button" class="generic-button index-button back-to-sing-in-button">back to sign-in</button>
+				<button id="reset-password-button" class="generic-button index-button">reset password</button>
+			</div>
+
+			<div class="field-container activation-element hidden" aria-hidden="true">
+				<button id="set-password-button" class="generic-button index-button">activate account</button>
+			</div>
+
+		</div>
+
+		<div class="email-success-message-container">
+			<p id="account-request-success-message" class="hidden" aria-hidden="True">Thanks! We received your account request. You'll get a confirmation email when your account is approved.</p>	
+			<div id="reset-password-success-message" class="hidden" aria-hidden="True">
+				<h3 class="text-center">Check your inbox!</h3>
+				<p>Thanks! We sent an email to your inbox with a password reset link</p>
 			</div>
 		</div>
 
 	</div>
-
-	<p id="account-request-success-message" class="hidden" aria-hidden="True">Thanks! We received your account request. You'll get a confirmation email when your account is approved.</p>
 	
 
 	 <!-- loading indicator should be hidden and will only be shown when loading data -->
@@ -80,32 +171,6 @@
 
 	<!--alert/message modal -->
 	<div class="modal fade" id="alert-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
-	<div class="modal centered-modal fade" id="exports-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
-		<div class="modal-dialog" role="document">
-			<div class="modal-content">
-		    	<div class="modal-header">
-			    	<h5 class="modal-title">Export PDF</h5>
-					<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
-						<span aria-hidden="true">&times;</span>
-					</button>
-				</div>
-				<div class="modal-body">
-					<div class="field-container col-6">
-						<select class="input-field no-option-fill ignore-changes col-6" id="input-export_type" name="export_type" value="confirmation_letter">
-							<option value="confirmation_letter" selected="selected">Confirmation letter</option>
-							<option value="registration_card">Registration card</option>
-						</select>
-						<label class="field-label" for="input-export_type">Export type</label>
-					</div>
-					<button class="generic-button" id="create-pdf-button" title="Create PDF">Create PDF</button>
-					
-				</div>
-				<div class="modal-footer">
-					<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>
-				</div>
-			</div>
-		</div>
-	</div>
 
 	<script src="js/climberdb.js"></script>
 	<script src="js/index.js"></script>

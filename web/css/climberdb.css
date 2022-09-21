@@ -6,7 +6,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   font-family: 'Lato', sans-serif;
-  color: #023047;;
+  color: #023047;
 }
 
 .generic-button {
@@ -360,15 +360,27 @@ ul.tabs input[type="radio"]:checked ~ .tab-content {
 
 /*---Utility classes--- */
 
-.shadow-on-hover {
+.shadow-on-hover,
+.shadow-on-focus {
   -webkit-transition: all 0.2s ease 0.15s;
           transition: all 0.2s ease 0.15s;
 }
-.shadow-on-hover:hover {
+.shadow-on-hover:hover,
+.shadow-on-focus:focus {
   -moz-box-shadow:    8px 8px 20px 6px rgba(0, 0, 0, 0.4);
   -webkit-box-shadow: 8px 8px 20px 6px rgba(0, 0, 0, 0.4);
   box-shadow:         8px 8px 20px 6px rgba(0, 0, 0, 0.4);
   transform: scale(1.025, 1.005);
+}
+.slide-up-on-hover,
+.slide-up-on-focus {
+  -webkit-transition: all 0.2s ease 0.15s;
+          transition: all 0.2s ease 0.15s;
+}
+.slide-up-on-hover:hover,
+.slide-up-on-focus:focus {
+  transform: translate(0px, -7px);
+  position: relative;
 }
 @media (prefers-reduced-motion) {
   .shadow-on-hover:hover {
@@ -377,16 +389,6 @@ ul.tabs input[type="radio"]:checked ~ .tab-content {
   .has-motion {
     transition: height 0s, width 0s, transform 0s !important;
   }
-}
-
-.slide-up-on-hover {
-  -webkit-transition: all 0.2s ease 0.15s;
-          transition: all 0.2s ease 0.15s;
-}
-
-.slide-up-on-hover:hover {
-  transform: translate(0px, -7px);
-  position: relative;
 }
 
 .vertical-scroll {
@@ -634,6 +636,7 @@ select.input-field:focus::placeholder {
 
 .input-field:placeholder-shown ~ .field-sub-label, 
 .input-field:placeholder-shown ~ .field-label,
+.input-field.invalid ~ .field-label,
 select.input-field.default ~ .field-label {
   visibility: hidden;
   transform: translateY(-28px);
@@ -970,13 +973,17 @@ textarea.input-field:valid + .required-indicator {
 .user-account-dropdown.show {
   height: 100px;
 }
-.user-account-dropdown * {
+.user-account-dropdown .account-button {
   opacity: 0;
   pointer-events: none;
   font-size: 20px;
+  text-decoration: none !important;/*for <a></a>*/
 }
-.user-account-dropdown.show * {
-  /*display: block;*/
+.user-account-dropdown .account-button:hover {
+  color: #219ebc;/*prevent default hover color on <a></a>*/
+}
+.user-account-dropdown.show .account-button {
+  display: block;
   opacity: 1;
   pointer-events: all;
 }

@@ -168,6 +168,12 @@ class ClimberDB {
 				const result = typeof resultString === 'object' ? resultString : $.parseJSON(resultString);
 				this.userInfo = {...result};
 				$('#username').text(`Hi, ${this.userInfo.first_name}!`);
+
+				// Set the href attribute of the user account dropdown (if it exists. It won't on pages that are initiated with addMenu: false)
+				const $changePasswordButton = $('#change-password-button');
+				if ($changePasswordButton.length) $changePasswordButton[0].href = window.encodeURI(
+						`${window.location.origin}/index.html?reset=true&id=${this.userInfo.id}&referer=${window.location.href}`
+					);
 			}
 		});
 	}
@@ -210,7 +216,7 @@ class ClimberDB {
 					</button>
 					<div class="user-account-dropdown" role="">
 						<button id="log-out-button" class="generic-button text-only-button w-100 centered-text account-button">Log out</button>
-						<button id="change-password-button" class="generic-button text-only-button w-100 centered-text account-button">Reset password</button>
+						<a id="change-password-button" class="generic-button text-only-button w-100 centered-text account-button">Reset password</a>
 					</div>
 				</div>
 			</nav>
@@ -329,9 +335,8 @@ class ClimberDB {
 	queryDB(sql, {returnTimestamp=false}={}) {
 		var requestData = {action: 'query', queryString: sql, db: 'climberdb'};
 		if (returnTimestamp) requestData.queryTime = (new Date()).getTime();
-		return $.ajax({
+		return $.post({
 			url: 'climberdb.php',
-			method: 'POST',
 			data: requestData,
 			cache: false
 		});
@@ -762,25 +767,40 @@ class ClimberDB {
 	}
 
 
+	pythonReturnedError(resultString) {
+
+		return resultString.startsWith('ERROR: Internal Server Error') ?
+		   resultString.match(/\s[A-Z]+[a-z]*Error: .*$/)[0] :
+		   false;
+	}
+
+
+	/*
+	Parse URL query string into a dictionary
+	*/
 	parseURLQueryString(queryString=window.location.search) {
-		//decodeURIComponent(window.location.search.slice(1))
-		return Object.fromEntries(
-			decodeURIComponent(queryString.slice(1))
-				.split('&')
-				.map(s => {
-					const match = s.match(/=/)
-					if (!match) {
-						return s
-					} else {
-						// Need to return [key, value]
-						return [
-							s.slice(0, match.index), 
-							s.slice(match.index + 1, s.length) //+1 to skip the = separator
-						]
+		if (queryString.length) {
+			return Object.fromEntries(
+				decodeURIComponent(queryString.slice(1))
+					.split('&')
+					.map(s => {
+						const match = s.match(/=/)
+						if (!match) {
+							return s
+						} else {
+							// Need to return [key, value]
+							return [
+								s.slice(0, match.index), 
+								s.slice(match.index + 1, s.length) //+1 to skip the = separator
+							]
+						}
 					}
-				}
-			)
-		);
+				)
+			);
+		} else {
+			// no search string so return an empty object
+			return {};
+		}
 	}
 
 	/*
@@ -865,7 +885,7 @@ class ClimberDB {
 			url: '/flask/checkPassword',
 			method: 'POST',
 			dataType: 'JSON',
-			data: {clientPassword: clientPassword, username: this.userInfo.ad_username},
+			data: {client_password: clientPassword, username: this.userInfo.ad_username},
 			cache: false
 		});
 	}

@@ -48,6 +48,25 @@ if not os.path.isfile(CONFIG_FILE):
 if not app.config.from_file(CONFIG_FILE, load=json.load):
 	raise IOError(f'Could not read CONFIG_FILE: {CONFIG_FILE}')
 
+def connect_db():
+	return sqlalchemy.create_engine(
+		'postgresql://{username}:{password}@{host}:{port}/{db_name}'
+			.format(**app.config['DB_PARAMS'])
+	)
+
+def get_config_from_db():
+	engine = connect_db()
+	db_config = {}		
+	with engine.connect() as conn:
+		cursor = conn.execute('TABLE config');
+	for row in cursor:
+		app.config[row['property']] = (
+			float(row['value']) if row['data_type'] == 'float' else  
+			int(row['value']) if row['data_type'] == 'integer' else
+			row['value']
+		)
+get_config_from_db()
+
 # disable caching (this doesn't seem to work for some reason)
 #app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 @app.after_request
@@ -65,12 +84,6 @@ def add_header(response):
 ###############################################
 # ------------- Helper functions ------------ #
 ###############################################
-def connect_db():
-	return sqlalchemy.create_engine(
-		'postgresql://{username}:{password}@{host}:{port}/{db_name}'
-			.format(**app.config['DB_PARAMS'])
-	)
-
 
 def validate_password(username, password):	
 	# Get user password from db
@@ -79,8 +92,13 @@ def validate_password(username, password):
 	with engine.connect() as conn:
 		cursor = conn.execute(f'''SELECT hashed_password FROM users WHERE ad_username='{username}';''')
 		result = cursor.first()
+		# If the result is an empty list, the user doesn't exist
 		if not result:
 			raise ValueError(f'Password query failed because user {username} does not exist')
+		# if the result is None, this is a new user whose password isn't set
+		if not result[0]:
+			return True
+
 		hashed_password = result[0].encode('utf-8')
 	if not hashed_password:
 		raise RuntimeError('Could not connect to database')
@@ -105,15 +123,18 @@ def add_header(response):
         response.headers['Cache-Control'] = 'no-store'
     return response
 
+
 ###############################################
 # -------------- endpoints ------------------ #
 ###############################################
 # **for testing**
 @app.route('/flask/test', methods=['GET', 'POST'])
 def test():
-	return json.dumps(request.remote_user)
+	
+	return json.dumps([request.url_root])
 
 
+# -------------- User Management ---------------- #
 # Get username and role
 @app.route('/flask/userInfo', methods=['POST'])
 def get_user_info():
@@ -127,7 +148,7 @@ def get_user_info():
 	if not username:
 		return 'ERROR: no auth_user'
 
-	sql = f'''SELECT '{username}' AS ad_username, user_role_code, user_status_code, first_name, last_name FROM users WHERE ad_username='{username}' '''
+	sql = f'''SELECT id, '{username}' AS ad_username, user_role_code, user_status_code, first_name, last_name FROM users WHERE ad_username='{username}' '''
 	engine = connect_db()
 	user_info = pd.read_sql(sql, engine)
 	if len(user_info) == 0:
@@ -141,21 +162,21 @@ def get_user_info():
 @app.route('/flask/setPassword', methods=['POST'])
 def set_password():
 	data = request.form
-	old_password = data['oldPassword']
+	old_password = data['old_password'] if 'old_password' in data else ''
 	username = data['username']
 	
 	# If the user's old passord is wrong, return false
-	if not validate_password(username, old_password):
+	if old_password and not validate_password(username, old_password):
 		return 'false'
 
 	# encrypt the new password
-	new_password = data['newPassword']
+	new_password = data['new_password']
 	salt = bcrypt.gensalt()
 	hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), salt)
 	
 	# Update db
 	engine = connect_db()
-	engine.execute(f'''UPDATE users SET hashed_password='{hashed_password.decode()}' WHERE ad_username='{username}';''')
+	engine.execute(f'''UPDATE users SET hashed_password='{hashed_password.decode()}', user_status_code=2 WHERE ad_username='{username}';''')
 
 	return 'true'
 
@@ -165,57 +186,100 @@ def set_password():
 def check_password():
 	# Get user input
 	data = request.form
-	user_input = data['clientPassword']
+	user_input = data['client_password']
 	username = data['username']
 	
 	# Until I implemeent ORM-driven queries, a single-quote will screw up the SQL statements 
-	if "'" in user_input:
-		return 'false'
+	# if "'" in user_input:
+	# 	return 'false'
 
 	# Check if the password is right
 	is_valid = validate_password(username, user_input)
 
 	return json.dumps(is_valid)
 
+# -------------- User Management ---------------- #
 
-# Send account request email
-@app.route('/flask/request_email.html')
-def request_email_test():
+
+#--------------- Email notifications ---------------------#
+def get_email_logo_base64(): 
+	""" Helper method to get logo image data for email messages """
 	with open('imgs/climberdb_icon_100px.jpg', 'rb') as f:
-		base64_str = base64.b64encode(f.read())
-	data = {
-		'first_name': 'Sam',
-		'last_name': 'Hooper',
-		'logo_base64_string': 'data:image/jpg;base64,' + base64_str.decode('utf-8'),
-		'request_id': '11111',
-		'users_page_url': 'http://inpdenaterm01.nps.doi.net:9006/users.html'
-	}
-	html = render_template('request_email.html', **data)
-	return html
+		return base64.b64encode(f.read()).decode('utf-8')
 
+# account request
+# @app.route('/flask/notifications/accountRequest', methods=['POST'])
+# def send_account_request():
+# 	data = request.form
+# 	data = dict(request.form)
 
-@app.route('/flask/accountRequest', methods=['POST'])
+# 	# get logo iimage data
+# 	with open('imgs/climberdb_icon_100px.jpg', 'rb') as f:
+# 		base64_str = base64.b64encode(f.read())
+# 	data['logo_base64_string'] = 'data:image/jpg;base64,' + base64_str.decode('utf-8')
+# 	data['request_id'] = '1094874'
+# 	data['button_url'] = request.base_url + '/users.html?request_id=' + request_id
+	
+# 	html = render_template('account_request_email.html', **data)
+# 	mailer = Mail(app)
+# 	msg = Message(
+# 		subject='New climber permit portal account request',
+# 		recipients=app.config['PROGRAM_ADMIN_EMAIL'], #should get from users table
+# 		html=html,
+# 		reply_to=app.config['DB_ADMIN_EMAIL'])
+# 	mailer.send(msg)
+
+# 	return 'true';
+
+# new account creation
+# This endpoint sends an activation notification to a user whose account was just created by an admin
+@app.route('/flask/notifications/accountActivation', methods=['POST'])
 def send_account_request():
-	data = request.form
 	data = dict(request.form)
 
-	# get logo iimage data
-	with open('imgs/climberdb_icon_100px.jpg', 'rb') as f:
-		base64_str = base64.b64encode(f.read())
-	data['logo_base64_string'] = 'data:image/jpg;base64,' + base64_str.decode('utf-8')
-	data['request_id'] = '1094874'
-	data['users_page_url'] = 'http://inpdenaterm01.nps.doi.net:9006/users.html'
-	
-	html = render_template('account_request_email.html', **data)
+	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
+	data['button_url'] = f'''{request.url_root.strip('/')}/index.html?activation=true&id={data['user_id']}'''
+	data['button_text'] = 'Activate Account'
+	data['heading_title'] = 'Activate your Denali Climbing Permit Portal account'
+
+	html = render_template('email_notification_activation.html', **data)
+
 	mailer = Mail(app)
 	msg = Message(
-		subject='New climber permit portal account request',
-		recipients=app.config['PROGRAM_ADMIN_EMAIL'], #should get from users table
+		subject=data['heading_title'],
+		recipients=[data['username'] + '@nps.gov'],
 		html=html,
-		reply_to=app.config['DB_ADMIN_EMAIL'])
+		reply_to=app.config['db_admin_email']
+	)
 	mailer.send(msg)
 
 	return 'true';
+
+# reset password
+# This endpoint sends a password reset email to a user
+@app.route('/flask/notifications/resetPassword', methods=['POST'])
+def send_reset_password_request():
+	data = dict(request.form)
+
+	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
+	data['button_url'] = f'''{request.url_root.strip('/')}/index.html?reset=true&id={data['user_id']}'''
+	data['button_text'] = 'Reset Password'
+	data['heading_title'] = 'Reset Denali Climbing Permit Portal account password'
+
+	html = render_template('email_notification_reset_password.html', **data)
+
+	mailer = Mail(app)
+	msg = Message(
+		subject=data['heading_title'],
+		recipients=[data['username'] + '@nps.gov'],
+		html=html,
+		reply_to=app.config['db_admin_email']
+	)
+	mailer.send(msg)
+
+	return 'true';
+
+#--------------- Email notifications ---------------------#
 
 
 
@@ -233,36 +297,9 @@ def hello_pdf(name):
     return render_pdf(HTML(string=html))
 
 
-@app.route('/flask/reports/confirmation_letter/<expedition_id>', methods=['GET', 'POST'])
-def get_confirmation_letter_html(expedition_id):
-	if request.method == 'GET':
-		data = json.loads('''
-			{"expedition_name":"Some expedition","leader_full_name":"Leader Name","planned_departure_date":"2022-1-1","total_payment":"300.00","total_climbers":"5", "something":"1", "climbers":"[{\\"full_name\\": \\"Climber 1\\"},{\\"full_name\\":\\"Climber 2\\"}]","cancellation_fee":"100.00"}
-					''')
-	else:
-		data = dict(request.form)
-	# For some stupid reason, the array comes in as a single value, so I encode it as a 
-	#	JSON string client side and it needs to be decoded here
-	data['climbers'] = json.loads(data['climbers'])
-	# Reformat date to be more human-readable
-	data['planned_departure_date'] = datetime.strptime(
-			data['planned_departure_date'], '%Y-%m-%d'
-		).strftime('%B %#d, %Y')
-	
-	# Get HTML string
-	return render_template('confirmation_letter.html', **data)
-
-
-@app.route('/flask/reports/confirmation_letter/<expedition_id>.pdf', methods=['GET', 'POST'])
+@app.route('/flask/reports/confirmation_letter/<expedition_id>.pdf', methods=['POST'])
 def get_confirmation_letter(expedition_id):
-	#data = dict(request.form)
-	
-	if request.method == 'GET':
-		data = json.loads('''
-			{"expedition_name":"Some expedition","leader_full_name":"Leader Name","planned_departure_date":"2022-1-1","total_payment":"300.00","total_climbers":"5", "something":"1", "climbers":"[{\\"full_name\\": \\"Climber 1\\"},{\\"full_name\\":\\"Climber 2\\"}]","cancellation_fee":"100.00"}
-					''')
-	else:
-		data = dict(request.form)
+	data = dict(request.form)
 
 	# For some stupid reason, the array comes in as a single value, so I encode it as a 
 	#	JSON string client side and it needs to be decoded here
@@ -281,28 +318,6 @@ def get_confirmation_letter(expedition_id):
 	# return HTML as PDF binary data
 	pdf_data = weasyprint.render_pdf(weasyprint.HTML(string=html))
 	return pdf_data
-
-
-@app.route('/flask/reports/registration_card/<expedition_id>', methods=['POST'])
-def get_registration_card_html(expedition_id):
-	data = dict(request.form)
-
-	# For some stupid reason, arrays come in as a single value, so I encode it as a 
-	#	JSON string client side and it needs to be decoded here
-	data['climbers'] = json.loads(data['climbers'])
-	data['routes'] = json.loads(data['routes'])
-	for prop in data:
-		if prop.endswith('_date'):
-			data[prop] = datetime.strptime(
-					data[prop], '%Y-%m-%d'
-				).strftime('%#m/%#d/%Y')
-
-	data['checkmark_character'] = '\u2714';
-
-	# Get HTML string
-	html = render_template('registration_card.html', **data)
-
-	return html
 
 
 @app.route('/flask/reports/registration_card/<expedition_id>.pdf', methods=['POST'])
@@ -328,6 +343,8 @@ def get_registration_card(expedition_id):
 	pdf_data = weasyprint.render_pdf(weasyprint.HTML(string=html))
 	
 	return pdf_data
+
+#--------------- Reports ---------------------#
 
 
 if __name__ == "__main__":
