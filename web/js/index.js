@@ -335,8 +335,11 @@ class ClimberDBIndex extends ClimberDB {
 		if ( ('activation' in urlParams) || ('reset' in urlParams) ) {
 			this.toggleFormElements('.activation-element' + ('changePassword' in urlParams ? ', .change-password-element' : '') );
 			$formContainer.addClass('activation');
+			// If somehow the id param isn't in the URL query, tell the user and exit 
+			//	because no other initialization should occur
 			if (!('id' in urlParams)) {
 				this.showActivationErrorMessage('#bad-url-activation-message');
+				return;
 			}
 
 			if ( ('reset' in urlParams) || ('changePassword' in urlParams) ) {
@@ -350,6 +353,7 @@ class ClimberDBIndex extends ClimberDB {
 					.data('mode', 'reset')
 					.siblings('.field-label')
 						.text('Old password');
+				$('#hide-reset-password-button').text('back to change password')
 
 			}
 		}
@@ -365,6 +369,7 @@ class ClimberDBIndex extends ClimberDB {
 				if ($formContainer.is('.activation')) {
 					if (parseInt(urlParams.id) !== parseInt(this.userInfo.id)) {
 						this.showActivationErrorMessage('#incorrect-user-activation-message');
+						return;
 					}
 				} 
 
@@ -393,8 +398,12 @@ class ClimberDBIndex extends ClimberDB {
 		});
 
 		// Hide request access stuff when someone clicks the back-to-sign-in button
-		$('.back-to-sing-in-button').click(() => {
-			this.toggleFormElements('.login-element');
+		$('.back-to-sign-in-button').click(e => {
+			this.toggleFormElements(
+				window.location.search.match('changePassword') ? 
+				'.activation-element, .change-password-element' : 
+				'.login-element'
+			);
 		})
 
 		// Send email to admins when someone requests access
