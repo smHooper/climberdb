@@ -29,8 +29,16 @@
 	position: absolute;
 	right: 20px;
 	/*top: 10px;*/
-	height: 70px;
-	width: 70px;
+	transition: 0.25s all;
+	border-radius: 7px;
+	height: 60px;
+	width: 60px;
+	padding: 5px;
+}
+.show-query-options-button:hover, 
+.show-query-options-button:focus {
+/* 	background: #faaf00bb; */
+	background: #219ebc4d;
 }
 .search-option-drawer {
 	width: 100%;
