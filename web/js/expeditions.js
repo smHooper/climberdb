@@ -38,7 +38,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						<option value="">Click to select an expedition</option>
 					</select>
 					<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
-					<button class="show-query-options-button icon-button">
+					<button class="show-query-options-button icon-button" title="Expedition filter options">
 						<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg">
 					</button>
 					<div class="search-option-drawer collapse">
@@ -125,11 +125,11 @@ class ClimberDBExpeditions extends ClimberDB {
 					<button id="edit-expedition-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Edit expedition" title="Edit expediton">
 						<i class="fas fa-2x fa-edit"></i>
 					</button>
-					<button id="open-reports-modal-button" class="expedition-edit-button icon-button" type="button" aria-label="Open exports menu" title="Open exports menu">
+					<button id="open-reports-modal-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Open exports menu" title="Open exports menu">
 						<i class="fas fa-2x fa-file-export"></i>
 					</button>
 				</div>
-				<button id="add-new-expedition-button" class="generic-button">new expedition</button>
+				<button id="add-new-expedition-button" class="generic-button" title="New Expedition">new expedition</button>
 			</div>
 			<div class="expedition-content uneditable">
 				<!-- expedition info --> 
@@ -190,7 +190,7 @@ class ClimberDBExpeditions extends ClimberDB {
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
 								<div class="field-container col-sm-6">
-									<select id="input-air_taxi" class="input-field default" name="air_taxi_code" data-table-name="expeditions" placeholder="Air taxi" title="Air taxi" type="text" autocomplete="off" required=""></select>
+									<select id="input-air_taxi" class="input-field default" name="air_taxi_code" data-table-name="expeditions" data-default-value="-1" placeholder="Air taxi" title="Air taxi" type="text" autocomplete="off" required=""></select>
 									<span class="required-indicator">*</span>
 									<label class="field-label" for="input-air_taxi">Air taxi</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
@@ -590,17 +590,27 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#add-new-expedition-button').click(e => {
+			// Clear fields and data
 			this.clearExpeditionInfo();
+
+			// Set header values
 			$('#expedition-entered-by-result-summary-item .result-details-summary-value')
 				.text(this.userInfo.ad_username);
 			$('#expedition-entry-time-result-summary-item .result-details-summary-value')
 				.text((new Date()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}));	
-			$('#expedition-search-bar')
-				.prepend('<option value="">Select an expedition to view</option>')
-				.val('')
-				.addClass('default');
+			
+			// Reset the search bar value to the default 
+			const $searchBar = $('#expedition-search-bar');
+			var $defaultOption = $searchBar.find('option[value=""]'); 
+			if (!$defaultOption.length) {
+				$defaultOption = $searchBar.prepend('<option value="">Select an expedition to view</option>')
+			} 
+			$searchBar.val('').addClass('default');
+			
 			$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
-			$('#input-expedition_name').focus();
+
+			// For some reason, setting the focus doesn't work unless there's a delay
+			setTimeout( ()=>{ $('#input-expedition_name').focus() }, 100);
 
 			// Show edit toggle button
 			$('#edit-expedition-button').ariaHide(false);
@@ -1683,6 +1693,8 @@ class ClimberDBExpeditions extends ClimberDB {
 
 				// Hide the save button again since there aren't any edits
 				$('#save-expedition-button').ariaHide(true);
+				// but open the reports modal button since there's something to show
+				$('#open-reports-modal-button').ariaHide(false);
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
@@ -1746,7 +1758,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
 
 		const onConfirmClick = `
-			showLoadingIndicator();
+			showLoadingIndicator('saveEdits');
 			climberDB.saveEdits(); 
 		`;
 		
@@ -2221,7 +2233,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		// Show edit toggle button
-		$('#edit-expedition-button').ariaHide(false);
+		$('#edit-expedition-button, #open-reports-modal-button').ariaHide(false);
 
 		// .change() events trigger onInputChange() so undo that stuff
 		$('.input-field.dirty').removeClass('dirty');
@@ -2262,6 +2274,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			transactions: {}, // props are exp. member IDs
 			cmc_checkout: {data: {}, order: []}
 		}
+
+		// Hide edit/export buttons
+		$('.expedition-edit-button').ariaHide(true);
 
 	}
 
