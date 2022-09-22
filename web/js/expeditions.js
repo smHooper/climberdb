@@ -190,8 +190,7 @@ class ClimberDBExpeditions extends ClimberDB {
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
 								<div class="field-container col-sm-6">
-									<select id="input-air_taxi" class="input-field default" name="air_taxi_code" data-table-name="expeditions" data-default-value="-1" placeholder="Air taxi" title="Air taxi" type="text" autocomplete="off" required=""></select>
-									<span class="required-indicator">*</span>
+									<select id="input-air_taxi" class="input-field default" name="air_taxi_code" data-table-name="expeditions" data-default-value="-1" placeholder="Air taxi" title="Air taxi" type="text" autocomplete="off"></select>
 									<label class="field-label" for="input-air_taxi">Air taxi</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
@@ -200,12 +199,6 @@ class ClimberDBExpeditions extends ClimberDB {
 								<div class="field-container col-sm-6">
 									<select id="input-special_group_type" class="input-field default" name="special_group_type_code" data-table-name="expeditions" placeholder="Special group type" title="Special group type" type="text" autocomplete="off"></select>
 									<label class="field-label" for="input-special_group_type">Special group type</label>
-									<span class="null-input-indicator">&lt; null &gt;</span>
-								</div>	
-								<div class="field-container col-sm-6">
-									<input id="input-permit_number" class="input-field" name="permit_number" data-table-name="expeditions" placeholder="Permit number" title="Permit number" type="number" autocomplete="off" required="">
-									<span class="required-indicator">*</span>
-									<label class="field-label" for="input-permit_number">Permit number</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
 							</div>
@@ -557,9 +550,17 @@ class ClimberDBExpeditions extends ClimberDB {
 			</div>
 		`);
 		
+		// Show/hide the expedition filter options when the toggle button is clicked
 		$('.show-query-options-button').on('click', e => {
 			$('.search-option-drawer').collapse('toggle');
 		});
+		// Hide the filter options drawer (if it's shown) when the user clicks outside of it
+		$(document).on('click', e => {
+			const $drawer = $('.search-option-drawer');
+			if (!$(e.target).closest('.collapse.search-option-drawer').length && $drawer.is('.show')) {
+				$drawer.collapse('hide');
+			}
+		})
 
 		$('#edit-expedition-button').click(e => {
 			this.toggleEditing();
@@ -612,8 +613,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			// For some reason, setting the focus doesn't work unless there's a delay
 			setTimeout( ()=>{ $('#input-expedition_name').focus() }, 100);
 
-			// Show edit toggle button
-			$('#edit-expedition-button').ariaHide(false);
+			// Hide all expedition buttons except delete
+			$('.expedition-edit-button').ariaHide(true);
 			this.toggleEditing(true);
 		});
 
