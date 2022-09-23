@@ -576,6 +576,10 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.saveEdits();
 		});
 
+		$('#delete-expedition-button').click(() => {
+			this.onDeleteExpeditionButtonClick();
+		})
+
 		$('#open-reports-modal-button').click(e => {
 			// Check if there are unsaved edits and ask the user to confirm
 			if ($('.input-field.dirty:not(#input-export_type)').length) {
@@ -596,32 +600,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#add-new-expedition-button').click(e => {
-
-			// Set header values
-			$('#expedition-entered-by-result-summary-item .result-details-summary-value')
-				.text(this.userInfo.ad_username);
-			$('#expedition-entry-time-result-summary-item .result-details-summary-value')
-				.text((new Date()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}));	
-			
-			// Reset the search bar value to the default 
-			const $searchBar = $('#expedition-search-bar');
-			var $defaultOption = $searchBar.find('option[value=""]'); 
-			if (!$defaultOption.length) {
-				$defaultOption = $searchBar.prepend('<option value="">Select an expedition to view</option>')
-			} 
-			$searchBar.val('').addClass('default');
-			
-			$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
-
-			// For some reason, setting the focus doesn't work unless there's a delay
-			setTimeout( ()=>{ $('#input-expedition_name').focus() }, 100);
-
-			// Hide all expedition buttons except delete
-			$('.expedition-edit-button').ariaHide(true);
-			this.toggleEditing(true);
-
-			// Clear fields and data
-			this.clearExpeditionInfo();
+			this.onNewExpeditionButtonClick();
 		});
 
 		$('.accordion .card-collapse').on('shown.bs.collapse', e => {
@@ -1785,6 +1764,48 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	deleteExpedition() {
+		const expeditionID = this.expeditionInfo.expeditions.id;
+		// If this is a new expedition, just discard UI edits
+		if (!expeditionID) {
+			this.discardEdits();
+			return $.Deferred().resolve(true);
+		} else {
+			showLoadingIndicator('deleteExpedition');
+			const sql = `DELETE FROM expeditions WHERE id=${expeditionID} RETURNING id`;
+			return this.queryDB(sql).done(queryResultString => {
+				if (this.queryReturnedError(queryResultString)) {
+					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
+					return;
+				} else {
+					// Remove the expedition from the search bar (if it exists, i.e., is from the current year)
+					$(`#expedition-search-bar option[value=${expeditionID}]`).remove();
+					this.clearExpeditionInfo();
+				}
+			}).fail((xhr, status, error) => {
+				showModal(`An unexpected error occurred while deleting data from the database: ${error}.`, 'Unexpected error');
+			}).always(() => {
+				hideLoadingIndicator();
+			});
+
+		}
+	}
+
+	onDeleteExpeditionButtonClick() {
+		const message = this.expeditionInfo.expeditions.id ? 
+			'Are you sure you want to delete this expedition? All expedition member, transaction,' + 
+				' and route information for this expedition will be deleted. <strong>This action'  + 
+				' is permanent and cannot be undone.</strong>' :
+			'Are you sure you want to delete this new expedition? If you click "Delete", all your' + 
+				' edits will be removed.';
+		const footerButtons = `
+			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
+			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.deleteExpedition()">Delete</button>
+		`;
+		showModal(message, 'Delete Expedition?', 'confirm', footerButtons);
+	} 
+
+
 	/*
 	Dynamically make a PDF of the specified type. Send a request to the Flask backend 
 	to make the PDF from a Jinja template filled in with the current expedition's data
@@ -2025,9 +2046,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		if (queryStrings.length === 0) return;
 
-		const searchBy = $('#search-by-select').val() || 'expedition_name';
 		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
-		const sql = `SELECT DISTINCT expedition_id, expedition_name FROM expedition_info_view ${whereClause} ORDER BY ${searchBy}`;
+		const sql = `SELECT DISTINCT expedition_id, expedition_name FROM expedition_info_view ${whereClause} ORDER BY expedition_name`;
 		this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
@@ -2038,7 +2058,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					if (result.length) {
 						$select.append('<option value="">Click to select an expedition</option>')
 						for (const row of result) {
-							$select.append(`<option value="${row.expedition_id}">${row[searchBy]}</option>`)
+							$select.append(`<option value="${row.expedition_id}">${row.expedition_name}</option>`)
 						}
 					} else {
 						$select.append('<option value="">No expeditions match your search</option>');
@@ -2050,6 +2070,53 @@ class ClimberDBExpeditions extends ClimberDB {
 			});
 		
 	}
+
+
+	/*
+	Helper function to clear UI for creating a new expedition. Mostly necessary to ask user 
+	to save edits if there are any and for after a successful expedition delete
+	*/
+	createNewExpedition() {
+		// Set header values
+		$('#expedition-entered-by-result-summary-item .result-details-summary-value')
+			.text(this.userInfo.ad_username);
+		$('#expedition-entry-time-result-summary-item .result-details-summary-value')
+			.text((new Date()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}));	
+		
+		// Reset the search bar value to the default 
+		const $searchBar = $('#expedition-search-bar');
+		var $defaultOption = $searchBar.find('option[value=""]'); 
+		if (!$defaultOption.length) {
+			$defaultOption = $searchBar.prepend('<option value="">Select an expedition to view</option>')
+		} 
+		$searchBar.val('').addClass('default');
+		
+		$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
+
+		// For some reason, setting the focus doesn't work unless there's a delay
+		setTimeout( ()=>{ $('#input-expedition_name').focus() }, 100);
+
+		// Hide all expedition buttons except delete
+		$('.expedition-edit-button').ariaHide(true);
+		this.toggleEditing(true);
+
+		// Clear fields and data
+		this.clearExpeditionInfo();
+	}
+
+
+	/*
+	Event handler for add-new-expedition-button
+	*/
+	onNewExpeditionButtonClick() {
+
+		if ($('.input-field.dirty').length) {
+			this.confirmSaveEdits({afterActionCallbackStr: 'climberDB.createNewExpedition();'})
+		} else {
+			this.createNewExpedition()
+		}
+	}
+
 
 
 	addExpeditionMemberCard({expeditionMemberID=null, firstName=null, lastName=null, climberID=null, showCard=false, isNewCard=false}={}) {
@@ -2441,7 +2508,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		return this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An unexpected error occurred while delete data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
+					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
 					return;
 				} else {
 					const failedDeletes = [];
