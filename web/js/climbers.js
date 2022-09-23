@@ -376,12 +376,12 @@ class ClimberForm {
 														<label class="field-label" for="input-phone">Phone</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
-													<div class="field-container col-sm-6">
+													<!--<div class="field-container col-sm-6">
 														<input id="input-email_contact" class="input-field default" name="email_address" data-table-name="emergency_contacts" placeholder="Email" title="Email" type="text" autocomplete="off" required="">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-email">Email</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
-													</div>	
+													</div>-->
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col">
