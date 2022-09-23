@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	id SERIAL PRIMARY KEY,
 	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	climber_id INTEGER REFERENCES climbers(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	permit_number VARCHAR(50) UNIQUE,
 	datetime_reserved TIMESTAMP,
 	datetime_canceled TIMESTAMP,
 	early_return_date DATE,

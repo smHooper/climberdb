@@ -706,16 +706,26 @@ class ClimberDB {
 	}
 
 
-	/**/
+	/*
+	Helper function to reset the values/classes of all inputs within a given parent to their defaults
+	*/
 	clearInputFields({parent='body', triggerChange=true}={}) {
-		for (const el of $(parent).find('*:not(.cloneable) .input-field:not(.no-option-fill)')) {
+		for (const el of $(parent).find('.input-field:not(.no-option-fill)')) {
 			const $el = $(el);
+			
+			// Skip any input-fields with a cloneable parent can't filter these out in .find() 
+			//	because inputs that are the descendants of .cloneables aren't the **immediate** 
+			//	descendants of .cloneables so there's always a non-.clineable parent in 
+			//	between the .cloneable and the input. Those inputs, therefore, don't get filtered out
+			if ($el.closest('.cloneable').length) continue;
+
 			const defaultValue = $el.data('default-value')
 			if ($el.is('.input-checkbox')) {
-				$el.prop('checked', defaultValue || false); //bool vals from postgres are returned as either 't' or 'f'
+				$el.prop('checked', defaultValue || false); 
 			} else if ($el.is('select')) {
 					el.value = defaultValue || '';
-					if (!defaultValue) $el.addClass('default');
+					$el.toggleClass('default', !defaultValue)
+						.change();
 			} else {
 				el.value = defaultValue || null;
 			}
@@ -972,9 +982,12 @@ class ClimberDB {
 			if (isCheckbox) {
 				$el.prop('checked', value === 't'); //bool vals from postgres are returned as either 't' or 'f'
 			} else {
-				$el.val(value);
+				
 				if (isSelect) {
+					$el.val(value === null ? '' : value); //if the db record isn't filled in, set it to the default
 					$el.toggleClass('default', value == null || value == '');
+				} else {
+					$el.val(value);
 				}
 			}
 		} else if (isSelect) {

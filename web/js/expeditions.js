@@ -63,7 +63,7 @@ class ClimberDBExpeditions extends ClimberDB {
 									<label class="query-option-label" for="query-option-group_status">Group status</label>
 								</div>
 								<div class="query-option-condition-container checkbox-option-group">
-									<select id="query-option-group_status" class="input-field query-option-input-field select2-no-tag" multiple="multiple" data-field-name="group_status_code" data-lookup-table="group_status_codes">
+									<select id="query-option-group_status" class="input-field query-option-input-field select2-no-tag ignore-changes" multiple="multiple" data-field-name="group_status_code" data-lookup-table="group_status_codes">
 									</select>
 								</div>
 							</div>
@@ -122,7 +122,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					<button id="delete-expedition-button" class="expedition-edit-button icon-button delete-expedition-button hidden" type="button" aria-label="Delete expedition" title="Delete expedition" aria-hidden="true">
 						<i class="fas fa-2x fa-trash"></i>
 					</button>
-					<button id="edit-expedition-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Edit expedition" title="Edit expediton">
+					<button id="edit-expedition-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Edit expedition" title="Edit expedition">
 						<i class="fas fa-2x fa-edit"></i>
 					</button>
 					<button id="open-reports-modal-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Open exports menu" title="Open exports menu">
@@ -137,8 +137,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<div class="expedition-data-header-content">	
-								<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Expedition Name" name="expedition_name" data-table-name="expeditons" title="Expedition name" autocomplete="off">
-								<select id="input-group_status" class="input-field" name="group_status_code" data-table-name="expeditons" title="Group status" autocomplete="off" data-default-value=1></select>
+								<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Expedition Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="off">
+								<select id="input-group_status" class="input-field" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="off" data-default-value=1 tabindex=-1></select>
 							</div>
 							<div class="expedition-data-header-content">							
 								<div id="entered-by-result-summary-item" class="result-details-summary-item col-6">
@@ -301,6 +301,11 @@ class ClimberDBExpeditions extends ClimberDB {
 														</div>
 													</div>
 													<div class="field-container-row">
+														<div class="field-container col-sm-6">
+															<input id="input-permit_number" class="input-field" name="permit_number" data-table-name="expedition_members" placeholder="Permit number" title="Permit number" type="number" autocomplete="off">
+															<label class="field-label" for="input-permit_number">Permit number</label>
+															<span class="null-input-indicator">&lt; null &gt;</span>
+														</div>	
 														<div class="field-container checkbox-field-container col-sm-6">
 															<label class="checkmark-container">
 																<input id="input-is_illegal_guide" class="input-field input-checkbox" type="checkbox" name="is_illegal_guide" data-table-name="expedition_members" title="Illegal guide">
@@ -316,8 +321,8 @@ class ClimberDBExpeditions extends ClimberDB {
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 														<div class="field-container collapse col-6">
-															<input id="input-datetime_cancelled" class="input-field" name="datetime_cancelled" data-table-name="expedition_members" placeholder="Date cancelled" title="Date cancelled" type="date" data-dependent-target="#input-reservation_status" data-dependent-value="6" autocomplete="off">
-															<label class="field-label" for="input-datetime_cancelled">Date cancelled</label>
+															<input id="input-datetime_canceled" class="input-field" name="datetime_canceled" data-table-name="expedition_members" placeholder="Date canceled" title="Date canceled" type="date" data-dependent-target="#input-reservation_status" data-dependent-value="6" autocomplete="off">
+															<label class="field-label" for="input-datetime_canceled">Date canceled</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 													</div>
@@ -591,8 +596,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#add-new-expedition-button').click(e => {
-			// Clear fields and data
-			this.clearExpeditionInfo();
 
 			// Set header values
 			$('#expedition-entered-by-result-summary-item .result-details-summary-value')
@@ -616,6 +619,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			// Hide all expedition buttons except delete
 			$('.expedition-edit-button').ariaHide(true);
 			this.toggleEditing(true);
+
+			// Clear fields and data
+			this.clearExpeditionInfo();
 		});
 
 		$('.accordion .card-collapse').on('shown.bs.collapse', e => {
@@ -824,15 +830,15 @@ class ClimberDBExpeditions extends ClimberDB {
 			$checkbox.closest('.leader-checkbox-container').toggleClass('transparent', !isChecked);
 		})
 
-		// Set the cancelled time when the reservation status is set to cancelled
+		// Set the canceled time when the reservation status is set to canceled
 		// also check all other reservation status fields to see if the whole group is ready
 		$(document).on('change', '.reservation-status-field', e => {
 			const $select = $(e.target);
 			const value = $select.val();
 			const cardID = $select.attr('id').match(/-\d+$/).toString();
 			const now = getFormattedTimestamp();
-			// 6 === cancelled
-			$(`#input-datetime_cancelled${cardID}`).val(value == 6 ? now : null).change();
+			// 6 === canceled
+			$(`#input-datetime_canceled${cardID}`).val(value == 6 ? now : null).change();
 
 			const reservationStatuses = $select.closest('.accordion').find('.card:not(.cloneable) .reservation-status-field')
 				.map((_, el) => el.value)
@@ -895,6 +901,12 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// When new route card is added, make sure it has all of the (not canceled) expedition members
 		$('#routes-data-container .add-card-button').click(e => {
+
+			if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
+				showModal('You must add at least one expedition member before you can add a route.', 'Invalid action');
+				return;
+			}
+
 			const $newCard = this.addNewCard($($(e.target).data('target')), {accordionName: 'routes', newCardClass: 'new-card'});
 			
 			// Use the UI to rather than in-memory data to add all active expedition members because
@@ -920,7 +932,9 @@ class ClimberDBExpeditions extends ClimberDB {
 				const mountainCode = $target.val();
 				const $routeHeaderSelect = $target.siblings('.route-code-header-input')
 					.empty();//remove all options
-				const mountainRoutes = Object.values(this.routeCodes).filter(r => r.mountain_code == mountainCode);
+				const mountainRoutes = Object.values(this.routeCodes)
+					.filter(r => r.mountain_code == mountainCode)
+					.sort((a, b) => a.sort_order - b.sort_order);
 				for (const route of mountainRoutes) {
 					$routeHeaderSelect.append($(`<option value="${route.code}">${route.name}</option>`))
 				}
@@ -1241,7 +1255,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				// If this is a checkbox, the new value needs to be converted to PostreSQL's boolean as intepreted by PHP
 				if ($input.is('.input-checkbox')) newValue = newValue ? 't' : 'f';
 
-				if (valueChanged || dbValue != newValue) valueChanged = true;
+				valueChanged = valueChanged || dbValue != newValue;
 			}
 
 			$input.toggleClass('dirty', valueChanged);
@@ -1595,15 +1609,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
 			cache: false
 		}).done(queryResultString => {
-			//****** error catching helper no longer works for some reason
 			if (climberDB.queryReturnedError(queryResultString)) { 
 				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-				// roll back in-memory data
-				for (const dbID in updates.climbers) {
-					for (const fieldName in updates.climbers[dbID]) {
-						climberInfo[fieldName] = originalDataValues[dbID][fieldName];
-					}
-				}
 				return;
 			} else {
 				const result = $.parseJSON(queryResultString)
@@ -1800,7 +1807,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Get climber and leader info
 		const climbers = Object.values(this.expeditionInfo.expedition_members.data).flatMap(info => {
-			// Skip cancelled climbers
+			// Skip canceled climbers
 			if (info.reservation_status_code == 6) return []; // flatmap will remove this
 
 			// destructure the climber's info and get just first_name and last_name
@@ -2020,7 +2027,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		const searchBy = $('#search-by-select').val() || 'expedition_name';
 		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
-		const sql = `SELECT DISTINCT expedition_id, expedition_name, permit_number FROM expedition_info_view ${whereClause} ORDER BY ${searchBy}`;
+		const sql = `SELECT DISTINCT expedition_id, expedition_name FROM expedition_info_view ${whereClause} ORDER BY ${searchBy}`;
 		this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
@@ -2246,15 +2253,22 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Clear any previously loaded data
 		$('.accordion .card:not(.cloneable), .data-list li:not(.cloneable)').remove();
 
-		/*for (const el of $('*:not(.cloneable) .input-field')) {
-			const $input = $(el);
-			$input.data('table-id', null)
-				.val(null);
-			if ($input.is('select')) {
-				$input.addClass('default')
-					.val($input.data('default-value'));
-			}
-		}*/
+		// Reset expetion data with just fields with defaults. Set them to null so that when .clearInputFields() 
+		//	calls .change() the value is different and the .dirty class is added
+		const defaultExpeditionValues = Object.fromEntries(
+			$('#expedition-data-container .input-field[data-default-value]').map(
+				(_, el) => [[el.name, null]] // for some stupid reason, jQuery flattens the array, so a 2D array becomes 1D
+			).get()
+		);
+		// Clear in-memory data
+		this.expeditionInfo = {
+			expeditions: {...defaultExpeditionValues}, // each field is a property
+			expedition_members: {data: {}, order: []}, 
+			expedition_member_routes: {data: {}, order: []},
+			transactions: {}, // props are exp. member IDs
+			cmc_checkout: {data: {}, order: []}
+		}
+
 		this.clearInputFields({triggerChange: false});
 		
 		// clearInputFields sets the class to default if the value = '', and these unputs are currently empty 
@@ -2266,18 +2280,12 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 		//$('#input-expedition_name').val('New Expedition Name');
 		$('#input-group_status').val(1);//=pending
-		
-		// Clear in-memory data
-		this.expeditionInfo = {
-			expeditions: {}, // each field is a property
-			expedition_members: {data: {}, order: []}, 
-			expedition_member_routes: {data: {}, order: []},
-			transactions: {}, // props are exp. member IDs
-			cmc_checkout: {data: {}, order: []}
-		}
 
 		// Hide edit/export buttons
 		$('.expedition-edit-button').ariaHide(true);
+
+		// Not sure why, but a few selects in the climber form get .change triggered so turn the .dirty class off
+		$('#add-climber-form-modal-container .input-field.dirty').removeClass('dirty');
 
 	}
 
