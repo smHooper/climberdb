@@ -326,6 +326,10 @@ class ClimberDBIndex extends ClimberDB {
 	}
 
 
+	showDisabledUserMessage(messageSelector) {
+
+	}
+
 	init() {
 
 		// If the user was bounced back to the sign-in page after trying to visit another page, 
@@ -367,6 +371,16 @@ class ClimberDBIndex extends ClimberDB {
 		$.when(...initDeferreds)
 			.done(resultString => {
 				const username = this.userInfo.ad_username;
+				const userStatus = this.userInfo.user_status_code;
+
+				// If the user's account has been disabled, don't let them do anything else
+				if (userStatus == -1) {
+					$formContainer.addClass('activation')
+						.children().not('#activation-error-message-container').remove();
+					this.showActivationErrorMessage('#disabled-user-activation-message');
+					return;
+				}
+
 				// If the user is activating a new account or resetting their passowrd, 
 				//	check that the userID in the URL params matches the Windows username 
 				//	retrieved from the server
