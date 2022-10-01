@@ -166,8 +166,9 @@ def set_password():
 	username = data['username']
 	
 	# If the user's old passord is wrong, return false
-	if old_password and not validate_password(username, old_password):
-		return 'false'
+	if old_password:
+		if not validate_password(username, old_password):
+			return 'false'
 
 	# encrypt the new password
 	new_password = data['new_password']
@@ -267,7 +268,7 @@ def send_reset_password_request():
 	data['heading_title'] = 'Reset Denali Climbing Permit Portal account password'
 
 	html = render_template('email_notification_reset_password.html', **data)
-
+		
 	mailer = Mail(app)
 	msg = Message(
 		subject=data['heading_title'],
@@ -284,19 +285,6 @@ def send_reset_password_request():
 
 
 #--------------- Reports ---------------------#
-# test
-@app.route('/flask/hello/', defaults={'name': 'World'})
-@app.route('/flask/hello/<name>/')
-def hello_html(name):
-    return render_template('hello.html', name=name)
-
-@app.route('/flask/hello_<name>.pdf')
-def hello_pdf(name):
-    # Make a PDF straight from HTML in a string.
-    html = render_template('hello.html', name=name)
-    return render_pdf(HTML(string=html))
-
-
 @app.route('/flask/reports/confirmation_letter/<expedition_id>.pdf', methods=['POST'])
 def get_confirmation_letter(expedition_id):
 	data = dict(request.form)
@@ -329,7 +317,7 @@ def get_registration_card(expedition_id):
 	data['climbers'] = json.loads(data['climbers'])
 	data['routes'] = json.loads(data['routes'])
 	for prop in data:
-		if prop.endswith('_date'):
+		if prop.endswith('_date') and data[prop]:
 			data[prop] = datetime.strptime(
 					data[prop], '%Y-%m-%d'
 				).strftime('%#m/%#d/%Y')
