@@ -1026,16 +1026,32 @@ class ClimberDB {
 	getCoreClimberSQL({searchString='', queryFields='*'} = {}) {
 		if (queryFields !== '*') {
 			if (!queryFields.includes('first_name')) queryFields = queryFields + ', first_name';
+			if (!queryFields.includes('first_name')) queryFields = queryFields + ', middle_name';
 			if (!queryFields.includes('last_name')) queryFields = queryFields + ', last_name';
 			if (!queryFields.includes('full_name')) queryFields = queryFields + ', full_name';
 		}
 		return  searchString.length > 0 ? 
-			`
-				SELECT ${queryFields}, 'first_name' AS search_column  FROM climber_info_view WHERE first_name ILIKE '${searchString}%' 
+			`SELECT DISTINCT ON (full_name, id) * FROM (
+				SELECT ${queryFields}, 'first_name' AS search_column FROM climber_info_view WHERE 
+					first_name ILIKE '${searchString}%' 
 				UNION ALL 
-				SELECT ${queryFields}, 'last_name' AS search_column FROM climber_info_view WHERE last_name ILIKE '${searchString}%' AND first_name NOT ILIKE '${searchString}%'
+				SELECT ${queryFields}, 'first_middle_name' AS search_column  FROM climber_info_view WHERE 
+					first_name || ' ' || middle_name ILIKE '${searchString}%'
 				UNION ALL 
-				SELECT ${queryFields}, 'full_name' AS search_column FROM climber_info_view WHERE full_name ILIKE '%${searchString}%' AND first_name NOT ILIKE '${searchString}%' AND last_name NOT ILIKE '${searchString}%'
+				SELECT ${queryFields}, 'first_last_name' AS search_column  FROM climber_info_view WHERE 
+					first_name || ' ' || last_name ILIKE '${searchString}%'
+				UNION ALL
+				SELECT ${queryFields}, 'last_name' AS search_column FROM climber_info_view WHERE 
+					last_name ILIKE '${searchString}%'
+				UNION ALL 
+				SELECT ${queryFields}, 'full_name' AS search_column FROM climber_info_view WHERE 
+					full_name ILIKE '%${searchString}%'
+				UNION ALL 
+				SELECT ${queryFields}, 'middle_last_name' AS search_column FROM climber_info_view WHERE 
+					middle_name || ' ' || last_name ILIKE '%${searchString}%' AND 
+					middle_name IS NOT NULL
+			) t
+			ORDER BY full_name, id
 			` :
 			`
 				SELECT 
@@ -1067,8 +1083,8 @@ class ClimberDB {
 					) t 
 				ORDER BY 
 					CASE  
-						WHEN search_column='first_name' THEN '1' || first_name || last_name 
-						WHEN search_column='first_name' THEN '2' || last_name 
+						WHEN search_column IN ('first_name', 'first_middle_name', 'first_last_name', 'full_name') THEN '1' || full_name 
+						WHEN search_column='last_name' THEN '2' || last_name 
 						ELSE '3' 
 					END 
 			) t1 

@@ -79,13 +79,18 @@ class ClimberForm {
 							</label>
 							<div id="climber-info-tab-content" class="tab-content" role="tabpanel" aria-labelledby="climber-info-tab" aria-hidden="false">
 								<div class="field-container-row">
-									<div class="field-container col-sm-6">
+									<div class="field-container col-sm-4">
 										<input id="input-first_name" class="input-field climber-form-title-field" name="first_name" data-table-name="climbers" placeholder="First name" title="First name" type="text" autocomplete="off" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-first_name">First name</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
-									<div class="field-container col-sm-6">
+									<div class="field-container col-sm-4">
+										<input id="input-middle_name" class="input-field climber-form-title-field" name="middle_name" data-table-name="climbers" placeholder="Middle name" title="Middle name" type="text" autocomplete="off">
+										<label class="field-label" for="input-middle_name">Middle name</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>
+									<div class="field-container col-sm-4">
 										<input id="input-last_name" class="input-field climber-form-title-field" name="last_name" data-table-name="climbers" placeholder="Last name" title="Last name" type="text" autocomplete="off" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-last_name">Last name</label>
@@ -144,8 +149,7 @@ class ClimberForm {
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col-sm-4">
-										<input id="input-dob" class="input-field" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" autocomplete="off" required="">
-										<span class="required-indicator">*</span>
+										<input id="input-dob" class="input-field passive-update-field" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" autocomplete="off">
 										<label class="field-label" for="input-dob">D.O.B.</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
@@ -156,9 +160,9 @@ class ClimberForm {
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6">
-										<select id="input-sex" class="input-field default" name="sex_code" data-table-name="climbers" placeholder="Sex" title="Sex" type="text" autocomplete="off" required=""></select>
+										<select id="input-sex" class="input-field default" name="sex_code" data-table-name="climbers" placeholder="Gender" title="Gender" type="text" autocomplete="off" required=""></select>
 										<span class="required-indicator">*</span>
-										<label class="field-label" for="input-sex">Sex</label>
+										<label class="field-label" for="input-sex">Gender</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 								</div>
@@ -425,9 +429,10 @@ class ClimberForm {
 
 		$('.climber-form-title-field').change(e => {
 			const firstName = $('#input-first_name').val();
+			const middleName = $('#input-middle_name').val();
 			const lastName = $('#input-last_name').val();
 
-			if (firstName && lastName) $('#result-details-header-title').text(`${lastName}, ${firstName}`);
+			if (firstName && lastName) $('#result-details-header-title').text(this.getFullName(firstName, lastName, middleName));
 		});
 
 		$('.toggle-editing-button').click(e => {
@@ -623,6 +628,14 @@ class ClimberForm {
 	}
 
 
+	/*
+	Helper function to get full name as last name first. Mostly this just simplifies dealing with the space in the middle name
+	*/
+	getFullName(firstName, lastName, middleName='') {
+		return `${lastName}, ${firstName}${middleName ? ' ' + middleName : ''}`;
+	}
+
+
 	fillClimberForm(climberID, climberInfo) {
 		
 		const $inputs = $('.climber-form-content .input-field');
@@ -630,7 +643,7 @@ class ClimberForm {
 			this.setInputFieldValue(el, climberInfo, {dbID: climberID});
 		}
 
-		$('#result-details-header-title').text(`${climberInfo.last_name}, ${climberInfo.first_name}`);
+		$('#result-details-header-title').text(this.getFullName(climberInfo.first_name, climberInfo.last_name, climberInfo.middle_name));
 
 		$('#expedition-name-result-summary-item > .result-details-summary-value')
 			.text(climberInfo.expedition_name + ' - ' + climberInfo.expedition_date);
@@ -1351,7 +1364,7 @@ class ClimberDBClimbers extends ClimberDB {
 	after a successful save will be different depending on where the modal form is shown
 	from.
 	*/
-	onSaveModalClimberClick(e) {
+	saveModalClimber(a=1) {
 		this.climberForm.saveEdits()
 			.done(resultString => {
 				if (!this.queryReturnedError(resultString) && resultString.length) {
@@ -1371,6 +1384,36 @@ class ClimberDBClimbers extends ClimberDB {
 
 				}
 			});
+	}
+
+	/*
+	Check if a climber with the same name already exists. If so, make the user confrim that they want to create a climber with the same name
+	*/
+	onSaveModalClimberClick(e) {
+		const firstName = $('#input-first_name').val(); 
+		const middleName = $('#input-middle_name').val();
+		const lastName = $('#input-last_name').val();
+		const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
+		this.queryDB(`SELECT id FROM climber_info_view WHERE full_name='${fullName}'`)
+			.done(resultString => {
+				if (!this.queryReturnedError(resultString)) {
+					const result = $.parseJSON(resultString);
+					const nClimbers = result.length;
+					if (nClimbers) {
+						// show modal
+						const message = `Are you sure you want to create another climber with this name. There ${nClimbers > 1 ? 'are' : 'is'} already ${nClimbers} climber${nClimbers > 1 ? 's' : ''} with this name in the database. If you click yes, make sure you are not creating a duplicate climber.`
+						const footerButtons = `
+							<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+							<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.saveModalClimber()">Yes</button>
+						`;
+						showModal(message, 'Possible Duplicate Climber', 'confirm', footerButtons);
+					} else {
+						this.saveModalClimber();
+					}
+				} else {
+					this.saveModalClimber();
+				}
+			})
 	}
 
 	/*
