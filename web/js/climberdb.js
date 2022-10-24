@@ -1117,6 +1117,14 @@ class ClimberDB {
 	}
 
 
+	beforeUnloadEventHandler(e) {
+		if ($('.input-field.dirty').length) {
+			const message = 'You have unsaved edits. Are you sure you want to leave this page?';
+			e.returnValue = message;
+			return message;
+		}
+	}
+
 	/* Return any Deferreds so anything that has to happen after these are done can wait */
 	init({addMenu=true}={}) {
 
@@ -1135,6 +1143,9 @@ class ClimberDB {
 			//$select.toggleClass('default', $select.val() == null);
 			this.onCheckboxChange(e);
 		});
+
+		// Warn the user before they leave the page if they have unsaved edits
+		$(window).on('beforeunload', (e) => {return this.beforeUnloadEventHandler(e)});
 
 		// Show the right sidebar nav item as selected
 		$('.sidebar-nav-group > .nav-item.selected').removeClass('selected');
