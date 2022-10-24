@@ -293,7 +293,8 @@ class ClimberDBExpeditions extends ClimberDB {
 													<div class="field-container-row">
 														<div class="field-container col collapse">
 															<label class="field-label" for="input-flagged_reason">Reason for flagging this expedition member</label>
-															<textarea id="input-flagged_reason" class="input-field" name="flagged_reason" data-table-name="expedition_members" placeholder="Describe why you flagged this expedition member" title="Flagged reason" type="text" autocomplete="off" data-dependent-target="#input-flagged" data-dependent-value="true"></textarea>
+															<textarea id="input-flagged_reason" class="input-field" name="flagged_reason" data-table-name="expedition_members" placeholder="Describe why you flagged this expedition member" title="Flagged reason" type="text" autocomplete="off" data-dependent-target="#input-flagged" data-dependent-value="true" required=""></textarea>
+															<span class="required-indicator">*</span>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>	
 														<div class="field-container col-sm-6 hidden">
@@ -832,9 +833,11 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$(document).on('change', '.input-field[name="flagged"]', e => {
 			const $checkbox = $(e.target);
-			if ($checkbox.prop('checked')) {
-				$checkbox.closest('.card-body')
-					.find('.input-field[name="flagged_by"]')
+			const isFlagged = $checkbox.prop('checked');
+			const $cardBody = $checkbox.closest('.card-body');
+			if (isFlagged) {
+				$cardBody
+					.find('.input-field[name=flagged_by]')
 					.val(this.userInfo.ad_username).change();
 			}
 		});
@@ -1124,6 +1127,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			$('.result-details-summary-container').collapse('hide')
 
 			$('.result-details-header-badge').ariaHide(true);
+
+			$('#edit-climber-info-button').collapse('hide');
 		})
 
 		// query climbers to fill select
@@ -1206,7 +1211,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					lastName: climberInfo.last_name, 
 					climberID: climberID,
 					showCard: true,
-					isNewCard: true
+					isNewCard: true,
+					climberInfo: climberInfo
 				}
 			);
 			// Add the member to each route
@@ -1222,7 +1228,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	onInputChange(e) {
 		const $input = $(e.target);
 
-		if ($input.is('.ignore-changes') || $input.closest('.uneditable')) return;
+		if ($input.is('.ignore-changes') || $input.closest('.uneditable').length) return;
 
 		// check if the value is different from in-memory data
 		var valueChanged = false;
@@ -1271,7 +1277,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		$input.toggleClass('dirty', valueChanged);
-		$('#save-expedition-button').ariaHide(!valueChanged);
+		$('#save-expedition-button').ariaHide(!$('.input-field.dirty').length);
 
 	}
 
@@ -2164,7 +2170,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 
-	addExpeditionMemberCard({expeditionMemberID=null, firstName=null, lastName=null, climberID=null, showCard=false, isNewCard=false}={}) {
+	addExpeditionMemberCard({expeditionMemberID=null, firstName=null, lastName=null, climberID=null, showCard=false, isNewCard=false, climberInfo={}}={}) {
 		const expeditionMemberInfo = this.expeditionInfo.expedition_members.data[expeditionMemberID];
 		if (expeditionMemberInfo) {
 			firstName = expeditionMemberInfo.first_name;
@@ -2245,6 +2251,28 @@ class ClimberDBExpeditions extends ClimberDB {
 			$newCard.find('.input-field[name="datetime_reserved"]')
 				.val(getFormattedTimestamp())
 				.change();
+
+			// set default tansactions (debits)
+			this.addNewListItem($transactionsList)
+				.find('.input-field[name=transaction_type_code]')
+					.val(10)//SUP fee
+					.change();
+			this.addNewListItem($transactionsList)
+				.find('.input-field[name=transaction_type_code]')
+					.val(11)//entrance fee
+					.change();
+
+			// If the climber is a minor, flag the expedition member
+			const climberAge = climberInfo.age;
+			if ((climberAge !== undefined) && (climberAge < 18) ) {
+				$newCard.find('.input-field[name=flagged]')
+					.prop('checked', true)
+					.change();
+				$newCard.find('.input-field[name=flagged_reason]')
+					.val('Climber is under 18.')
+					.change();
+			}
+
 		}
 
 		return $newCard;
