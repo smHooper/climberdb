@@ -1113,6 +1113,17 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#climber-form-modal-close-button').click(e => {
 			$climberFormModal.ariaHide(true);
 			this.climberForm.$el.removeClass('climberdb-modal');
+			
+			// Make the form blank so tha when the user opens it again, 
+			//	it's reset to it's original state
+			$('#modal-climber-search-bar').val('');
+			$('.modal-climber-select-container').collapse('hide')
+				.find('select > option:not([value=""])')
+					.remove();
+			$('#result-details-header-title').text('');
+			$('.result-details-summary-container').collapse('hide')
+
+			$('.result-details-header-badge').ariaHide(true);
 		})
 
 		// query climbers to fill select
@@ -1211,57 +1222,57 @@ class ClimberDBExpeditions extends ClimberDB {
 	onInputChange(e) {
 		const $input = $(e.target);
 
-		if (!$input.is('.ignore-changes')) {
+		if ($input.is('.ignore-changes') || $input.closest('.uneditable')) return;
 
-			// check if the value is different from in-memory data
-			var valueChanged = false;
-			// 	if it's inside a new card or list item, it has to be an insert
-			if ($input.closest('.new-list-item, .new-card').length) {
-				valueChanged = true;
-			} else {
-				var newValue = this.getInputFieldValue($input);
-				const dbID = $input.data('table-id');
-				const tableName = $input.data('table-name');
-				const fieldName = $input.attr('name');
-				var dbValue;
-				if (tableName === 'expeditions') {
-					dbValue = this.expeditionInfo.expeditions[fieldName];
-				} else if (tableName === 'expedition_members') {
-					dbValue = this.expeditionInfo.expedition_members.data[dbID][fieldName];
-				} else if (tableName === 'transactions') {
-					const expeditionMemberID = $input.closest('.card').data('table-id');
-					dbValue = this.expeditionInfo.transactions[expeditionMemberID].data[dbID][fieldName];
-				} else if (tableName === 'expedition_member_routes') {
-					const routeCode = $input
-						.closest('.data-list-item')
-							.find('.input-field[name=route_code]')
-								.val();
-					const foreignIDs = $input.data('foreign-ids') || {};
-					const memberInData =  						
-						Object.keys(this.expeditionInfo.expedition_member_routes.data).includes(routeCode) &&
-						Object.keys(foreignIDs).includes('expedition_member_id');
-					if (memberInData) {
-						const memberID = foreignIDs.expedition_member_id;
-						if (this.expeditionInfo.expedition_member_routes.data[routeCode][memberID]) {
-							dbValue = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID][fieldName];	
-						}
-					} else {
-						// If the route was changed, dbValue will be undefined and therefore similar to newValue
-						valueChanged = true;
+		// check if the value is different from in-memory data
+		var valueChanged = false;
+		// 	if it's inside a new card or list item, it has to be an insert
+		if ($input.closest('.new-list-item, .new-card').length) {
+			valueChanged = true;
+		} else {
+			var newValue = this.getInputFieldValue($input);
+			const dbID = $input.data('table-id');
+			const tableName = $input.data('table-name');
+			const fieldName = $input.attr('name');
+			var dbValue;
+			if (tableName === 'expeditions') {
+				dbValue = this.expeditionInfo.expeditions[fieldName];
+			} else if (tableName === 'expedition_members') {
+				dbValue = this.expeditionInfo.expedition_members.data[dbID][fieldName];
+			} else if (tableName === 'transactions') {
+				const expeditionMemberID = $input.closest('.card').data('table-id');
+				dbValue = this.expeditionInfo.transactions[expeditionMemberID].data[dbID][fieldName];
+			} else if (tableName === 'expedition_member_routes') {
+				const routeCode = $input
+					.closest('.data-list-item')
+						.find('.input-field[name=route_code]')
+							.val();
+				const foreignIDs = $input.data('foreign-ids') || {};
+				const memberInData =  						
+					Object.keys(this.expeditionInfo.expedition_member_routes.data).includes(routeCode) &&
+					Object.keys(foreignIDs).includes('expedition_member_id');
+				if (memberInData) {
+					const memberID = foreignIDs.expedition_member_id;
+					if (this.expeditionInfo.expedition_member_routes.data[routeCode][memberID]) {
+						dbValue = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID][fieldName];	
 					}
-				} else if (tableName === 'cmc_checkout') {
-					dbValue = this.expeditionInfo.cmc_checkout.data[dbID][fieldName];
+				} else {
+					// If the route was changed, dbValue will be undefined and therefore similar to newValue
+					valueChanged = true;
 				}
-
-				// If this is a checkbox, the new value needs to be converted to PostreSQL's boolean as intepreted by PHP
-				if ($input.is('.input-checkbox')) newValue = newValue ? 't' : 'f';
-
-				valueChanged = valueChanged || dbValue != newValue;
+			} else if (tableName === 'cmc_checkout') {
+				dbValue = this.expeditionInfo.cmc_checkout.data[dbID][fieldName];
 			}
 
-			$input.toggleClass('dirty', valueChanged);
-			$('#save-expedition-button').ariaHide(!valueChanged);
+			// If this is a checkbox, the new value needs to be converted to PostreSQL's boolean as intepreted by PHP
+			if ($input.is('.input-checkbox')) newValue = newValue ? 't' : 'f';
+
+			valueChanged = valueChanged || dbValue != newValue;
 		}
+
+		$input.toggleClass('dirty', valueChanged);
+		$('#save-expedition-button').ariaHide(!valueChanged);
+
 	}
 
 
