@@ -472,10 +472,15 @@ used to show climber form in "add climber" mode)*/
 .climber-form-modal-container > .climber-form.climberdb-modal #climber-history-list-item {
     display: flex;
 }
+.expedition-modal-climber-form-header,
 .expedition-modal-search-container {
 	display: flex;
 	flex-wrap: wrap;
 	column-gap: 20px;
+}
+.expedition-modal-search-container,
+.expedition-modal-climber-form-navigation-container {
+	width: 100%;
 }
 .modal-climber-select-container {
 	flex: 1 1 auto;

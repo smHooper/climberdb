@@ -1031,27 +1031,54 @@ class ClimberDB {
 			if (!queryFields.includes('full_name')) queryFields = queryFields + ', full_name';
 		}
 		return  searchString.length > 0 ? 
-			`SELECT DISTINCT ON (full_name, id) * FROM (
-				SELECT ${queryFields}, 'first_name' AS search_column FROM climber_info_view WHERE 
-					first_name ILIKE '${searchString}%' 
-				UNION ALL 
-				SELECT ${queryFields}, 'first_middle_name' AS search_column  FROM climber_info_view WHERE 
-					first_name || ' ' || middle_name ILIKE '${searchString}%'
-				UNION ALL 
-				SELECT ${queryFields}, 'first_last_name' AS search_column  FROM climber_info_view WHERE 
-					first_name || ' ' || last_name ILIKE '${searchString}%'
-				UNION ALL
-				SELECT ${queryFields}, 'last_name' AS search_column FROM climber_info_view WHERE 
-					last_name ILIKE '${searchString}%'
-				UNION ALL 
-				SELECT ${queryFields}, 'full_name' AS search_column FROM climber_info_view WHERE 
-					full_name ILIKE '%${searchString}%'
-				UNION ALL 
-				SELECT ${queryFields}, 'middle_last_name' AS search_column FROM climber_info_view WHERE 
-					middle_name || ' ' || last_name ILIKE '%${searchString}%' AND 
-					middle_name IS NOT NULL
-			) t
-			ORDER BY full_name, id
+			`	
+				SELECT
+					*	
+				FROM 
+					( 
+						SELECT 
+							id, 
+							min(sort_order) AS first_sort_order
+						FROM 
+							(
+								SELECT ${queryFields}, 1 AS sort_order FROM climber_info_view WHERE 
+									first_name ILIKE '${searchString}%' 
+								UNION ALL 
+								SELECT ${queryFields}, 2 AS sort_order FROM climber_info_view WHERE 
+									first_name || ' ' || middle_name ILIKE '${searchString}%' AND
+									first_name NOT ILIKE '${searchString}%'
+								UNION ALL 
+								SELECT ${queryFields}, 3 AS sort_order FROM climber_info_view WHERE 
+									first_name || ' ' || last_name ILIKE '${searchString}%' AND
+									(first_name || ' ' || middle_name NOT ILIKE '${searchString}%' OR
+									first_name NOT ILIKE '${searchString}%')
+								UNION ALL
+								SELECT ${queryFields}, 4 AS sort_order FROM climber_info_view WHERE 
+									last_name ILIKE '${searchString}%' AND
+									(first_name || ' ' || last_name NOT ILIKE '${searchString}%' OR
+									first_name || ' ' || middle_name NOT ILIKE '${searchString}%' OR
+									first_name NOT ILIKE '${searchString}%')
+								UNION ALL 
+								SELECT ${queryFields}, 5 AS sort_order FROM climber_info_view WHERE 
+									middle_name || ' ' || last_name ILIKE '${searchString}%' AND 
+									middle_name IS NOT NULL AND 
+									(last_name NOT ILIKE '${searchString}%' OR
+									first_name || ' ' || last_name NOT ILIKE '${searchString}%' OR
+									first_name || ' ' || middle_name NOT ILIKE '${searchString}%' OR
+									first_name NOT ILIKE '${searchString}%')
+								UNION ALL
+								SELECT ${queryFields}, 6 AS sort_order FROM climber_info_view WHERE 
+									full_name ILIKE '%${searchString}%' AND 
+									(middle_name || ' ' || last_name NOT ILIKE '${searchString}%' OR
+									last_name NOT ILIKE '${searchString}%' OR
+									first_name || ' ' || last_name NOT ILIKE '${searchString}%' OR
+									first_name || ' ' || middle_name NOT ILIKE '${searchString}%' OR
+									first_name NOT ILIKE '${searchString}%')
+							) t 
+						GROUP BY full_name, id
+					) gb 
+				JOIN climber_info_view ON gb.id = climber_info_view.id 
+				ORDER BY first_sort_order::text || full_name
 			` :
 			`
 				SELECT 
@@ -1072,36 +1099,18 @@ class ClimberDB {
 				`WHERE id=${parseInt(climberID)}`
 		;
 
-		const sql = withSearchString ? 
+		const sql = 
 			`SELECT * FROM (
 				SELECT 
 					row_number() over(), 
 					* 
-				FROM 
-					(
-						${coreQuery}
-					) t 
-				ORDER BY 
-					CASE  
-						WHEN search_column IN ('first_name', 'first_middle_name', 'first_last_name', 'full_name') THEN '1' || full_name 
-						WHEN search_column='last_name' THEN '2' || last_name 
-						ELSE '3' 
-					END 
-			) t1 
+				FROM (
+					${coreQuery}
+				) t1 
+			) t2
 			${whereClause} 
 			ORDER BY row_number
-			;` : 
-			`SELECT * FROM (
-				SELECT 
-					row_number() over(),
-					* 
-				FROM (
-				${coreQuery}
-				) t 
-			) t1 
-			${whereClause}
-			ORDER BY row_number
-			`
+			;`
 		;
 
 		return [sql, coreQuery];

@@ -34,17 +34,29 @@ class ClimberForm {
 							<span>&times;</span>
 						</button>
 					</div>
-					<div class="expedition-modal-search-container expedition-modal-only hidden" aria-hidden="true">
-						<div class="fuzzy-search-bar-container col-6">
-							<input id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Climber name search" autocomplete="off">
-							<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
+					<div class="expedition-modal-only expedition-modal-climber-form-header hidden">
+						<div class="expedition-modal-search-container" aria-hidden="true">
+							<div class="fuzzy-search-bar-container col-6">
+								<input id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Climber name search" autocomplete="off">
+								<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
+							</div>	
+							<div class="modal-climber-select-container collapse">
+								<select id="modal-climber-select" class="fuzzy-search-bar default">
+									<option value="">Search climbers to filter results</option>
+								</select>
+							</div>	
 						</div>	
-						<div class="modal-climber-select-container collapse">
-							<select id="modal-climber-select" class="fuzzy-search-bar default">
-								<option value="">Search climbers to filter results</option>
-							</select>
-						</div>	
-					</div>	
+						<!--<div class="expedition-modal-climber-form-navigation-container">
+							<div class="col-6">
+							</div>
+							<div class="col-3">
+								<a id="expedition-modal-add-new-climber-button" class="generic-button" href="climbers.html?newClimber=true" target="_blank">Create new climber</a>
+							</div>
+							<div class="col-3">
+								<a id="edit-climber-info-button" class="generic-button" href="climbers.html?" target="_blank">Edit climber info</a>
+							</div>
+						</div>-->
+					</div>
 					<div class="result-details-header-container">
 						<div class="result-details-title-container">
 							<h3 id="result-details-header-title"></h3>
@@ -407,6 +419,8 @@ class ClimberForm {
 					<button id="modal-save-climber-button" class="generic-button expedition-modal-hidden">Save new climber</button>
 					<button id="modal-save-to-expedition-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true">Add to expedition</button>
 					<button id="modal-save-new-climber-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true">Save new climber</button>
+					<a id="expedition-modal-add-new-climber-button" class="generic-button expedition-modal-only" aria-hidden="true" href="climbers.html?addClimber=true" target="_blank">Create new climber</a>
+					<a id="edit-climber-info-button" class="generic-button expedition-modal-only collapse hidden" href="climbers.html?" target="_blank">Edit climber info</a>
 					<button class="generic-button close-modal-button">Cancel</button>
 				</div>
 			
@@ -1746,21 +1760,32 @@ class ClimberDBClimbers extends ClimberDB {
 			)
 		} 
 		$.when(this.fillAllSelectOptions(), ...lookupDeferreds).then(() => {
-			var urlParams = {};
-			if (window.location.search.length) {
-				urlParams = Object.fromEntries(
-					decodeURIComponent(window.location.search.slice(1))
-						.split('&')
-						.map(s => s.split('=')
-					)
-				);
+			var urlParams = this.parseURLQueryString();
+			// if (window.location.search.length) {
+			// 	urlParams = Object.fromEntries(
+			// 		decodeURIComponent(window.location.search.slice(1))
+			// 			.split('&')
+			// 			.map(s => s.split('=')
+			// 		)
+			// 	);
 
-			} 
-			const queryDeferred = 'id' in urlParams ?
+			// } 
+			const queryDeferred = urlParams.id  ?
 				this.queryClimberByID(urlParams.id) :
 				this.getResultSet();
+
 			queryDeferred.always(()=>{
-				$.when(...deferreds).always(() => {this.hideLoadingIndicator()});
+				$.when(...deferreds)
+					.done(() => {
+						if (urlParams.id) {
+							if (urlParams.edit) {
+								this.climberForm.toggleEditing(true);
+							}
+						} else if (urlParams.newClimber) {
+							this.showModalClimberForm(this.climberForm.$el);
+						}
+					})
+					.always(() => {this.hideLoadingIndicator()});
 			});
 		});
 

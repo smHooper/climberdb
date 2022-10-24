@@ -1148,6 +1148,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					} else {
 						if (result.length) {
 							this.climberForm.fillClimberForm(climberID, result[0]);	
+							$('#edit-climber-info-button').attr('href', 'climbers.html?edit=true&id=' + climberID)
+								.collapse('show');
 						} else {
 							console.log('No climber found with ID ' + ClimberID);
 						}
@@ -1950,17 +1952,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	fillClimberFormSelectOptions(searchString) {
 		const queryFields = 'id, full_name';
-		const coreSQL = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields});
-		const sql = `
-			SELECT ${queryFields} FROM
-				(${coreSQL}) t 
-			ORDER BY 
-				CASE  
-					WHEN search_column='first_name' THEN '1' || first_name || last_name 
-					WHEN search_column='first_name' THEN '2' || last_name 
-					ELSE '3' 
-				END 
-			`;
+		const sql = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields});
 		this.queryDB(sql, {returnTimestamp: true})
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
@@ -2489,7 +2481,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							//$el.closest('.card').find('.card-link').click();
 							const dbID = $el.data('table-id');
 							const info = this.expeditionInfo.expedition_members.data[dbID];
-							return `<li>${info.last_name}, ${info.first_name}</li>`;
+							return `<li>${info.last_name}, ${info.first_name}</li>`; //******* add reason for flagged
 						}).get().join('')
 						const message = `${nFlagged} ${nFlagged === 1 ? ' member of this expedition has' : ' members of this expedition have'}` +
 							' been flagged. You might want to review the reason they were flagged. Flagged expedition member(s):\n' +
