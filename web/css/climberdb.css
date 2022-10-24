@@ -10,6 +10,7 @@ html, body {
 }
 
 .generic-button {
+  display: block; /*makes <a> tag buttons respect height/width*/
   min-width: 150px;
   height: 40px;
   line-height: 40px;
@@ -23,6 +24,9 @@ html, body {
   box-shadow:         0px 4px 6px 1px rgb(0 0 0 / 15%);
   cursor: pointer;
   transition: font-weight 0.2s ease; 
+}
+.generic-button.collapse:not(.show) {
+  display: none;
 }
 .generic-button:not(.account-button):hover {
   text-decoration: none !important; /*keep <a> tags from looking like links */
