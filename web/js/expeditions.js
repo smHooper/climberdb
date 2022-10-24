@@ -1117,12 +1117,32 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// query climbers to fill select
 		$('#modal-climber-search-bar').keyup(() => {
+			this.onClimberFormSearchKeyup();
+		});
+
+		$('#refresh-modal-climber-select').click(() => {
+			// show loading indicator
+			// get currently selected climber and reselect it after refresh
+			const $select = $('#modal-climber-select');
+			const currentSelection = $select.val();
 			const $input = $('#modal-climber-search-bar');
 			const searchString = $input.val();
-			
+			showLoadingIndicator('refresh-modal-climber-select');
 			if (searchString.length >= 3) {
-				$('#modal-climber-select').closest('.collapse').collapse('show');
-				this.fillClimberFormSelectOptions(searchString);
+				this.refreshClimberSelectOptions(searchString)
+					.done(() => {
+						// Check every 50 milliseconds if the option has been added to the select
+						//	If so, breack out of the interval loop 
+						var intervalID;
+						const callback = () => {
+							if ($select.find(`option[value=${currentSelection}]`).length) {
+								$select.val(currentSelection).change();
+								clearInterval(intervalID);
+								hideLoadingIndicator();
+							}
+						}
+						intervalID = setInterval(callback, 20);
+					})
 			}
 		});
 
@@ -1155,7 +1175,8 @@ class ClimberDBExpeditions extends ClimberDB {
 						}
 					}
 				})
-				
+			
+
 		});
 
 		$('#modal-save-to-expedition-button').click(e => {
@@ -1186,7 +1207,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		})
 		// ^^^^^ Climber form stuff ^^^^^^
 	}
-
 
 	onInputChange(e) {
 		const $input = $(e.target);
@@ -1950,10 +1970,13 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	/*
+	Populate the modal climber select options
+	*/
 	fillClimberFormSelectOptions(searchString) {
 		const queryFields = 'id, full_name';
 		const sql = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields});
-		this.queryDB(sql, {returnTimestamp: true})
+		return this.queryDB(sql, {returnTimestamp: true})
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
 
@@ -1985,6 +2008,25 @@ class ClimberDBExpeditions extends ClimberDB {
 			})
 	}
 
+
+	/*
+	Helper function called by either keyup event on modal climber search bar or select refresh button
+	This allows access to the deferred result of fillClimberFormSelectOptions
+	*/
+	refreshClimberSelectOptions(searchString) {
+
+		$('#modal-climber-select').closest('.collapse').collapse('show');
+		return this.fillClimberFormSelectOptions(searchString);
+	}
+
+	/*
+	Event hander for the search bar on the modal "add expedition member" form
+	*/
+	onClimberFormSearchKeyup() {
+		const $input = $('#modal-climber-search-bar');
+		const searchString = $input.val();
+		if (searchString.length >= 3) this.refreshClimberSelectOptions(searchString);
+	}
 
 	queryOptionToWhereClause(field, operatorValue, searchValue) {
 		

@@ -482,8 +482,12 @@ used to show climber form in "add climber" mode)*/
 .expedition-modal-climber-form-navigation-container {
 	width: 100%;
 }
-.modal-climber-select-container {
+.expedition-modal-search-container .modal-climber-select-container {
 	flex: 1 1 auto;
+	display: flex;
+}
+#refresh-modal-climber-select {
+	margin-left: 10px;
 }
 .climber-form .fuzzy-search-bar {
 	font-size: 16px;

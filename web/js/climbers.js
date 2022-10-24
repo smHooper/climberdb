@@ -44,6 +44,9 @@ class ClimberForm {
 								<select id="modal-climber-select" class="fuzzy-search-bar default">
 									<option value="">Search climbers to filter results</option>
 								</select>
+								<button id="refresh-modal-climber-select" class="icon-button">
+									<i class="fas fa-sync-alt fa-solid fa-arrows-rotate fa-2x"></i>
+								</button>
 							</div>	
 						</div>	
 						<!--<div class="expedition-modal-climber-form-navigation-container">
@@ -419,7 +422,7 @@ class ClimberForm {
 					<button id="modal-save-climber-button" class="generic-button expedition-modal-hidden">Save new climber</button>
 					<button id="modal-save-to-expedition-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true">Add to expedition</button>
 					<button id="modal-save-new-climber-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true">Save new climber</button>
-					<a id="expedition-modal-add-new-climber-button" class="generic-button expedition-modal-only" aria-hidden="true" href="climbers.html?addClimber=true" target="_blank">Create new climber</a>
+					<a id="expedition-modal-add-new-climber-button" class="generic-button expedition-modal-only hidden" aria-hidden="true" href="climbers.html?addClimber=true" target="_blank">Create new climber</a>
 					<a id="edit-climber-info-button" class="generic-button expedition-modal-only collapse hidden" href="climbers.html?" target="_blank">Edit climber info</a>
 					<button class="generic-button close-modal-button">Cancel</button>
 				</div>
@@ -1761,15 +1764,6 @@ class ClimberDBClimbers extends ClimberDB {
 		} 
 		$.when(this.fillAllSelectOptions(), ...lookupDeferreds).then(() => {
 			var urlParams = this.parseURLQueryString();
-			// if (window.location.search.length) {
-			// 	urlParams = Object.fromEntries(
-			// 		decodeURIComponent(window.location.search.slice(1))
-			// 			.split('&')
-			// 			.map(s => s.split('=')
-			// 		)
-			// 	);
-
-			// } 
 			const queryDeferred = urlParams.id  ?
 				this.queryClimberByID(urlParams.id) :
 				this.getResultSet();
@@ -1781,7 +1775,7 @@ class ClimberDBClimbers extends ClimberDB {
 							if (urlParams.edit) {
 								this.climberForm.toggleEditing(true);
 							}
-						} else if (urlParams.newClimber) {
+						} else if (urlParams.addClimber) {
 							this.showModalClimberForm(this.climberForm.$el);
 						}
 					})
