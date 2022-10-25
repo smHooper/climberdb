@@ -781,6 +781,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(document).on('click', '.add-transaction-button', e => {
 			const $newItem = this.addNewListItem($(e.target).closest('.transactions-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
 			$newItem.find('.input-field[name="transaction_type_code"]').change();
+			const $card = $newItem.closest('.card');
+			$newItem.attr('data-parent-table-id', $card.data('table-id'));
 		});
 
 		// When the leader input checkbox changes, set the transparent class appropriately
@@ -1319,19 +1321,28 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	/*
+	Helper method to add a new history entry for navigating between expeditions
+	*/
+	updateURLHistory(expeditionID, $select) {
+		// Update URL with new expedition ID and add a history entry so the back 
+		//	and forward buttons will move to and from expeditions
+		const url = new URL(window.location);
+		url.searchParams.set('id', expeditionID);
+		const previouslySelectedID = $select.data('current-value');
+		
+		// Push the new entry here because loadExpedition() is also called when the user clicks the back or forward button, and adding a history entry then will muck up the history sequence 
+		this.historyBuffer.push(expeditionID);
+		window.history.pushState({id: expeditionID, historyIndex: this.currentHistoryIndex + 1}, '', url);
+	}
+
+
 	onExpeditionSearchBarChange(e) {
 		const $select = $(e.target);
 		const expeditionID = $select.val();
 		if (expeditionID != '') {
 			this.loadExpedition(expeditionID);
-			// Update URL with new expedition ID and add a history entry so the back 
-			//	and forward buttons will move to and from expeditions
-			const url = new URL(window.location);
-			url.searchParams.set('id', expeditionID);
-			const previouslySelectedID = $select.data('current-value');
-			// Push the new entry here because loadExpedition() is also called when the user clicks the back or forward button, and adding a history entry then will muck up the history sequence 
-			this.historyBuffer.push(expeditionID);
-			window.history.pushState({id: expeditionID, historyIndex: this.currentHistoryIndex + 1}, '', url);
+			this.updateURLHistory(expeditionID, $select);
 		} else {
 			$select.addClass('default');
 		}
@@ -1633,6 +1644,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			} else {
 				const result = $.parseJSON(queryResultString)
 					.filter(row => row != null);
+				var expeditionID = this.expeditionInfo.expeditions.id;
 				for (const i in result) {
 					const returnedIDs = result[i];
 					const id = returnedIDs.id;
@@ -1640,7 +1652,11 @@ class ClimberDBExpeditions extends ClimberDB {
 
 					// Set the card's/list item's class and inputs' attributes so changes will register as updates
 					const {container, tableName} = inserts[i];
-					const $inputs = $(container).closest('.data-list-item, .card')
+					if (tableName === 'expeditions') expeditionID = id;
+					const $container = $(container).closest('.data-list-item, .card');
+					const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
+					if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
+					const $inputs = $container.closest('.data-list-item, .card')
 						.removeClass('new-card')
 						.removeClass('new-list-item')
 						.attr('data-table-id', id)
@@ -1721,6 +1737,15 @@ class ClimberDBExpeditions extends ClimberDB {
 				$('#save-expedition-button').ariaHide(true);
 				// but open the reports modal button since there's something to show
 				$('#open-reports-modal-button').ariaHide(false);
+				// show other edit buttons
+				$('#edit-expedition-button, #delete-expedition-button').ariaHide(false);
+
+				// If this is a new expedition, add it to the search bar and update the URL
+				if (expeditionInfo.id === undefined) {
+					expeditionInfo.id = expeditionID;
+					const $select = $('#expedition-search-bar').append(`<option value=${expeditionID}>${expeditionInfo.expedition_name}</option>`);
+					this.updateURLHistory(expeditionID, $select);
+				}
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
