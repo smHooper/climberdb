@@ -849,7 +849,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $select = $(e.target);
 			const $valueField = $select.closest('li').find('.transaction-amount-field');
 			const defaultAmount = this.defaultTransactionFees[$select.val()].default_fee;
-			if ($valueField.val() === '' || $valueField.val() === null && defaultAmount !== null) {
+			if (($valueField.val() === '' || $valueField.val() === '0.00') && defaultAmount !== null) {
 				$valueField
 					.val(defaultAmount.replace(/\(/, '-').replace(/[$)]/g, ''))
 					.change();
@@ -2663,7 +2663,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const lookupDeferreds = [this.getCMCInfo()];
 		if (Object.keys(this.routeCodes).length === 0) {
 			lookupDeferreds.push(
-				this.queryDB('SELECT * FROM route_codes')
+				this.queryDB('SELECT * FROM route_codes WHERE sort_order IS NOT NULL')
 					.done((queryResultString) => {
 						const $select = $('.route-code-header-input:not(.mountain-code-header-input)');
 						if (!this.queryReturnedError(queryResultString)) {
