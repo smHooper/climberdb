@@ -5,6 +5,7 @@
 include '../../config/climberdb-config.php';
 // error_reporting(-1);
 // ini_set('display_errors', 'On');
+ini_set('html_errors', false);
 
 function runQuery($ipAddress, $port, $dbName, $username, $password, $queryStr, $parameters=array()) {
 	/*return result of a postgres query as an array*/
@@ -34,7 +35,7 @@ function runQueryWithinTransaction($conn, $queryStr, $parameters=array()) {
 	  	return $err;
 	}
 	$pgFetch = pg_fetch_all($result);
-	return $pgFetch ? $pgFetch : null;
+	return $pgFetch ? $pgFetch : [null];
 }
 
 
