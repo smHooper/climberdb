@@ -816,12 +816,33 @@ class ClimberDBExpeditions extends ClimberDB {
 		// also check all other reservation status fields to see if the whole group is ready
 		$(document).on('change', '.reservation-status-field', e => {
 			const $select = $(e.target);
+			const $card = $select.closest('.card');
 			const value = $select.val();
-			const cardID = $select.attr('id').match(/-\d+$/).toString();
-			const now = getFormattedTimestamp();
-			// 6 === canceled
-			$(`#input-datetime_canceled${cardID}`).val(value == 6 ? now : null).change();
+			const isCanceled = value == 6;
 
+			// If this is the group's leader, ask the user to confirm
+			/*if ($card.find('.input-field[name=is_trip_leader]').prop('checked')) {
+				showModal('Are ')
+				return;
+			}*/
+
+			// Set the datetime_canceled field
+			const now = getFormattedTimestamp();
+			const cardID = $select.attr('id').match(/-\d+$/).toString();
+			$(`#input-datetime_canceled${cardID}`).val(isCanceled ? now : null).change();
+
+			// Show as canceled and move to bottom
+			$card.toggleClass('canceled', isCanceled);
+			if (isCanceled) $card.appendTo($card.closest('.accordion'));
+
+			// Hide/show this expedition member in any routes 
+			const expeditionMemberID = $card.data('table-id');
+			if (expeditionMemberID) {
+				$(`.route-member-list .data-list-item[data-expedition-member-id=${expeditionMemberID}]`)
+					.ariaHide(isCanceled);
+			}
+
+			// Change the group's status if all 
 			const reservationStatuses = $select.closest('.accordion').find('.card:not(.cloneable) .reservation-status-field')
 				.map((_, el) => el.value)
 				.get();
@@ -999,7 +1020,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(document).on('click', '.check-all-summitted-button', e => {
 			const $button = $(e.target);
 			const $card = $button.closest('.card');
-			const $checkboxes = $card.find('.data-list-item:not(.cloneable) .center-checkbox-col .input-checkbox');
+			const $checkboxes = $card.find('.data-list-item:not(.cloneable):not(.hidden) .center-checkbox-col .input-checkbox');
 			const cardID = $card.attr('id');
 			const checkboxIDs = '#' + $checkboxes.map((_, el) => el.id).get().join(',#');
 			const summitDateInputIDs = '#' + $checkboxes.closest('.center-checkbox-col').next().find('.input-field').map((_, el) => el.id).get().join(',#');
@@ -1318,6 +1339,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.queryExpedition(expeditionID);
 		$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
 		this.toggleEditing(false);//make sure editting is turned off
+
 	}
 
 
@@ -2247,6 +2269,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				this.setInputFieldValue(el, expeditionMemberInfo, {dbID: expeditionMemberID, triggerChange: isNewCard})
 			}
 
+			if (expeditionMemberInfo.reservation_status_code == 6) $newCard.addClass('canceled');
+
 			// Add transaction rows
 			const transactions = this.expeditionInfo.transactions[expeditionMemberID];
 			var transactionTotal = 0;
@@ -2382,7 +2406,10 @@ class ClimberDBExpeditions extends ClimberDB {
 					$listItem.find('.name-label').text(`${thisMember.last_name}, ${thisMember.first_name}`);
 
 					// Add the member ID to the list-item's data so the in-memory data can be linked back to the list item
-					$listItem.data('expedition-member-id', memberID); 
+					$listItem.attr('data-expedition-member-id', memberID); 
+
+					// If the expedition member is canceled, hide the list item
+					if (thisMember.reservation_status_code == 6) $listItem.ariaHide(true);
 
 					if (memberRouteID) {
 						const inputData = {'foreign-ids': {expedition_member_id: memberID}}
