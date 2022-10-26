@@ -138,7 +138,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<div class="expedition-data-header-content">	
-								<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Expedition Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="off">
+								<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Expedition Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="off" required="">
 								<select id="input-group_status" class="input-field" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="off" data-default-value=1 tabindex=-1></select>
 							</div>
 							<div class="expedition-data-header-content">							
@@ -1693,11 +1693,13 @@ class ClimberDBExpeditions extends ClimberDB {
 					
 				}
 
+
 				// update in-memory data for each edited input
 				const edits = this.edits;
 				const expeditionInfo = this.expeditionInfo;
 				const $editedInputs =  $('.input-field.dirty').removeClass('dirty');
-				for (const el of $editedInputs) {
+				this.queryExpedition(expeditionID, false);//suppress flagged expedition member warnings
+				/*for (const el of $editedInputs) {
 					const $input = $(el);
 					const fieldName = $input.attr('name');
 					const value = this.getInputFieldValue($input);
@@ -1755,7 +1757,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						let thisData = expeditionInfo[tableName].data[dbID];
 						thisData[fieldName] = value;
 					}
-				}
+				}*/
 
 				// Hide the save button again since there aren't any edits
 				$('#save-expedition-button').ariaHide(true);
@@ -1765,11 +1767,11 @@ class ClimberDBExpeditions extends ClimberDB {
 				$('#edit-expedition-button, #delete-expedition-button').ariaHide(false);
 
 				// If this is a new expedition, add it to the search bar and update the URL
-				if (expeditionInfo.id === undefined) {
+				/*if (expeditionInfo.id === undefined) {
 					expeditionInfo.id = expeditionID;
 					const $select = $('#expedition-search-bar').append(`<option value=${expeditionID}>${expeditionInfo.expedition_name}</option>`);
 					this.updateURLHistory(expeditionID, $select);
-				}
+				}*/
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
@@ -1920,7 +1922,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			if (info.reservation_status_code == 6) return []; // flatmap will remove this
 
 			// destructure the climber's info and get just first_name and last_name
-			const climberInfo = (({ firt_name, last_name }) => ({ firt_name, last_name }))(info);
+			const climberInfo = (({ first_name, last_name }) => ({ first_name, last_name }))(info);
 			
 			// Get full name for ease of use
 			const fullName = info.first_name + ' ' + info.last_name;
@@ -2052,10 +2054,10 @@ class ClimberDBExpeditions extends ClimberDB {
 					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
 					//	since we don't want the older result to overwrite the newer one
 					const queryTime = result.queryTime;
-					if (queryTime < this.lastSearchQuery) {
+					if (queryTime < this.climberForm.lastSearchQuery) {
 						return;
 					} else {
-						this.lastSearchQuery = queryTime;
+						this.climberForm.lastSearchQuery = queryTime;
 					}
 					const $select = $('#modal-climber-select').empty();
 					result = result.data;
@@ -2148,12 +2150,24 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
 		const sql = `SELECT DISTINCT expedition_id, expedition_name FROM expedition_info_view ${whereClause} ORDER BY expedition_name`;
-		this.queryDB(sql)
+		this.queryDB(sql, {returnTimestamp: true})
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
 
 				} else {
-					const result = $.parseJSON(queryResultString);
+					var result = $.parseJSON(queryResultString);
+					
+					// Check if this result is older than the currently displayed result. This can happen if the user is 
+					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
+					//	since we don't want the older result to overwrite the newer one
+					const queryTime = result.queryTime;
+					if (queryTime < this.lastSearchQuery) {
+						return;
+					} else {
+						this.lastSearchQuery = queryTime;
+					}
+					result = result.data;
+
 					const $select = $('#expedition-search-bar').empty().addClass('default');
 					if (result.length) {
 						$select.append('<option value="">Click to select an expedition</option>')
@@ -2499,7 +2513,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	queryExpedition(expeditionID) {
+	queryExpedition(expeditionID, showOnLoadWarnings=true) {
 
 		const sql = `
 			SELECT 
@@ -2630,20 +2644,22 @@ class ClimberDBExpeditions extends ClimberDB {
 					hideLoadingIndicator('queryExpedition');
 
 					// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
-					const $flaggedCheckboxes = $('.input-checkbox[name="flagged"]:checked');
-					const nFlagged = $flaggedCheckboxes.length
-					if (nFlagged) {
-						const flaggedMemberListItems = $flaggedCheckboxes.map((_, el) => {
-							const $el = $(el);
-							//$el.closest('.card').find('.card-link').click();
-							const dbID = $el.data('table-id');
-							const info = this.expeditionInfo.expedition_members.data[dbID];
-							return `<li>${info.last_name}, ${info.first_name}</li>`; //******* add reason for flagged
-						}).get().join('')
-						const message = `${nFlagged} ${nFlagged === 1 ? ' member of this expedition has' : ' members of this expedition have'}` +
-							' been flagged. You might want to review the reason they were flagged. Flagged expedition member(s):\n' +
-							`<ul>${flaggedMemberListItems}</ul>`
-						showModal(message, 'Flagged expedition member(s)');
+					if (showOnLoadWarnings) {
+						const $flaggedCheckboxes = $('.input-checkbox[name="flagged"]:checked');
+						const nFlagged = $flaggedCheckboxes.length
+						if (nFlagged) {
+							const flaggedMemberListItems = $flaggedCheckboxes.map((_, el) => {
+								const $el = $(el);
+								//$el.closest('.card').find('.card-link').click();
+								const dbID = $el.data('table-id');
+								const info = this.expeditionInfo.expedition_members.data[dbID];
+								return `<li>${info.last_name}, ${info.first_name}</li>`; //******* add reason for flagged
+							}).get().join('')
+							const message = `${nFlagged} ${nFlagged === 1 ? ' member of this expedition has' : ' members of this expedition have'}` +
+								' been flagged. You might want to review the reason they were flagged. Flagged expedition member(s):\n' +
+								`<ul>${flaggedMemberListItems}</ul>`
+							showModal(message, 'Flagged expedition member(s)');
+						}
 					}
 				}
 			});
