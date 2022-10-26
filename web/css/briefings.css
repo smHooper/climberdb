@@ -5,6 +5,7 @@ label {
 .main-content-wrapper {
 	display: flex;
 	padding-right: 0;
+	/*background: linear-gradient(2deg, #219ebc, #f9d67fb8);*/
 }
 /* ---- calendar --- */
 .calendar-container {
@@ -69,7 +70,7 @@ label {
 	flex-direction: column;
 	height: 110px;
 	width: 13.8%;
-	background-color: rgb(235,235,235);
+	background-color: rgb(235,235,235);/*rgb(235 235 235 / 70%);*/
 	color: #00679b;
 	cursor: pointer;
 	border: 2px solid rgba(0,0,0,0);
@@ -83,7 +84,7 @@ label {
 	padding-right: 5px;
 }
 .calendar-cell.disabled {
-	background-color: rgb(220,220,220);
+	background-color: rgb(220,220,220);/*rgb(235 235 235 / 50%);*/
 	pointer-events: none;
 	cursor: unset;
 }
@@ -180,7 +181,7 @@ label {
 	top: -100%; /*overlay with background*/
 	z-index: 2;
 	grid-template-columns: repeat(5, 1fr);
-	grid-template-rows: repeat(22, 30px); /*this should maybe be set at runtime based on open/close time user setting*/
+	grid-template-rows: repeat(22, 40px); /*this should maybe be set at runtime based on open/close time user setting*/
 	grid-auto-columns: 1fr;
 }
 .briefing-appointment-container {
@@ -241,9 +242,10 @@ label {
 	overflow: hidden; /* necessary to hide children when height is 0*/
 	flex-wrap: wrap;
 	margin-left: -20px; /*span the whole sidebar, including the time label gutter*/
-	box-shadow: -3px -1px 12px 2px rgb(0 0 0 / 0);
+	box-shadow: -3px -1px 12px 2px rgb(0 0 0 / 0); /* not necessary if I keep the gradient background */
 	margin-top: 10px;
 	transition: all 0.3s;
+	/*background-color: rgba(255,255,255, 0.5);*/
 }
 
 .appointment-details-drawer.show {

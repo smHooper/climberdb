@@ -627,6 +627,8 @@ select.input-field:focus::placeholder {
 
 .field-label.checkbox-label {
   width: calc(100% - 30px);
+  line-height: 25px;
+  height: 25px;
 }
 .field-container.checkbox-field-container {
   align-items: center;

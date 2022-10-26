@@ -9,6 +9,7 @@ class ClimberDBBriefings extends ClimberDB {
 		};
 		this.edits = {};
 		this.currentBriefing = {};
+		this.urlQueryParams = {};
 		return this;
 	}
 
@@ -87,12 +88,7 @@ class ClimberDBBriefings extends ClimberDB {
 		// Default to today
 		var date = new Date();
 
-		const params = Object.fromEntries(
-			decodeURIComponent(window.location.search.slice(1))
-				.split('&')
-				.map(s => s.split('=')
-			)
-		);
+		const params = Object.keys(this.urlQueryParams).length ? this.urlQueryParams : this.parseURLQueryString();
 
 		// Try to create the date from the given params
 		const paramDate = new Date(params.date + ' 00:00'); //** not robust -- FIX
@@ -106,6 +102,8 @@ class ClimberDBBriefings extends ClimberDB {
 	} 
 
 	configureMainContent() {
+		
+		this.urlQueryParams = this.parseURLQueryString();
 
 		const calendarDate = window.location.search.length ? this.getBriefingDateFromURL() : new Date();
 
@@ -1209,7 +1207,12 @@ class ClimberDBBriefings extends ClimberDB {
 					// Select today
 					//const today = new Date((new Date()).toDateString()); // need to trim time to midnight
 					const today = window.location.search.length ? this.getBriefingDateFromURL() : new Date();
-					this.selectCalendarCell(year === today.getFullYear() ? today : new Date($('.calendar-cell:not(.disabled)').first().data('date')));
+					this.selectCalendarCell(today);//year === today.getFullYear() ? today : new Date($('.calendar-cell:not(.disabled)').first().data('date')));
+
+					const briefingID = this.urlQueryParams.id;
+					if (briefingID) {
+						$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`).click()
+					}
 				}
 			})
 			.fail((xhr, status, error) => {

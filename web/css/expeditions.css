@@ -472,6 +472,11 @@
 	display: flex;
 }
 
+.expedition-briefing-link-label {
+	width: unset;
+	margin-right: 10px;
+}
+
 /*-------modal climber form ---------*/
 /*override hidden climber history (hidden in climbers.css because modal is
 used to show climber form in "add climber" mode)*/

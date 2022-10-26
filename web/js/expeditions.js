@@ -8,7 +8,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			expedition_members: {data: {}, order: []}, 
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
-			cmc_checkout: {data: {}, order: []}
+			cmc_checkout: {data: {}, order: []},
+			briefings: {} 
 		}
 		this.routeCodes = {};
 		this.cmcInfo = {
@@ -201,17 +202,18 @@ class ClimberDBExpeditions extends ClimberDB {
 									<label class="field-label" for="input-special_group_type">Special group type</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
-							</div>
-							<div class="field-container-row">
-								<div class="field-container checkbox-field-container col-sm">
+								<div class="field-container checkbox-field-container col-6">
 									<label class="checkmark-container">
 										<input id="input-needs_special_use_permit" class="input-field input-checkbox" type="checkbox" name="needs_special_use_permit" data-table-name="expeditions">
 										<span class="checkmark data-input-checkmark"></span>
 									</label>
-									<label class="field-label checkbox-label" for="input-needs_special_use_permit">Requires special use permit (filming, photography, etc.)</label>
+									<label class="field-label checkbox-label" for="input-needs_special_use_permit">Requires additional permit (photography, etc.)</label>
 								</div>
 							</div>
-
+							<div class="field-container-row">
+								<label class="field-label expedition-briefing-link-label" for="expedition-briefing-link">No briefing scheduled</label>
+								<a id="expedition-briefing-link" class="briefing-link" href="briefings.html" target="_blank" aria-hidden="true">Set briefing time</a>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -2438,6 +2440,17 @@ class ClimberDBExpeditions extends ClimberDB {
 		// .change() events trigger onInputChange() so undo that stuff
 		$('.input-field.dirty').removeClass('dirty');
 		$('#save-expedition-button').ariaHide(true);
+
+		// set briefing link 
+		const briefingLink = $('#expedition-briefing-link');
+		const briefingInfo = this.expeditionInfo.briefings;
+		const briefingDate = briefingInfo.briefing_date;
+		if (briefingDate) {
+			briefingLink.attr('href', `briefings.html?date=${briefingDate}&id=${briefingInfo.id}`).text('View/Change');
+			$('.field-label[for=expedition-briefing-link]').text('Briefing time: ' + briefingInfo.briefing_datetime);
+		} else if (expeditionData.planned_departure_date) {
+			briefingLink.attr('href', `briefings.html?date=${expeditionData.planned_departure_date}`);
+		}//*/
 	}
 
 
@@ -2458,7 +2471,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			expedition_members: {data: {}, order: []}, 
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
-			cmc_checkout: {data: {}, order: []}
+			cmc_checkout: {data: {}, order: []},
+			briefings: {}
 		}
 
 		this.clearInputFields({triggerChange: false});
@@ -2479,6 +2493,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Not sure why, but a few selects in the climber form get .change triggered so turn the .dirty class off
 		$('#add-climber-form-modal-container .input-field.dirty').removeClass('dirty');
 
+		// reset briefing link
+		$('.field-label[for=expedition-briefing-link]').text('No briefing scheduled');
+		$('#expedition-briefing-link').attr('href', `briefings.html`).text('Set briefing time');
 	}
 
 
@@ -2518,6 +2535,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					let transactions = this.expeditionInfo.transactions;
 					let routes = this.expeditionInfo.expedition_member_routes;
 					let cmcs = this.expeditionInfo.cmc_checkout;
+					let briefingInfo = this.expeditionInfo.briefings;
 					for (const row of result) {
 						// get expedition members
 						const memberID = row.expedition_member_id;
@@ -2581,6 +2599,12 @@ class ClimberDBExpeditions extends ClimberDB {
 							}
 						}
 						
+						if (row.briefing_date && !briefingInfo.briefing_date) {
+							briefingInfo.id = row.briefing_id;
+							briefingInfo.briefing_date = row.briefing_date;
+							briefingInfo.briefing_time = row.briefing_time;
+							briefingInfo.briefing_datetime = row.briefing_datetime;
+						}
 					}
 
 					this.fillFieldValues(false);//don't trigger change
