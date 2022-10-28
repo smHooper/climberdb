@@ -297,6 +297,14 @@ class ClimberDB {
 			$('.sidebar-collapse-button, nav.sidebar').toggleClass('collapsed');
 		});
 
+
+		$(window).resize(() => {
+			// Only collapse the menu automatically if it's less than 992 pixels plus the width of the sidebar (250 px)
+			const windowIsSmall =  $(window).width() < 1242;
+			const shouldCollapse = windowIsSmall || (!windowIsSmall && $('nav.sidebar').is('.collapsed'));
+			$('.sidebar-collapse-button, nav.sidebar').toggleClass('collapsed', shouldCollapse);
+		}).resize();//trigger it manuall in case the window is already small
+
 		$('#show-user-options-button').click(() => {
 			$('.user-account-dropdown').toggleClass('show');
 		});

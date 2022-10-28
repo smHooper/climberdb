@@ -4,6 +4,9 @@
 	justify-content: space-between;
 	align-items: center;
 }
+.main-content-wrapper {
+	scroll-behavior: smooth; /*for CMC jump link*/
+}
 .fuzzy-search-bar-container {
 	margin-right: 20px;
 	flex-wrap: wrap;
@@ -223,17 +226,22 @@
 	transition: display 0s; /*toggle visibility immediately*/
 }
 
-
 .expedition-content {
 	width: 100%;
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-template-rows: repeat(5, 500px);
+	grid-auto-columns: 1fr;
 	row-gap: 40px;
-	padding: 0 20px;
+	column-gap: 40px;
 }
-.expedition-data-wrapper {
+/*.expedition-data-wrapper {
 	height: 500px;
 	max-height: calc(100vh - 60px - 100px);
+}*/
+/*show the expedition members taking up the 2 rows*/
+#expedition-member-data-container {
+	grid-row: 2 / span 2;
 }
 .expedition-data-content {
 	height: 100%;
@@ -520,4 +528,17 @@ used to show climber form in "add climber" mode)*/
 }
 .result-details-summary-container.collapse {
 	display: none;
+}
+
+/*adjust grid layout when the screen is less than 992 pixels wide*/
+@media (min-width: 992px) {
+	.expedition-content {
+		grid-template-columns: repeat(2, 1fr);
+		grid-template-rows: repeat(3, 500px);
+	}
+	/*show the expedition members taking up the first 2 rows on the right*/
+	#expedition-member-data-container {
+		grid-row: 1 / span 2;
+		grid-column: 2 / span 1;
+	}
 }

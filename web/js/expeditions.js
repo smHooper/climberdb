@@ -134,7 +134,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			</div>
 			<div class="expedition-content uneditable">
 				<!-- expedition info --> 
-				<div id="expedition-data-container" class="expedition-data-wrapper col-md-6">
+				<div id="expedition-data-container" class="expedition-data-wrapper">
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<div class="expedition-data-header-content">	
@@ -218,16 +218,21 @@ class ClimberDBExpeditions extends ClimberDB {
 									<label class="field-label checkbox-label" for="input-needs_special_use_permit">Requires additional permit (photography, etc.)</label>
 								</div>
 							</div>
-							<div class="field-container-row collapse">
-								<label class="field-label expedition-briefing-link-label" for="expedition-briefing-link">No briefing scheduled</label>
-								<a id="expedition-briefing-link" class="briefing-link" href="briefings.html" target="_blank" aria-hidden="true">Set briefing time</a>
+							<div class="field-container-row">
+								<div class="col-6 pl-0 collapse">
+										<label class="field-label expedition-briefing-link-label" for="expedition-briefing-link">No briefing scheduled</label>
+										<a id="expedition-briefing-link" class="briefing-link" href="briefings.html" target="_blank" aria-hidden="true">Set briefing time</a>
+								</div>
+								<div class="col-6 pl-0">
+									<a href="#cmcs-data-container">CMC Info</a>
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<div class="expedition-data-wrapper col-md-6">
-					<div id="expedition-member-data-container" class="expedition-data-content">
+				<div id="expedition-member-data-container" class="expedition-data-wrapper">
+					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<h3 id="expedition-data-header" class="expedition-data-header">Expedition members</h3>
 							<button id="show-modal-climber-form-button" class="generic-button add-data-button" data-target="#expedition-members-accordion">Add member</button>
@@ -449,8 +454,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					</div>
 
 				</div>
-				<div class="expedition-data-wrapper col-md-6">
-					<div id="routes-data-container" class="expedition-data-content">
+				<div id="routes-data-container" class="expedition-data-wrapper">
+					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<h3 id="expedition-data-header" class="expedition-data-header">Routes</h3>
 							<button class="generic-button add-card-button" data-target="#routes-accordion">Add route</button>
@@ -527,7 +532,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						</div>
 					</div>
 				</div>
-				<div class="expedition-data-wrapper col-md-6">
+				<div class="expedition-data-wrapper">
 					<div id="cmcs-data-container" class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<h3 id="expedition-data-header" class="expedition-data-header">CMCs</h3>
@@ -561,11 +566,14 @@ class ClimberDBExpeditions extends ClimberDB {
 								</li>
 							</ul>
 						</div>
+						<div class="expedition-data-content-footer w-100">
+							<a href="#expedition-search-bar">Back To Top</a>
+						</div>
 					</div>
 				</div>
 			</div>
 		`);
-		
+
 		// Show/hide the expedition filter options when the toggle button is clicked
 		$('.show-query-options-button').on('click', e => {
 			$('.search-option-drawer').collapse('toggle');
@@ -2477,7 +2485,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		} else if (expeditionData.planned_departure_date) {
 			$briefingLink.attr('href', `briefings.html?date=${expeditionData.planned_departure_date}`);
 		}//*/
-		$briefingLink.closest('.collapse').collapse('show');
+		setTimeout(() => {$briefingLink.closest('.collapse').collapse('show')}, 500);
 	}
 
 
