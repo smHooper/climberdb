@@ -164,7 +164,7 @@ class ClimberForm {
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col-sm-4">
-										<input id="input-dob" class="input-field passive-update-field" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" autocomplete="off">
+										<input id="input-dob" class="input-field" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" autocomplete="off">
 										<label class="field-label" for="input-dob">D.O.B.</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	

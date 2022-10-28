@@ -139,10 +139,10 @@ class ClimberDBExpeditions extends ClimberDB {
 						<div class="expedition-data-header-container">
 							<div class="expedition-data-header-content">	
 								<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Expedition Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="off" required="">
-								<select id="input-group_status" class="input-field" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="off" data-default-value=1 tabindex=-1></select>
+								<select id="input-group_status" class="input-field filled-by-default needs-filled-by-default" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="off" data-default-value=1 tabindex=-1></select>
 							</div>
 							<div class="expedition-data-header-content">							
-								<div id="entered-by-result-summary-item" class="result-details-summary-item col-6">
+								<div class="result-details-summary-item col-6">
 									<div id="expedition-entered-by-result-summary-item" class="col">
 										<label class="result-details-summary-label">Entered by</label>
 										<label class="result-details-summary-value"></label>
@@ -150,6 +150,14 @@ class ClimberDBExpeditions extends ClimberDB {
 									<div id="expedition-entry-time-result-summary-item" class="col">
 										<label class="result-details-summary-label">Entry date</label>
 										<label class="result-details-summary-value"></label>
+									</div>
+								</div>							
+								<div class="result-details-summary-item col-6">
+									<div id="expedition-n-members-result-summary-item" class="col collapse">
+										<label class="result-details-summary-label">Current members</label>
+										<label class="result-details-summary-value"></label>
+									</div>
+									<div id="expedition-entry-time-result-summary-item" class="col">
 									</div>
 								</div>
 							</div>
@@ -171,7 +179,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							</div>
 							<div class="field-container-row collapse">
 								<div class="field-container col-6">
-									<input id="input-actual_departure_date" class="input-field" name="actual_departure_date" data-table-name="expeditions" placeholder="Actual departure" title="Actual departure" type="date" data-dependent-target="#input-group_status" data-dependent-value="4,5" autocomplete="off" required="">
+									<input id="input-actual_departure_date" class="input-field" name="actual_departure_date" data-table-name="expeditions" placeholder="Actual departure" title="Actual departure" type="date" data-dependent-target="#input-group_status" data-dependent-value="3,4,5" autocomplete="off" required="">
 									<span class="required-indicator">*</span>
 									<label class="field-label" for="input-actual_departure_date">Actual departure</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
@@ -185,20 +193,20 @@ class ClimberDBExpeditions extends ClimberDB {
 							</div>
 							<div class="field-container-row">
 								<div class="field-container col-sm-6">
-									<select id="input-guide_company" class="input-field" name="guide_company_code" data-table-name="expeditions" title="Guide company" type="text" autocomplete="off" data-default-value="-1"></select>
+									<select id="input-guide_company" class="input-field filled-by-default needs-filled-by-default" name="guide_company_code" data-table-name="expeditions" title="Guide company" type="text" autocomplete="off" data-default-value="-1"></select>
 									<span class="required-indicator">*</span>
 									<label class="field-label" for="input-guide_company">Guide company</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
 								<div class="field-container col-sm-6">
-									<select id="input-air_taxi" class="input-field default" name="air_taxi_code" data-table-name="expeditions" data-default-value="-1" placeholder="Air taxi" title="Air taxi" type="text" autocomplete="off"></select>
+									<select id="input-air_taxi" class="input-field default filled-by-default needs-filled-by-default" name="air_taxi_code" data-table-name="expeditions" data-default-value="-1" placeholder="Air taxi" title="Air taxi" type="text" autocomplete="off"></select>
 									<label class="field-label" for="input-air_taxi">Air taxi</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
 							</div>
 							<div class="field-container-row">
 								<div class="field-container col-sm-6">
-									<select id="input-special_group_type" class="input-field default" name="special_group_type_code" data-table-name="expeditions" placeholder="Special group type" title="Special group type" type="text" autocomplete="off"></select>
+									<select id="input-special_group_type" class="input-field default filled-by-default needs-filled-by-default" name="special_group_type_code" data-table-name="expeditions" placeholder="Special group type" title="Special group type" type="text" autocomplete="off"></select>
 									<label class="field-label" for="input-special_group_type">Special group type</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
@@ -210,7 +218,7 @@ class ClimberDBExpeditions extends ClimberDB {
 									<label class="field-label checkbox-label" for="input-needs_special_use_permit">Requires additional permit (photography, etc.)</label>
 								</div>
 							</div>
-							<div class="field-container-row">
+							<div class="field-container-row collapse">
 								<label class="field-label expedition-briefing-link-label" for="expedition-briefing-link">No briefing scheduled</label>
 								<a id="expedition-briefing-link" class="briefing-link" href="briefings.html" target="_blank" aria-hidden="true">Set briefing time</a>
 							</div>
@@ -228,7 +236,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							<div id="expedition-members-accordion" class="accordion" data-table-name="expedition_members" data-item-display-name="expedition member">
 								<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
 									<div class="card-header" id="cardHeader-expedition-members-cloneable">
-										<a class="card-link collapsed col-4 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
+										<a class="card-link collapsed col-6 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
 											<div class="card-link-content">
 												<h6 class="card-link-label expedition-member-card-link-label"></h6>
 											</div>
@@ -594,6 +602,29 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#create-pdf-button').click(e => {
+			const exportType = $('#input-export_type').val();
+			const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.canceled)').length;
+			const nRoutes = $('#routes-accordion .card:not(.cloneable)').length;
+			if (nMembers === 0) {
+				showModal(
+					'There are no active members of this expedition. You must add at least one member or' +
+					' set at least one member\'s status to something other than "Canceled".', 
+					'No Expedition Members'
+				);
+				return;
+			} else if ((exportType === 'confirmation_letter') && !$('.input-field[name=is_trip_leader]:checked').length) {
+				showModal(
+					'No expedition member has been designated as the trip leader yet. You must' +
+						' specify a trip leader before you can export this expedition\'s confirmation letter.' +
+						' To specify the leader for the expedition, hover over the member you want to' + 
+						' designate as the leader and check the leader box that appears. ',
+					'No Trip Leader Specified'
+				);
+				return;
+			} else if ((exportType === 'registration_card') && (nRoutes === 0)) {
+				showModal('You must add at least one route before you can export the expedition\'s registration card', 'No Routes Entered');
+				return;
+			}	
 			this.makePDF();
 		})
 
@@ -617,13 +648,18 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		});
 
+		// 
+		$('.filled-by-default').change(e => {
+			if (e.isTrigger) $(e.target).removeClass('filled-by-default');
+		})
+
 		// When the user clicks the back or forward browser nav buttons, check to see if there's a state entry with an ID associated. If so, load that expedition
 		window.onpopstate = (e) => {
 			const state = e.state;
 			if (state) {
 				if (state.id) {
 					// ask user to confirm/discard edits if there are any
-					if ($('.input-field.dirty').length) {
+					if ($('.input-field.dirty:not(.filled-by-default)').length) {
 						this.confirmSaveEdits({
 							afterActionCallbackStr: `
 								climberDB.loadExpedition(${state.id});
@@ -642,6 +678,11 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		}
 
+		// If the group status changes to "confirmed", make actual departure and actual return dates not required
+		$('#input-group_status').change(e => {
+			const statusCode = parseInt(e.target.value || 0);
+			this.toggleRequiredOnInput($('#input-actual_departure_date, #input-actual_return_date'), statusCode !== 3);//3 === confirmed
+		})
 
 		$(document).on('click', '.delete-card-button', (e) => {
 			e.stopPropagation(); // don't close or open the card
@@ -654,7 +695,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			if ($card.is('.new-card')) {
 				if (tableName === 'expedition_members') {
 					const climberID = $card.data('climber-id');
-					$(`#routes-accordion .route-member-list .data-list-item[data-climber-id="${climberID}"`).fadeRemove();
+					$(`#routes-accordion .route-member-list .data-list-item[data-climber-id="${climberID}"`).fadeRemove(500);
+					setTimeout(() => {this.updateExpeditionMemberCount()}, 550);
 				}
 				$card.fadeRemove();
 			} else {
@@ -682,7 +724,10 @@ class ClimberDBExpeditions extends ClimberDB {
 								const climberID = $card.data('climber-id');
 								$('#routes-accordion .route-member-list .data-list-item[data-climber-id=' + climberID + ']').remove();
 
-								 $('#${$card.attr('id')}').fadeRemove();
+								 $('#${$card.attr('id')}').fadeRemove(500);
+
+								 // Wait just over a half second for the card to be removed
+								 setTimeout(() => {climberDB.updateExpeditionMemberCount()}, 550);
 							})
 							.fail((xhr, status, error) => {
 								console.log('delete failed because ' + error)
@@ -692,6 +737,9 @@ class ClimberDBExpeditions extends ClimberDB {
 						`Are you sure you want to delete this expedition member` +
 						` and all related transactions and routes for this member? This action` +
 						` is permanent and cannot be undone.`;
+
+
+
 				} else if (tableName === 'expedition_member_routes') {
 					// get DB IDs for all member route records that are saved in the DB
 					const memberRouteIDs = $card.find('.route-member-list .data-list-item:not(.cloneable):not(.new-list-item)')
@@ -764,7 +812,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$('#expedition-search-bar').change(e => {
 			// If there are any unsaved edits, ask the user to save or discard them
-			if ($('.input-field.dirty').length) {
+			if ($('.input-field.dirty:not(.filled-by-default)').length) {
 				this.confirmSaveEdits({
 					afterActionCallbackStr: `climberDB.onExpeditionSearchBarChange({target: $('#${e.target.id}')})`,
 					afterCancelCallbackStr: `$('#${e.target.id}').val($('#${e.target.id}').data('current-value'))`
@@ -793,7 +841,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const isChecked = $checkbox.prop('checked');
 
 			// If this checkbox was checked and it's now unchecked, tell the user they can't do that
-			if ($('#expedition-members-accordion .card:not(.cloneable) .input-checkbox[name=is_trip_leader]:checked').length === 0) {	
+			/*if ($('#expedition-members-accordion .card:not(.cloneable) .input-checkbox[name=is_trip_leader]:checked').length === 0) {	
 				$checkbox.prop('checked', true);
 				const message =
 					'One expedition member must be selected as the leader. To change the leader' +
@@ -802,7 +850,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					' will automatically be unchecked.';
 				showModal(message, 'Invalid operation', 'alert');
 				return;
-			}
+			}*/
 
 			// If this chekcbox is being checked, hide all others
 			if (isChecked) {
@@ -1028,7 +1076,13 @@ class ClimberDBExpeditions extends ClimberDB {
 			const summitDateInputIDs = '#' + $checkboxes.closest('.center-checkbox-col').next().find('.input-field').map((_, el) => el.id).get().join(',#');
 			const allChecked = $checkboxes.filter(':checked').length == $checkboxes.length;
 			const expeditionName = this.expeditionInfo.expeditions.expedition_name;//$('#input-expedition_name').val();
-			const routeName = this.routeCodes[this.expeditionInfo.expedition_member_routes.order[$card.index() - 1]].name;
+			const $routeInput = $button.closest('.card').find('.route-code-header-input:not(.mountain-code-header-input)');
+			const routeCode = $routeInput.val();
+			if (routeCode === '') {
+				showModal('You must select a mountain and route first before you can mark that all climbers summited.', 'No Route Selected');
+				return;
+			}
+			const routeName = $routeInput.find(`option[value=${routeCode}]`).text();
 			var message, title, onConfirmClick;
 			if (allChecked) {
 				// Ask user to uncheck all and clear
@@ -1036,8 +1090,11 @@ class ClimberDBExpeditions extends ClimberDB {
 				title = `Uncheck all ${routeName} summits`;
 				onConfirmClick = `
 					$('${checkboxIDs}').prop('checked', false);
-					$('${summitDateInputIDs}').val(null);
-					$('#${cardID}').find('.check-all-summitted-button').text('check all');
+					$('${summitDateInputIDs}').val(null)
+						.closest('.collapse')
+							.collapse('hide');
+					const $card = $('#${cardID}');
+					$card.find('.check-all-summitted-button').text('check all');
 				`;
 
 			} else {
@@ -1054,8 +1111,14 @@ class ClimberDBExpeditions extends ClimberDB {
 				onConfirmClick = `
 					const summitDate = $('#modal-summit-date-input').val();
 					$('${checkboxIDs}').prop('checked', true);
-					if (summitDate) $('${summitDateInputIDs}').val(summitDate);	
-					$('#${cardID}').find('.check-all-summitted-button').text('uncheck all')
+					if (summitDate) {
+						$('${summitDateInputIDs}').val(summitDate)
+							.closest('.collapse')
+								.collapse('show');
+					}
+					const $card = $('#${cardID}');
+					$card.find('.check-all-summitted-button').text('uncheck all');
+					$card.find
 				`;
 			}
 			const footerButtons = `
@@ -1089,7 +1152,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				`;
 				const {first_name, last_name} = this.expeditionInfo.expedition_members.data[$li.data('expedition-member-id')];
 				const memberName = first_name + ' ' + last_name;
-				const routeName = this.routeCodes[$li.find('.input-field[name="route_code"]').val()].name;
+				const $routeInput = $li.closest('.card').find('.route-code-header-input:not(.mountain-code-header-input)');
+				const routeName = $routeInput.find(`option[value=${$routeInput.val()}]`).text();//this.routeCodes[$li.find('.input-field[name="route_code"]').val()].name;
 				showModal(`Are you sure you want to remove <strong>${memberName}</strong> from the <strong>${routeName}</strong> route?`, 'Remove expedition member from this route?', 'alert', footerButtons);
 			}
 		})
@@ -1102,7 +1166,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $ul = $($button.data('target'));
 			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item', parentDBID: $('#input-planned_departure_date').data('table-id')});
 			const $checkoutDate = $listItem.find('.input-field[name="checkout_date"]');//.filter((_, el) => el.name === 'checkout_date');
-			$checkoutDate.val(getFormattedTimestamp())
+			$checkoutDate.val($('.input-field[name=actual_departure_date]').val() || getFormattedTimestamp())
 				.change();
 		});
 
@@ -1201,6 +1265,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			$('#modal-save-to-expedition-button').collapse(collapseCommand);
 			$('.climber-form .result-details-summary-container.collapse').collapse(collapseCommand);
 
+			// Hide all badges
+			$('.result-details-header-badge').ariaHide(true);
+			
 			this.queryDB(`SELECT * FROM climber_info_view WHERE id=${parseInt(climberID)}`)
 				.done(queryResultString => {
 					const result = $.parseJSON(queryResultString);
@@ -1317,7 +1384,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			if ($('.input-field.dirty').length) this.discardEdits();
 		} else {
 			const allowEdits = $content.is('.uneditable');
-			if (!allowEdits && $('.input-field.dirty').length) {
+			if (!allowEdits && $('.input-field.dirty:not(.filled-by-default)').length) {
 				const afterActionCallbackStr = `
 					$('.expedition-content').addClass('uneditable');
 					$('#delete-expedition-button').ariaHide(true);
@@ -1699,65 +1766,6 @@ class ClimberDBExpeditions extends ClimberDB {
 				const expeditionInfo = this.expeditionInfo;
 				const $editedInputs =  $('.input-field.dirty').removeClass('dirty');
 				this.queryExpedition(expeditionID, false);//suppress flagged expedition member warnings
-				/*for (const el of $editedInputs) {
-					const $input = $(el);
-					const fieldName = $input.attr('name');
-					const value = this.getInputFieldValue($input);
-					const dbID = $input.data('table-id');
-					const tableName = $input.data('table-name');
-					if (tableName === 'expeditions') {
-						expeditionInfo.expeditions[fieldName] = value;
-					} else if (tableName === 'transactions') {
-						const expeditionMemberID = $input.closest('.card').data('table-id');
-						let memberTransactions = expeditionInfo.transactions[expeditionMemberID]
-						if (!memberTransactions) { // new member was added
-							const transactionOrder = $input.closest('.data-list')
-								.find('.data-list-item:not(.cloneable)')
-									.map((_, el) => $(el).data('table-id'))
-									.get();
-							expeditionInfo.transactions[expeditionMemberID] = {data: {}, order: transactionOrder};
-							memberTransactions = expeditionInfo.transactions[expeditionMemberID];
-						}
-						if (!memberTransactions.data[dbID]) memberTransactions.data[dbID] = {};
-						expeditionInfo.transactions[expeditionMemberID].data[dbID][fieldName] = value;
-					} else if (tableName === 'expedition_member_routes') {
-						// expedition member routes are organized by {data: {route_code: {expedition_member_id: {}}}, order: []}
-						//	order is route order and expedition members in route card are organized on the fly with expedition_members.order
-
-						const $listItem = $input.closest('.data-list-item');
-						const routeCode = $listItem.find('.input-field[name=route_code]').val();
-						let routeMembers = expeditionInfo.expedition_member_routes.data[routeCode];
-						if (!routeMembers) { // a new route was added
-							// add all expedition members
-							expeditionInfo.expedition_member_routes.data[routeCode] = Object.fromEntries(
-								$('#expedition-members-accordion .card').get().map(el => [$(el).data('table-id'), {}])
-							)
-							routeMembers = expeditionInfo.expedition_member_routes.data[routeCode];
-						}
-						const memberID = $input.data('foreign-ids').expedition_member_id;
-
-						if (!routeMembers[memberID]) routeMembers[memberID] = {};
-						routeMembers[memberID][fieldName] = value;
-
-						// necessary for linking in-memory data to the list item later on (e.g., in discardEdits())
-						if (!$listItem.data('expedition-member-id')) $listItem.data('expedition-member-id', memberID);
-					} else { // expedition_members, or cmc_checkout
-						const $parent = $input.closest('#expedition-members-accordion').length ? 
-							$input.closest('.card') :
-							$input.closest('.data-list-item');
-						const dbID = $parent.data('table-id');
-						if (!(dbID in expeditionInfo[tableName].data)) {
-							expeditionInfo[tableName].data[dbID] = {};
-							// this will overwrite the .order that already exists, but that's OK
-							expeditionInfo[tableName].order = $parent.siblings()
-								.not('.cloneable')
-								.add($parent)
-								.map((_, el) => $(el).data('table-id'))
-						}
-						let thisData = expeditionInfo[tableName].data[dbID];
-						thisData[fieldName] = value;
-					}
-				}*/
 
 				// Hide the save button again since there aren't any edits
 				$('#save-expedition-button').ariaHide(true);
@@ -1765,13 +1773,6 @@ class ClimberDBExpeditions extends ClimberDB {
 				$('#open-reports-modal-button').ariaHide(false);
 				// show other edit buttons
 				$('#edit-expedition-button, #delete-expedition-button').ariaHide(false);
-
-				// If this is a new expedition, add it to the search bar and update the URL
-				/*if (expeditionInfo.id === undefined) {
-					expeditionInfo.id = expeditionID;
-					const $select = $('#expedition-search-bar').append(`<option value=${expeditionID}>${expeditionInfo.expedition_name}</option>`);
-					this.updateURLHistory(expeditionID, $select);
-				}*/
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
@@ -1789,7 +1790,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('.new-card, .new-list-item').fadeRemove();
 
 		//expeditions
-		for (const el of $('#expedition-members-accordion .card:not(.cloneable) .input-field.dirty')) {
+		for (const el of $('#expedition-data-container .input-field.dirty')) {
 			this.setInputFieldValue(el, this.expeditionInfo.expeditions);
 		}
 
@@ -1825,6 +1826,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		$('.input-field.dirty').removeClass('dirty');
+		$('#save-expedition-button').ariaHide(true);
 	}
 
 
@@ -1870,7 +1872,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				} else {
 					// Remove the expedition from the search bar (if it exists, i.e., is from the current year)
 					$(`#expedition-search-bar option[value=${expeditionID}]`).remove();
-					this.clearExpeditionInfo();
+					this.createNewExpedition();
 				}
 			}).fail((xhr, status, error) => {
 				showModal(`An unexpected error occurred while deleting data from the database: ${error}.`, 'Unexpected error');
@@ -2191,12 +2193,6 @@ class ClimberDBExpeditions extends ClimberDB {
 	to save edits if there are any and for after a successful expedition delete
 	*/
 	createNewExpedition() {
-		// Set header values
-		$('#expedition-entered-by-result-summary-item .result-details-summary-value')
-			.text(this.userInfo.ad_username);
-		$('#expedition-entry-time-result-summary-item .result-details-summary-value')
-			.text((new Date()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}));	
-		
 		// Reset the search bar value to the default 
 		const $searchBar = $('#expedition-search-bar');
 		var $defaultOption = $searchBar.find('option[value=""]'); 
@@ -2216,6 +2212,15 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Clear fields and data
 		this.clearExpeditionInfo();
+
+		// Set header values
+		$('#expedition-entered-by-result-summary-item .result-details-summary-value')
+			.text(this.userInfo.ad_username);
+		$('#expedition-entry-time-result-summary-item .result-details-summary-value')
+			.text((new Date()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}));	
+		$('#expedition-n-members-result-summary-item').collapse('hide');
+
+		$('.needs-filled-by-default').addClass('filled-by-default')
 	}
 
 
@@ -2224,7 +2229,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	*/
 	onNewExpeditionButtonClick() {
 
-		if ($('.input-field.dirty').length) {
+		if ($('.input-field.dirty:not(.filled-by-default)').length) {
 			this.confirmSaveEdits({afterActionCallbackStr: 'climberDB.createNewExpedition();'})
 		} else {
 			this.createNewExpedition()
@@ -2232,6 +2237,11 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	updateExpeditionMemberCount() {
+		const nMembers = $('#expedition-members-accordion > .card:not(.cloneable):not(.canceled)').length;
+		$('#expedition-n-members-result-summary-item > .result-details-summary-value').text(nMembers)
+			.closest('.collapse').collapse(nMembers ? 'show' : 'hide');
+	}
 
 	addExpeditionMemberCard({expeditionMemberID=null, firstName=null, lastName=null, climberID=null, showCard=false, isNewCard=false, climberInfo={}}={}) {
 		const expeditionMemberInfo = this.expeditionInfo.expedition_members.data[expeditionMemberID];
@@ -2329,7 +2339,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			// If the climber is a minor, flag the expedition member
 			const climberAge = climberInfo.age;
-			if ((climberAge !== undefined) && (climberAge < 18) ) {
+			if (!((climberAge === undefined) || (climberAge === null)) && (climberAge < 18) ) {
 				$newCard.find('.input-field[name=flagged]')
 					.prop('checked', true)
 					.change();
@@ -2339,6 +2349,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 		}
+
+		this.updateExpeditionMemberCount();
 
 		return $newCard;
 	}
@@ -2456,19 +2468,20 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#save-expedition-button').ariaHide(true);
 
 		// set briefing link 
-		const briefingLink = $('#expedition-briefing-link');
+		const $briefingLink = $('#expedition-briefing-link');
 		const briefingInfo = this.expeditionInfo.briefings;
 		const briefingDate = briefingInfo.briefing_date;
 		if (briefingDate) {
-			briefingLink.attr('href', `briefings.html?date=${briefingDate}&id=${briefingInfo.id}`).text('View/Change');
+			$briefingLink.attr('href', `briefings.html?date=${briefingDate}&id=${briefingInfo.id}`).text('View/Change');
 			$('.field-label[for=expedition-briefing-link]').text('Briefing time: ' + briefingInfo.briefing_datetime);
 		} else if (expeditionData.planned_departure_date) {
-			briefingLink.attr('href', `briefings.html?date=${expeditionData.planned_departure_date}`);
+			$briefingLink.attr('href', `briefings.html?date=${expeditionData.planned_departure_date}`);
 		}//*/
+		$briefingLink.closest('.collapse').collapse('show');
 	}
 
 
-	clearExpeditionInfo() {
+	clearExpeditionInfo({hideEditButtons=true}={}) {
 		// Clear any previously loaded data
 		$('.accordion .card:not(.cloneable), .data-list li:not(.cloneable)').remove();
 
@@ -2494,22 +2507,23 @@ class ClimberDBExpeditions extends ClimberDB {
 		// clearInputFields sets the class to default if the value = '', and these unputs are currently empty 
 		$('.route-code-header-input').removeClass('default');
 
-
 		for (const el of $('.result-details-summary-value')) {
 			$(el).text('');
 		}
+
 		//$('#input-expedition_name').val('New Expedition Name');
 		$('#input-group_status').val(1);//=pending
 
 		// Hide edit/export buttons
-		$('.expedition-edit-button').ariaHide(true);
+		$('.expedition-edit-button').ariaHide(hideEditButtons);
 
 		// Not sure why, but a few selects in the climber form get .change triggered so turn the .dirty class off
 		$('#add-climber-form-modal-container .input-field.dirty').removeClass('dirty');
 
 		// reset briefing link
 		$('.field-label[for=expedition-briefing-link]').text('No briefing scheduled');
-		$('#expedition-briefing-link').attr('href', `briefings.html`).text('Set briefing time');
+		$('#expedition-briefing-link').attr('href', `briefings.html`).text('Set briefing time')
+			.closest('.collapse').collapse('hide');
 	}
 
 
@@ -2532,7 +2546,10 @@ class ClimberDBExpeditions extends ClimberDB {
 					const result = $.parseJSON(queryResultString);
 					// Get expedition info
 					if (result.length) {
-						this.clearExpeditionInfo();
+						this.clearExpeditionInfo(
+							// don't hide expedition buttons when reloading data. Toggling edits for other cases will happen otherwise
+							{hideEditButtons: showOnLoadWarnings} 
+						);  
 
 						const firstRow = result[0];//there should only be one
 						for (const fieldName in this.tableInfo.tables.expeditions.columns) {
@@ -2541,7 +2558,8 @@ class ClimberDBExpeditions extends ClimberDB {
 						}
 						this.expeditionInfo.expeditions.id = firstRow.expedition_id;
 					} else {
-						showModal(`There are no expeditions with the database ID '${expeditionID}'.`, 'Unexpected error');
+						const footerButton = '<button class="generic-button modal-button close-modal" onclick="climberDB.createNewExpedition()" data-dismiss="modal">Close</button>';
+						showModal(`There are no expeditions with the database ID '${expeditionID}'. This expedition was either deleted or the URL you are trying to use is invalid.`, 'Invalid Expedition ID', 'alert', footerButton);
 					}
 
 					// Get data for right-side tables
@@ -2701,9 +2719,14 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	getCMCInfo() {
-		const sql = 'SELECT id, cmc_can_identifier, rfid_tag_id FROM cmc_inventory';
+		const sql = `
+			SELECT DISTINCT cmc_inventory.* FROM cmc_inventory 
+			LEFT JOIN cmc_checkout ON cmc_inventory.id=cmc_id 
+			WHERE return_date IS NOT NULL 
+			ORDER BY cmc_inventory.id
+		;`
 		const $select = $('#input-cmc_id') // this is the select from the .cloneable <li>
-			.append(`<option class="" value=""></option>`); 
+			.append(`<option class="" value="">CMC #</option>`); 
 		return this.queryDB(sql)
 			.done(queryResultString => {
 				for (const row of $.parseJSON(queryResultString)) {

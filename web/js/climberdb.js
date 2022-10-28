@@ -706,6 +706,16 @@ class ClimberDB {
 	}
 
 
+	/* 
+	Helper method to toggle the required property on an input field
+	*/
+	toggleRequiredOnInput($input, isRequired) {
+		$input = $($input);
+		$input.prop('required', isRequired);
+		$input.siblings('.required-indicator').ariaHide(!isRequired);
+	}
+
+
 	/*
 	Helper function to reset the values/classes of all inputs within a given parent to their defaults
 	*/
@@ -969,7 +979,7 @@ class ClimberDB {
 		const $el = $(el);
 
 		// If this is a child of a cloneable card, skip it
-		if ($el.closest('.card.cloneable').length) return [$(null), null, null];
+		if ($el.closest('.card.cloneable').length || !values) return [$(null), null, null];
 
 		// If this is being called to roll back edits, the table-id should already be filled
 		if (dbID === null) dbID = $el.data('table-id');
@@ -1118,7 +1128,7 @@ class ClimberDB {
 
 
 	beforeUnloadEventHandler(e) {
-		if ($('.input-field.dirty').length) {
+		if ($('.input-field.dirty:not(.filled-by-default)').length) {
 			const message = 'You have unsaved edits. Are you sure you want to leave this page?';
 			e.returnValue = message;
 			return message;
@@ -1198,7 +1208,7 @@ class ClimberDB {
  	Helper function to remove a DOM element with a fade
  	*/
  	$.fn.fadeRemove = function(fadeTime=500) {
- 		 return this.fadeOut(500, () => {this.remove()});
+ 		 return this.fadeOut(fadeTime, () => {this.remove()});
  	}
 }( jQuery ));
 
