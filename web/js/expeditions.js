@@ -240,7 +240,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						<div class="expedition-data-content-body">
 							<div id="expedition-members-accordion" class="accordion" data-table-name="expedition_members" data-item-display-name="expedition member">
 								<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
-									<div class="card-header" id="cardHeader-expedition-members-cloneable">
+									<div class="card-header show-children-on-hover" id="cardHeader-expedition-members-cloneable">
 										<a class="card-link collapsed col-6 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
 											<div class="card-link-content">
 												<h6 class="card-link-label expedition-member-card-link-label"></h6>
@@ -268,7 +268,7 @@ class ClimberDBExpeditions extends ClimberDB {
 											<label class="field-label checkbox-label" for="input-psar_complete">PSAR</label>
 										</div>
 										<div class="card-header-content-container member-card-header-chevron-container">
-											<button class="delete-card-button icon-button">
+											<button class="delete-card-button icon-button show-on-parent-hover">
 												<i class="fa fa-trash"></i>
 											</button>
 											<i class="fa fa-chevron-down pull-right"></i>
@@ -421,7 +421,7 @@ class ClimberDBExpeditions extends ClimberDB {
 															<label class="data-list-col data-list-header-label col-6">Transaction notes</label>
 														</div>
 														<ul id="transactions-list" class="data-list">
-															<li class="data-list-item cloneable hidden">
+															<li class="data-list-item show-children-on-hover cloneable hidden">
 																<div class="col-3">
 																	<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" title="Transaction type"></select>
 																</div>
@@ -429,8 +429,13 @@ class ClimberDBExpeditions extends ClimberDB {
 																	<span class="unit-symbol">$</span>
 																	<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
 																</div>
-																<div class="col-6">
+																<div class="col-6 d-flex">
 																	<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
+																	<div class="col-2">
+																		<button class="icon-button delete-button delete-transaction-button show-on-parent-hover">
+																			<i class="fas fa-trash fa-lg"></i>
+																		</button>
+																	</div>
 																</div>
 															</li>
 														</ul>
@@ -475,7 +480,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<!--<h6 class="card-link-label expedition-member-card-link-label"></h6>-->
 											</div>
 											<div class="card-link-content">
-												<button class="delete-card-button icon-button delete-route-button">
+												<button class="delete-card-button icon-button delete-route-button show-on-parent-hover">
 													<i class="fa fa-trash"></i>
 												</button>
 												<i class="fa fa-chevron-down pull-right"></i>
@@ -950,14 +955,12 @@ class ClimberDBExpeditions extends ClimberDB {
 				$valueField.val(amount * -1)
 			}
 
-			// Get balance
-			const sum = $list.find('li:not(.cloneable) .transaction-amount-field')
-				.map((_, el) => el.value === '' ? 0 : parseFloat(el.value))
-				.get()
-				.reduce((runningTotal, value) => runningTotal + value)
-				.toFixed(2);
-			if (!isNaN(sum)) $list.siblings('.data-list-footer').find('.total-col .total-span').text(sum);
+			this.getTransactionBalance($list);
 		});
+
+		$(document).on('click', '.delete-transaction-button', e => {
+			this.onDeleteTransactionButtonClick(e);
+		})
 		// ^^^^^^^^^^ Members/transactions ^^^^^^^^^^^
 
 		// ---------- Route stuff ----------
@@ -2694,13 +2697,21 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	deleteListItem($listItem, tableName, tableID) {
+		$listItem = $($listItem); // make sure it's a jQuery object
+
+		if ($listItem.is('.new-list-item')) {
+			$listItem.fadeRemove();
+			return $.Deferred().resolve(true);
+		}
 		this.showLoadingIndicator('deleteListItem');
 		var sql = `DELETE FROM ${tableName} WHERE id=${parseInt(tableID)} RETURNING id, '${tableName}' AS table_name`;
 		return this.queryDB(sql)
-			.done(queryResultString => {
+			.always(() => {
+				this.hideLoadingIndicator();
+			}).then(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
 					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
-					return;
+					return false;
 				} else {
 					const failedDeletes = [];
 					for (const {id, tableName} of $.parseJSON(queryResultString)) {
@@ -2712,17 +2723,79 @@ class ClimberDBExpeditions extends ClimberDB {
 						showModal(
 							`There was a problem deleting objects from the table '${tableName}'.` +
 								` Contact your database adminstrator to resolve this issue.<br><br>Attempted SQL:<br>${sql}`, 
-							'Database Error')
+							'Database Error');
+						return false;
 					} else {
+						
+						if (tableName === 'transactions') {
+							const parentID = $listItem.data('parent-table-id');
+							delete this.expeditionInfo[tableName][parentID].data[tableID];
+						} 
 						$listItem.fadeRemove();
-						// ***** remove in-memory data *******
+						return true;
 					}
 				}
-			}).fail((xhr, status, error) => {
+			}, (xhr, status, error) => {
 				showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-			}).always(() => {
-				this.hideLoadingIndicator();
-			});
+			})
+	}
+
+
+	/*
+	Helper method to update the transaction balance in a transaction list footer
+	*/
+	getTransactionBalance($list) {
+		const sum = $list.find('li:not(.cloneable) .transaction-amount-field')
+			.map((_, el) => el.value === '' ? 0 : parseFloat(el.value))
+			.get()
+			.reduce((runningTotal, value) => runningTotal + value)
+			.toFixed(2);
+		if (!isNaN(sum)) $list.siblings('.data-list-footer').find('.total-col .total-span').text(sum);
+	}
+
+
+	/*
+
+	*/
+	deleteTransactionItem($listItem) {
+		$listItem = $($listItem);//make sure it's a jQuery object
+		
+		// Get a reference to the transaction list now because once the list item 
+		//	is removed from the DOM, the list can't be located using it
+		const $transactionsList = $listItem.closest('.data-list');
+
+		const dbID = $listItem.data('table-id');
+		// If the delete succeeds, update the transaction balance 
+		this.deleteListItem($listItem, 'transactions', dbID)
+			.then(success => {
+				// Wait a half second because .fadeRemove() takes that 
+				//	long to actually remove the item from the DOM
+				setTimeout(
+					() => {this.getTransactionBalance($transactionsList)},
+					550
+				)
+			})
+	}
+
+
+	onDeleteTransactionButtonClick(e) {
+		const $li = $(e.target).closest('.data-list-item');
+		// If this is a newly added transaction, just delete it
+		if ($li.is('.new-list-item')) {
+			this.deleteTransactionItem($li);
+		} else {
+			const transactionType = $li.find('.input-field[name=transaction_type_code]')[0].selectedOptions[0].text;
+			const transactionValue = $li.find('.input-field[name=transaction_value]').val();
+			const chargeType = transactionValue < 0 ? 'credit' : 'charge'
+			const message = `Are you sure you want to delete this <strong>${transactionType}</strong>` + 
+				` ${chargeType} of <strong>$${Math.abs(transactionValue)}</strong>? Clicking 'OK' will` +
+				' permanently delete this transaction record, which cannot be undone.';
+			const footerButtons = `
+				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
+				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.deleteTransactionItem('#${$li.attr('id')}')">OK</button>
+			`
+			showModal(message, 'Permanently Delete Transaction?', 'confirm', footerButtons);
+		}
 	}
 
 

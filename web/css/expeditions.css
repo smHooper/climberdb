@@ -458,11 +458,11 @@
 	font-size: 20px;
 }
 /*only show the delete button when the user hovers over the card header*/
-.delete-card-button {
+.show-on-parent-hover {
 	opacity: 0;
 	transition: 0.3s opacity;
 }
-.card-header:hover .delete-card-button {
+.show-children-on-hover:hover .show-on-parent-hover {
 	opacity: 1;
 }
 /*hide the button when not in editing mode*/
