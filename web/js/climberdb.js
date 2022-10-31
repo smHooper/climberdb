@@ -694,7 +694,7 @@ class ClimberDB {
 			$select.removeClass('default error');
 
 			// if the user selected an actual option, remove the empty default option
-			if (!$select.is('keep-default-option')) {
+			if (!$select.is('.keep-default-option')) {
 				$select.find('option[value=""]').remove();
 			}
 		

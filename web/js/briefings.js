@@ -245,7 +245,7 @@ class ClimberDBBriefings extends ClimberDB {
 						</div>
 						<div class="field-container-row">
 							<div class="field-container col-sm-6">
-								<select id="input-ranger" class="input-field no-option-fill revert-on-invalid-briefing-time" name="briefing_ranger_user_id" data-table-name="briefings" placeholder="Briefing ranger" title="Briefing ranger" required="required">
+								<select id="input-ranger" class="input-field no-option-fill revert-on-invalid-briefing-time keep-default-option" name="briefing_ranger_user_id" data-table-name="briefings" placeholder="Briefing ranger" title="Briefing ranger" required="required">
 									<option value="">Briefing ranger</option>
 								</select>
 								<span class="required-indicator">*</span>
@@ -357,6 +357,9 @@ class ClimberDBBriefings extends ClimberDB {
 			this.saveEdits();
 		})
 
+		$('#delete-button').click(e => {
+			this.onDeleteButtonClick(e);
+		})
 
 	}
 
@@ -473,7 +476,7 @@ class ClimberDBBriefings extends ClimberDB {
 			const expeditionOptions = Object.values(this.expeditionInfo.expeditions)
 				.filter(i => this.expeditionInfo.unscheduled.includes(i.expedition_id));
 			this.fillExpeditionsSelectOptions(expeditionOptions);
-			this.clearInputFields({body: '.appointment-details-drawer', triggerChange: false});
+			this.clearInputFields({parent: '.appointment-details-drawer', triggerChange: false});
 		}
 
 		$('.appointment-details-drawer').addClass('show');
@@ -489,9 +492,25 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	/*
+	ClimberDB.clearInputFields() excludes any .no-option-fill inputs because these 
+	usually don't have a default value. The briefing ranger field is .no-option-fill 
+	but does have one, so make sure it gets reset too
+	*/
+	clearInputFields() {
+		// Clear all inputs except .no-option-fill
+		super.clearInputFields({parent: '.appointment-details-drawer', triggerChange: false});
+		
+		// clear .no-option-fill
+		$('.appointment-details-drawer .no-option-fill').val('').addClass('default');
+	}
+
+	/*
 	Helper method to close the details drawer
 	*/
 	closeAppointmentDetailsDrawer() {
+		
+		this.clearInputFields({triggerChange: false});
+
 		$('.appointment-details-drawer').removeClass('show');
 		$('.briefing-appointment-container.selected').removeClass('selected');
 		this.toggleEditing(false);// turn off editing
@@ -507,6 +526,7 @@ class ClimberDBBriefings extends ClimberDB {
 				const labelText = $input.siblings('.field-label').text();
 				$input.focus();
 				showModal(`Before you can save this briefing, all fields must be filled in and the '${labelText}' field is blank. Fill in this and any other blank fields, then try to save your changes.`, 'Empty field');
+				hideLoadingIndicator();
 				return;
 			}
 		}
@@ -573,12 +593,14 @@ class ClimberDBBriefings extends ClimberDB {
 					this.briefings[briefingDate][briefingID] = info;
 
 					// Set breifing ID and remove new-briefing class
-					$selectedAppointment.data('briefing-id', briefingID)
+					$selectedAppointment.attr('data-briefing-id', briefingID)
 						.removeClass('new-briefing');
 
 					// Add to the calendar cell
 					this.addBriefingToCalendarCell($('.calendar-cell.selected'), info);
 				}
+
+				$('.input-field.dirty').removeClass('dirty');
 
 			}
 		}).fail((xhr, status, error) => {
@@ -684,20 +706,27 @@ class ClimberDBBriefings extends ClimberDB {
 					this.edits = {};
 
 					// add expedition to unscheduled list
-					this.expeditions.unscheduled.push(briefingID);
+					this.expeditionInfo.unscheduled.push(briefingID);
 					
 					// remove briefing from info
 					const briefingDate = result[0].briefing_date;
-					delete this.briefings[breifingDate][briefingID];
+					delete this.briefings[briefingDate][briefingID];
+
+					// remove from daily detail sidebar schedule
+					$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`)
+						.fadeRemove();
 
 					// remove briefing from calendar
 					$(`.briefing-calendar-entry[data-briefing-id=${briefingID}]`)
 						.remove();
 					this.toggleBriefingCalendarCellEntries($(`.calendar-cell[data-date="${briefingDate}"]`));
+
+					// Hide appointment details
+					this.closeAppointmentDetailsDrawer();
 				}
 			}).fail((xhr, status, error) => {
 				console.log('Delete failed because ' + error)
-			})
+			}).always(() => {hideLoadingIndicator()});
 
 	}
 
@@ -709,22 +738,30 @@ class ClimberDBBriefings extends ClimberDB {
 			$selectedAppointment.remove();
 			this.closeAppointmentDetailsDrawer();
 		} else {
+			const briefingID = $selectedAppointment.data('briefing-id');
 			const onConfirmClick = `
 				showLoadingIndicator();
-				climberDB.deleteBriefing(${$selectedAppointment}) 
+				climberDB.deleteBriefing(${briefingID}) 
 			`;
 			
 			const footerButtons = `
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.discardEdits();${afterActionCallbackStr};${afterDiscardCallbackStr}">Discard</button>
-				<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick};${afterActionCallbackStr};${afterSaveCallbackStr}">Save</button>
+				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick};">Delete</button>
 			`;
-			// climberDB is a global instance of ClimberDB or its subclasses that should be instantiated in each page
-			// 	this is a little un-kosher because the ClimberForm() instance is probably a property of climberDB, but
-			//	the only alternative is to make showModal a global function 
+			const selectedDate = $('.calendar-cell.selected').data('date');
+			const briefingInfo = this.briefings[selectedDate][briefingID];
+			var briefingStart = '';
+			if (briefingInfo) {
+				briefingStart = (new Date(briefingInfo.briefing_start))
+					.toLocaleTimeString('en-us', {hour: 'numeric', minute: 'numeric'})
+					.toLowerCase()
+					.replace(/\s|:00/g, '');
+			}
+			const expeditionNameText = briefingInfo ? ` for <strong>${briefingInfo.expedition_name}</strong>` : '';
+			const message = `Are you sure you want to delete ${briefingStart ? 'the ' : 'this'}<strong>${briefingStart}</strong> briefing${expeditionNameText}? This action is permanent and <strong>cannot be undone</strong>.`
 			showModal(
-				'You have unsaved edits to this briefing. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this briefing.',
-				'Save edits?',
+				message,
+				'Delete This Briefing?',
 				'alert',
 				footerButtons
 			);
@@ -1238,7 +1275,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 		var deferreds = [
 			// Fill expeditions
-			this.getExpeditionInfo(2021)
+			this.getExpeditionInfo(year)
 			,
 			// Get rangers 
 			this.queryDB(`SELECT id, first_name || ' ' || last_name As full_name FROM users WHERE user_role_code=2 AND user_status_code=2`)
@@ -1267,7 +1304,6 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	getExpeditionInfo(year=(new Date().getFullYear())) {
-
 		const sql = `SELECT * FROM briefings_expedition_info_view WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year + 1}-1-1' ORDER BY expedition_name`;
 		return this.queryDB(sql)
 			.done(queryResultString => {
@@ -1291,7 +1327,7 @@ class ClimberDBBriefings extends ClimberDB {
 		// Do synchronous stuff
 		this.configureMainContent();
 
-		this.fillBriefingDetailSelects(2021);
+		this.fillBriefingDetailSelects();
 
 		$.when(...deferreds).then(() => {
 			this.queryBriefings();
