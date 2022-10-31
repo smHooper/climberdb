@@ -101,6 +101,36 @@ class ClimberDBBriefings extends ClimberDB {
 		return date;
 	} 
 
+
+	/*
+	Helper method to get an array of the potential appointment times from the schedule UI
+	*/
+	getAppointmentTimes() {
+		return $('.schedule-background .half-hour-block')
+			.map((_, el) => $(el).data('time'))
+			.get();
+	}
+
+
+	/*
+	Helper method to get in-memory briefing information using the selected briefing appointment
+	*/
+	getBriefingInfo(briefingID=null) {
+		// If the briefing ID isn't given, try to get it from the selected appointment container
+		// 	(if there is one)
+		if (briefingID == null) {
+			const $selectedAppointment = $('.briefing-appointment-container.selected');
+			if (!$selectedAppointment.length) return {};
+			briefingID = $selectedAppointment.data('briefing-id');
+		}
+		const selectedDate = $('.calendar-cell.selected').data('date');
+		// If there aren't any briefings for this date, return an empty object
+		if (!(selectedDate in this.briefings)) return {};
+
+		return this.briefings[selectedDate][briefingID] || {};
+	}
+
+
 	configureMainContent() {
 		
 		this.urlQueryParams = this.parseURLQueryString();
@@ -405,7 +435,32 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	/*
-	Select the date when a calendar cell is clicked
+	Helper method to add an appointment container to the sidebar schedule UI. This is 
+	only called when a new cell is selected and the schedule needs to be filled in and 
+	when discarding edits.
+	*/
+	addBriefingToSchedule(briefingInfo, {appointmentTimes=[]}={}) {
+		
+		if (!appointmentTimes.length) appointmentTimes = this.getAppointmentTimes();
+
+		// Calculate the CSS grid row index for the given start and end times
+		const rowIndexStart = appointmentTimes.indexOf(briefingInfo.briefing_start_time) + 1;
+		const rowIndexEnd = appointmentTimes.indexOf(briefingInfo.briefing_end_time) + 1;
+		
+		$('.schedule-ui-container').append(`
+			<div class="briefing-appointment-container" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}" data-briefing-id=${briefingInfo.id}>
+				<label class="briefing-appointment-header">${briefingInfo.expedition_name}</label>
+				<p class="briefing-appointment-text">
+				<span class="briefing-details-n-climbers">${briefingInfo.n_members}</span> climber<span class="briefing-details-climber-plural">${briefingInfo.n_members > 1 ? 's' : ''}</span><br>
+				<span class="briefing-details-ranger-name">${briefingInfo.ranger_last_name || ''}</span>
+				</p>
+			</div>
+		`);
+	}
+
+
+	/*
+	Select the date when a calendar cell is clicked and fill any appointments on the sidebar schedule
 	*/
 	onCalendarCellClick(e) {
 		
@@ -428,25 +483,12 @@ class ClimberDBBriefings extends ClimberDB {
 			.text(selectedDate.toLocaleDateString('en-us', {weekday: 'long', month: 'long', day: 'numeric'}));
 
 		// Add breifing appointments to the schedule details
-		const appointmentTimes = $('.schedule-background .half-hour-block')
-			.map((_, el) => $(el).data('time'))
-			.get();
-
+		const appointmentTimes = this.getAppointmentTimes();
 		const briefingAppointments = this.briefings[dateString];
 		if (briefingAppointments) {
 			for (const expeditionID in briefingAppointments) {
 				const info = briefingAppointments[expeditionID];
-				const columnIndexStart = appointmentTimes.indexOf(info.briefing_start_time) + 1;
-				const columnIndexEnd = appointmentTimes.indexOf(info.briefing_end_time) + 1;
-				$('.schedule-ui-container').append(`
-					<div class="briefing-appointment-container" style="grid-row: ${columnIndexStart} / ${columnIndexEnd}" data-briefing-id=${info.id}>
-						<label class="briefing-appointment-header">${info.expedition_name}</label>
-						<p class="briefing-appointment-text">
-						<span class="briefing-details-n-climbers">${info.n_members}</span> climber<span class="briefing-details-climber-plural">${info.n_members > 1 ? 's' : ''}</span><br>
-						<span class="briefing-details-ranger-name">${info.ranger_last_name || ''}</span>
-						</p>
-					</div>
-				`);
+				this.addBriefingToSchedule(info, {appointmentTimes: appointmentTimes})
 			}
 	
 		}
@@ -581,16 +623,31 @@ class ClimberDBBriefings extends ClimberDB {
 				);
 			} else {
 				const result = $.parseJSON(queryResultString);
-				if (isInsert) {
-					// Add to in-memory data
-					const briefingID = result[0].id;
-					const info = Object.fromEntries($('.input-field').map((_, el) => [[el.name, el.value]]));
-					info.briefing_start = info.briefing_date + ' '  + info.briefing_start_time;
-					info.briefing_end = info.briefing_date + ' '  + info.briefing_end_time;
-					info.expedition_name = this.expeditionInfo.expeditions[info.expedition_id].expedition_name;
-					info.id = briefingID;
-					this.briefings[briefingDate][briefingID] = info;
+				const briefingID = result[0].id;
 
+				// Update in-memory data
+				if (!this.briefings[briefingDate]) this.briefings[briefingDate] = {};
+				if (!this.briefings[briefingDate][briefingID]) this.briefings[briefingDate][briefingID] = {};
+				
+				var info = this.briefings[briefingDate][briefingID];
+
+				for (const el of $('.input-field')) {
+					info[el.name] = el.value;
+				}
+				info.briefing_start = info.briefing_date + ' '  + info.briefing_start_time;
+				info.briefing_end = info.briefing_date + ' '  + info.briefing_end_time;
+				info.expedition_name = this.expeditionInfo.expeditions[info.expedition_id].expedition_name;
+				info.n_members = this.expeditionInfo.expeditions[info.expedition_id].n_members;
+				info.id = briefingID;
+				
+				const rangerID = info.briefing_ranger_user_id;
+				if (rangerID) {
+					const rangerName = $(`.input-field[name=briefing_ranger_user_id] option[value=${rangerID}]`).text();
+					info.ranger_last_name = rangerName.split(' ').pop();
+					info.ranger_first_name = rangerName.split(' ')[0];
+				}
+
+				if (isInsert) {
 					// Set breifing ID and remove new-briefing class
 					$selectedAppointment.attr('data-briefing-id', briefingID)
 						.removeClass('new-briefing');
@@ -616,14 +673,31 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	discardEdits() {
+
+		const $dirtyInputs = $('.input-field.dirty');
+
+		// If there's a .new-briefing, the appointment can just be removed 
+		//	because there's no im-memory data to update
 		const $newBriefing = $('.briefing-appointment-container.new-briefing');
 		if ($newBriefing.length) {
 			$newBriefing.remove();
 		}
+		// Otherwise, remvoe the appointment container that reflects the 
+		//	edited data and re-create it from the in-memory briefing data 
+		else {
+			// If the current briefing isn't new, then one is necessarily selected
+			const $selectedAppointment = $('.briefing-appointment-container.selected');
+			const briefingID = $selectedAppointment.data('briefing-id');
+			const briefingInfo = this.getBriefingInfo(briefingID);
+			if ($dirtyInputs.length) {
+				$selectedAppointment.remove();
+				this.addBriefingToSchedule(briefingInfo);
+			}
+		}
 
 		// Remove any edits
 		this.edits = {};
-		$('.input-field.dirty').removeClass('dirty');
+		$dirtyInputs.removeClass('dirty');
 
 		// Hide the details drawer
 		$('.appointment-details-drawer').removeClass('show');
@@ -705,7 +779,8 @@ class ClimberDBBriefings extends ClimberDB {
 					this.edits = {};
 
 					// add expedition to unscheduled list
-					this.expeditionInfo.unscheduled.push(briefingID);
+					const briefingInfo = this.getBriefingInfo(briefingID);
+					this.expeditionInfo.unscheduled.push(briefingInfo.expedition_id);
 					
 					// remove briefing from info
 					const briefingDate = result[0].briefing_date;
@@ -747,8 +822,7 @@ class ClimberDBBriefings extends ClimberDB {
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
 				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick};">Delete</button>
 			`;
-			const selectedDate = $('.calendar-cell.selected').data('date');
-			const briefingInfo = this.briefings[selectedDate][briefingID];
+			const briefingInfo = this.getBriefingInfo(briefingID);
 			var briefingStart = '';
 			if (briefingInfo) {
 				briefingStart = (new Date(briefingInfo.briefing_start))
@@ -859,7 +933,10 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	/*
-	Helper function to make sure in-memory data and DOM values are aligned
+	Helper function to make sure in-memory data and DOM values are aligned. Because 
+	the current-value of any .revert-on-invalid-briefing-time inputs will update 
+	whenever the input receives focus, this only works for reverting values back to 
+	the last one before the event that caused the .change() event on the input to fire. 
 	*/
 	revertInputValue($input, {briefingInfo={}}={}) {
 		const oldValue = $input.data('current-value');
@@ -868,10 +945,10 @@ class ClimberDBBriefings extends ClimberDB {
 		// Check if the reverted value is the same as the in-memory value queried from the DB
 		// need the briefing ID if not given
 		if (!Object.keys(briefingInfo).length) {
-			const $selectedAppointment = $('.briefing-appointment-container.selected');
-			const briefingID = $selectedAppointment.data('briefing-id');
-			const selectedDate = $('.calendar-cell.selected').data('date');
-			briefingInfo = this.briefings[selectedDate][briefingID];
+			// const $selectedAppointment = $('.briefing-appointment-container.selected');
+			// const briefingID = $selectedAppointment.data('briefing-id');
+			// const selectedDate = $('.calendar-cell.selected').data('date');
+			briefingInfo = this.getBriefingInfo()
 		}
 		const fieldName = $input.attr('name');
 		
@@ -891,9 +968,7 @@ class ClimberDBBriefings extends ClimberDB {
 	name and number of climbers in the appointment container when the expedition changes.
 	*/
 	onExpeditionChange() {
-		const appointmentTimes = $('.schedule-background .half-hour-block')
-			.map((_, el) => $(el).data('time'))
-			.get();
+		const appointmentTimes = this.getAppointmentTimes();
 		
 		const $selectedAppointment = $('.briefing-appointment-container.selected');
 		const briefingID = $selectedAppointment.data('briefing-id');
@@ -938,9 +1013,7 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	onBriefingTimeChange($target) {
 
-		const appointmentTimes = $('.schedule-background .half-hour-block')
-			.map((_, el) => $(el).data('time'))
-			.get();
+		const appointmentTimes = this.getAppointmentTimes();
 		
 		const $selectedAppointment = $('.briefing-appointment-container.selected');
 		const selectedAppointmentID = $selectedAppointment.data('briefing-id');
@@ -988,10 +1061,10 @@ class ClimberDBBriefings extends ClimberDB {
 		if (targetIsStartTime) $target.data('current-value', targetIsStartTime ? newStartTime : endTime);
 
 		// update in-memory data
-		if (info !== undefined) { // will be undefined if this is a new briefing
-			info.briefing_start_time = newStartTime;
-			info.briefing_end_time = endTime;
-		}
+		// if (info !== undefined) { // will be undefined if this is a new briefing
+		// 	info.briefing_start_time = newStartTime;
+		// 	info.briefing_end_time = endTime;
+		// }
 
 	}
 
@@ -1025,12 +1098,13 @@ class ClimberDBBriefings extends ClimberDB {
 		//	again. This is so that it can be properly reverted to the last value the user selected
 		$input.data('current-value', rangerID);
 
-		// Update the ranger's last name on the schedule
-		const newRangerName = $(`#input-ranger option[value=${rangerID}]`).text();
-		$selectedAppointment.find('.briefing-details-ranger-name').text(newRangerName.split(' ').pop());
-
+		// Update the ranger's last name on the schedule (unless the user selected the null option)
+		if (rangerID) {
+			const newRangerName = $(`#input-ranger option[value=${rangerID}]`).text();
+			$selectedAppointment.find('.briefing-details-ranger-name').text(newRangerName.split(' ').pop());
+		}
 		// Update in-memory data if this is an existing briefing (info will be undefined if it's new)
-		if (info !== undefined) info.briefing_ranger_user_id = rangerID;
+		//if (info !== undefined) info.briefing_ranger_user_id = rangerID;
 	}
 
 
@@ -1092,9 +1166,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 	getTimeSlotEventInfo(e) {
 		const $button = $(e.target).closest('button.half-hour-block');
-		const appointmentTimes = $('.schedule-background .half-hour-block')
-			.map((_, el) => $(el).data('time'))
-			.get();
+		const appointmentTimes = this.getAppointmentTimes();
 		
 		const timeIndex = $button.index();//appointmentTimes.indexOf(time);
 		const time = appointmentTimes[timeIndex];//$button.data('time');
@@ -1148,9 +1220,7 @@ class ClimberDBBriefings extends ClimberDB {
 		// 	.addClass('dirty');
 		// this.edits.briefing_date = currentDate;
 
-		const appointmentTimes = $('.schedule-background .half-hour-block')
-			.map((_, el) => $(el).data('time'))
-			.get();
+		const appointmentTimes = this.getAppointmentTimes();
 		$('#input-briefing_start_time').val(time).change();
 		$('#input-briefing_end_time').val(appointmentTimes[endIndex - 1]).change();
 			//.data('current-value', time)
@@ -1287,9 +1357,7 @@ class ClimberDBBriefings extends ClimberDB {
 		];
 
 		// Get times
-		const times = $('.schedule-background .half-hour-block')
-			.map((_, el) => $(el).data('time'))
-			.get();
+		const times = this.getAppointmentTimes();
 		const $inputs = $('#input-briefing_start_time, #input-briefing_end_time');
 		for (const timeString of times) {
 			$inputs.append(
