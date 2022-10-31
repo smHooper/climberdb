@@ -245,10 +245,9 @@ class ClimberDBBriefings extends ClimberDB {
 						</div>
 						<div class="field-container-row">
 							<div class="field-container col-sm-6">
-								<select id="input-ranger" class="input-field no-option-fill revert-on-invalid-briefing-time keep-default-option" name="briefing_ranger_user_id" data-table-name="briefings" placeholder="Briefing ranger" title="Briefing ranger" required="required">
+								<select id="input-ranger" class="input-field no-option-fill revert-on-invalid-briefing-time keep-default-option" name="briefing_ranger_user_id" data-table-name="briefings" placeholder="Briefing ranger" title="Briefing ranger">
 									<option value="">Briefing ranger</option>
 								</select>
-								<span class="required-indicator">*</span>
 								<label class="field-label" for="input-ranger">Briefing ranger</label>
 								<span class="null-input-indicator">&lt; null &gt;</span>
 							</div>
@@ -444,7 +443,7 @@ class ClimberDBBriefings extends ClimberDB {
 						<label class="briefing-appointment-header">${info.expedition_name}</label>
 						<p class="briefing-appointment-text">
 						<span class="briefing-details-n-climbers">${info.n_members}</span> climber<span class="briefing-details-climber-plural">${info.n_members > 1 ? 's' : ''}</span><br>
-						<span class="briefing-details-ranger-name">${info.ranger_last_name}</span>
+						<span class="briefing-details-ranger-name">${info.ranger_last_name || ''}</span>
 						</p>
 					</div>
 				`);
@@ -520,12 +519,12 @@ class ClimberDBBriefings extends ClimberDB {
 	saveEdits() {
 		showLoadingIndicator('saveEdits');
 
-		for (const el of $('.input-field')) {
+		for (const el of $('.input-field:required')) {
 			if (el.value === '') {
 				const $input = $(el);
 				const labelText = $input.siblings('.field-label').text();
-				$input.focus();
-				showModal(`Before you can save this briefing, all fields must be filled in and the '${labelText}' field is blank. Fill in this and any other blank fields, then try to save your changes.`, 'Empty field');
+				$input.addClass('error').focus();
+				showModal(`Before you can save this briefing, all fields except "Briefing ranger" must be filled in and the '${labelText}' field is blank. Fill in this and any other blank fields, then try to save your changes.`, 'Empty field');
 				hideLoadingIndicator();
 				return;
 			}
