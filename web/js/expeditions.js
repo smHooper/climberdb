@@ -417,21 +417,30 @@ class ClimberDBExpeditions extends ClimberDB {
 													<div class="transactions-container-body">
 														<div class="data-list-item data-list-item-header">
 															<label class="data-list-col data-list-header-label col-3">Type</label>
-															<label class="data-list-col data-list-header-label col-3">Value</label>
-															<label class="data-list-col data-list-header-label col-6">Transaction notes</label>
+															<label class="data-list-col data-list-header-label col-3">Payment method</label>
+															<label class="data-list-col data-list-header-label col-2">Value</label>
+															<label class="data-list-col data-list-header-label col-4">Transaction notes</label>
 														</div>
 														<ul id="transactions-list" class="data-list">
 															<li class="data-list-item show-children-on-hover cloneable hidden">
-																<div class="col-3">
-																	<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" title="Transaction type"></select>
+																<input id="input-transaction_time" class="input-field hidden" type="datetime-local" name="transaction_time" data-table-name="transactions">
+																<div class="col-3 d-flex">
+																	<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required></select>
+																	<span class="required-indicator">*</span>
 																</div>
 																<div class="col-3">
+																	<div class="w-100 d-flex collapse">
+																		<select id="input-payment_method" class="input-field default keep-default-option" name="payment_method_code" data-table-name="transactions" placeholder="Payment method" title="Payment method" required></select>
+																		<span class="required-indicator">*</span>
+																	</div>
+																</div>
+																<div class="col-2">
 																	<span class="unit-symbol">$</span>
 																	<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
 																</div>
-																<div class="col-6 d-flex">
+																<div class="col-4 d-flex">
 																	<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
-																	<div class="col-2">
+																	<div class="col-3 pl-1">
 																		<button class="icon-button delete-button delete-transaction-button show-on-parent-hover">
 																			<i class="fas fa-trash fa-lg"></i>
 																		</button>
@@ -440,11 +449,12 @@ class ClimberDBExpeditions extends ClimberDB {
 															</li>
 														</ul>
 														<div class="data-list-item data-list-footer">
-															<label class="data-list-col data-list-header-label col-3">Balance</label>
-															<label class="data-list-col data-list-header-label total-col col-3">
+															<label class="data-list-col data-list-header-label col-3"></label>
+															<label class="data-list-col data-list-header-label col-3 text-right pr-2">Balance</label>
+															<label class="data-list-col data-list-header-label total-col col-2">
 																<span>$</span><span class="total-span"></span>
 															</label>
-															<label class="data-list-col data-list-header-label col-6"></label>
+															<label class="data-list-col data-list-header-label col-4"></label>
 														</div>
 													</div>
 												</div>
@@ -843,7 +853,11 @@ class ClimberDBExpeditions extends ClimberDB {
 		//$('select.input-field').change(e => {this.onSelectChange(e)})
 		$(document).on('click', '.add-transaction-button', e => {
 			const $newItem = this.addNewListItem($(e.target).closest('.transactions-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
+			// 
 			$newItem.find('.input-field[name="transaction_type_code"]').change();
+
+			// This field is hidden completely so just fill it silently with the current timestamp
+			$newItem.find('.input-field[name=transaction_time]').val(new Date(), this.getFormattedTimestamp({format: 'datetime'})).change();
 			const $card = $newItem.closest('.card');
 			$newItem.attr('data-parent-table-id', $card.data('table-id'));
 		});
@@ -932,12 +946,22 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(document).on('change', '.transaction-type-field', e => {
 			const $select = $(e.target);
 			const $valueField = $select.closest('li').find('.transaction-amount-field');
-			const defaultAmount = this.defaultTransactionFees[$select.val()].default_fee;
-			if (($valueField.val() === '' || $valueField.val() === '0.00') && defaultAmount !== null) {
-				$valueField
-					.val(defaultAmount.replace(/\(/, '-').replace(/[$)]/g, ''))
-					.change();
+			const transactionTypeCode = $select.val();
+			if (!transactionTypeCode) return;
+			const info = this.defaultTransactionFees[transactionTypeCode];
+			const defaultAmount = info.default_fee;
+			const currentValue = $valueField.val();
+			if ( (currentValue === '') || (currentValue === '0.00') ) {
+				if (defaultAmount !== null) {
+					$valueField
+						.val(defaultAmount.replace(/\(/, '-').replace(/[$)]/g, ''))
+						.change();
+				}
 			}
+			$select.closest('.data-list-item')
+				.find('.input-field[name=payment_method_code]')
+					.closest('.collapse')
+						.collapse(info.is_payment === 't' ? 'show' : 'hide');
 		});
 
 		// When a transaction amount field changes, calculate balance
@@ -1181,7 +1205,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				.change();
 		});
 
-		// ask user to confirm removing CMC only if it already exists in the DB
+		// ask user to confirm removing CMC only if the cmc_checkout record already exists in the DB
 		$(document).on('click', '.delete-cmc-button', e => {
 			const $li = $(e.target).closest('li');
 			if ($li.is('.new-list-item')) {
@@ -2324,6 +2348,10 @@ class ClimberDBExpeditions extends ClimberDB {
 				for (const el of $item.find('.input-field')) {
 					this.setInputFieldValue(el, thisTransaction, {dbID: transactionID});
 				}
+				//show the payment method field if this transactions is a payment
+				const $paymentMethod = $item.find('.input-field[name=payment_method_code]');
+				$paymentMethod.closest('.collapse').collapse(thisTransaction.payment_method_code ? 'show' : 'hide');
+				
 				transactionTotal = transactionTotal + parseFloat(thisTransaction.transaction_value || 0);
 			}
 			$transactionsList.siblings('.data-list-footer')
@@ -2339,14 +2367,21 @@ class ClimberDBExpeditions extends ClimberDB {
 				.change();
 
 			// set default tansactions (debits)
-			this.addNewListItem($transactionsList)
-				.find('.input-field[name=transaction_type_code]')
-					.val(10)//SUP fee
-					.change();
-			this.addNewListItem($transactionsList)
-				.find('.input-field[name=transaction_type_code]')
-					.val(11)//entrance fee
-					.change();
+			const now = this.getFormattedTimestamp(new Date(), {format: 'datetime'})
+			const $supFee = this.addNewListItem($transactionsList);
+			$supFee.find('.input-field[name=transaction_type_code]')
+				.val(10)//code for SUP fee
+				.change();
+			$supFee.find('.input-field[name=transaction_time]')
+				.val(now)
+				.change();
+			$entranceFee = this.addNewListItem($transactionsList);
+			$entranceFee.find('.input-field[name=transaction_type_code]')
+				.val(11)//code for entrance fee
+				.change();
+			$entranceFee.find('.input-field[name=transaction_time]')
+				.val(now)
+				.change();
 
 			// If the climber is a minor, flag the expedition member
 			const climberAge = climberInfo.age;
@@ -2847,13 +2882,14 @@ class ClimberDBExpeditions extends ClimberDB {
 			)
 		} 
 		lookupDeferreds.push(
-			this.queryDB('SELECT code, default_fee, is_credit FROM transaction_type_codes')
+			this.queryDB('SELECT code, default_fee, is_credit, is_payment FROM transaction_type_codes')
 				.done((queryResultString) => {
 					if (!this.queryReturnedError(queryResultString)) {
 						for (const row of $.parseJSON(queryResultString)) {
 							this.defaultTransactionFees[row.code] = {
 								default_fee: row.default_fee,
-								is_credit: row.is_credit
+								is_credit: row.is_credit,
+								is_payment: row.is_payment
 							};
 						}
 					}

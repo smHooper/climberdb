@@ -396,8 +396,6 @@ class ClimberDB {
 			const placeholder = $el.attr('placeholder');
 			const lookupTable = $el.data('lookup-table');
 			const lookupTableName = lookupTable ? lookupTable : $el.attr('name') + 's';
-			//const lookupCodeColumn = $el.data('lookup-code-column') || 'code';
-			//const lookupNameColumn = $el.data('lookup-name-column') || 'name';
 			const id = el.id;
 			if (lookupTableName != 'undefineds') {//if neither data-lookup-table or name is defined, lookupTableName === 'undefineds' 
 				if (placeholder) $('#' + id).append(`<option class="" value="">${placeholder}</option>`);
@@ -453,6 +451,8 @@ class ClimberDB {
 		}
 
 		return $newItem.addClass(newItemClass).insertBefore($cloneable);
+
+
 	}
 
 
@@ -1002,7 +1002,7 @@ class ClimberDB {
 			} else {
 				
 				if (isSelect) {
-					$el.val(value === null ? '' : value); //if the db record isn't filled in, set it to the default
+					$el.val(value == null ? '' : value); //if the db record isn't filled in, set it to the default
 					$el.toggleClass('default', value == null || value == '');
 				} else {
 					$el.val(value);

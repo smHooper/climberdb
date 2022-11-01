@@ -535,7 +535,8 @@ select.input-field:focus::placeholder {
 .input-field.disabled,
 .field-container.disabled,
 .field-container.hidden,
-.field-container.collapse.show.disabled {
+.field-container.collapse.show.disabled,
+.d-flex.collapse:not(.show) { /*Bootstrap's .d-flex will override a closed .collpase*/
   /*utility class to turn off fields that aren't relevant*/
   display: none !important;
 }
