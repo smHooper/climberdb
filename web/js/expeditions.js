@@ -337,6 +337,22 @@ class ClimberDBExpeditions extends ClimberDB {
 															<label class="field-label checkbox-label" for="input-is_illegal_guide">Confirmed illegal guide</label>
 														</div>
 													</div>
+													<div class="field-container-row">
+														<div class="field-container col-sm-6">
+															<label class="checkmark-container">
+																<input id="input-is_guiding" class="input-field input-checkbox" type="checkbox" name="is_guiding" data-table-name="expedition_members" title="Is a guide on this expedition">
+																<span class="checkmark data-input-checkmark"></span>
+															</label>
+															<label class="field-label checkbox-label" for="input-is_guiding">Guiding on this expedition</label>
+														</div>	
+														<div class="field-container checkbox-field-container col-sm-6">
+															<label class="checkmark-container">
+																<input id="input-is_interpreter" class="input-field input-checkbox" type="checkbox" name="is_interpreter" data-table-name="expedition_members" title="Interpreter on this expedition">
+																<span class="checkmark data-input-checkmark"></span>
+															</label>
+															<label class="field-label checkbox-label" for="input-is_interpreter">Interpreter on this expedition</label>
+														</div>
+													</div>
 													<div class="field-container-row" style="">
 														<div class="field-container col-6">
 															<input id="input-datetime_reserved" class="input-field" name="datetime_reserved" data-table-name="expedition_members" placeholder="Date reserved" title="Date reserved" type="date"  autocomplete="off" required="">

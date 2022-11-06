@@ -126,6 +126,8 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	application_complete BOOLEAN,
 	psar_complete BOOLEAN,
 	is_trip_leader BOOLEAN,
+	is_guiding BOOLEAN,
+	is_interpreter BOOLEAN,
 	frostbite_severity_code INTEGER REFERENCES frostbite_severity_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	frostbite_details VARCHAR(255),
 	had_ams BOOLEAN,
