@@ -886,23 +886,16 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$(document).on('click', '.expedition-search-bar-option', e => {
 			const expeditionID = $(e.target).data('expedition-id');
-			if (expeditionID) {
-				this.queryExpedition(expeditionID);
-			}
-		})
-
-		$('#expedition-id-input').change(e => {
-			// If there are any unsaved edits, ask the user to save or discard them
 			if ($('.input-field.dirty:not(.filled-by-default)').length) {
-				const targetID = e.target.id;
+				const targetID = '#expedition-id-input';//e.target.id;
 				this.confirmSaveEdits({
-					afterActionCallbackStr: `climberDB.onExpeditionSearchBarChange({target: $('#${targetID}')})`,
-					afterCancelCallbackStr: `$('#${targetID}').val($('#${targetID}').data('current-value'))`
+					afterActionCallbackStr: `climberDB.onExpeditionOptionClick( {target: $('.expedition-search-bar-option[data-expedition-id=${expeditionID}')} )`,
+					afterCancelCallbackStr: `$('#expedition-id-input').val($('#expedition-id-input').data('current-value'))`
 				});
 			} else {
-				this.onExpeditionSearchBarChange(e);
+				this.onExpeditionOptionClick(e);
 			}
-		});
+		})
 
 		// Fill with this year's expeditions to start
 		this.fillExpeditionSearchSelect({showExpeditionOptions: !this.parseURLQueryString()});
@@ -1522,16 +1515,18 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	onExpeditionSearchBarChange(e) {
-		const $input = $(e.target);
-		const expeditionID = $input.val();
+	onExpeditionOptionClick(e) {
+		const $option = $(e.target);
+		const expeditionID = $option.data('expedition-id');
+		const $input = $('#expedition-id-input');
 		if (expeditionID != '') {
 			this.loadExpedition(expeditionID);
 			this.updateURLHistory(expeditionID, $input);
 		} else {
 			$input.addClass('default');
 		}
-		$input.data('current-value', expeditionID);
+		$input.val(expeditionID)
+			.data('current-value', expeditionID);
 	}
 
 
@@ -2779,7 +2774,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
 					const $searchBar = $('#expedition-search-bar');
 					const $idInput = $('#expedition-id-input').val(expeditionID)
-						.data('current-value', expeditionID);
+						.data('current-value', expeditionID)
+						.change();
 
 					//$select.toggleClass('default', $select.val() === '');
 
