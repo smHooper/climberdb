@@ -34,17 +34,21 @@ class ClimberDBExpeditions extends ClimberDB {
 	configureMainContent() {
 		$('.main-content-wrapper').append(`
 			<div class="main-content-header">
+				<input id="expedition-id-input" class="hidden" aria-hidden="True">
 				<div class="fuzzy-search-bar-container">
-					<select id="expedition-search-bar" class="fuzzy-search-bar no-option-fill default" placeholder="Search climbers" title="Expedition search bar">
+					<input id="expedition-search-bar" class="fuzzy-search-bar" placeholder="Type to search expeditions" title="Expedition search bar">
+					<!--<select id="expedition-search-bar" class="fuzzy-search-bar no-option-fill default" placeholder="Search climbers" title="Expedition search bar">
 						<option value="">Click to select an expedition</option>
-					</select>
+					</select>-->
 					<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 					<button class="show-query-options-button icon-button" title="Expedition filter options">
 						<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg">
 					</button>
-					<div class="search-option-drawer collapse">
-						<div class="search-option-drawer-content">
-							<div class="query-option-container col-4">
+					<div id="expedition-options-drawer" class="fuzzy-search-bar-drawer collapse">
+					</div>
+					<div id="search-options-drawer" class="fuzzy-search-bar-drawer collapse">
+						<div class="fuzzy-search-bar-drawer-content">
+							<!--<div class="query-option-container col-4">
 								<div class="query-option-condition-header">
 									<label class="query-option-label" for="query-option-expedition_name">Expedition name</label>
 								</div>
@@ -57,19 +61,9 @@ class ClimberDBExpeditions extends ClimberDB {
 									</select>
 									<input id="query-option-expedition_name" class="query-option-input-field string-match-query-option" type="text" data-field-name="expedition_name">
 								</div>
-							</div>
+							</div>-->
 
-							<div class="query-option-container col-4">
-								<div class="query-option-condition-header">
-									<label class="query-option-label" for="query-option-group_status">Group status</label>
-								</div>
-								<div class="query-option-condition-container checkbox-option-group">
-									<select id="query-option-group_status" class="input-field query-option-input-field select2-no-tag ignore-changes" multiple="multiple" data-field-name="group_status_code" data-lookup-table="group_status_codes">
-									</select>
-								</div>
-							</div>
-
-							<div class="w-100"></div>
+							<!--<div class="w-100"></div>-->
 
 							<div class="query-option-container col-4">
 								<div class="query-option-condition-header">
@@ -113,6 +107,19 @@ class ClimberDBExpeditions extends ClimberDB {
 								</div>
 							</div>
 
+							<div class="query-option-container col-4">
+								<div class="query-option-condition-header">
+									<label class="query-option-label" for="query-option-group_status">Group status</label>
+								</div>
+								<div class="query-option-condition-container checkbox-option-group">
+									<select id="query-option-group_status" class="input-field query-option-input-field select2-no-tag ignore-changes" multiple="multiple" data-field-name="group_status_code" data-lookup-table="group_status_codes">
+									</select>
+								</div>
+							</div>
+
+							<div class="w-100 d-flex justify-content-center align-items-center pt-3">
+								<button id="update-search-filter-button" class="generic-button">update filter</button>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -258,7 +265,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<input id="input-application_complete" class="input-field input-checkbox" type="checkbox" name="application_complete" data-table-name="expedition_members" title="Permit application complete?">
 												<span class="checkmark data-input-checkmark"></span>
 											</label>
-											<label class="field-label checkbox-label" for="input-application_complete">SUP</label>
+											<label class="field-label checkbox-label" for="input-application_complete">SUP app.</label>
 										</div>
 										<div class="card-header-content-container card-header-field-container col">
 											<label class="checkmark-container">
@@ -588,15 +595,30 @@ class ClimberDBExpeditions extends ClimberDB {
 				</div>
 			</div>
 		`);
+		
 
 		// Show/hide the expedition filter options when the toggle button is clicked
 		$('.show-query-options-button').on('click', e => {
-			$('.search-option-drawer').collapse('toggle');
+			const $expeditionOptions = $('#expedition-options-drawer');
+			const $searchOptions = $('#search-options-drawer');
+			// If the expedition options drawer is open, wait until is closes before opening the search options
+			if ($expeditionOptions.is('.show')) {
+				$expeditionOptions.on('hidden.bs.collapse', () => {
+					$searchOptions.collapse('show');
+					// turn of the event handler so it triggers only once
+					$expeditionOptions.off('hidden.bs.collapse');
+				}).collapse('hide');
+			} 
+			// Otherwise, just toggle the search options 
+			else {	
+				$searchOptions.collapse('toggle');
+			}
 		});
+
 		// Hide the filter options drawer (if it's shown) when the user clicks outside of it
 		$(document).on('click', e => {
-			const $drawer = $('.search-option-drawer');
-			if (!$(e.target).closest('.collapse.search-option-drawer').length && $drawer.is('.show')) {
+			const $drawer = $('.fuzzy-search-bar-drawer');
+			if (!$(e.target).closest('.collapse.fuzzy-search-bar-drawer').length && $drawer.is('.show')) {
 				$drawer.collapse('hide');
 			}
 		})
@@ -689,7 +711,7 @@ class ClimberDBExpeditions extends ClimberDB {
 								climberDB.currentHistoryIndex = ${state.historyIndex};
 							`,
 							afterCancelCallbackStr: `
-								const currentExpeditionID = $('#expedition-search-bar').val();
+								const currentExpeditionID = $('#expedition-id-input').val();
 								const historyIndex = climberDB.historyBuffer.indexOf(currentExpeditionID);
 								window.history.pushState({id: currentExpeditionID, historyIndex: historyIndex}, '', window.location.href)
 							`});
@@ -809,14 +831,16 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// ------------ Query stuff -------------------
 		// Set the default expedition query to only show this year's expeditions
-		const defaultDepartureQueryDate = new Date((new Date()).getFullYear() - 1, 0, 1);//new Date((new Date()).getFullYear(), 0, 1);
+		const defaultDepartureQueryDate = new Date((new Date()).getFullYear(), 0, 1);
 		$('#query-option-planned_departure')
 			.val(getFormattedTimestamp(defaultDepartureQueryDate))
 			.siblings('.query-option-operator')
 				.val('>=');
 
-		$('.query-option-input-field, .query-option-operator').change(e => {
-			this.fillExpeditionSearchSelect();
+		//$('.query-option-input-field, .query-option-operator').change(e => {
+		$('#update-search-filter-button').click(() => {
+			$('#search-options-drawer').collapse('hide');
+			this.fillExpeditionSearchSelect({showExpeditionOptions: true});
 		});
 
 		$('.query-option-operator.datetime-query-option').change(e => {
@@ -833,12 +857,31 @@ class ClimberDBExpeditions extends ClimberDB {
 					.attr('aria-hidden', !showDoubleValue);
 		});
 
-		$('#expedition-search-bar').change(e => {
+		$('#expedition-search-bar').keyup(() => {
+
+			const value = $('#expedition-search-bar').val();
+			if (value.length >= 5 || value.length === 0) {
+				this.fillExpeditionSearchSelect({showExpeditionOptions: true});
+			}
+			
+		}).focus(e => {
+			//$('#expedition-options-drawer').collapse('show');
+		})
+
+		$(document).on('click', '.expedition-search-bar-option', e => {
+			const expeditionID = $(e.target).data('expedition-id');
+			if (expeditionID) {
+				this.queryExpedition(expeditionID);
+			}
+		})
+
+		$('#expedition-id-input').change(e => {
 			// If there are any unsaved edits, ask the user to save or discard them
 			if ($('.input-field.dirty:not(.filled-by-default)').length) {
+				const targetID = e.target.id;
 				this.confirmSaveEdits({
-					afterActionCallbackStr: `climberDB.onExpeditionSearchBarChange({target: $('#${e.target.id}')})`,
-					afterCancelCallbackStr: `$('#${e.target.id}').val($('#${e.target.id}').data('current-value'))`
+					afterActionCallbackStr: `climberDB.onExpeditionSearchBarChange({target: $('#${targetID}')})`,
+					afterCancelCallbackStr: `$('#${targetID}').val($('#${targetID}').data('current-value'))`
 				});
 			} else {
 				this.onExpeditionSearchBarChange(e);
@@ -846,7 +889,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		// Fill with this year's expeditions to start
-		this.fillExpeditionSearchSelect();
+		this.fillExpeditionSearchSelect({showExpeditionOptions: !this.parseURLQueryString()});
 		// ^^^^^^^^^ Query stuff ^^^^^^^^^^^^^^^^
 
 		// ---------- Members/transactions ----------
@@ -1437,9 +1480,9 @@ class ClimberDBExpeditions extends ClimberDB {
 	Helper method to load expedition data. Used when either the searchbar val changes or the user clicks the browser back/forward buttons
 	*/
 	loadExpedition(expeditionID) {
-		const $select = $('#expedition-search-bar');
-		$select.removeClass('default');
-		$('.search-option-drawer').removeClass('show');
+		// const $select = $('#expedition-search-bar');
+		// $select.removeClass('default');
+		$('.search-options-drawer').removeClass('show');
 		this.queryExpedition(expeditionID);
 		$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
 		this.toggleEditing(false);//make sure editting is turned off
@@ -1450,12 +1493,12 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Helper method to add a new history entry for navigating between expeditions
 	*/
-	updateURLHistory(expeditionID, $select) {
+	updateURLHistory(expeditionID, $input) {
 		// Update URL with new expedition ID and add a history entry so the back 
 		//	and forward buttons will move to and from expeditions
 		const url = new URL(window.location);
 		url.searchParams.set('id', expeditionID);
-		const previouslySelectedID = $select.data('current-value');
+		const previouslySelectedID = $input.data('current-value');
 		
 		// Push the new entry here because loadExpedition() is also called when the user clicks the back or forward button, and adding a history entry then will muck up the history sequence 
 		this.historyBuffer.push(expeditionID);
@@ -1464,15 +1507,15 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	onExpeditionSearchBarChange(e) {
-		const $select = $(e.target);
-		const expeditionID = $select.val();
+		const $input = $(e.target);
+		const expeditionID = $input.val();
 		if (expeditionID != '') {
 			this.loadExpedition(expeditionID);
-			this.updateURLHistory(expeditionID, $select);
+			this.updateURLHistory(expeditionID, $input);
 		} else {
-			$select.addClass('default');
+			$input.addClass('default');
 		}
-		$select.data('current-value', expeditionID);
+		$input.data('current-value', expeditionID);
 	}
 
 
@@ -1906,7 +1949,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					return;
 				} else {
 					// Remove the expedition from the search bar (if it exists, i.e., is from the current year)
-					$(`#expedition-search-bar option[value=${expeditionID}]`).remove();
+					//$(`#expedition-search-bar option[value=${expeditionID}]`).remove();
+					$(`#expedition-search-bar .expedition-search-bar-option[data-expedition-id=${expeditionID}]`).remove();
 					this.createNewExpedition();
 				}
 			}).fail((xhr, status, error) => {
@@ -1986,8 +2030,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		var totalPayment = 0;
 		for (const transactions of Object.values(climberDB.expeditionInfo.transactions)) {
 			for (const info of Object.values(transactions.data)) {
-				// only add positive-value tranactions because the rest are charges
-				if (info.transaction_value > 0) totalPayment += parseFloat(info.transaction_value);
+				// only add negative-value tranactions because the rest are charges
+				if ( (info.transaction_value < 0) && (info.transaction_type_code == 24) ) 
+					totalPayment -= parseFloat(info.transaction_value); // -= because payments are negative
 			}
 		}
 		// Format string as float
@@ -2159,7 +2204,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	fillExpeditionSearchSelect() {
+	fillExpeditionSearchSelect({showExpeditionOptions=false}={}) {
 		var queryStrings = {};
 		for (const el of $('.query-option-container')) {
 			const $container = $(el);
@@ -2182,11 +2227,35 @@ class ClimberDBExpeditions extends ClimberDB {
 				queryStrings[fieldName] = (`${fieldName} IN (${searchValues.join(',')})`)
 			}
 		}
-		
+
+		// If a search string is given and the expedition_name filter isn't filled, use Postgres trigram fuzzy search
+		const searchString = $('#expedition-search-bar').val();
+		var orderBy, 
+			similarity = '';
+		if (searchString && !queryStrings.expedition_name) {
+			// Make sure options that start with the search string appear first
+			similarity = `
+				CASE 
+					WHEN expedition_name LiKE '${searchString}%' THEN 1 + similarity(expedition_name, '${searchString}')
+					ELSE similarity(expedition_name, '${searchString}')
+				END`;
+			queryStrings.expedition_id = similarity + ' > 0.3';
+			orderBy = 'search_score DESC, expedition_name';
+		} else {
+			orderBy = 'expedition_name'
+		}
 		if (queryStrings.length === 0) return;
 
 		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
-		const sql = `SELECT DISTINCT expedition_id, expedition_name FROM expedition_info_view ${whereClause} ORDER BY expedition_name`;
+
+		const sql = `
+			SELECT DISTINCT 
+				expedition_id, 
+				expedition_name 
+				${similarity ? `, ${similarity} AS search_score` : ''} 
+			FROM expedition_info_view 
+			${whereClause} 
+			ORDER BY ${orderBy}`;
 		this.queryDB(sql, {returnTimestamp: true})
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
@@ -2205,15 +2274,16 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 					result = result.data;
 
-					const $select = $('#expedition-search-bar').empty().addClass('default');
+					const $drawer = $('#expedition-options-drawer').empty();
 					if (result.length) {
-						$select.append('<option value="">Click to select an expedition</option>')
+						//$drawer.append('<option value="">Click to select an expedition</option>')
 						for (const row of result) {
-							$select.append(`<option value="${row.expedition_id}">${row.expedition_name}</option>`)
+							$drawer.append(`<div class="expedition-search-bar-option" data-expedition-id="${row.expedition_id}">${row.expedition_name}</div>`)
 						}
 					} else {
-						$select.append('<option value="">No expeditions match your search</option>');
+						$drawer.append('<div class="expedition-search-bar-option">No expeditions match your search</div>');
 					}
+					if (showExpeditionOptions) $drawer.collapse('show');
 				}
 			})
 			.fail((xhr, status, error) => {
@@ -2229,12 +2299,12 @@ class ClimberDBExpeditions extends ClimberDB {
 	*/
 	createNewExpedition() {
 		// Reset the search bar value to the default 
-		const $searchBar = $('#expedition-search-bar');
-		var $defaultOption = $searchBar.find('option[value=""]'); 
-		if (!$defaultOption.length) {
-			$defaultOption = $searchBar.prepend('<option value="">Select an expedition to view</option>')
-		} 
-		$searchBar.val('').addClass('default');
+		const $searchBar = $('#expedition-search-bar').val('');
+		// var $defaultOption = $searchBar.find('option[value=""]'); 
+		// if (!$defaultOption.length) {
+		// 	$defaultOption = $searchBar.prepend('<option value="">Select an expedition to view</option>')
+		// } 
+		// $searchBar.val('').addClass('default');
 		
 		$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
 
@@ -2524,6 +2594,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			$briefingLink.attr('href', `briefings.html?date=${expeditionData.planned_departure_date}`);
 		}//*/
 		setTimeout(() => {$briefingLink.closest('.collapse').collapse('show')}, 500);
+
+		// Data were loaed so make sure they're not obscured
+		$('#expedition-options-drawer').collapse('hide');
 	}
 
 
@@ -2688,13 +2761,11 @@ class ClimberDBExpeditions extends ClimberDB {
 					this.fillFieldValues(false);//don't trigger change
 
 					// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
-					const $select = $('#expedition-search-bar');
-					$select.val(
-						$select.find(`option[value=${expeditionID}]`).length ? 
-						expeditionID :
-						'' // set it to the null option
-					);
-					$select.toggleClass('default', $select.val() === '');
+					const $searchBar = $('#expedition-search-bar');
+					const $idInput = $('#expedition-id-input').val(expeditionID)
+						.data('current-value', expeditionID);
+
+					//$select.toggleClass('default', $select.val() === '');
 
 					// If there are any expedition members that aren't assigned to a route, show that .add-expedition-route-member-button 
 					const nMembers = this.expeditionInfo.expedition_members.order.length;
