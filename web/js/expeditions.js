@@ -705,6 +705,9 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$('.accordion .card-collapse').on('shown.bs.collapse', e => {
 			const $collapse = $(e.target);
+			// FOr some reason this gets triggered on collapses that are childern of a .card-collapse
+			if (!$collapse.is('.card-collapse')) return;
+
 			const $contentBody = $collapse.closest('.expedition-data-content-body');
 			const contentBodyElement = $contentBody[0]
 			if (contentBodyElement.scrollHeight > contentBodyElement.clientHeight) {
@@ -1002,6 +1005,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		// When the is_guiding field changes, show/hide the guide icon on the card header
 		$(document).on('change', '.input-field[name=is_guiding]', e => {
 			const checkbox = e.target;
+			// If the climber isn't a guide, uncheck the box and warn the user
+			if (checkbox.checked) {
+				// *** figure out if this should query DB or if climber guide boolean should be stored somewhere
+			}
 			$(checkbox).closest('.card')
 				.find('.guide-icon')
 					.ariaHide(!checkbox.checked);
@@ -2426,7 +2433,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			if (expeditionMemberInfo.reservation_status_code == 6) $newCard.addClass('canceled');
 			if (expeditionMemberInfo.is_guiding) $newCard.find('.guide-icon').ariaHide(false);
-			
+
 			// Add transaction rows
 			const transactions = this.expeditionInfo.transactions[expeditionMemberID];
 			//var transactionTotal = 0;
@@ -2491,6 +2498,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 		}
+
 
 		this.updateExpeditionMemberCount();
 
@@ -2689,6 +2697,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					return;
 				} else {
 					const result = $.parseJSON(queryResultString);
+					const openCardIDs = '#' + $('.card:not(.cloneable) .card-collapse.show').map((_, el) => el.id).get().join(',#');
+					
 					// Get expedition info
 					if (result.length) {
 						this.clearExpeditionInfo(
@@ -2784,7 +2794,10 @@ class ClimberDBExpeditions extends ClimberDB {
 						}
 					}
 
+					
 					this.fillFieldValues(false);//don't trigger change
+					// If the data are being re-loaded after a save, show the cards that were open before
+					if (!showOnLoadWarnings) $(openCardIDs).addClass('show');
 
 					// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
 					const $searchBar = $('#expedition-search-bar');
