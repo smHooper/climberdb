@@ -248,33 +248,38 @@ class ClimberDBExpeditions extends ClimberDB {
 							<div id="expedition-members-accordion" class="accordion" data-table-name="expedition_members" data-item-display-name="expedition member">
 								<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
 									<div class="card-header show-children-on-hover" id="cardHeader-expedition-members-cloneable">
-										<a class="card-link collapsed col-6 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
-											<div class="card-link-content">
-												<h6 class="card-link-label expedition-member-card-link-label"></h6>
+										<a class="card-link collapsed col-7 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
+											<div class="card-link-content col-8 pl-0">
+												<h6 class="card-link-label expedition-member-card-link-label col px-0"></h6>
+											</div>
+											<div class="expedition-member-badge-container card-link-content col-4 pl-0">
+												<img class="result-details-header-badge climber-fee-icon hidden" src="imgs/climber_fee_icon_50px.svg" title="Climber fee paid" aria-hidden="true">
+												<img class="result-details-header-badge entrance-fee-icon hidden" src="imgs/entrance_fee_icon_100px.svg" title="Entrance fee paid" aria-hidden="true">
+												<img class="result-details-header-badge guide-icon hidden" src="imgs/guide_icon_100px.svg" title="Guiding on this expedition" aria-hidden="true">
 											</div>
 										</a>
-										<div class="card-header-content-container card-header-field-container leader-checkbox-container transparent col">
+										<div class="card-header-content-container card-header-field-container leader-checkbox-container transparent">
 											<label class="checkmark-container">
 												<input id="input-is_trip_leader" class="input-field input-checkbox" type="checkbox" name="is_trip_leader" data-table-name="expedition_members" title="Is trip leader?">
 												<span class="checkmark data-input-checkmark"></span>
 											</label>
 											<label class="field-label checkbox-label" for="input-is_trip_leader">Leader</label>
 										</div>
-										<div class="card-header-content-container card-header-field-container col">
+										<div class="card-header-content-container card-header-field-container">
 											<label class="checkmark-container">
 												<input id="input-application_complete" class="input-field input-checkbox" type="checkbox" name="application_complete" data-table-name="expedition_members" title="Permit application complete?">
 												<span class="checkmark data-input-checkmark"></span>
 											</label>
 											<label class="field-label checkbox-label" for="input-application_complete">SUP app.</label>
 										</div>
-										<div class="card-header-content-container card-header-field-container col">
+										<div class="card-header-content-container card-header-field-container">
 											<label class="checkmark-container">
 												<input id="input-psar_complete" class="input-field input-checkbox" type="checkbox" name="psar_complete" data-table-name="expedition_members" title="PSAR form complete?">
 												<span class="checkmark data-input-checkmark"></span>
 											</label>
 											<label class="field-label checkbox-label" for="input-psar_complete">PSAR</label>
 										</div>
-										<div class="card-header-content-container member-card-header-chevron-container">
+										<div class="member-card-header-chevron-container col-1 pr-0">
 											<button class="delete-card-button icon-button show-on-parent-hover">
 												<i class="fa fa-trash"></i>
 											</button>
@@ -847,7 +852,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// ------------ Query stuff -------------------
 		// Set the default expedition query to only show this year's expeditions
-		const defaultDepartureQueryDate = new Date((new Date()).getFullYear(), 0, 1);
+		const defaultDepartureQueryDate = new Date( (new Date()).getFullYear(), 0, 1 );
 		$('#query-option-planned_departure')
 			.val(getFormattedTimestamp(defaultDepartureQueryDate))
 			.siblings('.query-option-operator')
@@ -909,7 +914,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			$newItem.find('.input-field[name="transaction_type_code"]').change();
 
 			// This field is hidden completely so just fill it silently with the current timestamp
-			$newItem.find('.input-field[name=transaction_time]').val(new Date(), this.getFormattedTimestamp({format: 'datetime'})).change();
+			$newItem.find('.input-field[name=transaction_time]').val(getFormattedTimestamp(new Date(), {format: 'datetime'})).change();
 			const $card = $newItem.closest('.card');
 			$newItem.attr('data-parent-table-id', $card.data('table-id'));
 		});
@@ -992,6 +997,14 @@ class ClimberDBExpeditions extends ClimberDB {
 					.find('.input-field[name=flagged_by]')
 					.val(this.userInfo.ad_username).change();
 			}
+		});
+
+		// When the is_guiding field changes, show/hide the guide icon on the card header
+		$(document).on('change', '.input-field[name=is_guiding]', e => {
+			const checkbox = e.target;
+			$(checkbox).closest('.card')
+				.find('.guide-icon')
+					.ariaHide(!checkbox.checked);
 		});
 
 		// When a transaction type field changes and amount is not already set, fill the amount with the defuault value
@@ -2412,10 +2425,11 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 			if (expeditionMemberInfo.reservation_status_code == 6) $newCard.addClass('canceled');
-
+			if (expeditionMemberInfo.is_guiding) $newCard.find('.guide-icon').ariaHide(false);
+			
 			// Add transaction rows
 			const transactions = this.expeditionInfo.transactions[expeditionMemberID];
-			var transactionTotal = 0;
+			//var transactionTotal = 0;
 			for (const transactionID of transactions.order) {
 				const $item = this.addNewListItem(
 					$transactionsList, 
@@ -2433,11 +2447,12 @@ class ClimberDBExpeditions extends ClimberDB {
 				const $paymentMethod = $item.find('.input-field[name=payment_method_code]');
 				$paymentMethod.closest('.collapse').collapse(thisTransaction.payment_method_code ? 'show' : 'hide');
 				
-				transactionTotal = transactionTotal + parseFloat(thisTransaction.transaction_value || 0);
+				//transactionTotal = transactionTotal + parseFloat(thisTransaction.transaction_value || 0);
 			}
-			$transactionsList.siblings('.data-list-footer')
-				.find('.data-list-header-label.total-col .total-span')
-				.text(transactionTotal.toFixed(2));
+			// $transactionsList.siblings('.data-list-footer')
+			// 	.find('.data-list-header-label.total-col .total-span')
+			// 	.text(transactionTotal.toFixed(2));
+			this.getTransactionBalance($transactionsList);
 		} else {
 			// Set deault values for new members
 			$newCard.find('.input-field[name="reservation_status_code"]')
@@ -2869,6 +2884,29 @@ class ClimberDBExpeditions extends ClimberDB {
 			.reduce((runningTotal, value) => runningTotal + value)
 			.toFixed(2);
 		if (!isNaN(sum)) $list.siblings('.data-list-footer').find('.total-col .total-span').text(sum);
+
+		// Because this function is called every time transaction value changes,
+		//	check to see if the fee icons in the card's header should be toggled
+		// climber fee
+		const $transactionTypes = $list.find('li:not(.cloneable) .transaction-type-field');
+		var climbingFeeBalance = 0,
+			entranceFeeBalance = 0;
+		for (const el of $transactionTypes) {
+			const $valueField = $(el)
+				.closest('.data-list-item')
+					.find('.transaction-amount-field');
+			const transactionValue = parseFloat($valueField.val() || 0)
+			const transactionTypeCode = parseInt(el.value);
+			if ([3, 10, 12, 14, 15, 23, 24].includes(transactionTypeCode)) { // climbing permit fee
+				climbingFeeBalance += transactionValue;
+			} else if ([11, 25, 8, 26].includes(transactionTypeCode)) {
+				entranceFeeBalance += transactionValue;
+			}
+		}
+		const $cardHeader = $list.closest('.card').find('.card-header');
+		$cardHeader.find('.climber-fee-icon').ariaHide(climbingFeeBalance > 0);
+		$cardHeader.find('.entrance-fee-icon').ariaHide(entranceFeeBalance > 0);
+
 	}
 
 

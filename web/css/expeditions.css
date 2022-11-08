@@ -385,6 +385,14 @@
 }
 .card.expedition-card .card-header-content-container {
 	font-size: 14px;
+	max-width: 12.5%;
+	flex: 1 1 12.5%;
+}
+.expedition-member-badge-container {
+	height: 100%;
+}
+.result-details-header-badge {
+	padding:  12px 5px;
 }
 .expedition-card .card-header .leader-checkbox-container {
 	transition: 0.3s all;
@@ -408,10 +416,13 @@
 	font-size: 14px;
 	line-height: 20px;
 }
-.card-header-content-container.member-card-header-chevron-container {
+.member-card-header-chevron-container {
 	display: flex;
 	justify-content: flex-end;
 	flex: 1 1 auto;
+	justify-content: flex-end;
+	line-height: 100%;
+	align-items: center;
 }
 .uneditable .input-field.card-link-label.route-code-header-input {
 	border:none;
