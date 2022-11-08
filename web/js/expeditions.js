@@ -2267,8 +2267,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			// Make sure options that start with the search string appear first
 			similarity = `
 				CASE 
-					WHEN expedition_name LiKE '${searchString}%' THEN 1 + similarity(expedition_name, '${searchString}')
-					ELSE similarity(expedition_name, '${searchString}')
+					WHEN expedition_name ILIKE '${searchString}%' THEN 1 + similarity(lower(expedition_name), lower('${searchString}'))
+					ELSE similarity(lower(expedition_name), lower('${searchString}'))
 				END`;
 			queryStrings.expedition_id = similarity + ' > 0.3';
 			orderBy = 'search_score DESC, expedition_name';
