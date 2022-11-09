@@ -342,7 +342,7 @@ class ClimberDBExpeditions extends ClimberDB {
 															<label class="field-label checkbox-label" for="input-is_illegal_guide">Confirmed illegal guide</label>
 														</div>
 													</div>
-													<div class="field-container-row">
+													<div class="field-container-row collapse">
 														<div class="field-container col-sm-6">
 															<label class="checkmark-container">
 																<input id="input-is_guiding" class="input-field input-checkbox" type="checkbox" name="is_guiding" data-table-name="expedition_members" title="Is a guide on this expedition">
@@ -617,7 +617,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			</div>
 		`);
 		
-
 		// Show/hide the expedition filter options when the toggle button is clicked
 		$('.show-query-options-button').on('click', e => {
 			const $expeditionOptions = $('#expedition-options-drawer');
@@ -909,7 +908,28 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.fillExpeditionSearchSelect({showExpeditionOptions: !this.parseURLQueryString()});
 		// ^^^^^^^^^ Query stuff ^^^^^^^^^^^^^^^^
 
+
+		// ----------- Expedition -------------------
+
+		// ^^^^^^^^^^^ Expedition ^^^^^^^^^^^^^^^^^^^
+
+
 		// ---------- Members/transactions ----------
+
+		// for some reason, .collapses surrounding the is_guiding field doesn't 
+		$('#input-guide_company').change(e => {
+			const guideCompanyCode = $(e.target).val();
+			const isGuided = guideCompanyCode != -1;
+			const $isGuiding = $('.input-field[name=is_guiding]')
+			$isGuiding.closest('.collapse')
+				.toggleClass('show', isGuided);
+			for (const checkbox of $isGuiding) {
+				$(checkbox).closest('.card')
+				.find('.guide-icon')
+					.ariaHide( !(checkbox.checked && isGuided) );
+			}
+		});
+
 		//$('select.input-field').change(e => {this.onSelectChange(e)})
 		$(document).on('click', '.add-transaction-button', e => {
 			const $newItem = this.addNewListItem($(e.target).closest('.transactions-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
@@ -2470,7 +2490,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				.change();
 
 			// set default tansactions (debits)
-			const now = this.getFormattedTimestamp(new Date(), {format: 'datetime'})
+			const now = getFormattedTimestamp(new Date(), {format: 'datetime'})
 			const $supFee = this.addNewListItem($transactionsList);
 			$supFee.find('.input-field[name=transaction_type_code]')
 				.val(10)//code for SUP fee
@@ -2478,7 +2498,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			$supFee.find('.input-field[name=transaction_time]')
 				.val(now)
 				.change();
-			$entranceFee = this.addNewListItem($transactionsList);
+			const $entranceFee = this.addNewListItem($transactionsList);
 			$entranceFee.find('.input-field[name=transaction_type_code]')
 				.val(11)//code for entrance fee
 				.change();
@@ -2631,6 +2651,9 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Data were loaed so make sure they're not obscured
 		$('#expedition-options-drawer').collapse('hide');
+
+		// Toggle the is_guiding collapse
+		$('#input-guide_company').change();
 	}
 
 

@@ -645,7 +645,7 @@ class ClimberDB {
 				.collapse.field-container-row .input-field,
 				.collapse.accordion, 
 				.collapse.add-item-container .add-item-button
-			`).filter((_, el) => {return $(el).data('dependent-target') === selectID});
+			`).filter((_, el) => $(el).data('dependent-target') === selectID);
 		//const dependentIDs = $select.data('dependent-target');
 		//var dependentValues = $select.data('dependent-value');
 		for (const el of $dependentElements) {
