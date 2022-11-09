@@ -189,13 +189,13 @@ class ClimberForm {
 										</label>
 										<label class="field-label checkbox-label" for="input-is_guide">Commercial guide</label>
 									</div>
-									<div class="field-container checkbox-field-container col-sm">
+									<!--<div class="field-container checkbox-field-container col-sm">
 										<label class="checkmark-container">
 											<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin" data-table-name="climbers" data-badge-target="#pro-pin-badge" data-badge-target-value="t">
 											<span class="checkmark data-input-checkmark"></span>
 										</label>
 										<label class="field-label checkbox-label" for="input-received_pro_pin">Received Pro Pin</label>
-									</div>
+									</div>-->
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col">
@@ -693,12 +693,13 @@ class ClimberForm {
 		$accordion.find('.card:not(.cloneable)').remove();
 		const historyIndex = 0;
 		var expeditionMemberIDs = {};
-		var qualifiesFor7DayPermit = false;
+		var qualifiesFor7DayPermit = false,
+			receivedProPin = false;
 		const now = new Date();
 		for (const i in climberHistory) {
 			const row = climberHistory[i];
-			const formattedDeparture = (new Date(row.actual_departure_date)).toLocaleDateString();
-			const actualReturnDate = new Date(row.actual_return_date);
+			const formattedDeparture = (new Date(row.actual_departure_date + ' 12:00')).toLocaleDateString(); //add a time otherwise the date will be a day before
+			const actualReturnDate = new Date(row.actual_return_date + ' 12:00');
 			const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
 			const cardTitle = `${climberDB.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}`;
 			const $card = climberDB.addNewCard(
@@ -737,9 +738,12 @@ class ClimberForm {
 					((actualReturnDate <= now && formattedReturn) || row.group_status_code == 3) && 
 					actualReturnDate.getFullYear() === now.getFullYear() - 1
 				)
+
+			receivedProPin = receivedProPin || row.received_pro_pin === 't';
 		}	
 
 		$('#7-day-badge').toggleClass('hidden', !qualifiesFor7DayPermit);
+		$('#pro-pin-badge').toggleClass('hidden', !receivedProPin);
 
 		// .change() events on .input-fields will add dirty class
 		$('.climber-form .input-field').removeClass('dirty');
@@ -767,6 +771,7 @@ class ClimberForm {
 				.fail((xhr, status, error) => {
 					showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
 				});
+
 		}
 	}
 
@@ -1311,9 +1316,9 @@ class ClimberDBClimbers extends ClimberDB {
 			this.onCardLabelFieldChange($(e.target).closest('.input-field'));
 		});
 
-		$('#input-received_pro_pin').change(e => {
-			$('#pro-pin-badge').ariaHide(!$(e.target).prop('checked'));
-		});
+		// $('#input-received_pro_pin').change(e => {
+		// 	$('#pro-pin-badge').ariaHide(!$(e.target).prop('checked'));
+		// });
 		$('#input-is_guide').change(e => {
 			$('#guide-badge').ariaHide(!$(e.target).prop('checked'));
 		});

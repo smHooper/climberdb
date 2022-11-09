@@ -392,6 +392,22 @@ class ClimberDBExpeditions extends ClimberDB {
 														</div>	
 													</div>
 													<div class="field-container-row">
+														<div class="field-container checkbox-field-container col-sm">
+															<label class="checkmark-container">
+																<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin" data-table-name="expedition_members">
+																<span class="checkmark data-input-checkmark"></span>
+															</label>
+															<label class="field-label checkbox-label" for="input-received_pro_pin">Received Pro Pin</label>
+														</div>	
+													</div>
+													<div class="field-container-row">
+														<div class="field-container col collapse">
+															<label class="field-label" for="input-reason_for_pro_pin">Reason this climber received a Pro Pin</label>
+															<textarea id="input-reason_for_pro_pin" class="input-field" name="reason_for_pro_pin" data-table-name="expedition_members" placeholder="Describe why this climber received a Pro Pin" title="Reason for Pro Pin" type="text" autocomplete="off" data-dependent-target="#input-received_pro_pin" data-dependent-value="true"></textarea>
+															<span class="null-input-indicator">&lt; null &gt;</span>
+														</div>
+													</div>
+													<div class="field-container-row">
 														<div class="field-container checkbox-field-container col-sm-4">
 															<label class="checkmark-container">
 																<input id="input-had_ams" class="input-field input-checkbox" type="checkbox" name="had_ams" data-table-name="expedition_members" title="Climber had AMS">

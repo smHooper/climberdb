@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS climbers (
 	email_address VARCHAR(50),
 	phone VARCHAR(25),
 	sex_code INTEGER REFERENCES sex_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
-	received_pro_pin BOOLEAN,
+	received_pro_pin BOOLEAN, -- for backwards compatibility with old DB
 	is_guide BOOLEAN,
 	hx_of_frostbite INTEGER REFERENCES frostbite_severity_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	hx_of_ams BOOLEAN,
@@ -128,6 +128,7 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	is_trip_leader BOOLEAN,
 	is_guiding BOOLEAN,
 	is_interpreter BOOLEAN,
+	received_pro_pin BOOLEAN, -- in new DB this should be recorded per expedition member, not per climber
 	frostbite_severity_code INTEGER REFERENCES frostbite_severity_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	frostbite_details VARCHAR(255),
 	had_ams BOOLEAN,
