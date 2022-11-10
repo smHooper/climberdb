@@ -212,6 +212,14 @@ class ClimberDBDashboard extends ClimberDB {
 			$container.find('.group-status-bar-dropdown').toggleClass('show');
 		});
 
+		// Hide the group status dropdowns when the user clicks outside of it
+		$(document).on('click', e => {
+			const $openDrawer = $('.group-status-bar-dropdown.show');
+			if (!$(e.target).closest('.group-status-bar-container').length && $openDrawer.length) {
+				$openDrawer.collapse('hide');
+			}
+		});
+
 		$('.sort-column-button').click(e => {
 			const $button = $(e.target).closest('.sort-column-button');
 			// if the column was already sorted and descending, then make it ascending. 

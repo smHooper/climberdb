@@ -313,6 +313,15 @@ class ClimberDB {
 			this.confirmLogout();
 		})
 
+		// Hide the group status dropdowns when the user clicks outside of it
+		$(document).on('click', e => {
+			const $openDrawer = $('.user-account-dropdown.show');
+			const $target = $(e.target);
+			if (!$target.is('.user-account-dropdown') && !$target.parents('#show-user-options-button').length && $openDrawer.length) {
+				$openDrawer.collapse('hide');
+			}
+		});
+
 		var tabIndex = 0;
 		for (const el of $('nav a, nav button')) {
 			el.tabIndex = tabIndex;
