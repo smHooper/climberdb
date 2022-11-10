@@ -14,7 +14,7 @@
 	flex-wrap: wrap;
 	height: 100%;
 	overflow-y: auto;
-	gap: 30px;
+	row-gap: 0.5rem;
 }
 .dashboard-col {
 	padding: 0;
@@ -70,12 +70,13 @@
 	padding: 0.5rem 1rem;
 }
 .climberdb-dashboard-table th {/*:not(:first-of-type) {*/
-	background-color: #219ebc;
-	color: white;
+	/*background-color: #00679B;*/
+	color: #00679B;
 	font-weight: bold;
 	position: sticky;
 	top: 0;
 	text-align: center;
+	border-bottom: 2px solid #00679B;
 }
 
 .climberdb-dashboard-table tbody {
@@ -90,14 +91,14 @@
 
 /*-------- flagged groups table ----------*/
 #flagged-groups-card .climberdb-dashboard-table th {
-	background-color: #f28100;
+	/*background-color: #f28100;*/
 }
 .sort-column-button {
 	width: 100%;
 	height: 100%;
 	display: flex;
 	align-items: center;
-	color: white;
+	color: #00679B;
 }
 .sort-column-button span {
 	flex: 1 0 calc(100% - 20px);
@@ -189,7 +190,7 @@
 	background-color: #BB3E03;
 }
 .group-status-row[data-status-code="6"] .group-status-bar {
-	background-color: #747572;
+	background-color: #999b97;
 }
 .group-status-bar-dropdown {
 	width: 100%;
@@ -206,7 +207,8 @@
 	overflow-y: auto;
 }
 .group-status-bar-dropdown.show {
-	height: 300px;
+	height: auto;
+	max-height: 300px;
 	padding: 10px;
 }
 /*hide all content when the dropdown is collapsed*/
@@ -228,7 +230,8 @@
 	margin-right: 15px;
 }
 .group-status-bar-dropdown-content {
-	max-width: 250px;
+	/*max-width: 250px;*/
+	width: 100%;
 	flex-wrap: wrap;
 }
 .group-status-link {
@@ -236,6 +239,10 @@
 	font-size: 20px;
 	color: white;
 	margin-bottom: 10px;
+}
+.group-status-link:hover {
+	color: white;
+	background-color: #ffffff44;
 }
 /*^^^^^^^group status^^^^^^^^^^*/
 

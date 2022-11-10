@@ -3,6 +3,7 @@ class ClimberDBDashboard extends ClimberDB {
 	constructor() {
 		super();
 		this.flaggedExpeditionInfo = [];
+		this.missingPaymentOrSUPInfo = [];
 		return this;
 	}
 
@@ -11,133 +12,141 @@ class ClimberDBDashboard extends ClimberDB {
 		$('.main-content-wrapper').append(`
 			<div class="main-dashboard-container container-fluid">
 				<!-- season mountain stats -->
-				<div id="season-mountain-stats-card" class="card dashboard-card col-md">
-					<h2 class="dashboard-card-header">Mountain Stats this Season</h2>
-					<div class="dashboard-card-body">
-						<table class="climberdb-dashboard-table">
-							<thead>
-								<tr>
-									<th></th>
-									<th>Denali</th>
-									<th>Foraker</th>
-								</th>
-							</thead>
-							<tbody>
-							</tbody>
-						</table>
+				<div class="col-md px-2">
+					<div id="season-mountain-stats-card" class="card dashboard-card">
+						<h2 class="dashboard-card-header">Mountain Stats This Season</h2>
+						<div class="dashboard-card-body">
+							<table class="climberdb-dashboard-table">
+								<thead>
+									<tr>
+										<th></th>
+										<th>Denali</th>
+										<th>Foraker</th>
+									</th>
+								</thead>
+								<tbody>
+								</tbody>
+							</table>
+						</div>
 					</div>
 				</div>
-				<div id="flagged-groups-card" class="card dashboard-card col-md">
-					<h2 class="dashboard-card-header">Flagged Expeditions</h2>
-					<div class="dashboard-card-body">
-						<table class="climberdb-dashboard-table">
-							<thead>
-								<tr>
-									<th>
-										<button class="text-only-button sort-column-button" data-field-name="expedition_name">
-											<span>Name</span>
-											<i class="fa fa-solid fa-sort"></i>
-										</button>
-									</th>
-									<th>
-										<button class="text-only-button sort-column-button sorted" data-field-name="departure">
-											<span>Departure</span>
-											<i class="fa fa-solid fa-sort"></i>
-										</button>
-									</th>
-									<th>Commments</th>
-								</th>
-							</thead>
-							<tbody>
-							</tbody>
-						</table>
+				<!-- flagged expeditions -->
+				<div class="col-md px-2">
+					<div id="flagged-groups-card" class="card dashboard-card">
+						<h2 class="dashboard-card-header">Flagged Expeditions</h2>
+						<div class="dashboard-card-body">
+							<table class="climberdb-dashboard-table">
+								<thead>
+									<tr>
+										<th>
+											<button class="text-only-button sort-column-button" data-field-name="expedition_name">
+												<span>Name</span>
+												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+											</button>
+										</th>
+										<th>
+											<button class="text-only-button sort-column-button sorted" data-field-name="departure">
+												<span>Departure</span>
+												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+											</button>
+										</th>
+										<th>Commments</th>
+									</tr>
+								</thead>
+								<tbody>
+								</tbody>
+							</table>
+						</div>
 					</div>
 				</div>
 
-				<div id="group-status-card" class="card dashboard-card col-md">
-					<h2 class="dashboard-card-header w-100 centered-text">Group Status</h2>
-					<div class="dashboard-card-body h-100">
-						<div class="group-status-graph-container">
-							<div class="group-status-row" data-status-code="1">
-								<label class="group-status-bar-label">Pending</label>
-								<div class="group-status-bar-container">
-									<div class="group-status-bar"></div>
-									<div class="group-status-bar-text count-up"></div>
-									<div class="group-status-bar-dropdown">
-										<div class="group-status-bar-dropdown-header">
-											<button class="close text-only-button">&times</button>
-										</div>
-										<div class="group-status-bar-dropdown-content">
-										</div>
-									</div>
-								</div>
-							</div>
-							<div class="group-status-row" data-status-code="2">
-								<label class="group-status-bar-label">Ready for review</label>
-								<div class="group-status-bar-container">
-									<div class="group-status-bar"></div>
-									<div class="group-status-bar-text count-up"></div>
-									<div class="group-status-bar-dropdown">
-										<div class="group-status-bar-dropdown-header">
-											<button class="close">&times</button>
-										</div>
-										<div class="group-status-bar-dropdown-content">
+				<!-- group status -->
+				<div class="col-md px-2">
+					<div id="group-status-card" class="card dashboard-card">
+						<h2 class="dashboard-card-header w-100 centered-text">Group Status</h2>
+						<div class="dashboard-card-body h-100">
+							<div class="group-status-graph-container">
+								<div class="group-status-row" data-status-code="1">
+									<label class="group-status-bar-label">Pending</label>
+									<div class="group-status-bar-container">
+										<div class="group-status-bar"></div>
+										<div class="group-status-bar-text count-up"></div>
+										<div class="group-status-bar-dropdown">
+											<div class="group-status-bar-dropdown-header">
+												<button class="close text-only-button">&times</button>
+											</div>
+											<div class="group-status-bar-dropdown-content">
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-							<div class="group-status-row" data-status-code="3">
-								<label class="group-status-bar-label">Registraton complete</label>
-								<div class="group-status-bar-container">
-									<div class="group-status-bar"></div>
-									<div class="group-status-bar-text count-up"></div>
-									<div class="group-status-bar-dropdown">
-										<div class="group-status-bar-dropdown-header">
-											<button class="close">&times</button>
-										</div>
-										<div class="group-status-bar-dropdown-content">
-										</div>
-									</div>
-								</div>
-							</div>
-							<div class="group-status-row" data-status-code="4">
-								<label class="group-status-bar-label">Briefing complete</label>
-								<div class="group-status-bar-container">
-									<div class="group-status-bar"></div>
-									<div class="group-status-bar-text count-up"></div>
-									<div class="group-status-bar-dropdown">
-										<div class="group-status-bar-dropdown-header">
-											<button class="close">&times</button>
-										</div>
-										<div class="group-status-bar-dropdown-content">
+								<div class="group-status-row" data-status-code="2">
+									<label class="group-status-bar-label">Ready for review</label>
+									<div class="group-status-bar-container">
+										<div class="group-status-bar"></div>
+										<div class="group-status-bar-text count-up"></div>
+										<div class="group-status-bar-dropdown">
+											<div class="group-status-bar-dropdown-header">
+												<button class="close">&times</button>
+											</div>
+											<div class="group-status-bar-dropdown-content">
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-							<div class="group-status-row" data-status-code="5">
-								<label class="group-status-bar-label">Returned</label>
-								<div class="group-status-bar-container">
-									<div class="group-status-bar"></div>
-									<div class="group-status-bar-text count-up"></div>
-									<div class="group-status-bar-dropdown">
-										<div class="group-status-bar-dropdown-header">
-											<button class="close">&times</button>
-										</div>
-										<div class="group-status-bar-dropdown-content">
+								<div class="group-status-row" data-status-code="3">
+									<label class="group-status-bar-label">Confirmed</label>
+									<div class="group-status-bar-container">
+										<div class="group-status-bar"></div>
+										<div class="group-status-bar-text count-up"></div>
+										<div class="group-status-bar-dropdown">
+											<div class="group-status-bar-dropdown-header">
+												<button class="close">&times</button>
+											</div>
+											<div class="group-status-bar-dropdown-content">
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-							<div class="group-status-row" data-status-code="6">
-								<label class="group-status-bar-label">Cancelled</label>
-								<div class="group-status-bar-container">
-									<div class="group-status-bar"></div>
-									<div class="group-status-bar-text count-up"></div>
-									<div class="group-status-bar-dropdown">
-										<div class="group-status-bar-dropdown-header">
-											<button class="close">&times</button>
+								<div class="group-status-row" data-status-code="4">
+									<label class="group-status-bar-label">On mountain</label>
+									<div class="group-status-bar-container">
+										<div class="group-status-bar"></div>
+										<div class="group-status-bar-text count-up"></div>
+										<div class="group-status-bar-dropdown">
+											<div class="group-status-bar-dropdown-header">
+												<button class="close">&times</button>
+											</div>
+											<div class="group-status-bar-dropdown-content">
+											</div>
 										</div>
-										<div class="group-status-bar-dropdown-content">
+									</div>
+								</div>
+								<div class="group-status-row" data-status-code="5">
+									<label class="group-status-bar-label">Off mountain</label>
+									<div class="group-status-bar-container">
+										<div class="group-status-bar"></div>
+										<div class="group-status-bar-text count-up"></div>
+										<div class="group-status-bar-dropdown">
+											<div class="group-status-bar-dropdown-header">
+												<button class="close">&times</button>
+											</div>
+											<div class="group-status-bar-dropdown-content">
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="group-status-row" data-status-code="6">
+									<label class="group-status-bar-label">Cancelled</label>
+									<div class="group-status-bar-container">
+										<div class="group-status-bar"></div>
+										<div class="group-status-bar-text count-up"></div>
+										<div class="group-status-bar-dropdown">
+											<div class="group-status-bar-dropdown-header">
+												<button class="close">&times</button>
+											</div>
+											<div class="group-status-bar-dropdown-content">
+											</div>
 										</div>
 									</div>
 								</div>
@@ -146,7 +155,10 @@ class ClimberDBDashboard extends ClimberDB {
 					</div>
 				</div>
 
-				<div class="col-12 dashboard-col">
+				<div class="w-100"></div>
+
+				<!-- breifings per day -->
+				<div class="col-lg-8 px-2">
 					<div class="card dashboard-card">
 						<h2 class="dashboard-card-header w-100 centered-text">Scheduled Expedition Briefings per Day</h2>
 						<div class="scrollable-chart-and-axis-wrapper">
@@ -160,6 +172,38 @@ class ClimberDBDashboard extends ClimberDB {
 						</div>
 					</div>
 				</div>
+
+				<!-- expeditions that still need to pay and turn in application -->
+				<div class="col-md px-2">
+					<div id="missing-sup-fee-groups-card" class="card dashboard-card">
+						<h2 class="dashboard-card-header">Missing SUP or Climber Fee</h2>
+						<div class="dashboard-card-body">
+							<table class="climberdb-dashboard-table">
+								<thead>
+									<tr>
+										<th>
+											<button class="text-only-button sort-column-button" data-field-name="expedition_name">
+												<span>Name</span>
+												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+											</button>
+										</th>
+										<th>
+											<button class="text-only-button sort-column-button sorted" data-field-name="days_to_departure">
+												<span>Days to Departure</span>
+												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+											</button>
+										</th>
+										<th>Missing SUP</th>
+										<th>Missing payment</th>
+									</r>
+								</thead>
+								<tbody>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
 			</div>
 		`);
 
@@ -181,7 +225,12 @@ class ClimberDBDashboard extends ClimberDB {
 			}
 
 			const fieldName = $button.data('field-name');
-			this.sortFlaggedExpeditions({sortField: fieldName, ascending: sortAscending});
+			
+			if ($button.closest('.dashboard-card').is('#flagged-groups-card')) {
+				this.sortFlaggedExpeditions({sortField: fieldName, ascending: sortAscending});
+			} else {
+				this.sortMisingPaymentOrSUP({sortField: fieldName, ascending: sortAscending})
+			}
 
 			$('.sort-column-button').removeClass('sorted');
 			$button.addClass('sorted')
@@ -190,7 +239,7 @@ class ClimberDBDashboard extends ClimberDB {
 	}
 
 	configureDailyMountainStats() {
-		const year = (new Date()).getFullYear() - 1; /********* remove minus one for prod **********/
+		const year = (new Date()).getFullYear()
 		// Collect data, then add to table since order matters and the queries won't necessarily return results in order
 		const tableData = {};
 		
@@ -215,7 +264,7 @@ class ClimberDBDashboard extends ClimberDB {
 			{mountain_name: 'Denali', value: 0},
 			{mountain_name: 'Foraker', value: 0} 
 		]
-		const this_ = this; // get this for inside
+		
 		const processResult = (queryResultString, statName, displayName) => {
 			tableData[statName] = {displayName: displayName}
 			if (this.queryReturnedError(queryResultString)) {
@@ -224,10 +273,17 @@ class ClimberDBDashboard extends ClimberDB {
 			} else {
 				let result = $.parseJSON(queryResultString);
 				// In case the query returns nothing, set the values to 0
-				if (!result.length) result = [...nullResult];
+				if (!result.length) {
+					result = [...nullResult];
+				} else if (!Object.values(result).filter(row => row.mountain_name === 'Denali').length) {
+					result.push({mountain_name: 'Denali', value: 0})
+				} else if (!Object.values(result).filter(row => row.mountain_name === 'Foraker').length) {
+					result.push({mountain_name: 'Foraker', value: 0})
+				}
 				tableData[statName].data = result;
 			}
 		}
+
 		const registeredDeferred =  this.queryDB(registeredSQL)
 			.done(queryResultString => {
 				processResult(queryResultString, 'registered', 'Registered climbers');
@@ -324,12 +380,12 @@ class ClimberDBDashboard extends ClimberDB {
 		`;
 		const summitedDeferred =  this.queryDB(summitedSQL)
 			.done(queryResultString => {
-				processResult(queryResultString, 'summited', 'Climbers summited');
+				processResult(queryResultString, 'summited', 'Summits');
 			})
 			.fail((xhr, status, error) => {
 				print('Registered climber query failed with error: ' + error);
 				tableData.summited = {
-					displayName: 'Climbers summited',
+					displayName: 'Summits',
 					data: [...nullResult]
 				};
 			});
@@ -362,7 +418,7 @@ class ClimberDBDashboard extends ClimberDB {
 			tableData.summitPercent.data.push({
 				mountain_name: 'Foraker',
 				value: Math.round(
-					tableData.summited.data[1].value / 
+					tableData.summited.data[1].value /  // ****** breaks when no summits
 					(tableData.offMountain.data[1].value || 1) 
 					* 100
 				) + '%'
@@ -375,6 +431,14 @@ class ClimberDBDashboard extends ClimberDB {
 		});
 	}
 
+	/*
+	Return an array of objects sorted by a given field
+	*/
+	sortDataArray(data, sortField, {ascending=true}={}) {
+		return data.sort((a, b) => {
+				return ((a[sortField] > b[sortField]) - (b[sortField] > a[sortField])) * (ascending ? 1 : -1);
+			})
+	}
 
 	/*
 	Helper method to fill the flagged groups table. Called on load and whenever a column header 
@@ -387,10 +451,9 @@ class ClimberDBDashboard extends ClimberDB {
 			.empty();
 
 		if (sortField) {
-			this.flaggedExpeditionInfo = this.flaggedExpeditionInfo.sort((a, b) => {
-				return ((a[sortField] > b[sortField]) - (b[sortField] > a[sortField])) * (ascending ? 1 : -1);
-			})
+			this.flaggedExpeditionInfo = this.sortDataArray(this.flaggedExpeditionInfo, sortField, {ascending: ascending});
 		}
+
 		for (const info of this.flaggedExpeditionInfo) {
 			$(`<tr>
 				<td><a href="expeditions.html?id=${info.expedition_id}" target="_blank">${info.expedition_name}</a></td>
@@ -431,9 +494,83 @@ class ClimberDBDashboard extends ClimberDB {
 			})
 	}
 
+
+	/*
+	Helper method to fill the flagged groups table. Called on load and whenever a column header 
+	in the flagged groups table is clicked
+	*/
+	sortMisingPaymentOrSUP({sortField=null, ascending=true}={}) {
+		
+		// Clear the table
+		const $tableBody = $('#missing-sup-fee-groups-card .climberdb-dashboard-table tbody')
+			.empty();
+
+		if (sortField) {
+			this.missingPaymentOrSUPInfo = this.sortDataArray(this.missingPaymentOrSUPInfo, sortField, {ascending: ascending});
+		}
+
+		for (const info of this.missingPaymentOrSUPInfo) {
+			$(`<tr>
+				<td><a href="expeditions.html?id=${info.expedition_id}" target="_blank">${info.expedition_name}</a></td>
+				<td class="centered-text">${info.days_to_departure}</td>
+				<td class="centered-text">${info.missing_sup || ''}</td>
+				<td class="centered-text">${info.missing_payment || ''}</td>
+			</tr>`).appendTo($tableBody)
+		}
+	}
+
+	configureMisingPaymentOrSUP() {
+		const sql = `
+			SELECT 
+				expedition_name, 
+				extract(days FROM planned_departure_date - now()) AS days_to_departure, 
+				sup.missing_sup, 
+				sup.expedition_id,
+				fee.missing_payment 
+			FROM expeditions 
+			LEFT JOIN (
+				SELECT 
+					expedition_id, 
+					count(id) AS missing_sup
+				FROM expedition_members 
+				WHERE NOT application_complete
+				GROUP BY expedition_id
+			) sup ON expeditions.id=sup.expedition_id 
+			LEFT JOIN (
+				SELECT 
+					expedition_id, 
+					count(expedition_member_id) AS missing_payment
+				FROM (
+					SELECT
+						expedition_id,
+						expedition_member_id,
+						sum(transaction_value) AS balance
+					FROM expedition_members
+					JOIN transactions ON expedition_members.id=transactions.expedition_member_id
+					WHERE transaction_type_code IN (3, 10, 12, 14, 15, 23, 24) 
+					GROUP BY expedition_id, expedition_member_id
+				) climbing_fee_balance 
+				WHERE balance > 0::MONEY
+				GROUP BY expedition_id
+			) fee ON expeditions.id=fee.expedition_id
+			WHERE planned_departure_date >= now()::date 
+			ORDER BY days_to_departure, expedition_name;`
+		
+		return this.queryDB(sql)
+			.done(queryResultString => {
+				if (this.queryReturnedError(queryResultString)) {
+					console.log('error querying flagged: ' + queryResultString)
+				} else {
+					
+					this.missingPaymentOrSUPInfo = $.parseJSON(queryResultString);
+					this.sortMisingPaymentOrSUP();
+				}
+			})
+	}
+
 	configureGroupStatusGraph() {
 
-		const year = (new Date()).getFullYear() - 1;
+		const year = (new Date()).getFullYear();
 
 		const sql = `
 			SELECT DISTINCT
@@ -473,7 +610,7 @@ class ClimberDBDashboard extends ClimberDB {
 						const $dropdown = $(el);
 						const nGroups = $dropdown.find('.group-status-link').length;
 						$dropdown.siblings('.group-status-bar-text').text(nGroups);
-						const width = Math.round(nGroups / maxGroups * 100);
+						const width = Math.ceil(nGroups / maxGroups * 100);
 						const $bar = $dropdown.siblings('.group-status-bar').css('width', width  + '%');
 						if (width == 0) {
 							$dropdown.closest('.group-status-bar-container').addClass('disabled');
@@ -677,7 +814,8 @@ class ClimberDBDashboard extends ClimberDB {
 			this.configureDailyMountainStats(),
 			this.configureGroupStatusGraph(),
 			this.configureDailyBriefingsChart(),
-			this.configureFlaggedGroups()
+			this.configureFlaggedGroups(),
+			this.configureMisingPaymentOrSUP()
 		).always(() => {
 			hideLoadingIndicator();
 		});

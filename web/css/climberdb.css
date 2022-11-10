@@ -8,6 +8,10 @@ html, body {
   font-family: 'Lato', sans-serif;
   color: #023047;
 }
+body a {
+  color: #219ebc;
+  font-weight: bold;
+}
 
 .generic-button {
   display: block; /*makes <a> tag buttons respect height/width*/
@@ -996,6 +1000,7 @@ textarea.input-field:valid + .required-indicator {
   display: block;
   opacity: 1;
   pointer-events: all;
+  font-weight: normal;
 }
 
 /*^^^^^^user account button ^^^^^^^^*/
@@ -1101,6 +1106,7 @@ nav.sidebar .nav-item a {
   color: white;
   transition: 0.3s all;
   width: 100%;
+  font-weight: normal;
 }
 nav.sidebar .nav-item a > span {
   padding-left: 20px;
