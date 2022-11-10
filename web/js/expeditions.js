@@ -2930,11 +2930,14 @@ class ClimberDBExpeditions extends ClimberDB {
 	Helper method to update the transaction balance in a transaction list footer
 	*/
 	getTransactionBalance($list) {
-		const sum = $list.find('li:not(.cloneable) .transaction-amount-field')
-			.map((_, el) => el.value === '' ? 0 : parseFloat(el.value))
-			.get()
-			.reduce((runningTotal, value) => runningTotal + value)
-			.toFixed(2);
+		const $transactionAmounts = $list.find('li:not(.cloneable) .transaction-amount-field');
+		const transactionListEmpty = $transactionAmounts.length === 0;
+		const sum = transactionListEmpty ? 0 :
+			$transactionAmounts
+				.map((_, el) => el.value === '' ? 0 : parseFloat(el.value))
+				.get()
+				.reduce((runningTotal, value) => runningTotal + value)
+				.toFixed(2);
 		if (!isNaN(sum)) $list.siblings('.data-list-footer').find('.total-col .total-span').text(sum);
 
 		// Because this function is called every time transaction value changes,
@@ -2943,21 +2946,25 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $transactionTypes = $list.find('li:not(.cloneable) .transaction-type-field');
 		var climbingFeeBalance = 0,
 			entranceFeeBalance = 0;
-		for (const el of $transactionTypes) {
-			const $valueField = $(el)
-				.closest('.data-list-item')
-					.find('.transaction-amount-field');
-			const transactionValue = parseFloat($valueField.val() || 0)
-			const transactionTypeCode = parseInt(el.value);
-			if ([3, 10, 12, 14, 15, 23, 24].includes(transactionTypeCode)) { // climbing permit fee
-				climbingFeeBalance += transactionValue;
-			} else if ([11, 25, 8, 26].includes(transactionTypeCode)) {
-				entranceFeeBalance += transactionValue;
+		if (!transactionListEmpty) {
+			for (const el of $transactionTypes) {
+				const $valueField = $(el)
+					.closest('.data-list-item')
+						.find('.transaction-amount-field');
+				const transactionValue = parseFloat($valueField.val() || 0)
+				const transactionTypeCode = parseInt(el.value);
+				if ([3, 10, 12, 14, 15, 23, 24].includes(transactionTypeCode)) { // climbing permit fee
+					climbingFeeBalance += transactionValue;
+				} else if ([11, 25, 8, 26].includes(transactionTypeCode)) {
+					entranceFeeBalance += transactionValue;
+				}
 			}
 		}
+		
+		// If the transaction list is empty, hide both icons. Otherwise, check the balance
 		const $cardHeader = $list.closest('.card').find('.card-header');
-		$cardHeader.find('.climber-fee-icon').ariaHide(climbingFeeBalance > 0);
-		$cardHeader.find('.entrance-fee-icon').ariaHide(entranceFeeBalance > 0);
+		$cardHeader.find('.climber-fee-icon').ariaHide(transactionListEmpty || climbingFeeBalance > 0);
+		$cardHeader.find('.entrance-fee-icon').ariaHide(transactionListEmpty || entranceFeeBalance > 0);
 
 	}
 
