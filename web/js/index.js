@@ -448,6 +448,11 @@ class ClimberDBIndex extends ClimberDB {
 			}
 		});
 
+		// the username shouldn't be focusable
+		$('#username-input').focus(e => {
+			$('#password-input').focus();
+		})
+
 		$('#sign-in-button').click(e => {
 			this.signIn(e);
 		});

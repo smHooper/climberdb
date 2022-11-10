@@ -68,6 +68,9 @@ body {
 .embedded-input-end-button:focus {
   display: block;
 }
+/*#sign-in-form .toggle-password-visibility-button:focus {
+  outline: unset !important;
+}*/
 
 .forgot-password-button-container {
   width: 100%;
@@ -144,6 +147,12 @@ body {
 }
 #sign-in-form-container .input-field:focus {
   color: white;
+}
+#sign-in-form-container .input-field[name=username],
+#sign-in-form-container .input-field[name=username]:hover,
+#sign-in-form-container .input-field[name=username]:focus {
+  pointer-events: none;
+  border: none;
 }
 
 #sign-in-form-container .field-label:not(.checkbox-label) {
