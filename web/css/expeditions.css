@@ -511,6 +511,7 @@
 /*hide the button when not in editing mode*/
 .uneditable .delete-card-button,
 .uneditable .delete-cmc-button, 
+.uneditable .delete-comms-button, 
 .uneditable .delete-route-member-button,
 .uneditable .route-list-footer-button {
 	display: none;

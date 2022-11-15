@@ -9,6 +9,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
 			cmc_checkout: {data: {}, order: []},
+			communication_devices: {data: {}, order: []},
 			briefings: {} 
 		}
 		this.routeCodes = {};
@@ -231,7 +232,7 @@ class ClimberDBExpeditions extends ClimberDB {
 										<a id="expedition-briefing-link" class="briefing-link" href="briefings.html" target="_blank" aria-hidden="true">Set briefing time</a>
 								</div>
 								<div class="col-6 pl-0">
-									<a href="#cmcs-data-container">CMC Info</a>
+									<a href="#cmcs-data-container">CMC and Comms Info</a>
 								</div>
 							</div>
 						</div>
@@ -630,6 +631,44 @@ class ClimberDBExpeditions extends ClimberDB {
 						</div>
 					</div>
 				</div>
+				<div class="expedition-data-wrapper">
+					<div id="comms-data-container" class="expedition-data-content">
+						<div class="expedition-data-header-container">
+							<h3 id="expedition-data-header" class="expedition-data-header">Comms Devices</h3>
+							<button class="generic-button add-data-button add-comms-button" data-target="#comms-list">Add Comms</button>
+						</div>
+						<div class="expedition-data-content-body">
+							<div class="data-list-item data-list-item-header">
+								<label class="data-list-col data-list-header-label col-3">Device type</label>
+								<label class="data-list-col data-list-header-label col-4">Number/address</label>
+								<label class="data-list-col data-list-header-label col-3">Device owner</label>
+								<label class="data-list-col data-list-header-label col-1"></label>
+							</div>
+							<ul id="comms-list" class="data-list cmc-list">
+								<li class="data-list-item cloneable hidden">
+									<div class="cmc-col col-3">
+										<select id="input-communication_device_type" class="input-field default" name="communication_device_type_code" data-table-name="communication_devices" title="Device Type" placeholder="Device type" required="required"></select>
+										<span class="required-indicator">*</span>
+									</div>
+									<div class="cmc-col col-4">
+										<input id="input-number_or_address" class="input-field" name="number_or_address" data-table-name="communication_devices" title="Device number/address" autocomplete="off"> 
+									</div>
+									<div class="cmc-col col-3">
+										<select id="input-owner" class="input-field no-option-fill default" name="expedition_member_id" data-table-name="communication_devices" title="Device owner"></select>
+									</div>
+									<div class="col-1">
+										<button class="icon-button delete-button delete-comms-button">
+											<i class="fas fa-trash fa-lg"></i>
+										</button>
+									</div>
+								</li>
+							</ul>
+						</div>
+						<div class="expedition-data-content-footer w-100">
+							<a href="#expedition-search-bar">Back To Top</a>
+						</div>
+					</div>
+				</div>
 			</div>
 		`);
 		
@@ -732,7 +771,11 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		});
 
-		// 
+		// Fields that are filled by default are filled automatically with a default value. A manually .change() 
+		//	event is triggered when the data are loaded to make sure the field values get saved if the user 
+		//	clicks the save button. The .filled-by-default utility is used to distinguish between changes the user 
+		//	actually made and .change events manually tirggered by the app. If the input is .filled-by-default 
+		//	still, that means the user didn't make the change.
 		$('.filled-by-default').change(e => {
 			if (e.isTrigger) $(e.target).removeClass('filled-by-default');
 		})
@@ -811,7 +854,7 @@ class ClimberDBExpeditions extends ClimberDB {
 								 $('#${$card.attr('id')}').fadeRemove(500);
 
 								 // Wait just over a half second for the card to be removed
-								 setTimeout(() => {climberDB.updateExpeditionMemberCount()}, 550);
+								 setTimeout(() => {climberDB.updateExpeditionMemberCount(); climberDB.updateCommsDeviceOwnerOptions()}, 550);
 							})
 							.fail((xhr, status, error) => {
 								console.log('delete failed because ' + error)
@@ -912,7 +955,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			if ($('.input-field.dirty:not(.filled-by-default)').length) {
 				const targetID = '#expedition-id-input';//e.target.id;
 				this.confirmSaveEdits({
-					afterActionCallbackStr: `climberDB.onExpeditionOptionClick( {target: $('.expedition-search-bar-option[data-expedition-id=${expeditionID}')} )`,
+					afterActionCallbackStr: `climberDB.onExpeditionOptionClick( {target: $('.expedition-search-bar-option[data-expedition-id=${expeditionID}]')} )`,
 					afterCancelCallbackStr: `$('#expedition-id-input').val($('#expedition-id-input').data('current-value'))`
 				});
 			} else {
@@ -1332,6 +1375,36 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		})
 		// ^^^^^^^^^^^ CMCs ^^^^^^^^^^^^^^^
+
+
+		// -----------Comms ---------------
+		$('.add-comms-button').click(e => {
+			// ************* chek if the cmc is already checked out to another group ******************
+			const $button = $(e.target);
+			const $ul = $($button.data('target'));
+			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item'});
+		});
+
+		// ask user to confirm removing CMC only if the cmc_checkout record already exists in the DB
+		$(document).on('click', '.delete-comms-button', e => {
+			const $li = $(e.target).closest('li');
+			if ($li.is('.new-list-item')) {
+				$li.fadeRemove();
+			} else {
+				const dbID = $li.data('table-id');
+				const $deviceTypeSelect = $li.find('select[name=communication_device_type_code]');
+				const tableName = $deviceTypeSelect.data('table-name');
+				const deviceType = $deviceTypeSelect.find('option:selected').text();
+				const onConfirmClick = `climberDB.deleteListItem($('#${$li.attr('id')}'), '${tableName}', ${dbID})`;
+				const expeditionName = this.expeditionInfo.expeditions.expedition_name; // has to be set since this list item is already saved
+				const footerButtons = `
+					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+					<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
+				`;
+				showModal(`Are you sure you want to delete this ${deviceType} from ${expeditionName}'s communication device list?`, 'Delete Comms Device?', 'alert', footerButtons);
+			}
+		})
+		// ^^^^^^^^^^^ Comms ^^^^^^^^^^^^^^^
 
 
 		// ------ Climber form stuff ------
@@ -1865,7 +1938,25 @@ class ClimberDBExpeditions extends ClimberDB {
 			sqlParameters.push(parameters);
 		}
 		
-		// update query now returns null and causes an error
+		// Comms
+		for (const li of $('#comms-list li.data-list-item:not(.cloneable)').has('.input-field.dirty')) {
+			const dbID = $(li).data('table-id');
+			$(li).find('.input-field[name=expedition_member_id]')
+				.addClass('dirty'); // force expedition_member_id field to appear in values so it isn't included in foregin table clauses
+			const [sql, parameters] = this.inputsToSQL(
+				li, 
+				'communication_devices', 
+				now, 
+				userName, 
+				{
+					updateID: dbID || null,
+					foreignIDs: {expeditions: expeditionID},
+					insertArray: inserts
+				}
+			);
+			sqlStatements.push(sql);
+			sqlParameters.push(parameters);
+		}
 		
 
 		return $.ajax({ 
@@ -2537,6 +2628,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 		this.updateExpeditionMemberCount();
+		this.updateCommsDeviceOwnerOptions();
 
 		return $newCard;
 	}
@@ -2646,6 +2738,16 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		}
 
+		const comms = this.expeditionInfo.communication_devices;
+		const $commsList = $('#comms-list');
+		for (const commsID of comms.order) {
+			const thisDevice = comms.data[commsID];
+			const $listItem = this.addNewListItem($commsList, {dbID: commsID, parentDBID: expeditionData.id});
+			for (const el of $listItem.find('.input-field')) {
+				this.setInputFieldValue(el, thisDevice, {dbID: commsID});
+			}
+		}
+
 		// Show edit toggle button
 		$('#edit-expedition-button, #open-reports-modal-button').ariaHide(false);
 
@@ -2691,6 +2793,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
 			cmc_checkout: {data: {}, order: []},
+			communication_devices: {data: {}, order: []},
 			briefings: {}
 		}
 
@@ -2729,23 +2832,34 @@ class ClimberDBExpeditions extends ClimberDB {
 		`
 		showLoadingIndicator('queryExpedition');
 
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An unexpected error occurred while querying the database: ${queryResultString.trim()}.`, 'Unexpected error');
+		// Query comms separate from all other expedition info because expedition_member_id 
+		//	needs to be optional and, therefore, potentially null. This means that comms are 
+		//	only related to other data by expedition_id. Using this relationship to join 
+		//	communication_decices to other expedition info produces multiple comms device 
+		//	records in the result without any way of determining which is right record. 
+		//	Querying them separately eliminates this issue
+		return $.when(
+			this.queryDB(sql),
+			this.queryDB(`SELECT * FROM communication_devices WHERE expedition_id=${expeditionID} ORDER BY entry_time, id`)
+		).done( (expeditionInfoResult, commsResult) => {
+				if (this.queryReturnedError(expeditionInfoResult)) {
+					showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: ${expeditionInfoResult.trim()}.`, 'Unexpected error');
+					return;
+				} else if (this.queryReturnedError(commsResult)) {
+					showModal(`An unexpected error occurred while querying the comms info with ID ${expeditionID}: ${commsResult.trim()}.`, 'Unexpected error');
 					return;
 				} else {
-					const result = $.parseJSON(queryResultString);
+					const expeditionResult = $.parseJSON(expeditionInfoResult[0]);
 					const openCardIDs = '#' + $('.card:not(.cloneable) .card-collapse.show').map((_, el) => el.id).get().join(',#');
 					
 					// Get expedition info
-					if (result.length) {
+					if (expeditionResult.length) {
 						this.clearExpeditionInfo(
 							// don't hide expedition buttons when reloading data. Toggling edits for other cases will happen otherwise
 							{hideEditButtons: showOnLoadWarnings} 
 						);  
 
-						const firstRow = result[0];//there should only be one
+						const firstRow = expeditionResult[0];//there should only be one
 						for (const fieldName in this.tableInfo.tables.expeditions.columns) {
 							const queryField = this.entryMetaFields.includes(fieldName) ? 'expeditions_' + fieldName : fieldName;
 							this.expeditionInfo.expeditions[fieldName] = firstRow[queryField];
@@ -2762,7 +2876,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					let routes = this.expeditionInfo.expedition_member_routes;
 					let cmcs = this.expeditionInfo.cmc_checkout;
 					let briefingInfo = this.expeditionInfo.briefings;
-					for (const row of result) {
+					for (const row of expeditionResult) {
 						// get expedition members
 						const memberID = row.expedition_member_id;
 						if (!(memberID in members.data) && memberID != null) {
@@ -2833,6 +2947,12 @@ class ClimberDBExpeditions extends ClimberDB {
 						}
 					}
 
+					// Process comms results
+					let comms = this.expeditionInfo.communication_devices;
+					for (const row of $.parseJSON(commsResult[0])) {
+						comms.data[row.id] = {...row};
+						comms.order.push(row.id);
+					}
 					
 					this.fillFieldValues(false);//don't trigger change
 					// If the data are being re-loaded after a save, show the cards that were open before
@@ -3036,6 +3156,32 @@ class ClimberDBExpeditions extends ClimberDB {
 			});
 	}
 	
+
+	updateCommsDeviceOwnerOptions() {
+		// Record the current values because removing the old options will make the value null
+		const $selects = $(`#comms-list .input-field[name=expedition_member_id]`);
+		const values = Object.fromEntries($selects.map((_, el) => [[el.id, el.value]] ));
+		
+		// Build new options
+		var options = '<option value="">Device owner</option>';
+		for (const card of $('#expedition-members-accordion .card:not(.cloneable)')) {
+			const $card = $(card);
+			const expeditionMemberID = $card.data('table-id');
+			const climberName = $card.find('.expedition-member-card-link-label').text();
+			options += `<option value=${expeditionMemberID}>${climberName}</option>`;
+		}
+		// Remove old options and add the new ones
+		$selects.empty();
+		$selects.append(options);
+
+		// reset original values
+		for (const selectID in values) {
+			$(selectID).val(values[selectID]);
+			// check if value is blank and assign default value
+
+		}
+
+	}
 
 	init() {
 		// Call super.init()
