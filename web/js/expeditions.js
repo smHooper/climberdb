@@ -34,6 +34,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	configureMainContent() {
 		$('.main-content-wrapper').append(`
+			<div id="scroll-tack" aria-hidden="true"></div> <!--dummy element to allow scrolling back to top of page-->
 			<div class="main-content-header">
 				<input id="expedition-id-input" class="hidden" aria-hidden="True">
 				<div class="fuzzy-search-bar-container">
@@ -627,7 +628,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							</ul>
 						</div>
 						<div class="expedition-data-content-footer w-100">
-							<a href="#expedition-search-bar">Back To Top</a>
+							<a href="#scroll-tack">Back To Top</a>
 						</div>
 					</div>
 				</div>
@@ -665,7 +666,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							</ul>
 						</div>
 						<div class="expedition-data-content-footer w-100">
-							<a href="#expedition-search-bar">Back To Top</a>
+							<a href="#scroll-tack">Back To Top</a>
 						</div>
 					</div>
 				</div>

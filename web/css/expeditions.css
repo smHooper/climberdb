@@ -3,6 +3,11 @@
 	display: inline-flex;
 	justify-content: space-between;
 	align-items: center;
+	/*Make sure the header shows when the user scrolls*/
+	position: sticky;
+	top: -10px;
+	background: linear-gradient(180deg, #cccccc 70%, transparent);
+	z-index: 1000;
 }
 .main-content-wrapper {
 	scroll-behavior: smooth; /*for CMC jump link*/
