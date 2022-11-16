@@ -1206,6 +1206,11 @@ class ClimberDB {
 	$.fn.ariaHide = function(isHiding=true) {
 		return this.toggleClass('hidden', isHiding)
 			.attr('aria-hidden', isHiding);
+	}	
+	// Toggle opacity: 0 with .transparent class rather than display: none as with the .hidden
+	$.fn.ariaTransparent = function(isHiding=true) {
+		return this.toggleClass('transparent', isHiding)
+			.attr('aria-hidden', isHiding);
 	}
  	
  	/* 

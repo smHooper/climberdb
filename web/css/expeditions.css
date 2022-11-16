@@ -269,8 +269,8 @@
 	grid-template-columns: 1fr;
 	grid-template-rows: repeat(5, 500px);
 	grid-auto-columns: 1fr;
-	row-gap: 40px;
-	column-gap: 40px;
+	row-gap: 20px;
+	column-gap: 20px;
 }
 /*.expedition-data-wrapper {
 	height: 500px;
@@ -398,6 +398,7 @@
 }
 .result-details-header-badge {
 	padding:  12px 5px;
+	transition: 0.3s opacity;
 }
 .expedition-card .card-header .leader-checkbox-container {
 	transition: 0.3s all;
@@ -478,7 +479,7 @@
 }
 *.data-list-item {
 	display: flex;
-	width: 100%;
+	width: calc(100% - 30px); /*ul element doesn't honor width so set to 100% of parent minus 15px padding*/  
 	padding: 0;
 	justify-content: space-between;
 	column-gap: 10px;
@@ -499,6 +500,14 @@
 .data-list .input-field:not(.field-with-units) {
 	width: 100%;
 	max-width: 100%;
+}
+/*special styling for transaction list*/
+.data-list-item .col.col-13-percent {
+	flex: 0 0 13%;
+	max-width: 13%;
+}
+.unit-symbol + .input-field[name="transaction_value"] {
+	text-indent: 0;
 }
 
 /*chevron is small for some reason*/

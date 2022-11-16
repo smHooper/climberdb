@@ -1016,8 +1016,7 @@ main.climberdb-main {
   background-attachment: fixed;
   background-position: center;
   background-size: cover;
-
-  background: rgba(0, 0, 0, 0.2);
+  background: #cccccc;
 }
 
 .main-container-with-sidebar {

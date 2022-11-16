@@ -255,9 +255,9 @@ class ClimberDBExpeditions extends ClimberDB {
 												<h6 class="card-link-label expedition-member-card-link-label col px-0"></h6>
 											</div>
 											<div class="expedition-member-badge-container card-link-content col-4 pl-0">
-												<img class="result-details-header-badge climber-fee-icon hidden" src="imgs/climber_fee_icon_50px.svg" title="Climber fee paid" aria-hidden="true">
-												<img class="result-details-header-badge entrance-fee-icon hidden" src="imgs/entrance_fee_icon_100px.svg" title="Entrance fee paid" aria-hidden="true">
-												<img class="result-details-header-badge guide-icon hidden" src="imgs/guide_icon_100px.svg" title="Guiding on this expedition" aria-hidden="true">
+												<img class="result-details-header-badge climber-fee-icon transparent" src="imgs/climber_fee_icon_50px.svg" title="Climber fee paid" aria-hidden="true">
+												<img class="result-details-header-badge entrance-fee-icon transparent" src="imgs/entrance_fee_icon_100px.svg" title="Entrance fee paid" aria-hidden="true">
+												<img class="result-details-header-badge guide-icon transparent" src="imgs/guide_icon_100px.svg" title="Guiding on this expedition" aria-hidden="true">
 											</div>
 										</a>
 										<div class="card-header-content-container card-header-field-container leader-checkbox-container transparent">
@@ -463,26 +463,29 @@ class ClimberDBExpeditions extends ClimberDB {
 													<div class="transactions-container-body">
 														<div class="data-list-item data-list-item-header">
 															<label class="data-list-col data-list-header-label col-3">Type</label>
-															<label class="data-list-col data-list-header-label col-3">Payment method</label>
-															<label class="data-list-col data-list-header-label col-2">Value</label>
+															<label class="data-list-col data-list-header-label col-2">Payment method</label>
+															<label class="data-list-col data-list-header-label col col-13-percent"">Value</label>
+															<label class="data-list-col data-list-header-label col-2">Date</label>
 															<label class="data-list-col data-list-header-label col-4">Transaction notes</label>
 														</div>
 														<ul id="transactions-list" class="data-list">
 															<li class="data-list-item show-children-on-hover cloneable hidden">
-																<input id="input-transaction_time" class="input-field hidden" type="datetime-local" name="transaction_time" data-table-name="transactions">
 																<div class="col-3 d-flex">
-																	<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required></select>
+																	<select id="input-transaction_type" class="input-field transaction-type-field dirty" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
 																	<span class="required-indicator">*</span>
 																</div>
-																<div class="col-3">
+																<div class="col-2">
 																	<div class="w-100 d-flex collapse">
-																		<select id="input-payment_method" class="input-field default keep-default-option" name="payment_method_code" data-table-name="transactions" placeholder="Payment method" title="Payment method" required></select>
+																		<select id="input-payment_method" class="input-field keep-default-option default dirty" name="payment_method_code" data-table-name="transactions" placeholder="Payment method" title="Payment method" required=""></select>
 																		<span class="required-indicator">*</span>
 																	</div>
 																</div>
-																<div class="col-2">
+																<div class="col col-13-percent">
 																	<span class="unit-symbol">$</span>
-																	<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
+																	<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field dirty" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
+																</div>
+																<div class="col-2 d-flex">
+																	<input id="input-transaction_date" class="input-field" type="date" name="transaction_date" data-table-name="transactions"> 
 																</div>
 																<div class="col-4 d-flex">
 																	<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
@@ -496,9 +499,11 @@ class ClimberDBExpeditions extends ClimberDB {
 														</ul>
 														<div class="data-list-item data-list-footer">
 															<label class="data-list-col data-list-header-label col-3"></label>
-															<label class="data-list-col data-list-header-label col-3 text-right pr-2">Balance</label>
-															<label class="data-list-col data-list-header-label total-col col-2">
+															<label class="data-list-col data-list-header-label col-2 text-right pr-2">Balance</label>
+															<label class="data-list-col data-list-header-label col col-13-percent total-col">
 																<span>$</span><span class="total-span"></span>
+															</label>
+															<label class="data-list-col data-list-header-label total-col col-2">
 															</label>
 															<label class="data-list-col data-list-header-label col-4"></label>
 														</div>
@@ -672,7 +677,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				</div>
 			</div>
 		`);
-		
+
 		// Show/hide the expedition filter options when the toggle button is clicked
 		$('.show-query-options-button').on('click', e => {
 			const $expeditionOptions = $('#expedition-options-drawer');
@@ -986,7 +991,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			for (const checkbox of $isGuiding) {
 				$(checkbox).closest('.card')
 				.find('.guide-icon')
-					.ariaHide( !(checkbox.checked && isGuided) );
+					.ariaTransparent( !(checkbox.checked && isGuided) );
 			}
 		});
 
@@ -997,7 +1002,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			$newItem.find('.input-field[name="transaction_type_code"]').change();
 
 			// This field is hidden completely so just fill it silently with the current timestamp
-			$newItem.find('.input-field[name=transaction_time]').val(getFormattedTimestamp(new Date(), {format: 'datetime'})).change();
+			$newItem.find('.input-field[name=transaction_date]').val( getFormattedTimestamp(new Date()) ).change();
 			const $card = $newItem.closest('.card');
 			$newItem.attr('data-parent-table-id', $card.data('table-id'));
 		});
@@ -1091,7 +1096,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 			$(checkbox).closest('.card')
 				.find('.guide-icon')
-					.ariaHide(!checkbox.checked);
+					.ariaTransparent(!checkbox.checked);
 		});
 
 		// When a transaction type field changes and amount is not already set, fill the amount with the defuault value
@@ -1507,10 +1512,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#modal-save-to-expedition-button').click(e => {
 			const currentClimberIDs = Object.values(climberDB.expeditionInfo.expedition_members.data)
 				.map(member => member.climber_id);
-			const selectedClimberID = $('#modal-climber-select').val();
-			const climberID = Object.keys(this.climberForm.selectedClimberInfo.climbers)[0];
+			const climberID = $('#modal-climber-select').val();
+			//const climberID = Object.keys(this.climberForm.selectedClimberInfo.climbers)[0];
 			const climberInfo = this.climberForm.selectedClimberInfo.climbers[climberID];
-			if (currentClimberIDs.includes(selectedClimberID)) {
+			if (currentClimberIDs.includes(climberID)) {
 				showModal(`${climberInfo.first_name} ${climberInfo.last_name} is already a member of the expedition '${this.expeditionInfo.expeditions.expedition_name}'`, 'Climber is already a member');
 				return;
 			}
@@ -2560,7 +2565,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 			if (expeditionMemberInfo.reservation_status_code == 6) $newCard.addClass('canceled');
-			if (expeditionMemberInfo.is_guiding) $newCard.find('.guide-icon').ariaHide(false);
+			if (expeditionMemberInfo.is_guiding) $newCard.find('.guide-icon').ariaTransparent(false);
 
 			// Add transaction rows
 			const transactions = this.expeditionInfo.transactions[expeditionMemberID];
@@ -2580,7 +2585,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				}
 				//show the payment method field if this transactions is a payment
 				const $paymentMethod = $item.find('.input-field[name=payment_method_code]');
-				$paymentMethod.closest('.collapse').collapse(thisTransaction.payment_method_code ? 'show' : 'hide');
+				$paymentMethod.closest('.collapse').collapse(thisTransaction.payment_method_code ? 'show' : 'hide');//.toggleClass('show', thisTransaction.payment_method_code !== null);
 				
 				//transactionTotal = transactionTotal + parseFloat(thisTransaction.transaction_value || 0);
 			}
@@ -2603,14 +2608,14 @@ class ClimberDBExpeditions extends ClimberDB {
 			$supFee.find('.input-field[name=transaction_type_code]')
 				.val(10)//code for SUP fee
 				.change();
-			$supFee.find('.input-field[name=transaction_time]')
+			$supFee.find('.input-field[name=transaction_date]')
 				.val(now)
 				.change();
 			const $entranceFee = this.addNewListItem($transactionsList);
 			$entranceFee.find('.input-field[name=transaction_type_code]')
 				.val(11)//code for entrance fee
 				.change();
-			$entranceFee.find('.input-field[name=transaction_time]')
+			$entranceFee.find('.input-field[name=transaction_date]')
 				.val(now)
 				.change();
 
@@ -3084,8 +3089,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		// If the transaction list is empty, hide both icons. Otherwise, check the balance
 		const $cardHeader = $list.closest('.card').find('.card-header');
-		$cardHeader.find('.climber-fee-icon').ariaHide(transactionListEmpty || climbingFeeBalance > 0);
-		$cardHeader.find('.entrance-fee-icon').ariaHide(transactionListEmpty || entranceFeeBalance > 0);
+		$cardHeader.find('.climber-fee-icon').ariaTransparent(transactionListEmpty || climbingFeeBalance > 0);
+		$cardHeader.find('.entrance-fee-icon').ariaTransparent(transactionListEmpty || entranceFeeBalance > 0);
 
 	}
 
