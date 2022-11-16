@@ -208,7 +208,7 @@ def get_email_logo_base64():
 	with open('imgs/climberdb_icon_100px.jpg', 'rb') as f:
 		return base64.b64encode(f.read()).decode('utf-8')
 
-# account request
+#account request
 # @app.route('/flask/notifications/accountRequest', methods=['POST'])
 # def send_account_request():
 # 	data = request.form
@@ -230,7 +230,7 @@ def get_email_logo_base64():
 # 		reply_to=app.config['DB_ADMIN_EMAIL'])
 # 	mailer.send(msg)
 
-# 	return 'true';
+#  	return 'true';
 
 # new account creation
 # This endpoint sends an activation notification to a user whose account was just created by an admin

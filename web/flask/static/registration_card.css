@@ -79,6 +79,9 @@
 			height: 30pt;
 			vertical-align: top;
 		}
+		#orientation-table td:first-of-type {
+			width: 40%;
+		}
 
 		#orientation-checklist-table td {
 			width: 33%;
