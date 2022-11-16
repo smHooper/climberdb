@@ -361,6 +361,19 @@
 	padding-left: 0px;
 }
 
+.page-bottom-jump-link,
+.page-top-jump-link {
+	line-height: 20px;
+}
+.page-bottom-jump-link::after {
+	font-size: 20px;
+	content: "\25BC";
+}
+.page-top-jump-link::after {
+	font-size: 20px;
+	content: "\25B2";
+}
+
 #climber-data-container .card.expedition-card {
 	border: 1px solid #a193804d;
 }
