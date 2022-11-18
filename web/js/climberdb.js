@@ -327,9 +327,29 @@ class ClimberDB {
 			el.tabIndex = tabIndex;
 			tabIndex ++;
 		}
+
+		// Add ctrl + s hotkey for saving. Use keydown to prevent the default broswer behavior 
+		//	(showing save file dialog) 
+		$(document).keydown(e => {
+			if (e.ctrlKey && e.key.toLowerCase() === 's') {
+				// Stop save dialog
+				e.preventDefault();
+				e.returnValue = false;
+				
+				this.saveEdits();
+				return false;
+			}
+		})
 	}
 
-
+	/*
+	Dummy function so that this.saveEdits() doesn't throw an error for any pages 
+	in the document.keydown event listner 
+	*/
+	saveEdits() {
+		// override in subclasses
+	}
+	
 	/*
 	Ask user if they really want to log out and warn them that they'll lose unsaved data.
 	If they confirm, set the expiration of their login session to now and go to the sign-in page
