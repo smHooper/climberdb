@@ -40,8 +40,8 @@
 
 	<!--alert/message modal -->
 	<div class="modal fade" id="alert-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
-	<div class="modal centered-modal fade" id="exports-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
-		<div class="modal-dialog" role="document">
+	<div class="modal fade" id="exports-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered" role="document">
 			<div class="modal-content">
 		    	<div class="modal-header">
 			    	<h5 class="modal-title">Export PDF</h5>
@@ -66,7 +66,47 @@
 			</div>
 		</div>
 	</div>
+
+	<!--modal for moving expedition member -->
+	<div class="modal centered-modal fade" id="change-expedition-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered" role="document">
+			<div class="modal-content">
+		    	<div class="modal-header">
+			    	<h5 class="modal-title">Move Expedition Member</h5>
+					<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<label id="modal-expedition-search-bar-label" class="w-100"></label>
+					<div class="fuzzy-search-bar-container">
+						<input id="modal-expedition-search-bar" class="fuzzy-search-bar" placeholder="Type to search expeditions" title="Expedition search bar" autocomplete="off">
+						<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
+						<div id="modal-expedition-options-drawer" class="fuzzy-search-bar-drawer expedition-options-container collapse"></div> 
+					</div>
+					<!-- <div class="w-100 d-flex justify-content-center">
+						<button class="generic-button" id="confirm-change-expedition-button" title="Move to expedition">Move to expedition</button>
+					</div> -->
+					
+				</div>
+				<div class="modal-footer">
+					<button class="generic-button modal-button" id="confirm-change-expedition-button" title="Move to expedition">Move to expedition</button>
+					<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
 	
+	<!-- 			<div class="fuzzy-search-bar-container">
+						<input id="expedition-search-bar" class="fuzzy-search-bar" placeholder="Type to search expeditions" title="Expedition search bar">
+						<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
+						<button class="show-query-options-button icon-button" title="Expedition filter options">
+							<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg">
+						</button>
+						<div id="expedition-options-drawer" class="fuzzy-search-bar-drawer collapse">
+						</div> 
+					</div>
+				-->
 <!-- 	<script type="text/javascript">
 		$('.modal.fade').after(`<script src="js/climbers.js?t=${(new Date).getTime()}"><\/script>`);
 		$('.modal.fade').after(`<script src="js/climberdb.js?t=${(new Date).getTime()}"><\/script>`);

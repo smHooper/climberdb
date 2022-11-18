@@ -89,11 +89,11 @@
 #search-options-drawer.show {
 	height: 220px;
 }
-#expedition-options-drawer {
+.fuzzy-search-bar-drawer.expedition-options-container {
 	max-height: 400px;
 	padding-top: 10px;
 }
-#expedition-options-drawer:not(.collapsing) {/*don't override collapsing style so drawer slides closed*/
+.fuzzy-search-bar-drawer.expedition-options-container:not(.collapsing) {/*don't override collapsing style so drawer slides closed*/
 	height: auto;
 	overflow: auto;
 }
@@ -360,7 +360,7 @@
 	padding-right: 0px;
 	padding-left: 0px;
 }
-
+/*add up/down arrows to bottom/top jump links*/
 .page-bottom-jump-link,
 .page-top-jump-link {
 	line-height: 20px;
@@ -439,10 +439,16 @@
 	display: flex;
 	justify-content: flex-end;
 	flex: 1 1 auto;
+	max-width: 10%;
 	justify-content: flex-end;
 	line-height: 100%;
 	align-items: center;
 }
+.change-expedition-button {
+	min-width: 40px;
+	width: 40px;
+}
+.member-card-header-chevron-container > 
 .uneditable .input-field.card-link-label.route-code-header-input {
 	border:none;
 }
@@ -537,6 +543,7 @@
 }
 /*hide the button when not in editing mode*/
 .uneditable .delete-card-button,
+.uneditable .change-expedition-button,
 .uneditable .delete-cmc-button, 
 .uneditable .delete-comms-button, 
 .uneditable .delete-route-member-button,
@@ -599,6 +606,15 @@ used to show climber form in "add climber" mode)*/
 }
 .result-details-summary-container.collapse {
 	display: none;
+}
+
+
+/*move expedition member modal*/
+#change-expedition-modal .modal-content {
+	min-width: 500px;
+}
+#change-expedition-modal .search-bar-icon {
+	z-index: unset;
 }
 
 /*adjust grid layout when the screen is less than 992 pixels wide*/

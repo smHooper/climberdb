@@ -39,39 +39,18 @@ class ClimberDBExpeditions extends ClimberDB {
 				<input id="expedition-id-input" class="hidden" aria-hidden="True">
 				<div class="fuzzy-search-bar-container">
 					<input id="expedition-search-bar" class="fuzzy-search-bar" placeholder="Type to search expeditions" title="Expedition search bar">
-					<!--<select id="expedition-search-bar" class="fuzzy-search-bar no-option-fill default" placeholder="Search climbers" title="Expedition search bar">
-						<option value="">Click to select an expedition</option>
-					</select>-->
 					<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 					<button class="show-query-options-button icon-button" title="Expedition filter options">
 						<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg">
 					</button>
-					<div id="expedition-options-drawer" class="fuzzy-search-bar-drawer collapse">
+					<div id="expedition-options-drawer" class="fuzzy-search-bar-drawer expedition-options-container collapse">
 					</div>
-					<div id="search-options-drawer" class="fuzzy-search-bar-drawer collapse">
+					<div id="search-options-drawer" class="fuzzy-search-bar-drawer search-options-container collapse">
 						<div class="fuzzy-search-bar-drawer-content">
-							<!--<div class="query-option-container col-4">
-								<div class="query-option-condition-header">
-									<label class="query-option-label" for="query-option-expedition_name">Expedition name</label>
-								</div>
-								<div class="query-option-condition-container">
-									<select class="query-option-operator string-match-query-option text-string-query-option" value="equals">
-										<option value="equals">equals</option>
-										<option value="startsWith">starts with</option>
-										<option value="endsWith">ends with</option>
-										<option value="contains">contains</option>
-									</select>
-									<input id="query-option-expedition_name" class="query-option-input-field string-match-query-option" type="text" data-field-name="expedition_name">
-								</div>
-							</div>-->
-
-							<!--<div class="w-100"></div>-->
-
 							<div class="query-option-container col-4">
 								<div class="query-option-condition-header">
 									<label class="query-option-label" for="query-option-planned_departure">Planned departure</label>
 								</div>
-							
 								<div class="query-option-condition-container">
 									<select class="query-option-operator datetime-query-option" value="equals">
 										<option value="=">equals</option>
@@ -92,7 +71,6 @@ class ClimberDBExpeditions extends ClimberDB {
 								<div class="query-option-condition-header">
 									<label class="query-option-label" for="query-option-planned_return">Planned return</label>
 								</div>
-							
 								<div class="query-option-condition-container">
 									<select class="query-option-operator datetime-query-option" value="equals">
 										<option value="=">equals</option>
@@ -281,8 +259,11 @@ class ClimberDBExpeditions extends ClimberDB {
 											</label>
 											<label class="field-label checkbox-label" for="input-psar_complete">PSAR</label>
 										</div>
-										<div class="member-card-header-chevron-container col-1 pr-0">
-											<button class="delete-card-button icon-button show-on-parent-hover">
+										<div class="member-card-header-chevron-container col-2 pr-0">
+											<button class="change-expedition-button icon-button show-on-parent-hover" title="Move to different expedition">
+												<img src="imgs/change_groups_icon_50px.svg">
+											</button>
+											<button class="delete-card-button icon-button show-on-parent-hover" title="Delete expedition member">
 												<i class="fa fa-trash"></i>
 											</button>
 											<i class="fa fa-chevron-down pull-right"></i>
@@ -697,12 +678,22 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		// Hide the filter options drawer (if it's shown) when the user clicks outside of it
+		// 	Make sure to exclude the modal expedition options drawer because otherwise it will 
+		//	be hidden all the time
 		$(document).on('click', e => {
-			const $drawer = $('.fuzzy-search-bar-drawer');
+			const $drawer = $('.fuzzy-search-bar-drawer:not(#modal-expedition-options-drawer)');
 			if (!$(e.target).closest('.collapse.fuzzy-search-bar-drawer').length && $drawer.is('.show')) {
 				$drawer.collapse('hide');
 			}
-		})
+		});
+		// Handle the modal search bar separately because otherwise the drawer doesn't
+		//	open and close properly. When anywhere in the modal is clicked 
+		$('#change-expedition-modal').on('click', e => {
+			const $drawer = $('#modal-expedition-options-drawer');
+			if ($drawer.is('.show')) {
+				$drawer.collapse('hide');
+			}
+		});
 
 		$('#edit-expedition-button').click(e => {
 			this.toggleEditing();
@@ -944,19 +935,41 @@ class ClimberDBExpeditions extends ClimberDB {
 				.find('.double-value-field')
 					.attr('aria-hidden', !showDoubleValue);
 		});
-
-		$('#expedition-search-bar').keyup(() => {
-
-			const value = $('#expedition-search-bar').val();
-			if (value.length >= 5 || value.length === 0) {
-				this.fillExpeditionSearchSelect({showExpeditionOptions: true});
+		
+		// The keyup event on .fuzzy-search-bars is only triggered by the escape key if there's an 
+		//	onkeyup event for the whole document
+		$(document).keyup(e => {
+			// And for some reason, Escape keyup events aren't registered for the modal search bar so handle them here 
+			const $modalExpeditionOptions = $('#modal-expedition-options-drawer');
+			if ($modalExpeditionOptions.is('.show') && (e.key === 'Escape')) {
+				$modalExpeditionOptions.collapse('hide');
 			}
-			
-		}).focus(e => {
-			//$('#expedition-options-drawer').collapse('show');
 		})
+		
+		$('.fuzzy-search-bar').keyup( e => {
+			const $searchBar = $(e.target);
+			
+			// If the user pressed the escape key, hide the options drawer
+			if (e.key === 'Escape') {
+				$searchBar.siblings('.fuzzy-search-bar-drawer.collapse').collapse('hide');
+				return;
+			}
 
-		$(document).on('click', '.expedition-search-bar-option', e => {
+			// Only query the DB for options if the search string's length is more than 5 characters or 0.
+			//	0-length will show all options but 1-4 chars will not produce reliable search results.
+			//	Also no expedition name should be less than 5 characters long
+			const value = $searchBar.val();
+			if (value.length >= 5 || value.length === 0) { 
+				this.fillExpeditionSearchSelect({$searchBar: $searchBar, showExpeditionOptions: true});
+			}
+		}).click(e => {
+			// Toggle the options drawer when the search bar is clicked
+			const $optionsDrawer = $(e.target).siblings('.expedition-options-container.collapse');
+			$optionsDrawer.collapse('toggle')
+		});
+
+		// When a user selects an option in the main search bar, load the expedition
+		$(document).on('click', '#expedition-options-drawer .expedition-search-bar-option', e => {
 			const expeditionID = $(e.target).data('expedition-id');
 			if ($('.input-field.dirty:not(.filled-by-default)').length) {
 				const targetID = '#expedition-id-input';//e.target.id;
@@ -967,6 +980,15 @@ class ClimberDBExpeditions extends ClimberDB {
 			} else {
 				this.onExpeditionOptionClick(e);
 			}
+		})
+
+		// Set the search bar value to the expedition name
+		$(document).on('click', '#modal-expedition-options-drawer .expedition-search-bar-option', e => {
+			this.onModalExpeditionSearchOptionClick(e);
+		})
+
+		$('#confirm-change-expedition-button').click(() => {
+			this.onConfirmChangeExpeditionButtonClick();
 		})
 
 		// Fill with this year's expeditions to start
@@ -1012,18 +1034,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $checkbox = $(e.target).closest('.input-checkbox');
 			const isChecked = $checkbox.prop('checked');
 
-			// If this checkbox was checked and it's now unchecked, tell the user they can't do that
-			/*if ($('#expedition-members-accordion .card:not(.cloneable) .input-checkbox[name=is_trip_leader]:checked').length === 0) {	
-				$checkbox.prop('checked', true);
-				const message =
-					'One expedition member must be selected as the leader. To change the leader' +
-					' for the expedition, hover over the member you want to designate as the leader' +
-					' and check the leader box that appears. The currently selected leader checkbox' +
-					' will automatically be unchecked.';
-				showModal(message, 'Invalid operation', 'alert');
-				return;
-			}*/
-
 			// If this chekcbox is being checked, hide all others
 			if (isChecked) {
 				$(`.card:not(.cloneable) .leader-checkbox-container .input-checkbox:not(#${$checkbox.attr('id')})`)
@@ -1033,6 +1043,10 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 			$checkbox.closest('.leader-checkbox-container').toggleClass('transparent', !isChecked);
 		})
+
+		$(document).on('click', '.change-expedition-button', e => {
+			this.showChangeExpeditionModal($(e.target).closest('.card'));
+		});
 
 		// Set the canceled time when the reservation status is set to canceled
 		// also check all other reservation status fields to see if the whole group is ready
@@ -2140,6 +2154,117 @@ class ClimberDBExpeditions extends ClimberDB {
 		showModal(message, 'Delete Expedition?', 'confirm', footerButtons);
 	} 
 
+	/*
+	@param $card: the parent .card of the clicked change-expedition-button 
+	*/
+	showChangeExpeditionModal($card) {
+		if ($card.is('.new-card')) {
+			showModal('You can\'t move this expedition member to a different expedition until you have saved their information. Either save their information first or delete this expedition member and enter add them to the correct expedition.', 'Invalid operation');
+			return;
+		}
+		// default to NULL because nothing == NULL, although a fallback option shouldn't 
+		//	ever be needed because the only way the the current-value wouldn't be set is 
+		//	if this is a new expedition, and that wouldn't happen because of the above 
+		//	if {} block
+		const expeditionID = $('#input-expedition_name').data('table-id') || 'NULL'; 
+
+		const $searchBar = $('#modal-expedition-search-bar').val('')//make sure it's empty;
+
+		// fill the select by default with all 
+		this.fillExpeditionSearchSelect({
+			$searchBar: $searchBar, 
+			queryStrings: {
+				planned_departure_date: `planned_departure_date >= '${new Date().getFullYear()}-01-01'`,
+				expedition_id: `expedition_id <> ${expeditionID}`
+			}
+		})
+		const expeditionMemberID = $card.data('table-id');
+		const memberInfo = this.expeditionInfo.expedition_members.data[expeditionMemberID];
+		const fullName = `${memberInfo.first_name} ${memberInfo.last_name}`;
+		const $label = $('#modal-expedition-search-bar-label').html(`Search for the expedition to move <span><strong>${fullName}</strong></span> to`);
+		const $modal = $('#change-expedition-modal').modal({keyboard: false,  backdrop: 'static'});
+
+		// Save the expedition member ID in the data of the confirm button
+		$('#confirm-change-expedition-button').data('expedition-member-id', expeditionMemberID);
+	}
+
+
+	/*
+	*/
+	onModalExpeditionSearchOptionClick(e) {
+		const $option = $(e.target)
+		const $searchBar = $('#modal-expedition-search-bar');
+		const selectedExpeditionName = $option.text();
+
+		// check that the climber isn't already a member of this expedition
+		const expeditionID = $option.data('expedition-id');
+		const expeditionMemberID = $('#confirm-change-expedition-button').data('expedition-member-id');
+		const climberID = this.expeditionInfo.expedition_members.data[expeditionMemberID].climber_id;
+		this.queryDB(`SELECT * FROM expedition_members WHERE expedition_id=${expeditionID} AND climber_id=${climberID}`)
+			.done(queryResultString => {
+				if (!this.queryReturnedError(queryResultString)) {
+					const result = $.parseJSON(queryResultString);
+					if (result.length) {
+						const climberName = $('#modal-expedition-search-bar-label > span').text();
+						showModal(`${climberName} is already a member of ${selectedExpeditionName}. If you think this is an error, check which expedition member record has the most complete or up-to-date information and delete the other one. Then change their expedition if necessary.`, 'Duplicate Expedition Member');
+					} else {
+						const $searchBar = $('#modal-expedition-search-bar');
+						
+						// Select the clicked option so that it can be easily located if the user clicks the 
+						//	confirm-change-expedition-button
+						$searchBar.find('.expedition-search-bar-option.selected').removeClass('selected');
+						$option.addClass('selected');
+
+						// Set the search bar value
+						$searchBar.val(selectedExpeditionName);
+					}
+				}
+			})
+
+	} 
+
+	/*
+
+	*/
+	moveExpeditionMember() {
+
+		showLoadingIndicator('moveExpeditionMember');
+
+		const selectedExpeditionID = $('#modal-expedition-options-drawer .expedition-search-bar-option.selected')
+			.data('expedition-id');
+		const expeditionMemberID = $('#confirm-change-expedition-button').data('expedition-member-id');
+
+		const sql = `UPDATE expedition_members SET expedition_id=${selectedExpeditionID} WHERE id=${expeditionMemberID} RETURNING expedition_id`;
+		this.queryDB(sql)
+			.done(queryResultString => {
+				if (this.queryReturnedError(queryResultString)) {
+					showModal('The expedition member could not be moved to a new expedition. Error: ' + queryResultString, 'Database Error');
+				} else {
+					this.loadExpedition(selectedExpeditionID);
+					this.updateURLHistory(selectedExpeditionID, $('#expedition-id-input'));
+					$('#change-expedition-modal').modal('hide');
+				}
+			}).fail((xhr, status, error) => {
+				showModal('The expedition member could not be moved to a new expedition. Error: ' + error, 'Database Error');
+			}).always(() => {
+				hideLoadingIndicator();
+			});
+
+	}
+
+	/*
+	Event handler for modal confirm-change-expedition-button
+	*/
+	onConfirmChangeExpeditionButtonClick() {
+		// Confirm edits if there are any
+		if ($('.input-field.dirty:not(.filled-by-default)').length) {
+			this.confirmSaveEdits({afterActionCallbackStr: `climberDB.moveExpeditionMember()`});
+		} 
+		// Otherwise just do the move
+		else {
+			this.moveExpeditionMember();
+		}
+	}
 
 	/*
 	Dynamically make a PDF of the specified type. Send a request to the Flask backend 
@@ -2368,32 +2493,37 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	fillExpeditionSearchSelect({showExpeditionOptions=false}={}) {
-		var queryStrings = {};
-		for (const el of $('.query-option-container')) {
-			const $container = $(el);
-			const $inputs = $container.find('*:not(.hidden) > .query-option-input-field:not(.hidden)');
-			const fieldName = $inputs.first().data('field-name');
-			let searchValues = $inputs.map((_, el) => {
-				const value = el.value;
-				if (value !== null && value.length > 0) return el.value
-			}).get();
-			
-			if (searchValues.length === 0 || fieldName in queryStrings) continue; //2 value option (i.e. operaor === BETWEEN) and field already captured
+	fillExpeditionSearchSelect({$searchBar='#expedition-search-bar', showExpeditionOptions=false, queryStrings={}}={}) {
+		
+		$searchBar = $($searchBar);
 
-			const operator = $container.find('.query-option-operator').val();
+		const $queryOptions = $searchBar.siblings('.search-options-container').find('.query-option-container'); //empty for modal
+		if (!Object.keys(queryStrings).length) {
+			for (const el of $queryOptions ) {
+				const $container = $(el);
+				const $inputs = $container.find('*:not(.hidden) > .query-option-input-field:not(.hidden)');
+				const fieldName = $inputs.first().data('field-name');
+				let searchValues = $inputs.map((_, el) => {
+					const value = el.value;
+					if (value !== null && value.length > 0) return el.value
+				}).get();
+				
+				if (searchValues.length === 0 || fieldName in queryStrings) continue; //2 value option (i.e. operaor === BETWEEN) and field already captured
 
-			if ($inputs.is('.datetime-query-option') && operator == 'BETWEEN') {
-				queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues));
-			} else if ($inputs.first().is('.string-match-query-option, .datetime-query-option')) {
-				queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues[0]));
-			} else if ($inputs.is('.select2-no-tag')) {
-				queryStrings[fieldName] = (`${fieldName} IN (${searchValues.join(',')})`)
+				const operator = $container.find('.query-option-operator').val();
+
+				if ($inputs.is('.datetime-query-option') && operator == 'BETWEEN') {
+					queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues));
+				} else if ($inputs.first().is('.string-match-query-option, .datetime-query-option')) {
+					queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues[0]));
+				} else if ($inputs.is('.select2-no-tag')) {
+					queryStrings[fieldName] = (`${fieldName} IN (${searchValues.join(',')})`)
+				}
 			}
 		}
 
 		// If a search string is given and the expedition_name filter isn't filled, use Postgres trigram fuzzy search
-		const searchString = $('#expedition-search-bar').val();
+		const searchString = $searchBar.val();
 		var orderBy, 
 			similarity = '';
 		if (searchString && !queryStrings.expedition_name) {
@@ -2408,7 +2538,14 @@ class ClimberDBExpeditions extends ClimberDB {
 		} else {
 			orderBy = 'expedition_name'
 		}
-		if (queryStrings.length === 0) return;
+		if (Object.keys(queryStrings).length === 0) {
+			queryStrings = {planned_departure_date: `planned_departure_date >= '${new Date().getFullYear()}-1-1'`}
+		};
+		if (!('expedition_id' in queryStrings)) {
+			// Exclude the current expedition. If this is a new expedition and table-id isn't set, nothing is equal to NULL so it will return everything
+			const currentExpeditionID = $('#input-expedition_name').data('table-id') || 'NULL';
+			queryStrings.expedition_id = `expedition_id <> ${currentExpeditionID}`;
+		}
 
 		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
 
@@ -2438,7 +2575,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 					result = result.data;
 
-					const $drawer = $('#expedition-options-drawer').empty();
+					const $drawer = $searchBar.siblings('.expedition-options-container').empty();
 					if (result.length) {
 						//$drawer.append('<option value="">Click to select an expedition</option>')
 						for (const row of result) {
