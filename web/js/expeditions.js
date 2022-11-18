@@ -1316,12 +1316,15 @@ class ClimberDBExpeditions extends ClimberDB {
 				title = 'Enter summit date?';
 				onConfirmClick = `
 					const summitDate = $('#modal-summit-date-input').val();
+					const $summitDateInputs = $('${summitDateInputIDs}');
 					$('${checkboxIDs}').prop('checked', true);
+					// If the user entered a summit date, fill the inputs
 					if (summitDate) {
-						$('${summitDateInputIDs}').val(summitDate)
-							.closest('.collapse')
-								.collapse('show');
+						$summitDateInputs.val(summitDate)
 					}
+					// Show inputs regardless
+					$summitDateInputs.closest('.collapse')
+						.collapse('show');
 					const $card = $('#${cardID}');
 					$card.find('.check-all-summitted-button').text('uncheck all');
 					$card.find
@@ -2162,11 +2165,11 @@ class ClimberDBExpeditions extends ClimberDB {
 			showModal('You can\'t move this expedition member to a different expedition until you have saved their information. Either save their information first or delete this expedition member and enter add them to the correct expedition.', 'Invalid operation');
 			return;
 		}
-		// default to NULL because nothing == NULL, although a fallback option shouldn't 
+		// default to -1 because ID will never equal -1, although a fallback option shouldn't 
 		//	ever be needed because the only way the the current-value wouldn't be set is 
 		//	if this is a new expedition, and that wouldn't happen because of the above 
 		//	if {} block
-		const expeditionID = $('#input-expedition_name').data('table-id') || 'NULL'; 
+		const expeditionID = $('#input-expedition_name').data('table-id') || '-1'; 
 
 		const $searchBar = $('#modal-expedition-search-bar').val('')//make sure it's empty;
 
@@ -2542,8 +2545,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			queryStrings = {planned_departure_date: `planned_departure_date >= '${new Date().getFullYear()}-1-1'`}
 		};
 		if (!('expedition_id' in queryStrings)) {
-			// Exclude the current expedition. If this is a new expedition and table-id isn't set, nothing is equal to NULL so it will return everything
-			const currentExpeditionID = $('#input-expedition_name').data('table-id') || 'NULL';
+			// Exclude the current expedition. If this is a new expedition and table-id isn't set, 
+			//	ID should never = -1 so it will return everything
+			const currentExpeditionID = $('#input-expedition_name').data('table-id') || '-1';
 			queryStrings.expedition_id = `expedition_id <> ${currentExpeditionID}`;
 		}
 
