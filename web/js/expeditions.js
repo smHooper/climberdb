@@ -1371,7 +1371,6 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// ------------ CMCs -------------------
 		$('.add-cmc-button').click(e => {
-			// ************* chek if the cmc is already checked out to another group ******************
 			const $button = $(e.target);
 			const $ul = $($button.data('target'));
 			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item', parentDBID: $('#input-planned_departure_date').data('table-id')});
@@ -1383,13 +1382,14 @@ class ClimberDBExpeditions extends ClimberDB {
 		// ask user to confirm removing CMC only if the cmc_checkout record already exists in the DB
 		$(document).on('click', '.delete-cmc-button', e => {
 			const $li = $(e.target).closest('li');
+			const $cmcSelect = $li.find('select');
+			const cmcID = $cmcSelect.val();
 			if ($li.is('.new-list-item')) {
 				$li.fadeRemove();
 			} else {
-				const $cmcSelect = $li.find('select');
+				
 				const dbID = $cmcSelect.data('table-id');
 				const tableName = $cmcSelect.data('table-name');
-				const cmcID = $cmcSelect.val();
 				const onConfirmClick = `climberDB.deleteListItem($('#${$li.attr('id')}'), '${tableName}', ${dbID})`
 				const footerButtons = `
 					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
@@ -1397,13 +1397,44 @@ class ClimberDBExpeditions extends ClimberDB {
 				`;
 				showModal(`Are you sure you want to delete this checkout record for CMC ${cmcID}?`, 'Delete CMC?', 'alert', footerButtons);
 			}
+
+			// Add this cmc back to other selects as a selectable option
+			const cmcCanIdentifier = $cmcSelect.find(`option[value=${cmcID}]`).html();
+			this.insertCMCOption($('.input-field[name=cmc_id]'), cmcID, cmcCanIdentifier);
+		});
+
+		$(document).on('change', '.input-field[name=cmc_id]', e => {
+ 
+			const $allSelects = $('.input-field[name=cmc_id]');
+			const selectedCMCs = $allSelects.map((_, el) => el.value).get();
+			for (let [id, identifier] of Object.entries(this.cmcInfo.cmcCanIDs) ) {
+				
+				// If one of the selects has this value, find out which one and remove it from all others
+				if (selectedCMCs.includes(id)) {
+					let $select;
+					for (const el of $allSelects) {
+						if (parseInt(el.value) === parseInt(id)) {
+							$select = $(el);
+							break;
+						}
+					}
+					// Remove the option from all selects whose value !== id
+					$allSelects.not($select).find(`option[value=${id}]`).remove();
+				} 
+				// Otherwise, make sure it's in all of them. This could happen if, for instance, 
+				//	a user changes the value of a CMC select: the previous value would have been 
+				//	removed from all the others so add it back in
+				else {
+					this.insertCMCOption($allSelects, id, identifier);
+				}
+				
+			}
 		})
 		// ^^^^^^^^^^^ CMCs ^^^^^^^^^^^^^^^
 
 
 		// -----------Comms ---------------
 		$('.add-comms-button').click(e => {
-			// ************* chek if the cmc is already checked out to another group ******************
 			const $button = $(e.target);
 			const $ul = $($button.data('target'));
 			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item'});
@@ -1934,7 +1965,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					userName, 
 					{
 						updateID: dbID || null,
-						foreignIDs: {expedition_members: $(li).data('parent-table-id')},
+						foreignIDs: {expedition_members: $(li).data('expedition-member-id')},
 						insertArray: inserts
 					}
 				);
@@ -2856,6 +2887,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					const $listItem = this.addNewListItem($list, {dbID: memberRouteID});
 					const thisMember = members.data[memberID];
 					
+					$listItem.attr('data-climber-id', thisMember.climber_id);
+
 					// Set name of member
 					$listItem.find('.name-label').text(`${thisMember.last_name}, ${thisMember.first_name}`);
 
@@ -3304,6 +3337,27 @@ class ClimberDBExpeditions extends ClimberDB {
 			});
 	}
 	
+	/*
+	Insert a CMC select option in the correct sequential order
+	*/
+	insertCMCOption($cmcSelects, cmcID, cmcCanIdentifier) {
+		// Loop through each select missing the option and determine where it should be 
+		//	inserted to be in sequential order for the user
+		const $missingCMC = $cmcSelects.not($cmcSelects.has(`option[value=${cmcID}]`));
+		for (const el of $missingCMC) {
+			const $options = $(el).find('option');
+			const identifierOrder = $options.map((i, el) => parseInt(el.innerHTML)).get();//innerHTML is the can identifier
+			cmcCanIdentifier = parseInt(cmcCanIdentifier);//for correct sorting all have to be ints
+			identifierOrder.push(cmcCanIdentifier);
+			// Get the index of the new identifier once it's been inserted
+			const index = identifierOrder.sort((a, b) => (a > b) - (b > a)).indexOf(cmcCanIdentifier);
+			// Select the option at that index. Because the null option is always first, in the select's 
+			//	options the index will refer to the option just before this element should be added
+			$(`<option class="" value="${cmcID}">${cmcCanIdentifier}</option>`)
+				.insertBefore($options.eq(index));
+		}
+	}
+
 
 	updateCommsDeviceOwnerOptions() {
 		// Record the current values because removing the old options will make the value null
