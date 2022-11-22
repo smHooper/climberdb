@@ -3,6 +3,7 @@ class ClimberDBDashboard extends ClimberDB {
 	constructor() {
 		super();
 		this.flaggedExpeditionInfo = [];
+		this.soloClimberInfo = [];
 		this.missingPaymentOrSUPInfo = [];
 		return this;
 	}
@@ -12,9 +13,9 @@ class ClimberDBDashboard extends ClimberDB {
 		$('.main-content-wrapper').append(`
 			<div class="main-dashboard-container container-fluid">
 				<!-- season mountain stats -->
-				<div class="col-md px-2">
+				<div class="col-md card-container">
 					<div id="season-mountain-stats-card" class="card dashboard-card">
-						<h2 class="dashboard-card-header">Mountain Stats This Season</h2>
+						<h3 class="dashboard-card-header">Mountain Stats This Season</h3>
 						<div class="dashboard-card-body">
 							<table class="climberdb-dashboard-table">
 								<thead>
@@ -24,17 +25,16 @@ class ClimberDBDashboard extends ClimberDB {
 										<th>Foraker</th>
 									</th>
 								</thead>
-								<tbody>
-								</tbody>
+								<tbody></tbody>
 							</table>
 						</div>
 					</div>
 				</div>
-				<!-- flagged expeditions -->
-				<div class="col-md px-2">
-					<div id="flagged-groups-card" class="card dashboard-card">
-						<h2 class="dashboard-card-header">Flagged Expeditions</h2>
-						<div class="dashboard-card-body">
+				<!-- flagged and solo expeditions -->
+				<div class="col-md card-container">
+					<div id="flagged-groups-card" class="card dashboard-card half-height-card">
+						<h3 class="dashboard-card-header">Flagged Expeditions</h3>
+						<div class="dashboard-card-body mt-0">
 							<table class="climberdb-dashboard-table">
 								<thead>
 									<tr>
@@ -54,6 +54,54 @@ class ClimberDBDashboard extends ClimberDB {
 									</tr>
 								</thead>
 								<tbody>
+									<tr class="cloneable hidden">
+										<td><a href="expeditions.html?id={expedition_id}" target="_blank">{expedition_name}</a></td>
+										<td class="centered-text">{departure}</td>
+										<td>{flagged_comments}</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<div id="solo-climbers-card" class="card dashboard-card half-height-card">
+						<h3 class="dashboard-card-header">Solo Climbers</h3>
+						<div class="dashboard-card-body mt-0">
+							<table class="climberdb-dashboard-table">
+								<thead>
+									<tr>
+										<th>
+											<button class="text-only-button sort-column-button" data-field-name="climber_name">
+												<span>Name</span>
+												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+											</button>
+										</th>
+										<!--<th>
+											<button class="text-only-button sort-column-button" data-field-name="route_name">
+												<span>Route</span>
+												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+											</button>
+										</th>-->
+										<th>
+											<button class="text-only-button sort-column-button sorted" data-field-name="departure">
+												<span>Departure</span>
+												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+											</button>
+										</th>
+										<th>
+											<button class="text-only-button sort-column-button sorted" data-field-name="planned_return">
+												<span class="text-nowrap">Planned return</span> <!-- force to single row-->
+												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+											</button>
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr class="cloneable hidden">
+										<td><a href="expeditions.html?id={expedition_id}" target="_blank">{climber_name}</a></td>
+										<!--<td>{route_name}</td>-->
+										<td class="centered-text">{departure}</td>
+										<td class="centered-text">{planned_return}</td>
+									</tr>
 								</tbody>
 							</table>
 						</div>
@@ -61,9 +109,9 @@ class ClimberDBDashboard extends ClimberDB {
 				</div>
 
 				<!-- group status -->
-				<div class="col-md px-2">
+				<div class="col-md card-container">
 					<div id="group-status-card" class="card dashboard-card">
-						<h2 class="dashboard-card-header w-100 centered-text">Group Status</h2>
+						<h3 class="dashboard-card-header w-100 centered-text">Group Status</h3>
 						<div class="dashboard-card-body h-100">
 							<div class="group-status-graph-container">
 								<div class="group-status-row" data-status-code="1">
@@ -158,9 +206,9 @@ class ClimberDBDashboard extends ClimberDB {
 				<div class="w-100"></div>
 
 				<!-- breifings per day -->
-				<div class="col-lg-8 px-2">
+				<div class="col-lg-8 card-container">
 					<div class="card dashboard-card">
-						<h2 class="dashboard-card-header w-100 centered-text">Scheduled Expedition Briefings per Day</h2>
+						<h3 class="dashboard-card-header w-100 centered-text">Scheduled Expedition Briefings per Day</h3>
 						<div class="scrollable-chart-and-axis-wrapper">
 							<div class="scrollable-chart-outer-wrapper">
 								<div class="scrollable-chart-inner-wrapper">
@@ -174,15 +222,15 @@ class ClimberDBDashboard extends ClimberDB {
 				</div>
 
 				<!-- expeditions that still need to pay and turn in application -->
-				<div class="col-md px-2">
+				<div class="col-md card-container">
 					<div id="missing-sup-fee-groups-card" class="card dashboard-card">
-						<h2 class="dashboard-card-header">Missing SUP or Climber Fee</h2>
+						<h3 class="dashboard-card-header">Missing SUP or Climber Fee</h3>
 						<div class="dashboard-card-body">
 							<table class="climberdb-dashboard-table">
 								<thead>
 									<tr>
 										<th>
-											<button class="text-only-button sort-column-button" data-field-name="expedition_name">
+											<button class="text-only-button sort-column-button col-4" data-field-name="expedition_name">
 												<span>Name</span>
 												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
 											</button>
@@ -198,6 +246,12 @@ class ClimberDBDashboard extends ClimberDB {
 									</r>
 								</thead>
 								<tbody>
+									<tr class="cloneable hidden">
+										<td><a href="expeditions.html?id={expedition_id}" target="_blank">{expedition_name}</a></td>
+										<td class="centered-text">{days_to_departure}</td>
+										<td class="centered-text">{missing_sup}</td>
+										<td class="centered-text">{missing_payment}</td>
+									</tr>
 								</tbody>
 							</table>
 						</div>
@@ -234,11 +288,12 @@ class ClimberDBDashboard extends ClimberDB {
 
 			const fieldName = $button.data('field-name');
 			
-			if ($button.closest('.dashboard-card').is('#flagged-groups-card')) {
-				this.sortFlaggedExpeditions({sortField: fieldName, ascending: sortAscending});
-			} else {
-				this.sortMisingPaymentOrSUP({sortField: fieldName, ascending: sortAscending})
-			}
+			const $card = $button.closest('.dashboard-card');
+			let data = $card.is('#flagged-groups-card') ? this.flaggedExpeditionInfo :
+				$card.is('#solo-climbers-card') ? this.soloClimberInfo :
+				this.missingPaymentOrSUPInfo;
+
+			data = this.sortDataTable($button.closest('table'), data, {sortField: fieldName, ascending: sortAscending});
 
 			$('.sort-column-button').removeClass('sorted');
 			$button.addClass('sorted')
@@ -325,12 +380,12 @@ class ClimberDBDashboard extends ClimberDB {
 		`;
 		const onMountainDeferred =  this.queryDB(onMountainSQL)
 			.done(queryResultString => {
-				processResult(queryResultString, 'onMountain', 'On the Mountain');
+				processResult(queryResultString, 'onMountain', 'On the mounain');
 			})
 			.fail((xhr, status, error) => {
 				print('Registered climber query failed with error: ' + error);
 				tableData.onMountain = {
-					displayName: 'On the Mountain',
+					displayName: 'On the mounain',
 					data: [...nullResult]
 				};
 			});
@@ -355,12 +410,12 @@ class ClimberDBDashboard extends ClimberDB {
 		`;
 		const offMountainDeferred =  this.queryDB(offMountainSQL)
 			.done(queryResultString => {
-				processResult(queryResultString, 'offMountain', 'Done and off Mountain');
+				processResult(queryResultString, 'offMountain', 'Done and off mountain');
 			})
 			.fail((xhr, status, error) => {
 				print('Registered climber query failed with error: ' + error);
 				tableData.offMountain = {
-					displayName: 'Done and off Mountain',
+					displayName: 'Done and off mountain',
 					data: [...nullResult]
 				};
 			});
@@ -444,32 +499,34 @@ class ClimberDBDashboard extends ClimberDB {
 	*/
 	sortDataArray(data, sortField, {ascending=true}={}) {
 		return data.sort((a, b) => {
-				return ((a[sortField] > b[sortField]) - (b[sortField] > a[sortField])) * (ascending ? 1 : -1);
+				const comparandA = a[sortField].match(/^\d+$/, a[sortField]) ? parseInt(a[sortField]) : a[sortField];
+				const comparandB = b[sortField].match(/^\d+$/, b[sortField]) ? parseInt(b[sortField]) : b[sortField];
+				return ((comparandA > comparandB) - (comparandB > comparandA)) * (ascending ? 1 : -1);
 			})
 	}
 
-	/*
-	Helper method to fill the flagged groups table. Called on load and whenever a column header 
-	in the flagged groups table is clicked
-	*/
-	sortFlaggedExpeditions({sortField=null, ascending=true}={}) {
-		
+
+	sortDataTable($table, data, {sortField=null, ascending=true}={}) {
 		// Clear the table
-		const $tableBody = $('#flagged-groups-card .climberdb-dashboard-table tbody')
-			.empty();
+		const $tableBody = $table.find('tbody');
+		$tableBody.find('tr:not(.cloneable)').remove();
 
 		if (sortField) {
-			this.flaggedExpeditionInfo = this.sortDataArray(this.flaggedExpeditionInfo, sortField, {ascending: ascending});
+			data = this.sortDataArray(data, sortField, {ascending: ascending});
 		}
 
-		for (const info of this.flaggedExpeditionInfo) {
-			$(`<tr>
-				<td><a href="expeditions.html?id=${info.expedition_id}" target="_blank">${info.expedition_name}</a></td>
-				<td class="centered-text">${info.departure}</td>
-				<td>${info.flagged_comments}</td>
-			</tr>`).appendTo($tableBody)
+		const cloneableHTML = $tableBody.find('tr.cloneable').prop('outerHTML');
+		for (const info of data) {
+			let html = cloneableHTML.slice(); // copy string
+			for (const fieldName in info) {
+				html = html.replaceAll(`{${fieldName}}`, info[fieldName] || '');
+			}
+			$(html).appendTo($tableBody).removeClass('hidden cloneable');
 		}
+
+		return data;
 	}
+
 
 	configureFlaggedGroups() {
 		const sql = `
@@ -493,39 +550,53 @@ class ClimberDBDashboard extends ClimberDB {
 		return this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
-					console.log('error querying flagged: ' + queryResultString)
+					print('error querying flagged: ' + queryResultString)
 				} else {
-					
 					this.flaggedExpeditionInfo = $.parseJSON(queryResultString);
-					this.sortFlaggedExpeditions();
+					this.sortDataTable($('#flagged-groups-card .climberdb-dashboard-table'), this.flaggedExpeditionInfo);
 				}
 			})
 	}
 
 
-	/*
-	Helper method to fill the flagged groups table. Called on load and whenever a column header 
-	in the flagged groups table is clicked
-	*/
-	sortMisingPaymentOrSUP({sortField=null, ascending=true}={}) {
-		
-		// Clear the table
-		const $tableBody = $('#missing-sup-fee-groups-card .climberdb-dashboard-table tbody')
-			.empty();
+	configureSoloClimbers() {
 
-		if (sortField) {
-			this.missingPaymentOrSUPInfo = this.sortDataArray(this.missingPaymentOrSUPInfo, sortField, {ascending: ascending});
-		}
+		const sql = `
+			SELECT 
+				solo_climbs_view.expedition_id,
+				climbers.last_name || ', ' || climbers.first_name AS climber_name,
+				route_codes.name AS route_name,
+				to_char(
+					coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date),
+					'Mon DD'
+				) AS departure,
+				to_char(expeditions.planned_return_date, 'Mon DD') AS planned_return
+			FROM solo_climbs_view 
+			JOIN expeditions ON solo_climbs_view.expedition_id = expeditions.id 
+			JOIN climbers ON solo_climbs_view.climber_id = climbers.id
+			JOIN route_codes ON solo_climbs_view.route_code=route_codes.code 
+			WHERE 
+				coalesce(expeditions.actual_departure_date, planned_departure_date) >= now()::date AND 
+				group_status_code IN (3, 4)
+		`;
+		return this.queryDB(sql)
+			.done(queryResultString => {
+				if (this.queryReturnedError(queryResultString)) {
+					print('error querying solo climbs: ' + queryResultString)
+				} else {
+					const result = $.parseJSON(queryResultString);
+					this.soloClimberInfo = result.filter( (value, index, self) =>
+						index === self.findIndex( 
+							t => t.expedition_id === value.expedition_id 
+						)
+					)
 
-		for (const info of this.missingPaymentOrSUPInfo) {
-			$(`<tr>
-				<td><a href="expeditions.html?id=${info.expedition_id}" target="_blank">${info.expedition_name}</a></td>
-				<td class="centered-text">${info.days_to_departure}</td>
-				<td class="centered-text">${info.missing_sup || ''}</td>
-				<td class="centered-text">${info.missing_payment || ''}</td>
-			</tr>`).appendTo($tableBody)
-		}
+					this.sortDataTable($('#solo-climbers-card .climberdb-dashboard-table'), this.soloClimberInfo);
+				}
+			})
+
 	}
+
 
 	configureMisingPaymentOrSUP() {
 		const sql = `
@@ -561,7 +632,9 @@ class ClimberDBDashboard extends ClimberDB {
 				WHERE balance > 0::MONEY
 				GROUP BY expedition_id
 			) fee ON expeditions.id=fee.expedition_id
-			WHERE planned_departure_date >= now()::date 
+			WHERE 
+				planned_departure_date >= now()::date AND
+				(sup.missing_sup IS NOT NULL OR fee.missing_payment IS NOT NULL)
 			ORDER BY days_to_departure, expedition_name;`
 		
 		return this.queryDB(sql)
@@ -569,9 +642,8 @@ class ClimberDBDashboard extends ClimberDB {
 				if (this.queryReturnedError(queryResultString)) {
 					console.log('error querying flagged: ' + queryResultString)
 				} else {
-					
 					this.missingPaymentOrSUPInfo = $.parseJSON(queryResultString);
-					this.sortMisingPaymentOrSUP();
+					this.sortDataTable($('#missing-sup-fee-groups-card .climberdb-dashboard-table'), this.missingPaymentOrSUPInfo);
 				}
 			})
 	}
@@ -823,6 +895,7 @@ class ClimberDBDashboard extends ClimberDB {
 			this.configureGroupStatusGraph(),
 			this.configureDailyBriefingsChart(),
 			this.configureFlaggedGroups(),
+			this.configureSoloClimbers(),
 			this.configureMisingPaymentOrSUP()
 		).always(() => {
 			hideLoadingIndicator();
