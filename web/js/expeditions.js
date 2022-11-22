@@ -805,7 +805,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		// If the group status changes to "confirmed", make actual departure and actual return dates not required
 		$('#input-group_status').change(e => {
 			const statusCode = parseInt(e.target.value || 0);
-			this.toggleRequiredOnInput($('#input-actual_departure_date, #input-actual_return_date'), statusCode !== 3);//3 === confirmed
+			this.toggleRequiredOnInput($('#input-actual_departure_date'), statusCode !== 3);//3 === confirmed
+			this.toggleRequiredOnInput($('#input-actual_return_date'), statusCode === 5);//5 === off mountain
 		})
 
 		$(document).on('click', '.delete-card-button', (e) => {
