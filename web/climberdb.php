@@ -297,7 +297,7 @@ if (isset($_POST['action'])) {
 				}
 			}
 		} else {
-			echo "either sqlStatements and/or sqlParameters not given";//false;
+			echo "ERROR: either sqlStatements and/or sqlParameters not given";//false;
 		}
 	}
 

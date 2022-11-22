@@ -813,6 +813,9 @@ class ClimberDB {
 	Helper function to check a Postgres query result for an error
 	*/
 	queryReturnedError(queryResultString) {
+		
+		queryResultString = queryResultString.trim();
+
 		if (typeof queryResultString === 'object') {
 			if (Array.isArray(queryResultString)) {
 				return !queryResultString.length;
@@ -820,7 +823,7 @@ class ClimberDB {
 				return queryResultString === null;
 			}
 		}
-		return queryResultString.match(/Query failed: ERROR:/) || queryResultString.startsWith('ERROR:') || queryResultString.trim() === '["query returned an empty result"]';
+		return queryResultString.match(/Query failed: ERROR:/) || queryResultString.startsWith('ERROR:') || queryResultString === '["query returned an empty result"]';
 	}
 
 
