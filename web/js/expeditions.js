@@ -453,7 +453,7 @@ class ClimberDBExpeditions extends ClimberDB {
 														<ul id="transactions-list" class="data-list">
 															<li class="data-list-item show-children-on-hover cloneable hidden">
 																<div class="col-3 d-flex">
-																	<select id="input-transaction_type" class="input-field transaction-type-field dirty" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
+																	<select id="input-transaction_type" class="input-field transaction-type-field dirty revertable" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
 																	<span class="required-indicator">*</span>
 																</div>
 																<div class="col-2">
@@ -755,6 +755,12 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(document).on('change', '.input-field:not(.route-code-header-input)', e => {
 			if ($(e.target).closest('.cloneable').length) return;
 			this.onInputChange(e);
+		});
+
+		// Record current value for .revertable inputs so the value can be reverted after a certain event
+		$(document).on('change', '.input-field.revertable', e => {
+			const $target = $(e.target);
+			$target.data('current-value', $target.val());
 		});
 
 		$('#add-new-expedition-button').click(e => {
@@ -1126,7 +1132,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $select = $(e.target);
 			const $valueField = $select.closest('li').find('.transaction-amount-field');
 			const transactionTypeCode = $select.val();
-			if (!transactionTypeCode) return;
+			if (!transactionTypeCode) return;// && $select.data('current-value') != ) return;
 			const info = this.defaultTransactionFees[transactionTypeCode];
 			const defaultAmount = info.default_fee;
 			const currentValue = $valueField.val();
@@ -2125,7 +2131,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		// transactions
-		const $transactionInputs = $('#expedition-members-accordion .card:not(.cloneable) .transactions-tab-pane .data-list > li.data-list-item:not(.cloneable) .input-field.dirty');
+		const $transactionInputs = $('.card:not(.cloneable) .transactions-tab-pane .data-list-item:not(.cloneable):not(.new-list-item) .input-field.dirty');
 		for (const el of $transactionInputs) {
 			const memberID = $(el).closest('card').data('table-id');
 			const transactionInfo = this.expeditionInfo.transactions.data[memberID];

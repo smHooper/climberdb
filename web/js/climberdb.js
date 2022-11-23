@@ -812,24 +812,24 @@ class ClimberDB {
 
 
 	validateFields($parent, {focusOnField=true}={}) {
-		const $fields = $parent
-			.find('.field-container:not(.disabled)')
-			.find('.input-field:required, .required-indicator + .input-field')
+		const $invalidFields = $parent
+			.find('.input-field:required')
 			.not('.hidden')
 			.each((_, el) => {
 				const $el = $(el);
 				const $hiddenParent = $el.parents('.collapse:not(.show, .card-collapse), .card.cloneable, .field-container.disabled, .hidden');
 				$el.toggleClass('error', !$el.val() && $hiddenParent.length === 0)
-			});
+			})
+			.filter('.error');
 
-		if ($fields.filter('.error').length) {
+		if ($invalidFields.length) {
 			// If any are descendents of a card in an accordion, open the card
-			$fields.parents('.card-collapse:not(.show)')
+			$invalidFields.parents('.card-collapse:not(.show)')
 				.siblings('.card-header')
 				.find('.card-link')
 					.click();
 
-			if (focusOnField) $fields.first().focus();
+			if (focusOnField) $invalidFields.first().focus();
 			return false;
 		} else {
 			return true;
