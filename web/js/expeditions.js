@@ -1399,35 +1399,50 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 			// Add this cmc back to other selects as a selectable option
-			const cmcCanIdentifier = $cmcSelect.find(`option[value=${cmcID}]`).html();
-			this.insertCMCOption($('.input-field[name=cmc_id]'), cmcID, cmcCanIdentifier);
+			if (cmcID) {
+				const cmcCanIdentifier = $cmcSelect.find(`option[value=${cmcID}]`).html();
+				this.insertCMCOption(cmcID, cmcCanIdentifier);
+			}
 		});
 
 		$(document).on('change', '.input-field[name=cmc_id]', e => {
- 
-			const $allSelects = $('.input-field[name=cmc_id]');
-			const selectedCMCs = $allSelects.map((_, el) => el.value).get();
+ 			// If the return date is already set, don't change anything because 
+ 			//	theoretically the can has already been returned
+ 			const $returnDateInput = $(e.target).closest('li').find('.input-field[name=return_date]');
+ 			if ($returnDateInput.val()) return;
+
+			const $cmcSelects = $('.input-field[name=cmc_id]');
+			const selectedCMCs = $cmcSelects.map((_, el) => el.value).get();
 			for (let [id, identifier] of Object.entries(this.cmcInfo.cmcCanIDs) ) {
-				
 				// If one of the selects has this value, find out which one and remove it from all others
 				if (selectedCMCs.includes(id)) {
-					let $select;
-					for (const el of $allSelects) {
-						if (parseInt(el.value) === parseInt(id)) {
-							$select = $(el);
-							break;
-						}
-					}
-					// Remove the option from all selects whose value !== id
-					$allSelects.not($select).find(`option[value=${id}]`).remove();
+					this.removeCMCOption(id)
 				} 
 				// Otherwise, make sure it's in all of them. This could happen if, for instance, 
 				//	a user changes the value of a CMC select: the previous value would have been 
 				//	removed from all the others so add it back in
 				else {
-					this.insertCMCOption($allSelects, id, identifier);
+					this.insertCMCOption(id, identifier, {$cmcSelects: $cmcSelects});
 				}
 				
+			}
+		});
+
+		$(document).on('change', '.input-field[name=return_date]', e => {
+			const $target = $(e.target);
+			const returnDate = $target.val();
+			const $cmcSelect = $target.closest('li').find('.input-field[name=cmc_id]');
+			const cmcID = $cmcSelect.val();
+			
+			if (!cmcID) return; //if it's blank there's nothing we can do
+
+			// If return date is specified and valid, add this CMC back into the select options
+			if (returnDate) {
+				this.insertCMCOption(cmcID, $cmcSelect.find('option:selected').html())
+			} 
+			// Otherwise, take it out of the inventory (for this user's session)
+			else {
+				this.removeCMCOption(cmcID);
 			}
 		})
 		// ^^^^^^^^^^^ CMCs ^^^^^^^^^^^^^^^
@@ -3340,7 +3355,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Insert a CMC select option in the correct sequential order
 	*/
-	insertCMCOption($cmcSelects, cmcID, cmcCanIdentifier) {
+	insertCMCOption(cmcID, cmcCanIdentifier, {$cmcSelects=$('.input-field[name=cmc_id]')}={}) {
 		// Loop through each select missing the option and determine where it should be 
 		//	inserted to be in sequential order for the user
 		const $missingCMC = $cmcSelects.not($cmcSelects.has(`option[value=${cmcID}]`));
@@ -3358,6 +3373,20 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 	}
 
+	/*
+	Remove a CMC select option from all CMC selects except any whose values are set
+	*/
+	removeCMCOption(cmcID, {$cmcSelects=$('.input-field[name=cmc_id]')}={}) {
+		let $select;
+		for (const el of $cmcSelects) {
+			if (parseInt(el.value) === parseInt(cmcID)) {
+				$select = $(el);
+				break;
+			}
+		}
+		// Remove the option from all selects whose value !== id
+		$cmcSelects.not($select).find(`option[value=${cmcID}]`).remove();
+	}
 
 	updateCommsDeviceOwnerOptions() {
 		// Record the current values because removing the old options will make the value null
