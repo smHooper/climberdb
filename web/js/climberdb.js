@@ -814,7 +814,7 @@ class ClimberDB {
 	*/
 	queryReturnedError(queryResultString) {
 		
-		queryResultString = queryResultString.trim();
+		
 
 		if (typeof queryResultString === 'object') {
 			if (Array.isArray(queryResultString)) {
@@ -822,6 +822,8 @@ class ClimberDB {
 			} else {
 				return queryResultString === null;
 			}
+		} else if (typeof queryResultString === 'string') {
+			queryResultString = queryResultString.trim();
 		}
 		return queryResultString.match(/Query failed: ERROR:/) || queryResultString.startsWith('ERROR:') || queryResultString === '["query returned an empty result"]';
 	}
