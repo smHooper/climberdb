@@ -354,28 +354,19 @@ class ClimberDBExpeditions extends ClimberDB {
 														</div>
 													</div>
 													<div class="field-container-row">
-														<div class="field-container col-sm-6">
+														<!--<div class="field-container col-sm-6">
 															<input id="input-highest_elevation_ft" class="input-field" name="highest_elevation_ft" data-table-name="expedition_members" data-table-id="" placeholder="Highest Elevation (ft)" title="Highest Elevation in feet" type="number" autocomplete="off">
 															<span class="required-indicator">*</span>
 															<label class="field-label" for="input-highest_elevation_ft">Highest Elevation (ft)</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
-														</div>	
+														</div>-->	
+
 														<div class="field-container col-sm-6">
 															<select id="input-frostbite_severity" class="input-field default" name="frostbite_severity_code" data-table-name="expedition_members" placeholder="Frostbite severity" title="Frostbite severity"></select>
 															<label class="field-label" for="input-frostbite_severity_code">Frostbite severity</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>		
-													</div>
-													<div class="field-container-row">
-														<div class="field-container col collapse">
-															<input id="input-frostbite_details" class="input-field" name="frostbite_details" data-table-name="expedition_members" data-table-id="" placeholder="Frostbite details" title="Frostbite details" type="text" autocomplete="off" data-dependent-target="#input-frostbite_severity" data-dependent-value="!<blank>">
-															<span class="required-indicator">*</span>
-															<label class="field-label" for="input-frostbite_details">Frostbite details</label>
-															<span class="null-input-indicator">&lt; null &gt;</span>
-														</div>	
-													</div>
-													<div class="field-container-row">
-														<div class="field-container checkbox-field-container col-sm">
+														<div class="field-container checkbox-field-container col-sm-6">
 															<label class="checkmark-container">
 																<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin" data-table-name="expedition_members">
 																<span class="checkmark data-input-checkmark"></span>
@@ -383,6 +374,15 @@ class ClimberDBExpeditions extends ClimberDB {
 															<label class="field-label checkbox-label" for="input-received_pro_pin">Received Pro Pin</label>
 														</div>	
 													</div>
+													<!--<div class="field-container-row">
+														<div class="field-container checkbox-field-container col-sm">
+															<label class="checkmark-container">
+																<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin" data-table-name="expedition_members">
+																<span class="checkmark data-input-checkmark"></span>
+															</label>
+															<label class="field-label checkbox-label" for="input-received_pro_pin">Received Pro Pin</label>
+														</div>	
+													</div>-->
 													<div class="field-container-row">
 														<div class="field-container col collapse">
 															<label class="field-label" for="input-reason_for_pro_pin">Reason this climber received a Pro Pin</label>
@@ -534,7 +534,8 @@ class ClimberDBExpeditions extends ClimberDB {
 											<div class="data-list-item data-list-item-header">
 												<label class="data-list-col data-list-header-label col-4"></label>
 												<label class="data-list-col data-list-header-label col-3 text-center">Summited?</label>
-												<label class="data-list-col data-list-header-label col-4">Summit date</label>
+												<label class="data-list-col data-list-header-label col-2 text-center">Summit date</label>
+												<label class="data-list-col data-list-header-label col-2">Highest Elevation</label>
 												<label class="data-list-col data-list-header-label col-1"></label>
 											</div>
 											<ul id="route-member-list" class="data-list route-member-list">
@@ -542,18 +543,23 @@ class ClimberDBExpeditions extends ClimberDB {
 													<!-- route_code and route_order inputs are hidden because the select in the .card-header controls the value for all of them-->
 													<input id="input-route_code" class="input-field hidden" type="number" name="route_code" data-table-name="expedition_member_routes">
 													<input id="input-route_order" class="input-field hidden" type="number" name="route_order" data-table-name="expedition_member_routes">
-													<div class="col-5">
+													<div class="col-4">
 														<label class="data-list-header-label name-label"></label>
 													</div>
-													<div class="col-2 center-checkbox-col">
+													<div class="col-3 center-checkbox-col">
 														<label class="checkmark-container">
 															<input id="input-route_summited" class="input-field input-checkbox route-summited-checkbox" type="checkbox" name="route_was_summited" data-table-name="expedition_member_routes" title="Route summitted?">
 															<span class="checkmark data-input-checkmark"></span>
 														</label>
 													</div>
-													<div class="col-4">
+													<div class="col-2">
 														<div class="field-container collapse">
-															<input id="input-summit_date" class="input-field" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
+															<input id="input-summit_date" class="input-field text-center" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
+														</div>
+													</div>
+													<div class="col-2">
+														<div class="field-container">
+															<input id="input-summit_date" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest Elevation"> 
 														</div>
 													</div>
 													<div class="col-1">

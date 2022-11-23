@@ -513,9 +513,6 @@
 .data-list-col.total-col .total-span {
 	margin-left: 12px;
 }
-.data-list .col-2.center-checkbox-col {
-	/*padding-left: calc(12.5% - 12px);*/
-}
 .data-list .input-field:not(.field-with-units) {
 	width: 100%;
 	max-width: 100%;
@@ -608,6 +605,19 @@ used to show climber form in "add climber" mode)*/
 	display: none;
 }
 
+.route-member-list .center-checkbox-col {
+	display: flex;
+	justify-content: center;
+}
+.route-member-list .center-checkbox-col .checkmark-container {
+	width: 25px; /*give it a width so it gets properly centered*/ 
+}
+.uneditable .route-member-list .input-field {
+	text-indent: 5px;
+}
+.uneditable .input-field.text-center {
+	text-align: center !important;
+}
 
 /*move expedition member modal*/
 #change-expedition-modal .modal-content {

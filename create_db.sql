@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	had_hace BOOLEAN,
 	had_hape BOOLEAN,
 	medical_notes TEXT,
-	highest_elevation_ft INTEGER,
+	--highest_elevation_ft INTEGER,
 	climber_comments TEXT, --ClimberNotes
 	internal_notes TEXT, --ResNotes
 	entered_by VARCHAR(50),
@@ -150,7 +150,8 @@ CREATE TABLE IF NOT EXISTS expedition_member_routes (
 	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	route_code INTEGER REFERENCES route_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	route_order INTEGER,
-	route_was_climbed BOOLEAN, --a null summit_date could indicate that the route wasn't climbed, but I don't think you could rely on it
+	route_was_summited BOOLEAN, --a null summit_date could indicate that the route wasn't climbed, but I don't think you could rely on it
+	highest_elevation_ft INTEGER,
 	summit_date DATE 
 );
 
@@ -161,7 +162,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 	payment_method_code INTEGER REFERENCES payment_method_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	transaction_value MONEY,
 	transaction_notes TEXT,
-	transaction_time TIMESTAMP,
+	transaction_date DATE,
 	entered_by VARCHAR(50),
 	entry_time TIMESTAMP,
 	last_modified_by VARCHAR(50),
