@@ -2077,7 +2077,11 @@ class ClimberDBExpeditions extends ClimberDB {
 				const edits = this.edits;
 				const expeditionInfo = this.expeditionInfo;
 				const $editedInputs =  $('.input-field.dirty').removeClass('dirty');
-				this.queryExpedition(expeditionID, false);//suppress flagged expedition member warnings
+				this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
+					// .done(() => {
+					// 	//
+					// 	setTimeout(() => {$('#input-group_status').change()}, 500);
+					// });
 
 				// Hide the save button again since there aren't any edits
 				$('#save-expedition-button').ariaHide(true);
@@ -2674,7 +2678,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.toggleEditing(true);
 
 		// Clear fields and data
-		this.clearExpeditionInfo();
+		this.clearExpeditionInfo({triggerChange: true});
 
 		// Set header values
 		$('#expedition-entered-by-result-summary-item .result-details-summary-value')
@@ -2977,7 +2981,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	clearExpeditionInfo({hideEditButtons=true}={}) {
+	clearExpeditionInfo({hideEditButtons=true, triggerChange=false}={}) {
 		// Clear any previously loaded data
 		$('.accordion .card:not(.cloneable), .data-list li:not(.cloneable)').remove();
 
@@ -2999,7 +3003,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			briefings: {}
 		}
 
-		this.clearInputFields({triggerChange: false});
+		this.clearInputFields({triggerChange: triggerChange});
 		
 		// clearInputFields sets the class to default if the value = '', and these unputs are currently empty 
 		$('.route-code-header-input').removeClass('default');
@@ -3024,7 +3028,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	queryExpedition(expeditionID, showOnLoadWarnings=true) {
+	queryExpedition(expeditionID, {showOnLoadWarnings=true, triggerChange=null}={}) {
 
 		const sql = `
 			SELECT 

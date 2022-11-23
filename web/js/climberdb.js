@@ -143,6 +143,33 @@ function deepCopy(inObject) {
 	return outObject;
 }
 
+/*
+Helper function to debug issues with collapses
+*/
+function toggleCollapseEventHandlers(selector, toggleOn=true) {
+	const $collapse = $(selector).closest('.collapse');
+
+	if (toggleOn) {
+		$collapse.on('show.bs.collapse', e => {
+			const a = 1;
+		});
+		$collapse.on('shown.bs.collapse', e => {
+			const a = 1;
+		});
+		$collapse.on('hide.bs.collapse', e => {
+			const a = 1;
+		});
+		$collapse.on('hidden.bs.collapse', e => {
+			const a = 1;
+		});
+	} else {
+		$collapse.off('show.bs.collapse');
+		$collapse.off('shown.bs.collapse');
+		$collapse.off('hide.bs.collapse');
+		$collapse.off('hidden.bs.collapse');
+	}
+}
+
 /* ClimberDB base class*/
 class ClimberDB {
 	constructor() {
@@ -771,8 +798,8 @@ class ClimberDB {
 				$el.prop('checked', defaultValue || false); 
 			} else if ($el.is('select')) {
 					el.value = defaultValue || '';
-					$el.toggleClass('default', !defaultValue)
-						.change();
+					$el.toggleClass('default', !defaultValue);
+						//.change();
 			} else {
 				el.value = defaultValue || null;
 			}
