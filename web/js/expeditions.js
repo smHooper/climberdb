@@ -13,6 +13,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			briefings: {} 
 		}
 		this.routeCodes = {};
+		this.mountainCodes = {};
 		this.cmcInfo = {
 			rfidTags: {}, // keys are RFID tag IDs, vals are db IDs
 			cmcCanIDs: {} // keys are db IDs, vals are can IDs
@@ -533,9 +534,9 @@ class ClimberDBExpeditions extends ClimberDB {
 										<div class="card-body">
 											<div class="data-list-item data-list-item-header">
 												<label class="data-list-col data-list-header-label col-4"></label>
-												<label class="data-list-col data-list-header-label col-3 text-center">Summited?</label>
+												<label class="data-list-col data-list-header-label col-2 text-center">Summited?</label>
 												<label class="data-list-col data-list-header-label col-2 text-center">Summit date</label>
-												<label class="data-list-col data-list-header-label col-2">Highest Elevation</label>
+												<label class="data-list-col data-list-header-label col-3">Highest elevation (ft)</label>
 												<label class="data-list-col data-list-header-label col-1"></label>
 											</div>
 											<ul id="route-member-list" class="data-list route-member-list">
@@ -546,7 +547,7 @@ class ClimberDBExpeditions extends ClimberDB {
 													<div class="col-4">
 														<label class="data-list-header-label name-label"></label>
 													</div>
-													<div class="col-3 center-checkbox-col">
+													<div class="col-2 center-checkbox-col">
 														<label class="checkmark-container">
 															<input id="input-route_summited" class="input-field input-checkbox route-summited-checkbox" type="checkbox" name="route_was_summited" data-table-name="expedition_member_routes" title="Route summitted?">
 															<span class="checkmark data-input-checkmark"></span>
@@ -557,9 +558,9 @@ class ClimberDBExpeditions extends ClimberDB {
 															<input id="input-summit_date" class="input-field text-center" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
 														</div>
 													</div>
-													<div class="col-2">
-														<div class="field-container">
-															<input id="input-summit_date" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest Elevation"> 
+													<div class="col-3">
+														<div class="field-container pr-5">
+															<input id="input-highest_elevation" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest elevation in feet"> 
 														</div>
 													</div>
 													<div class="col-1">
@@ -571,12 +572,12 @@ class ClimberDBExpeditions extends ClimberDB {
 											</ul>
 											<div class="data-list-item data-list-footer">
 												<div class="data-list-col data-list-header-label col-4">
-													<button class="text-only-button route-list-footer-button add-expedition-route-member-button w-100 text-left px-0 mx-0 hidden" aria-hidden="True">Add expedition member</button>
+													<button class="text-only-button route-list-footer-button add-expedition-route-member-button w-100 text-left px-0 mx-0 hidden" aria-hidden="True">Add member to route</button>
 												</div>
-												<div class="data-list-col data-list-header-label center-checkbox-col col-3">
+												<div class="data-list-col data-list-header-label center-checkbox-col col-2">
 													<button class="text-only-button route-list-footer-button check-all-summitted-button w-100">check all</button>
 												</div>
-												<div class="data-list-col data-list-header-label col-5"></div>
+												<div class="data-list-col data-list-header-label col-6"></div>
 											</div>
 										</div>
 									</div>
@@ -1324,17 +1325,13 @@ class ClimberDBExpeditions extends ClimberDB {
 				onConfirmClick = `
 					const summitDate = $('#modal-summit-date-input').val();
 					const $summitDateInputs = $('${summitDateInputIDs}');
-					$('${checkboxIDs}').prop('checked', true);
+					$('${checkboxIDs}').prop('checked', true).change();
 					// If the user entered a summit date, fill the inputs
 					if (summitDate) {
 						$summitDateInputs.val(summitDate)
 					}
-					// Show inputs regardless
-					$summitDateInputs.closest('.collapse')
-						.collapse('show');
 					const $card = $('#${cardID}');
 					$card.find('.check-all-summitted-button').text('uncheck all');
-					$card.find
 				`;
 			}
 			const footerButtons = `
@@ -1346,10 +1343,19 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Set text of check/uncheck all button when 
 		$('.route-summited-checkbox').change(e => {
-			const $card = $(e.target).closest('.card');
+			const $thisCheckbox = $(e.target);
+			const $card = $thisCheckbox.closest('.card');
 			const $checkboxes = $card.find('.data-list-item:not(.cloneable) .center-checkbox-col .input-checkbox');
 			const allChecked = $checkboxes.filter(':checked').length == $checkboxes.length;
 			$card.find('.check-all-summitted-button').text(allChecked ? 'uncheck all' : 'check all');
+
+			// if the elevation hasn't been set and the route was summited, set the highest_elevation field
+			const mountainCode = $card.find('.input-field[name=mountain_code]').val();
+			const $highestElevationInput = $thisCheckbox.closest('li').find('.input-field[name=highest_elevation_ft]')
+			// if 1) the mountain is selected, 2) the route was summited, & 3) highest elevation isn't set
+			if (mountainCode && $thisCheckbox.prop('checked') && !$highestElevationInput.val()) {
+				$highestElevationInput.val(this.mountainCodes[mountainCode].elevation_ft)
+			}
 		});
 
 
@@ -3437,7 +3443,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		if (Object.keys(this.routeCodes).length === 0) {
 			lookupDeferreds.push(
 				this.queryDB('SELECT * FROM route_codes WHERE sort_order IS NOT NULL')
-					.done((queryResultString) => {
+					.done(queryResultString => {
 						const $select = $('.route-code-header-input:not(.mountain-code-header-input)');
 						if (!this.queryReturnedError(queryResultString)) {
 							for (const route of $.parseJSON(queryResultString)) {
@@ -3449,8 +3455,16 @@ class ClimberDBExpeditions extends ClimberDB {
 			)
 		} 
 		lookupDeferreds.push(
+			this.queryDB('SELECT * FROM mountain_codes')
+				.done(queryResultString => {
+					for (const row of $.parseJSON(queryResultString)) {
+						this.mountainCodes[row.code] = {...row};
+					}
+				})
+		);
+		lookupDeferreds.push(
 			this.queryDB('SELECT code, default_fee, is_credit, is_payment FROM transaction_type_codes')
-				.done((queryResultString) => {
+				.done(queryResultString => {
 					if (!this.queryReturnedError(queryResultString)) {
 						for (const row of $.parseJSON(queryResultString)) {
 							this.defaultTransactionFees[row.code] = {

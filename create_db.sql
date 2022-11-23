@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS air_taxi_codes(id SERIAL PRIMARY KEY, name VARCHAR(50
 CREATE TABLE IF NOT EXISTS group_status_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS special_group_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS reservation_status_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
-CREATE TABLE IF NOT EXISTS mountain_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS mountain_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER, elevation_ft INTEGER);
 CREATE TABLE IF NOT EXISTS payment_method_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS route_codes(
 	id SERIAL PRIMARY KEY, 
@@ -238,7 +238,7 @@ CREATE TABLE IF NOT EXISTS config (
 INSERT INTO sex_codes (name) VALUES ('Female'), ('Male'), ('Intersex'), ('Prefer not to say');
 INSERT INTO frostbite_severity_codes(name) VALUES ('superficial'), ('deep'), ('mild'), ('moderate'), ('severe');
 INSERT INTO user_role_codes (name) VALUES ('Data entry'), ('Ranger'), ('Admin');
-INSERT INTO mountain_codes (name) VALUES ('Denali'), ('Foraker');
+INSERT INTO mountain_codes (name, elevation_ft) VALUES ('Denali', 20310), ('Foraker', 17400);
 INSERT INTO cmc_status_codes (name) VALUES ('active'), ('lost'), ('damaged'));
 INSERT into payment_method_codes (name) VALUES ('Pay.gov'), ('Credit card'), ('Cash'), ('Check');
 INSERT into communication_device_type_codes (name) VALUES ('Satellite phone'), ('inReach'), ('Zoleo'), ('Spot');
