@@ -525,6 +525,26 @@
 .unit-symbol + .input-field[name="transaction_value"] {
 	text-indent: 0;
 }
+.transactions-tab-pane .refund-post-item .input-field,
+.transactions-tab-pane .refund-post-item .unit-symbol {
+	color: hsl(0, 0%, 40%);
+	font-style: italic;
+}
+.transactions-tab-pane .refund-post-item .input-field {
+	pointer-events: none;
+	border-bottom: none;
+/*	position: relative; /*allows hiding calendar-date-picker*/
+}
+.transactions-tab-pane .refund-post-item .input-field::-webkit-calendar-picker-indicator {
+	color: transparent;
+	background: transparent;
+}
+.transactions-tab-pane .refund-post-item select.input-field {
+	-webkit-appearance: none;
+}
+.transactions-tab-pane .refund-post-item .delete-transaction-button {
+	display: none;
+}
 
 /*chevron is small for some reason*/
 .card-link ~ * > .fa-chevron-dow {

@@ -453,7 +453,7 @@ class ClimberDBExpeditions extends ClimberDB {
 														<ul id="transactions-list" class="data-list">
 															<li class="data-list-item show-children-on-hover cloneable hidden">
 																<div class="col-3 d-flex">
-																	<select id="input-transaction_type" class="input-field transaction-type-field dirty revertable" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
+																	<select id="input-transaction_type" class="input-field transaction-type-field dirty" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
 																	<span class="required-indicator">*</span>
 																</div>
 																<div class="col-2">
@@ -1129,42 +1129,12 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// When a transaction type field changes and amount is not already set, fill the amount with the defuault value
 		$(document).on('change', '.transaction-type-field', e => {
-			const $select = $(e.target);
-			const $valueField = $select.closest('li').find('.transaction-amount-field');
-			const transactionTypeCode = $select.val();
-			if (!transactionTypeCode) return;// && $select.data('current-value') != ) return;
-			const info = this.defaultTransactionFees[transactionTypeCode];
-			const defaultAmount = info.default_fee;
-			const currentValue = $valueField.val();
-			if ( (currentValue === '') || (currentValue === '0.00') ) {
-				if (defaultAmount !== null) {
-					$valueField
-						.val(defaultAmount.replace(/\(/, '-').replace(/[$)]/g, ''))
-						.change();
-				}
-			}
-			$select.closest('.data-list-item')
-				.find('.input-field[name=payment_method_code]')
-					.closest('.collapse')
-						.collapse(info.is_payment === 't' ? 'show' : 'hide');
+			this.onTransactionTypeChange(e);
 		});
 
 		// When a transaction amount field changes, calculate balance
 		$(document).on('change', '.transaction-amount-field', e => {
-			const $list = $(e.target).closest('.data-list');
-			
-			// If the field is a credit, set the value to be negative and vice versa
-			const $valueField = $(e.target);
-			const amount = $valueField.val();
-			const transactionType = $valueField.closest('li').find('.transaction-type-field').val();
-			const isCredit = this.defaultTransactionFees[transactionType].is_credit === 't';
-			if (isCredit && amount > 0) {
-				$valueField.val(amount * -1);
-			} else if (!isCredit && amount < 0) {
-				$valueField.val(amount * -1)
-			}
-
-			this.getTransactionBalance($list);
+			this.onTransactionAmountChange(e);
 		});
 
 		$(document).on('click', '.delete-transaction-button', e => {
@@ -1948,7 +1918,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// expedition member
 			const dbID = $card.data('table-id');
 			const climberID = $card.data('climber-id');
-			if ($card.find('.input-field.dirty').length) {
+			if ($card.find('.expedition-info-tab-pane .input-field.dirty').length) {
 				const [sql, parameters] = this.inputsToSQL(
 					$card.find('.expedition-info-tab-pane, .card-header'),
 					'expedition_members', 
@@ -2231,7 +2201,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	*/
 	showChangeExpeditionModal($card) {
 		if ($card.is('.new-card')) {
-			showModal('You can\'t move this expedition member to a different expedition until you have saved their information. Either save their information first or delete this expedition member and enter add them to the correct expedition.', 'Invalid operation');
+			showModal('You can\'t move this expedition member to a different expedition until you have saved their information. Either save their information first or delete this expedition member and enter add them to the correct expedition.', 'Invalid Operation');
 			return;
 		}
 		// default to -1 because ID will never equal -1, although a fallback option shouldn't 
@@ -2791,13 +2761,12 @@ class ClimberDBExpeditions extends ClimberDB {
 				);
 				const thisTransaction = transactions.data[transactionID];
 				for (const el of $item.find('.input-field')) {
-					this.setInputFieldValue(el, thisTransaction, {dbID: transactionID});
+					this.setInputFieldValue(el, thisTransaction, {dbID: transactionID, triggerChange: true});
 				}
 				//show the payment method field if this transactions is a payment
-				const $paymentMethod = $item.find('.input-field[name=payment_method_code]');
-				$paymentMethod.closest('.collapse').collapse(thisTransaction.payment_method_code ? 'show' : 'hide');//.toggleClass('show', thisTransaction.payment_method_code !== null);
-				
-				//transactionTotal = transactionTotal + parseFloat(thisTransaction.transaction_value || 0);
+				//const $paymentMethod = $item.find('.input-field[name=payment_method_code]');
+				//$paymentMethod.closest('.collapse').collapse(thisTransaction.payment_method_code ? 'show' : 'hide');
+
 			}
 			// $transactionsList.siblings('.data-list-footer')
 			// 	.find('.data-list-header-label.total-col .total-span')
@@ -3312,15 +3281,23 @@ class ClimberDBExpeditions extends ClimberDB {
 	*/
 	deleteTransactionItem($listItem) {
 		$listItem = $($listItem);//make sure it's a jQuery object
-		
+
 		// Get a reference to the transaction list now because once the list item 
 		//	is removed from the DOM, the list can't be located using it
 		const $transactionsList = $listItem.closest('.data-list');
+
+		const transactionType = $listItem.find('.transaction-type-field').val();
+		const $relatedTransactionItem = $('#' + $listItem.data('related-transaction'));
 
 		const dbID = $listItem.data('table-id');
 		// If the delete succeeds, update the transaction balance 
 		this.deleteListItem($listItem, 'transactions', dbID)
 			.then(success => {
+				// If this was a refund, remove the associated refund post
+				if ($relatedTransactionItem.length) {
+					$relatedTransactionItem.remove();
+				}
+
 				// Wait a half second because .fadeRemove() takes that 
 				//	long to actually remove the item from the DOM
 				setTimeout(
@@ -3330,6 +3307,106 @@ class ClimberDBExpeditions extends ClimberDB {
 			})
 	}
 
+	onTransactionTypeChange(e) {
+		const $select = $(e.target);
+		const $listItem = $select.closest('li');
+		const $valueField = $listItem.find('.transaction-amount-field');
+		const transactionTypeCode = parseInt($select.val());
+		const previousTransactionType = parseInt($select.data('current-value'));
+		
+		// Prevent the user from creating a refund post manually because 
+		//	a refund post should be managed automatically
+		if (transactionTypeCode === 27 || transactionTypeCode === 28) {
+			showModal('You can\'t add a refund post directly to the transaction history. If you want to add a refund, just add a "Climbing fee refund" or "Entrance fee refund" and the refund post will be added automatically.', 'Invalid Operation')
+			$select.val(previousTransactionType);
+			return;
+		}
+
+		// Record the current value in the field's data so it can be retrieved after 
+		//	the .change event has been triggered
+		$select.data('current-value', transactionTypeCode)
+
+		// If the transaction type is null, don't do anything else
+		if (!transactionTypeCode) return;
+
+		// Set default transaction amount
+		const info = this.defaultTransactionFees[transactionTypeCode];
+		const defaultAmount = info.default_fee;
+		const currentValue = $valueField.val();
+		if ( (currentValue === '') || (currentValue === '0.00') ) {
+			if (defaultAmount !== null) {
+				$valueField
+					.val(defaultAmount.replace(/\(/, '-').replace(/[$)]/g, ''))
+					.change();
+			}
+		}
+
+		// If this is a payment, show the payment type collapse
+		$select.closest('.data-list-item')
+			.find('.input-field[name=payment_method_code]')
+				.closest('.collapse')
+					.collapse(info.is_payment === 't' ? 'show' : 'hide');
+
+		// if this was a refund, remove the refund post
+		if (previousTransactionType === 3 || previousTransactionType === 26) {
+			$('#' + $listItem.data('related-transaction')).remove();
+		}
+		// If this is now a refund, add a corresponding uneditable refund post 
+		if (transactionTypeCode === 3 || transactionTypeCode === 26) {
+			// Add a refund post transaction
+			const $newItem = this.addNewListItem($listItem.closest('.data-list'), {newItemClass: 'refund-post-item'})
+				.removeClass('new-list-item')
+				.insertAfter($listItem);
+			
+			// Set the transaction amount to be the opposite of the refund
+			$newItem.find('.transaction-amount-field')
+				.val(($valueField.val() * -1).toFixed(2));
+
+			// if this is a climbing fee refund, set the refund post code to climbing refund post. Otherwise set it 
+			//	to an entrance fee refund post
+			$newItem.find('.transaction-type-field')
+				.val(transactionTypeCode === 3 ? 27 : 28)
+				.removeClass('default');
+
+			$newItem.find('.input-field[name=transaction_date]')
+				.val(getFormattedTimestamp());
+
+			// Save the new list item's id so it can be manipulated in concert with 
+			$listItem.data('related-transaction', $newItem.attr('id'));
+
+		} else {
+			// If this isn't a refund, make sure the related transaction data attribut is null
+			$listItem.data('related-transaction', '');
+		}
+
+		// Always recalculate since amounts could change from adding/removing refund posts
+		this.getTransactionBalance($listItem.closest('.data-list'));
+	}
+
+	onTransactionAmountChange(e) {
+		const $valueField = $(e.target);
+		const $list = $valueField.closest('.data-list');
+		
+		// If the field is a credit, set the value to be negative and vice versa
+		const amount = $valueField.val();
+		const $transactionTypeField = $valueField.closest('li').find('.transaction-type-field');
+		const transactionType = parseInt($transactionTypeField.val());
+		const isCredit = this.defaultTransactionFees[transactionType].is_credit === 't';
+		if (isCredit && amount > 0) {
+			$valueField.val(amount * -1);
+		} else if (!isCredit && amount < 0) {
+			$valueField.val(amount * -1)
+		}
+
+		// if the transaction is a refund, change the corresponding refund post
+		if (transactionType === 3 || transactionType === 26) {
+			const $refundPostItem = $('#' + $valueField.closest('li').data('related-transaction'));
+			$refundPostItem.find('.transaction-amount-field')
+				.val(($valueField.val() * -1).toFixed(2));
+		}
+
+		this.getTransactionBalance($list);
+	}
 
 	onDeleteTransactionButtonClick(e) {
 		const $li = $(e.target).closest('.data-list-item');
