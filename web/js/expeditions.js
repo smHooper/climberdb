@@ -234,7 +234,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<h6 class="card-link-label expedition-member-card-link-label col px-0"></h6>
 											</div>
 											<div class="expedition-member-badge-container card-link-content col-4 pl-0">
-												<img class="result-details-header-badge climber-fee-icon transparent" src="imgs/climber_fee_icon_50px.svg" title="Climber fee paid" aria-hidden="true">
+												<img class="result-details-header-badge climbing-fee-icon transparent" src="imgs/climber_fee_icon_50px.svg" title="Climber fee paid" aria-hidden="true">
 												<img class="result-details-header-badge entrance-fee-icon transparent" src="imgs/entrance_fee_icon_100px.svg" title="Entrance fee paid" aria-hidden="true">
 												<img class="result-details-header-badge guide-icon transparent" src="imgs/guide_icon_100px.svg" title="Guiding on this expedition" aria-hidden="true">
 											</div>
@@ -546,9 +546,6 @@ class ClimberDBExpeditions extends ClimberDB {
 													<input id="input-route_order" class="input-field hidden" type="number" name="route_order" data-table-name="expedition_member_routes">
 													<div class="col-4">
 														<label class="data-list-header-label name-label"></label>
-														<!--<select class="input-field ignore-changes hidden route-member-name-field">
-															<option value="">Select an expedition member</select>-->
-														</select>
 													</div>
 													<div class="col-2 center-checkbox-col">
 														<label class="checkmark-container">
@@ -1943,7 +1940,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// expedition member
 			const dbID = $card.data('table-id');
 			const climberID = $card.data('climber-id');
-			if ($card.find('.expedition-info-tab-pane .input-field.dirty').length) {
+			if ($card.find('.card-header .input-field.dirty, .expedition-info-tab-pane .input-field.dirty').length) {
 				const [sql, parameters] = this.inputsToSQL(
 					$card.find('.expedition-info-tab-pane, .card-header'),
 					'expedition_members', 
@@ -3207,21 +3204,8 @@ class ClimberDBExpeditions extends ClimberDB {
 
 					// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
 					if (showOnLoadWarnings) {
-						const $flaggedCheckboxes = $('.input-checkbox[name="flagged"]:checked');
-						const nFlagged = $flaggedCheckboxes.length
-						if (nFlagged) {
-							const flaggedMemberListItems = $flaggedCheckboxes.map((_, el) => {
-								const $el = $(el);
-								//$el.closest('.card').find('.card-link').click();
-								const dbID = $el.data('table-id');
-								const info = this.expeditionInfo.expedition_members.data[dbID];
-								return `<li>${info.last_name}, ${info.first_name}</li>`; //******* add reason for flagged
-							}).get().join('')
-							const message = `${nFlagged} ${nFlagged === 1 ? ' member of this expedition has' : ' members of this expedition have'}` +
-								' been flagged. You might want to review the reason they were flagged. Flagged expedition member(s):\n' +
-								`<ul>${flaggedMemberListItems}</ul>`
-							showModal(message, 'Flagged expedition member(s)');
-						}
+						this.showFlaggedMemberWarning();
+						this.show60DayWarning();
 					}
 				}
 			});
@@ -3311,7 +3295,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		// If the transaction list is empty, hide both icons. Otherwise, check the balance
 		const $cardHeader = $list.closest('.card').find('.card-header');
-		$cardHeader.find('.climber-fee-icon').ariaTransparent(transactionListEmpty || climbingFeeBalance > 0);
+		$cardHeader.find('.climbing-fee-icon').ariaTransparent(transactionListEmpty || climbingFeeBalance > 0);
 		$cardHeader.find('.entrance-fee-icon').ariaTransparent(transactionListEmpty || entranceFeeBalance > 0);
 
 	}
@@ -3470,16 +3454,6 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	/*onAddRouteMemberButtonClick(e) {
-		const $list = $(e.target).closest('.card').find('.route-member-list');
-
-		const $newListItem = this.addNewListItem($list);
-		$newListItem.find('.name-label').addClass('hidden')
-			.siblings('.route-member-name-field')
-				.removeClass('hidden')
-				.append(options);
-	}*/
-
 	getCMCInfo() {
 		const sql = `
 			SELECT DISTINCT cmc_inventory.* FROM cmc_inventory 
@@ -3563,6 +3537,61 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 	}
+
+
+	showFlaggedMemberWarning() {
+		const $flaggedCheckboxes = $('.input-checkbox[name="flagged"]:checked');
+		const nFlagged = $flaggedCheckboxes.length
+		if (nFlagged) {
+			const flaggedMemberListItems = $flaggedCheckboxes.map((_, el) => {
+				const $el = $(el);
+				//$el.closest('.card').find('.card-link').click();
+				const dbID = $el.data('table-id');
+				const info = this.expeditionInfo.expedition_members.data[dbID];
+				return `<li>${info.last_name}, ${info.first_name} (${info.flagged_reason})</li>`;
+			}).get().join('')
+			const message = `${nFlagged} ${nFlagged === 1 ? ' member of this expedition has' : ' members of this expedition have'}` +
+				' been flagged. You might want to review the reason they were flagged. Flagged expedition member(s):\n' +
+				`<ul>${flaggedMemberListItems}</ul>`
+			return showModal(message, 'Flagged Epedition Member(s)');
+		}
+	}
+
+
+	show60DayWarning() {
+		const departureDate = new Date($('#input-planned_departure_date').val() + ' 00:00');
+		const now = new Date();
+		const daysToDeparture = (departureDate - now)/(1000 * 60 * 60 * 24);
+		
+		// If this expedition's departure has already passed or it's more than 60 days away, do nothing
+		if (daysToDeparture < 0 || daysToDeparture > 60) {
+			return;
+		}
+
+		const groupStatusCode = parseInt($('#input-group_status').val());
+		const $cards = $('#expedition-members-accordion .card:not(.canceled)');
+		const nClimbingFeesNotPaid = $cards.find('.climbing-fee-icon.transparent').length;
+		const nSUPsNotComplete = $cards.find('.input-field[name=application_complete]:not(:checked)').length;
+		const nPSARNotComplete = $cards.find('.input-field[name=psar_complete]:not(:checked)').length;
+
+		const climbingFeesNotPaid = nClimbingFeesNotPaid !== 0;
+		const supsNotComplete = nSUPsNotComplete !== 0;
+		const psarNotComplete = nPSARNotComplete !== 0;
+		if (
+				(groupStatusCode === 1 || groupStatusCode === 2) && //group is not confirmed
+				(climbingFeesNotPaid || supsNotComplete || psarNotComplete)
+			) {
+			const newDepartureDate = new Date(departureDate.getTime() + (1000 * 60 * 60 * 24) * 60)
+				.toLocaleDateString('en-US', {month: 'long', day: 'numeric'});
+			let reasons = '';
+			if (climbingFeesNotPaid) reasons += `<li>${nClimbingFeesNotPaid} climber${nClimbingFeesNotPaid > 1 ? 's have' : ' has'} not paid their climbing permit fee</li>`;
+			if (supsNotComplete) 	 reasons += `<li>${nSUPsNotComplete} climber${nSUPsNotComplete > 1 ? 's have' : ' has'} not submitted their SUP application</li>`;
+			if (psarNotComplete)	 reasons += `<li>${nPSARNotComplete} climber${nPSARNotComplete > 1 ? 's have' : ' has'} not submitted their PSAR form</li>`;
+			const message = `This expedition is 60 days or less from their scheduled departure date on <strong>${departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric'})}</strong>, but not all expedition members have completed the requirements to receive a permit. These unfulfilled requirements include: <ul>${reasons}</ul>You should verify that these requirements have not been fulfilled, and if not, change the groups departure date to on or after <strong>${newDepartureDate}</strong>.`;
+			showModal(message, 'WARNING: 60-Day Rule Violation');
+		}
+	}
+
 
 	init() {
 		// Call super.init()

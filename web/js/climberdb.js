@@ -20,25 +20,33 @@ function print(i) {
 }
 
 
-function showModal(message, title, modalType='alert', footerButtons='', dismissable=true) {
+function getDefaultModalFooterButtons(modalType) {
+	return  modalType === 'confirm' ? 
+		(
+			'button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>' +
+			'<button class="generic-button modal-button close-modal" data-dismiss="modal">OK</button>'
+		 ) :
+		'<button class="generic-button modal-button close-modal" data-dismiss="modal">Close</button>'
+		;
+}
 
-	var modalID = title
-		.replace(/[^\w]/g, '-') // replace non-alphanumeric chars with '-'
-		.replace(/^-|-+$/g, '') // remove any hyphens from beginning or end
 
-	if (!footerButtons) {
-		switch(modalType) { 
-			case 'alert': 
-				footerButtons = '<button class="generic-button modal-button close-modal" data-dismiss="modal">Close</button>';
-				break;
-			case 'confirm':
-				footerButtons = `
-					<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>';
-					<button class="generic-button modal-button close-modal" data-dismiss="modal">OK</button>
-				`;
-				break;
-		}
+function showModal(message, title, modalType='alert', footerButtons='', {dismissable=true}={}) {
+
+	const $modal = $('#alert-modal');
+
+	// If the modal is currently being shown, wait until it's done to show this message
+	if ($modal.is('.showing')) {
+		$modal.on('hidden.bs.modal', () => {
+			const $returnedModal = showModal(message, title, modalType, footerButtons, dismissable);
+			if ($returnedModal) $modal.off('hidden.bs.modal');
+		})
+		return;
 	}
+
+	$modal.addClass('showing');
+
+	if (!footerButtons) footerButtons = getDefaultModalFooterButtons(modalType);
 
 	// expired session modal should not be dismissable so only add this if dismissable is false
 	const closeButton = `
@@ -63,14 +71,29 @@ function showModal(message, title, modalType='alert', footerButtons='', dismissa
 	  </div>
 	`;
 	const options = dismissable ? {} : {backdrop: 'static', keyboard: false};
-	const $modal = $('#alert-modal').empty()
+	$modal.empty()
 		.append($(innerHTML))
 		.modal(options);
 	
-	$modal.find('.close-modal').click(function() {
-		$modal.modal('hide');
+	$modal.find('.close-modal').click(() => {$modal.modal('hide')});
+
+	// Remove class that indicates the modal is being shown
+	$modal.on('hide.bs.modal', () => {
+		$modal.removeClass('showing')
 	})
+
+	return $modal;
 }
+
+// var _$modalSuper = $.fn.modal;
+// _$modalSuper.Constructor.prototype.addModal = function (message, title, {modalType='alert', footerButtons='', dismissable=true}={}) {
+// 	const $modal = this;
+// 	return $modal.on('hidden.bs.modal', () => {
+// 		$modal.find('.modal-title').html(title);
+// 		$modal.find('.modal-body').html('<p>' + message + '</p>');
+// 		$modal.find('.modal-footer').html(footerButtons || getDefaultModalFooterButtons(modalType));
+// 	});
+// }
 
 
 function showLoadingIndicator(caller, timeout=15000) {
@@ -1242,7 +1265,7 @@ class ClimberDB {
 						$('#climberdb-main-content').empty();
 						hideLoadingIndicator();
 						const footerButtons = `<button class="generic-button modal-button close-modal" data-dismiss="modal" onclick="window.location.href='index.html?referer=${encodeURI(window.location.href)}'">OK</button>`;
-						showModal('Your session has expired. Click OK to log in again.', 'Session expired', 'alert', footerButtons, false);
+						showModal('Your session has expired. Click OK to log in again.', 'Session expired', 'alert', footerButtons, {dismissable: false});
 					}
 				}
 			});
