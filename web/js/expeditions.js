@@ -546,6 +546,9 @@ class ClimberDBExpeditions extends ClimberDB {
 													<input id="input-route_order" class="input-field hidden" type="number" name="route_order" data-table-name="expedition_member_routes">
 													<div class="col-4">
 														<label class="data-list-header-label name-label"></label>
+														<!--<select class="input-field ignore-changes hidden route-member-name-field">
+															<option value="">Select an expedition member</select>-->
+														</select>
 													</div>
 													<div class="col-2 center-checkbox-col">
 														<label class="checkmark-container">
@@ -1203,118 +1206,13 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$(document).on('click', '.add-expedition-route-member-button', e => {
-			// If there's more than one expedition member not on this route, show a modal that allows the user 
-			//	to select which member to add
-			const $list = $(e.target).closest('.card').find('.route-member-list');
-			const routeMemberIDs = $list.find('.data-list-item')
-				.map((_, el) => $(el).data('expedition-member-id'))
-				.get();
-			const expeditionMemberIDs = $('#expedition-members-accordion .card:not(.cloneable)')
-				.map((_, el) => $(el).data('table-id'))
-				.get()
-				.filter(id => !routeMemberIDs.includes(id));
-
-			if (expeditionMemberIDs.length == 1) {
-				const memberID = expeditionMemberIDs[0];
-				const memberInfo = this.expeditionInfo.expedition_members.data[memberID];
-				this.addRouteMember(memberInfo, $list, memberInfo.climber_id, {expeditionMemberID: memberID});
-			} else if (expeditionMemberIDs.length > 1) {
-				const options = expeditionMemberIDs.map(id => {
-					const info = this.expeditionInfo.expedition_members.data[id];
-					return `<option value=${id}>${info.first_name} ${info.last_name}</option>`
-				}).join('\n');
-
-				const message = `
-					<p>Select which expedition member you want to add. If you want to add all remaining expedition members, click <strong>Add All</strong>.</p>
-					<div class="field-container col-8 single-line-field">
-							<label class="field-label inline-label" for="modal-summit-date-input" for="modal-route-member">Expedition member</label>
-							<select id="modal-add-route-member" class="input-field modal-input">
-								${options}
-							</select>
-					</div>
-				`;
-
-				const onAddSelectedConfirm = `
-					const memberID = $('#modal-add-route-member').val();
-					const memberInfo = climberDB.expeditionInfo.expedition_members.data[memberID];
-					climberDB.addRouteMember(memberInfo, '#${$list.attr('id')}', memberInfo.climber_id, {expeditionMemberID: memberID});
-				`;
-				const onAddAllConfirm = `
-					const listID = '#${$list.attr('id')}';
-					for (const memberID of [${expeditionMemberIDs}]) {
-						const memberInfo = climberDB.expeditionInfo.expedition_members.data[memberID];
-						climberDB.addRouteMember(memberInfo, listID, memberInfo.climber_id, {expeditionMemberID: memberID});
-					}
-				`;
-				const footerButtons = `
-					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-					<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onAddSelectedConfirm}">Add selected</button>
-					<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onAddAllConfirm}">Add All</button>
-				`;
-				showModal(message, 'Select expedition member(s) to add', 'confirm', footerButtons);
-			}
+			this.onModalAddRouteMemberClick(e);
 
 		});
 
 		// Show modal to prompt user to enter summit date
 		$(document).on('click', '.check-all-summitted-button', e => {
-			const $button = $(e.target);
-			const $card = $button.closest('.card');
-			const $checkboxes = $card.find('.data-list-item:not(.cloneable):not(.hidden) .center-checkbox-col .input-checkbox');
-			const cardID = $card.attr('id');
-			const checkboxIDs = '#' + $checkboxes.map((_, el) => el.id).get().join(',#');
-			const summitDateInputIDs = '#' + $checkboxes.closest('.center-checkbox-col').next().find('.input-field').map((_, el) => el.id).get().join(',#');
-			const allChecked = $checkboxes.filter(':checked').length == $checkboxes.length;
-			const expeditionName = this.expeditionInfo.expeditions.expedition_name;//$('#input-expedition_name').val();
-			const $routeInput = $button.closest('.card').find('.route-code-header-input:not(.mountain-code-header-input)');
-			const routeCode = $routeInput.val();
-			if (routeCode === '') {
-				showModal('You must select a mountain and route first before you can mark that all climbers summited.', 'No Route Selected');
-				return;
-			}
-			const routeName = $routeInput.find(`option[value=${routeCode}]`).text();
-			var message, title, onConfirmClick;
-			if (allChecked) {
-				// Ask user to uncheck all and clear
-				message = `Are you sure you want to uncheck all ${routeName} summits for ${expeditionName}?`;
-				title = `Uncheck all ${routeName} summits`;
-				onConfirmClick = `
-					$('${checkboxIDs}').prop('checked', false);
-					$('${summitDateInputIDs}').val(null)
-						.closest('.collapse')
-							.collapse('hide');
-					const $card = $('#${cardID}');
-					$card.find('.check-all-summitted-button').text('check all');
-				`;
-
-			} else {
-				message = `<p>Do you want to mark all expedition members for the ${routeName} route` + 
-					` with the same summit date? This will overwrite any summit dates currently entered.` + 
-					` If so, enter the date below and click 'OK'. Otherwise just click 'OK' and all` + 
-					` expedition members will be marked as having summitted but the summit date(s) won't change.</p>
-					<div class="field-container col-8 single-line-field">
-							<label class="field-label inline-label" for="modal-summit-date-input">Summit date</label>
-							<input id="modal-summit-date-input" class="input-field modal-input" type="date">
-					</div>
-				`;
-				title = 'Enter summit date?';
-				onConfirmClick = `
-					const summitDate = $('#modal-summit-date-input').val();
-					const $summitDateInputs = $('${summitDateInputIDs}');
-					$('${checkboxIDs}').prop('checked', true).change();
-					// If the user entered a summit date, fill the inputs
-					if (summitDate) {
-						$summitDateInputs.val(summitDate)
-					}
-					const $card = $('#${cardID}');
-					$card.find('.check-all-summitted-button').text('uncheck all');
-				`;
-			}
-			const footerButtons = `
-				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
-			`;
-			showModal(message, title, 'confirm', footerButtons);
+			this.onCheckAllSummitedButtonClick(e);
 		});
 
 		// Set text of check/uncheck all button when 
@@ -1354,6 +1252,10 @@ class ClimberDBExpeditions extends ClimberDB {
 				const routeName = $routeInput.find(`option[value=${$routeInput.val()}]`).text();//this.routeCodes[$li.find('.input-field[name="route_code"]').val()].name;
 				showModal(`Are you sure you want to remove <strong>${memberName}</strong> from the <strong>${routeName}</strong> route?`, 'Remove expedition member from this route?', 'alert', footerButtons);
 			}
+		})
+
+		$(document).on('click', 'add-expedition-route-member-button', e => {
+			this.onAddRouteMemberButtonClick(e);
 		})
 		// ^^^^^^^^^^ Route stuff ^^^^^^^^^
 
@@ -1583,7 +1485,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			);
 			// Add the member to each route
 			for (const ul of $('.card:not(.cloneable) .route-member-list')) {
-				this.addRouteMember(climberInfo, ul, climberID);
+				this.addRouteMember(ul, `${climberInfo.last_name}, ${climberInfo.first_name}`, climberID);
 			}
 
 			$(e.target).siblings('.close-modal-button').click();
@@ -1720,14 +1622,15 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Helper method to add an expedition member to a give unordered list
 	*/
-	addRouteMember(memberInfo, $list, climberID, {expeditionMemberID=null}={}) {
+	addRouteMember($list, climberName, climberID, {expeditionMemberID=null}={}) {
 		
 		// Make sure this can be called from a modal with adhoc onclick events. In this case, just an html id would be given so make sure it's a jquery object
 		$list = $($list);
 
-		const $listItem = this.addNewListItem($list, {newItemClass: 'new-list-item', parentDBID: expeditionMemberID});
-		$listItem.data('expedition-member-id', expeditionMemberID);
-		$listItem.find('.name-label').text(`${memberInfo.last_name}, ${memberInfo.first_name}`);
+		const $listItem = this.addNewListItem($list, {newItemClass: 'new-list-item', parentDBID: expeditionMemberID})
+			.data('expedition-member-id', expeditionMemberID);
+		
+		$listItem.find('.name-label').text(climberName);
 
 		// Set the climber ID so when edits are saved, this route's SQL can be added with the corresponding newly-added expedition_member
 		// use .attr() instead of .data() so we can use the css selector [data-climber-id=<id>] later
@@ -1742,16 +1645,138 @@ class ClimberDBExpeditions extends ClimberDB {
 		$listItem.find('.input-field[name="route_order"]').val(routeOrder).change();
 
 		// Toggle the add-expedition-route-member-button If there are any expedition members that aren't assigned to a route
-		const nMembers = this.expeditionInfo.expedition_members.order.length;
+		const nMembers = $('#expedition-members-accordion .card:not(.cloneable)').length//this.expeditionInfo.expedition_members.order.length;
 		const $card = $list.closest('.card');
 		$card.find( $('.add-expedition-route-member-button') ).ariaHide(
 			$card.find('.route-member-list .data-list-item:not(.cloneable)').length >= nMembers 
 		);
-
-		//$('#save-expedition-button').ariaHide(false); 
+	
 	}
 
 
+	onModalAddRouteMemberClick(e) {
+		// If there's more than one expedition member not on this route, show a modal that allows the user 
+		//	to select which member to add
+		const $list = $(e.target).closest('.card').find('.route-member-list');
+
+		var unassignedClimbers = [];
+		for (const el of $('#expedition-members-accordion .card:not(.cloneable)')) {
+			const $card = $(el);
+			const climberID = $card.data('climber-id');
+			if ($list.find(`li[data-climber-id=${climberID}]`).length === 0) {
+				const climberName = $card.find('.expedition-member-card-link-label').text();
+				unassignedClimbers.push({climberID: climberID, climberName: climberName})// += `<option value=${climberID}>${climberName}</option>`;
+			}
+		}
+
+		if (unassignedClimbers.length === 1) {
+			//const memberID = ;
+			const climberInfo = unassignedClimbers[0];//this.expeditionInfo.expedition_members.data[memberID];
+			const climberID = climberInfo.climberID;
+			const memberData = this.expeditionInfo.expedition_members.data;
+			const memberID = Object.keys(memberData).filter(id => parseInt(memberData[id].climber_id) === parseInt(climberID)).pop()
+			this.addRouteMember($list, climberInfo.climberName, climberID, {expeditionMemberID: memberID});
+		} else if (unassignedClimbers.length > 1) {
+			const options = unassignedClimbers.map(info => `<option value=${info.climberID}>${info.climberName}</option>`).join('\n');
+
+			const message = `
+				<p>Select which expedition member you want to add. If you want to add all remaining expedition members, click <strong>Add All</strong>.</p>
+				<div class="field-container col-8 single-line-field">
+						<label class="field-label inline-label" for="modal-summit-date-input" for="modal-route-member">Expedition member</label>
+						<select id="modal-add-route-member" class="input-field modal-input">
+							${options}
+						</select>
+				</div>
+			`;
+
+			// Snippet for when the user wants to add just the currently selected climber
+			const onAddSelectedConfirm = `
+				const climberID = $('#modal-add-route-member').val();
+				const climberName = $('#modal-add-route-member option[value=' + climberID + ']').text();
+				const memberData = climberDB.expeditionInfo.expedition_members.data;
+				const memberID = Object.keys(memberData).filter(id => parseInt(memberData[id].climber_id) === parseInt(climberID)).pop()
+				climberDB.addRouteMember('#${$list.attr('id')}', climberName, climberID, {expeditionMemberID: memberID});
+			`;
+			// Snippet to add all unassigned climbers
+			const onAddAllConfirm = `
+				const listID = '#${$list.attr('id')}';
+				const memberData = climberDB.expeditionInfo.expedition_members.data;
+				for (const el of $('#modal-add-route-member option')) {
+					const climberID = el.value;
+					const climberName = el.innerHTML;
+					const memberID = Object.keys(memberData).filter(id => parseInt(memberData[id].climber_id) === parseInt(climberID)).pop()
+					climberDB.addRouteMember(listID, climberName, climberID, {expeditionMemberID: memberID});
+				}
+			`;
+			const footerButtons = `
+				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
+				<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onAddSelectedConfirm}">Add selected</button>
+				<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onAddAllConfirm}">Add All</button>
+			`;
+			showModal(message, 'Select expedition member(s) to add', 'confirm', footerButtons);
+		}
+	} 
+
+
+	onCheckAllSummitedButtonClick(e) {
+		const $button = $(e.target);
+		const $card = $button.closest('.card');
+		const $checkboxes = $card.find('.data-list-item:not(.cloneable):not(.hidden) .center-checkbox-col .input-checkbox');
+		const cardID = $card.attr('id');
+		const checkboxIDs = '#' + $checkboxes.map((_, el) => el.id).get().join(',#');
+		const summitDateInputIDs = '#' + $checkboxes.closest('.center-checkbox-col').next().find('.input-field').map((_, el) => el.id).get().join(',#');
+		const allChecked = $checkboxes.filter(':checked').length == $checkboxes.length;
+		const expeditionName = this.expeditionInfo.expeditions.expedition_name;//$('#input-expedition_name').val();
+		const $routeInput = $button.closest('.card').find('.route-code-header-input:not(.mountain-code-header-input)');
+		const routeCode = $routeInput.val();
+		if (routeCode === '') {
+			showModal('You must select a mountain and route first before you can mark that all climbers summited.', 'No Route Selected');
+			return;
+		}
+		const routeName = $routeInput.find(`option[value=${routeCode}]`).text();
+		var message, title, onConfirmClick;
+		if (allChecked) {
+			// Ask user to uncheck all and clear
+			message = `Are you sure you want to uncheck all ${routeName} summits for ${expeditionName}?`;
+			title = `Uncheck all ${routeName} summits`;
+			onConfirmClick = `
+				$('${checkboxIDs}').prop('checked', false);
+				$('${summitDateInputIDs}').val(null)
+					.closest('.collapse')
+						.collapse('hide');
+				const $card = $('#${cardID}');
+				$card.find('.check-all-summitted-button').text('check all');
+			`;
+
+		} else {
+			message = `<p>Do you want to mark all expedition members for the ${routeName} route` + 
+				` with the same summit date? This will overwrite any summit dates currently entered.` + 
+				` If so, enter the date below and click 'OK'. Otherwise just click 'OK' and all` + 
+				` expedition members will be marked as having summitted but the summit date(s) won't change.</p>
+				<div class="field-container col-8 single-line-field">
+						<label class="field-label inline-label" for="modal-summit-date-input">Summit date</label>
+						<input id="modal-summit-date-input" class="input-field modal-input" type="date">
+				</div>
+			`;
+			title = 'Enter summit date?';
+			onConfirmClick = `
+				const summitDate = $('#modal-summit-date-input').val();
+				const $summitDateInputs = $('${summitDateInputIDs}');
+				$('${checkboxIDs}').prop('checked', true).change();
+				// If the user entered a summit date, fill the inputs
+				if (summitDate) {
+					$summitDateInputs.val(summitDate)
+				}
+				const $card = $('#${cardID}');
+				$card.find('.check-all-summitted-button').text('uncheck all');
+			`;
+		}
+		const footerButtons = `
+			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
+			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
+		`;
+		showModal(message, title, 'confirm', footerButtons);
+	}
 	/*
 	Helper function to convert unordered parameters 
 	into pre-prepared SQL statement and params
@@ -2699,9 +2724,10 @@ class ClimberDBExpeditions extends ClimberDB {
 			lastName = expeditionMemberInfo.last_name;
 			climberID = expeditionMemberInfo.climber_id;
 		}
+		const climberName = `${lastName}, ${firstName}`;
 		const options = {
 				accordionName: 'expedition_members', 
-				cardLinkText: `${lastName}, ${firstName}`,
+				cardLinkText: climberName,
 				updateIDs: expeditionMemberID ? {expedition_members: expeditionMemberID} : {},
 				show: showCard,
 				newCardClass: isNewCard ? 'new-card' : ''
@@ -2811,6 +2837,10 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		}
 
+		// Add this expedition member as a select option for the cloneable route-member list item
+		// 	When this member is added to a given route, they'll be removed from the select options
+		//	for this route
+		$('.route-member-name-field').append(`<option value=${climberID}>${climberName}</option>`);
 
 		this.updateExpeditionMemberCount();
 		this.updateCommsDeviceOwnerOptions();
@@ -2820,7 +2850,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*Helper method to fill the data-list after adding a new route card*/
-	fillRouteMemberList(memberInfo, routeInfo) {
+	/*fillRouteMemberList(memberInfo, routeInfo) {
 		// List items should be in alphabetical order, so add them in order of the members
 		for (const memberID of memberInfo.order) {
 			// Not all expedition members climb necessarily climb all routes
@@ -2831,13 +2861,16 @@ class ClimberDBExpeditions extends ClimberDB {
 				const thisMember = memberInfo.data[memberID];
 				$listItem.find('.name-label').text(`${thisMember.last_name}, ${thisMember.first_name}`);
 				if (memberRouteID) {
-					for (const el of $listItem.find('.input-field')) {
+					for (const el of $listItem.find('.input-field:not(.route-member-name-field)')) {
 						this.setInputFieldValue(el, memberRouteRecord, {dbID: memberRouteID, triggerChange: true});
 					}
+					// Remove as an option for all expedition member name fields for this route
+					$listItem.closest('.card').find(`.route-member-name-field option[value=${thisMember.climber_id}]`).remove();
 				}
 			}
 		}
-	}
+
+	}*/
 
 
 	fillFieldValues(triggerChange=true) {
@@ -2882,15 +2915,16 @@ class ClimberDBExpeditions extends ClimberDB {
 					.val(routeCode)
 					.removeClass('default');
 
-			const $list = $newCard.find('.route-member-list');
-			$list.attr('id', $list.attr('id') + '-' + routeCode);
+			const $routeMemberList = $newCard.find('.route-member-list');
+			$routeMemberList.attr('id', $routeMemberList.attr('id') + '-' + routeCode);
 			// List items should be in alphabetical order, so add them in order of the members
+			let nRouteMembers = 0;
 			for (const memberID of members.order) {
 				// Not all expedition members necessarily climb all routes
 				if (memberID in thisRoute) {
 					const memberRouteRecord = thisRoute[memberID];
 					const memberRouteID = memberRouteRecord.expedition_member_route_id || null;
-					const $listItem = this.addNewListItem($list, {dbID: memberRouteID});
+					const $listItem = this.addNewListItem($routeMemberList, {dbID: memberRouteID});
 					const thisMember = members.data[memberID];
 					
 					$listItem.attr('data-climber-id', thisMember.climber_id);
@@ -2911,8 +2945,15 @@ class ClimberDBExpeditions extends ClimberDB {
 							this.setInputFieldValue(el, memberRouteRecord, {dbID: memberRouteID, triggerChange: true, elementData: inputData});
 						}
 					}
+					nRouteMembers ++;
 				}
 			}
+
+			// Show the add route member button if there are less route members than expedition members
+			$newCard.find('.add-expedition-route-member-button').toggleClass(
+				'hidden',
+				$('#expedition-members-accordion .card').length !== nRouteMembers
+			)
 		}
 
 		const cmcs = this.expeditionInfo.cmc_checkout;
@@ -3428,6 +3469,16 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 	}
 
+
+	/*onAddRouteMemberButtonClick(e) {
+		const $list = $(e.target).closest('.card').find('.route-member-list');
+
+		const $newListItem = this.addNewListItem($list);
+		$newListItem.find('.name-label').addClass('hidden')
+			.siblings('.route-member-name-field')
+				.removeClass('hidden')
+				.append(options);
+	}*/
 
 	getCMCInfo() {
 		const sql = `
