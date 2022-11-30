@@ -1341,7 +1341,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// ------ Climber form stuff ------
 		const $climberFormModal = $('<div id="add-climber-form-modal-container" class="climber-form-modal-container uneditable hidden" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>')
 			.appendTo('body');
-		this.climberForm = new ClimberForm($climberFormModal);
+		this.climberForm = new ClimberForm(this, $climberFormModal);
 		this.climberForm.lastSearchQuery = (new Date()).getTime();
 
 		// Enable onclick event

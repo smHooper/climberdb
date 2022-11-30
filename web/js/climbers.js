@@ -1,7 +1,7 @@
 
 /* helper class to create a climber form inside the given parent selector*/
 class ClimberForm {
-	constructor(parent) {
+	constructor(parent, $parentElement) {
 		this.$el; // the jquery .climber-form object
 		this.edits = {
 			updates: {}
@@ -9,8 +9,9 @@ class ClimberForm {
 		this.countryCodes = {};
 		this.stateCodes = {};
 		this.selectedClimberInfo = {}; // used for rolling back edits
+		this._parent = parent;
+		const $parent = $($parentElement);
 
-		const $parent = $(parent);
 		$parent.append(`
 			<div class="climber-form" autocomplete="off">
 				<div class="climber-form-content">
@@ -409,7 +410,7 @@ class ClimberForm {
 												<div class="field-container-row">
 													<div class="field-container col">
 														<label class="field-label" for="input-internal_notes">Notes about this contact</label>
-														<textarea id="input-internal_notes_contact" class="input-field" name="internal_notes" data-table-name="emergency_contacts" placeholder="Enter notes about this emergency contact that other rangers should see" title="Notes about this contact" type="text" autocomplete="off" required=""></textarea>
+														<textarea id="input-internal_notes_contact" class="input-field" name="internal_notes" data-table-name="emergency_contacts" placeholder="Enter notes about this emergency contact that other rangers should see" title="Notes about this contact" type="text" autocomplete="off"></textarea>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>
 												</div>
@@ -512,7 +513,7 @@ class ClimberForm {
 	*/
 	setInputFieldValue(el, values, {dbID=null, triggerChange=false}={}) {
 
-		const [$el, fieldName, value] = climberDB.setInputFieldValue(el, values, {dbID: dbID, triggerChange: triggerChange});
+		const [$el, fieldName, value] = this._parent.setInputFieldValue(el, values, {dbID: dbID, triggerChange: triggerChange});
 
 		const badgeTarget = $el.data('badge-target');
 		if (badgeTarget && $el.data('badge-target-value') == value) $(badgeTarget).ariaHide(false);
@@ -530,7 +531,8 @@ class ClimberForm {
 	When an input field changes, 
 	*/
 	onInputChange(e) {
-		const $input = $(e.target).addClass('dirty');
+		const $input = $(e.target).addClass('dirty').removeClass('error');
+
 		// This is an insert if it's a descendant of either a .new-card or modal .climber-form. In that case,
 		//	changes will be captured when the save button is clicked
 		if ($input.closest('.new-card, .climber-form.climberdb-modal').length) return;
@@ -544,6 +546,7 @@ class ClimberForm {
 		if (!(tableName in editObject)) editObject[tableName] = {};
 		if (!(dbID in editObject[tableName])) editObject[tableName][dbID] = {};
 		editObject[tableName][dbID][fieldName] = this.getInputFieldValue($input);
+
 	}
 
 
@@ -705,8 +708,8 @@ class ClimberForm {
 			const formattedDeparture = (new Date(row.actual_departure_date + ' 12:00')).toLocaleDateString(); //add a time otherwise the date will be a day before
 			const actualReturnDate = new Date(row.actual_return_date + ' 12:00');
 			const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
-			const cardTitle = `${climberDB.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}`;
-			const $card = climberDB.addNewCard(
+			const cardTitle = `${this._parent.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}`;
+			const $card = this._parent.addNewCard(
 				$accordion, 
 				{
 					accordionName: 'climber-history', 
@@ -756,9 +759,9 @@ class ClimberForm {
 		if (climberHistory.length) {
 			const $newCards = $accordion.find('.card:not(.cloneable)');
 			const soloSQL = `SELECT * FROM solo_climbs_view WHERE climber_id=${climberHistory[0].climber_id}`;
-			const soloDeferred = climberDB.queryDB(soloSQL)
+			const soloDeferred = this._parent.queryDB(soloSQL)
 				.done(resultString => {
-					if (climberDB.queryReturnedError(resultString)) {
+					if (this._parent.queryReturnedError(resultString)) {
 						console.log('could not get solo info because ' + resultString)
 					} else {
 						const result = $.parseJSON(resultString);
@@ -786,7 +789,7 @@ class ClimberForm {
 		$accordion.find('.card:not(.cloneable)').remove();
 		const historyIndex = 0;
 		for (const row of emergencyContacts) {
-			const $card = climberDB.addNewCard(
+			const $card = this._parent.addNewCard(
 				$accordion, 
 				{
 					accordionName: 'emergency-contacts', 
@@ -816,9 +819,9 @@ class ClimberForm {
 		//`SELECT * FROM WHERE  climbers.id=${climberID} `
 		const contactsSQL = `SELECT * FROM emergency_contacts WHERE climber_id=${climberID}`;
 
-		const historyDeferred = climberDB.queryDB(historySQL)
+		const historyDeferred = this._parent.queryDB(historySQL)
 			.done(resultString => {
-				if (climberDB.queryReturnedError(resultString)) {
+				if (this._parent.queryReturnedError(resultString)) {
 					showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
 				} else {
 					this.fillClimberHistory($.parseJSON(resultString));
@@ -827,9 +830,9 @@ class ClimberForm {
 			.fail((xhr, status, error) => {
 				showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
 			});
-		const contactsDeferred = climberDB.queryDB(contactsSQL)
+		const contactsDeferred = this._parent.queryDB(contactsSQL)
 			.done(resultString => {
-				if (climberDB.queryReturnedError(resultString)) {
+				if (this._parent.queryReturnedError(resultString)) {
 					showModal('Retrieving emergency contact info from the database failed because because ' + resultString, 'Database Error');
 				} else {
 					this.fillEmergencyContacts($.parseJSON(resultString));
@@ -880,22 +883,32 @@ class ClimberForm {
 	*/
 	saveEdits({chainInserts=false}={}) {
 
-		climberDB.showLoadingIndicator('saveEdits');
+		showLoadingIndicator('saveEdits');
 
 		var sqlStatements = [];
 		var sqlParameters = [];
 		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
-		const userName = climberDB.userInfo.ad_username;
+		const userName = this._parent.userInfo.ad_username;
 		
 		// Deep copy to be able to roll back changes to in-memory data (climberDB.climberInfo)
 		const originalDataValues = deepCopy(this.selectedClimberInfo.climbers);
 		const currentIndex = $('.query-result-list-item.selected').index();
 		var climberInfo = {};
-		if (climberDB.climberInfo) { // will be undefined if this is a new climber
-			climberInfo = climberDB.climberInfo[currentIndex];
+		if (this._parent.climberInfo) { // will be undefined if this is a new climber
+			climberInfo = this._parent.climberInfo[currentIndex];
 		}
 
-		// **** check for required fields in any inserts
+		const $editParents = $(`
+				#climber-info-tab-content,
+				#emergency-contacts-tab-content .card:not(.cloneable)
+			`)
+			.has('.input-field.dirty');
+		if (!this._parent.validateFields($editParents)) {
+			showModal('One or more required fields are not filled. All required fields must be filled before you can save your edits.', 'Required field is empty');
+			hideLoadingIndicator();
+			return;
+		};
+
 		// collect inserts
 		let inserts = [];
 		for (const container of $('.climberdb-modal #climber-info-tab-content, .new-card:not(.cloneable)')) { 
@@ -912,11 +925,11 @@ class ClimberForm {
 			// Loop through tables in their insert order
 			let currvalClauseString = '';
 			let currvalCount = 0;
-			for (const tableName in climberDB.tableInfo.tables) {
+			for (const tableName in this._parent.tableInfo.tables) {
 				// If the table doesn't have any fields that were edited, skip it
 				if (!(tableName in tableParameters)) continue;
 
-				const columnInfo = climberDB.tableInfo.tables[tableName].columns;
+				const columnInfo = this._parent.tableInfo.tables[tableName].columns;
 				let values = tableParameters[tableName].values;
 				let fields = tableParameters[tableName].fields;
 				if ('entered_by' in columnInfo) {
@@ -927,7 +940,7 @@ class ClimberForm {
 					values = values.concat([now, userName]);
 					fields = fields.concat(['last_modified_time', 'last_modified_by']);
 				}
-				const foreignColumnInfo = climberDB.tableInfo.tables[tableName].foreignColumns || [];
+				const foreignColumnInfo = this._parent.tableInfo.tables[tableName].foreignColumns || [];
 				if (foreignColumnInfo.length) {
 					// find the ID
 					for (const {foreignTable, column} of foreignColumnInfo) {
@@ -973,7 +986,7 @@ class ClimberForm {
 		// collect updates
 		const updates = this.edits.updates;
 		for (const tableName in updates) {
-			const columnInfo = climberDB.tableInfo.tables[tableName].columns;
+			const columnInfo = this._parent.tableInfo.tables[tableName].columns;
 			const hasLastModifiedBy = 'last_modified_by' in columnInfo;
 			for (const id in updates[tableName]) {
 				let parameters = hasLastModifiedBy ? [now, userName] : [];
@@ -1004,7 +1017,7 @@ class ClimberForm {
 			data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
 			cache: false
 		}).done(queryResultString => {
-			if (climberDB.queryReturnedError(queryResultString)) { 
+			if (this._parent.queryReturnedError(queryResultString)) { 
 				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
 				// roll back in-memory data
 				for (const dbID in updates.climbers) {
@@ -1048,7 +1061,7 @@ class ClimberForm {
 				}
 			}
 		}).always(() => {
-			climberDB.hideLoadingIndicator();
+			this._parent.hideLoadingIndicator();
 		});
 	}
 
@@ -1088,7 +1101,7 @@ class ClimberForm {
 		if ($card.is('.new-card')) {
 			$card.fadeOut(500, () => {$card.remove()})
 		} else {
-			climberDB.showLoadingIndicator('deleteCard');
+			showLoadingIndicator('deleteCard');
 			var tablesToDeleteFrom = [];
 			var deleteStatements = [];
 			for (const el of $card.find('.input-field')) {
@@ -1101,9 +1114,9 @@ class ClimberForm {
 				}
 			}
 
-			return climberDB.queryDB(deleteStatements)
+			return this._parent.queryDB(deleteStatements)
 				.done(queryResultString => {
-					if (climberDB.queryReturnedError(queryResultString)) {
+					if (this._parent.queryReturnedError(queryResultString)) {
 						showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}.`, 'Unexpected error');
 						return;
 					} else {
@@ -1125,7 +1138,7 @@ class ClimberForm {
 				}).fail((xhr, status, error) => {
 					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
 				}).always(() => {
-					climberDB.hideLoadingIndicator();
+					hideLoadingIndicator();
 				});
 
 		}
@@ -1153,16 +1166,16 @@ class ClimberForm {
 	/*
 	*/
 	deleteClimber(climberID) {
-		return climberDB.queryDB(`DELETE FROM climbers WHERE id=${parseInt(climberID)} RETURNING id`)
+		return this._parent.queryDB(`DELETE FROM climbers WHERE id=${parseInt(climberID)} RETURNING id`)
 			.done(queryResultString => {
-				if (climberDB.queryReturnedError(queryResultString)) {
+				if (this._parent.queryReturnedError(queryResultString)) {
 					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
 					return;
 				} 
 			}).fail((xhr, status, error) => {
 				showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
 			}).always(() => {
-				climberDB.hideLoadingIndicator();
+				hideLoadingIndicator();
 			});
 	}
 
@@ -1247,7 +1260,7 @@ class ClimberDBClimbers extends ClimberDB {
 			</div>
 		`);
 		
-		this.climberForm = new ClimberForm('.query-result-pane.result-details-pane');
+		this.climberForm = new ClimberForm(this, '.query-result-pane.result-details-pane');
 
 		// Set tab indices
 		var liTabIndex = this.getNextTabIndex();
@@ -1419,6 +1432,10 @@ class ClimberDBClimbers extends ClimberDB {
 					this.saveModalClimber();
 				}
 			})
+	}
+
+	saveEdits() {
+		this.climberForm.saveEdits();
 	}
 
 	/*
