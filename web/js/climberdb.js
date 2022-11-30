@@ -230,13 +230,33 @@ class ClimberDB {
 				if (this.userInfo.user_role_code === 3) {
 					// Make fields only editable by admins editable
 					$('.admin-only-edit').removeClass('admin-only-edit');
+					$('.admin-only-nav-item').removeClass('hidden');
 				} else {
 					//*****TODO: add info button explaining that this field isn't editable
 					$('.admin-only-edit').insertAfter('')
+
+					
 				}
 			}
 		});
 	}
+
+	/*
+	For admin only pages, check that the user has the admin role. This function should be chained on admin pages with subsequent admin-only content getting loaded only after the promise is successfully resolved
+	*/
+	checkUserRole() {
+		const deferred = $.Deferred();
+		if (this.userInfo.user_role_code !== 3) {
+			const adminEmail = this.config.program_admin_email;
+			const footerButtons = '<a href="dashboard.html" class="generic-button modal-button close-modal confirm-button">OK</a>'
+			showModal(`You do not have sufficient permissions to view this page. If you think this is an error, contact the program adminstrator at <a href="mailto:${adminEmail}">${adminEmail}</a>.`, 'Permission Error', 'alert', footerButtons, {dismissable: false})
+			deferred.reject();
+		} else {
+			deferred.resolve();
+		}
+		return deferred.promise();
+	}
+
 
 	loadConfigValues() {
 		this.queryDB('SELECT property, data_type, value FROM config')
@@ -325,14 +345,14 @@ class ClimberDB {
 									</a>
 								</li>
 
-								<li class="nav-item">
+								<li class="nav-item admin-only-nav-item hidden">
 									<a href="users.html">
 										<img class="sidebar-nav-item-icon" src="imgs/user_icon_50px.svg">
 										<span class="sidebar-nav-item-label">manage users</span>
 									</a>
 								</li>
 
-								<li class="nav-item">
+								<li class="nav-item admin-only-nav-item hidden">
 									<a href="config.html">
 										<img class="sidebar-nav-item-icon" src="imgs/settings_icon_50px.svg">
 										<span class="sidebar-nav-item-label">configure app</span>

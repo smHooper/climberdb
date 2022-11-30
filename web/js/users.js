@@ -533,20 +533,22 @@ class ClimberDBUsers extends ClimberDB {
 	init() {
 		// Call super.init()
 		this.showLoadingIndicator('init');
-		var initDeferreds = super.init();
-		
-		this.configureMainContent();
-		
-		$.when(
-			initDeferreds,
-			...this.loadSelectOptions()
-		)
-		.then(() => {
-			this.loadUsers();
-		})
-		.always(() => {
-			hideLoadingIndicator();
-		});
+		var initDeferreds = $.when(...super.init())
+			.then(() => { 
+				return this.checkUserRole()
+			})
+			// Only runs if checkUserRole returns a resolved promise
+			.then(() => {
+				this.configureMainContent();
+				
+				return $.when(...this.loadSelectOptions())
+			})
+			.then(() => {
+				this.loadUsers();
+			})
+			.always(() => {
+				hideLoadingIndicator();
+			});
 
 		return initDeferreds;
 	}
