@@ -12,6 +12,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			communication_devices: {data: {}, order: []},
 			briefings: {} 
 		}
+		this.climberInfo = {};
 		this.routeCodes = {};
 		this.mountainCodes = {};
 		this.cmcInfo = {
@@ -1091,14 +1092,28 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// When the is_guiding field changes, show/hide the guide icon on the card header
 		$(document).on('change', '.input-field[name=is_guiding]', e => {
-			const checkbox = e.target;
+			const $checkbox = $(e.target);
+			const $card = $checkbox.closest('.card')
+			
 			// If the climber isn't a guide, uncheck the box and warn the user
-			if (checkbox.checked) {
-				// *** figure out if this should query DB or if climber guide boolean should be stored somewhere
+			const isChecked = $checkbox.prop('checked');
+			if (isChecked) {
+				const climberID = $card.data('climber-id');
+				const climberInfo = this.climberInfo[climberID] || {};
+				const isCommercialGuide = climberInfo.isCommercialGuide;
+				if (!isCommercialGuide) {
+					//TODO: could ask the user if they want to update the climber table record
+					const message = `${climberInfo.firstName} ${climberInfo.lastName} isn't marked as a`
+						+ ` guide in the database so they can't serve as a guide on this expedition. If the`
+						+ ` climber is actually a commercial guide, <a href="climbers.html?id=${climberID}`
+						+ `&edit=true" target="_blank">edit their climber profile</a>. You can then reload`
+						+ ` this page and mark them as a guide on this expedition.`;
+					showModal(message, 'Climber Is Not A Guide');
+					$checkbox.prop('checked', false).removeClass('dirty');
+				}
 			}
-			$(checkbox).closest('.card')
-				.find('.guide-icon')
-					.ariaTransparent(!checkbox.checked);
+			$card.find('.guide-icon')
+				.ariaTransparent(!isChecked);
 		});
 
 		// When a transaction type field changes and amount is not already set, fill the amount with the defuault value
@@ -1339,7 +1354,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 		// ------ Climber form stuff ------
-		const $climberFormModal = $('<div id="add-climber-form-modal-container" class="climber-form-modal-container uneditable hidden" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>')
+		const $climberFormModal = $('#add-climber-form-modal-container')//$('<div id="add-climber-form-modal-container" class="climber-form-modal-container uneditable hidden" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>')
 			.appendTo('body');
 		this.climberForm = new ClimberForm(this, $climberFormModal);
 		this.climberForm.lastSearchQuery = (new Date()).getTime();
@@ -1439,31 +1454,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#modal-save-to-expedition-button').click(e => {
-			const currentClimberIDs = Object.values(climberDB.expeditionInfo.expedition_members.data)
-				.map(member => member.climber_id);
-			const climberID = $('#modal-climber-select').val();
-			//const climberID = Object.keys(this.climberForm.selectedClimberInfo.climbers)[0];
-			const climberInfo = this.climberForm.selectedClimberInfo.climbers[climberID];
-			if (currentClimberIDs.includes(climberID)) {
-				showModal(`${climberInfo.first_name} ${climberInfo.last_name} is already a member of the expedition '${this.expeditionInfo.expeditions.expedition_name}'`, 'Climber is already a member');
-				return;
-			}
-			const $memberCard = this.addExpeditionMemberCard(
-				{
-					firstName: climberInfo.first_name, 
-					lastName: climberInfo.last_name, 
-					climberID: climberID,
-					showCard: true,
-					isNewCard: true,
-					climberInfo: climberInfo
-				}
-			);
-			// Add the member to each route
-			for (const ul of $('.card:not(.cloneable) .route-member-list')) {
-				this.addRouteMember(ul, `${climberInfo.last_name}, ${climberInfo.first_name}`, climberID);
-			}
-
-			$(e.target).siblings('.close-modal-button').click();
+			this.onAddClimberToExpeditionClick();
 		})
 		// ^^^^^ Climber form stuff ^^^^^^
 	}
@@ -2679,6 +2670,50 @@ class ClimberDBExpeditions extends ClimberDB {
 		if (searchString.length >= 3) this.refreshClimberSelectOptions(searchString);
 	}
 
+
+	/*
+	Get info from climber form's currently selected climber and add a new card
+	*/
+	onAddClimberToExpeditionClick() {
+
+		// Check if the climber is already a member of this expedition
+		const currentClimberIDs = Object.values(climberDB.expeditionInfo.expedition_members.data)
+			.map(member => member.climber_id);
+		const climberID = $('#modal-climber-select').val();
+		const climberInfo = this.climberForm.selectedClimberInfo.climbers[climberID];
+		if (currentClimberIDs.includes(climberID)) {
+			showModal(`${climberInfo.first_name} ${climberInfo.last_name} is already a member of the expedition '${this.expeditionInfo.expeditions.expedition_name}'`, 'Climber is already a member');
+			return;
+		}
+
+		// add the card
+		const $memberCard = this.addExpeditionMemberCard(
+			{
+				firstName: climberInfo.first_name, 
+				lastName: climberInfo.last_name, 
+				climberID: climberID,
+				showCard: true,
+				isNewCard: true,
+				climberInfo: climberInfo
+			}
+		);
+
+		// Save climber info to memory so it can be referenced later
+		this.climberInfo[climberID] = {
+			firstName: climberInfo.first_name, 
+			lastName: climberInfo.last_name, 
+			isCommercialGuide: climberInfo.is_guide
+		}
+
+		// Add the member to each route
+		for (const ul of $('.card:not(.cloneable) .route-member-list')) {
+			this.addRouteMember(ul, `${climberInfo.last_name}, ${climberInfo.first_name}`, climberID);
+		}
+
+		$(e.target).siblings('.close-modal-button').click();
+	}
+
+
 	queryOptionToWhereClause(field, operatorValue, searchValue) {
 		
 		var searchString;
@@ -2990,6 +3025,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.updateExpeditionMemberCount();
 		this.updateCommsDeviceOwnerOptions();
 
+
 		return $newCard;
 	}
 
@@ -3263,6 +3299,11 @@ class ClimberDBExpeditions extends ClimberDB {
 							}
 							members.data[memberID].first_name = row.first_name;
 							members.data[memberID].last_name = row.last_name;
+							this.climberInfo[row.climber_id] = {
+								firstName: row.first_name,
+								lastName: row.last_name,
+								isCommercialGuide: row.is_guide
+							}
 						}
 						const transactionID = row.transaction_id;
 						if (transactionID != null) {
