@@ -39,7 +39,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			<div class="main-content-header">
 				<input id="expedition-id-input" class="hidden" aria-hidden="True">
 				<div class="fuzzy-search-bar-container">
-					<input id="expedition-search-bar" class="fuzzy-search-bar" placeholder="Type to search expeditions" title="Expedition search bar">
+					<input id="expedition-search-bar" class="fuzzy-search-bar" placeholder="Type to search expeditions" title="Expedition search bar" autocomplete="off">
 					<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 					<button class="show-query-options-button icon-button" title="Expedition filter options">
 						<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg">
@@ -145,7 +145,11 @@ class ClimberDBExpeditions extends ClimberDB {
 										<label class="result-details-summary-label">Current members</label>
 										<label class="result-details-summary-value"></label>
 									</div>
-									<div id="expedition-entry-time-result-summary-item" class="col">
+									<div id="expedition-entry-time-result-summary-item" class="col admin-edit-only">
+										<div class="field-container-row collapse">
+											<label class="result-details-summary-label">Date confirmed</label>
+											<input id="input-date_confirmed" class="input-field result-details-summary-value" type="date" name="date_confirmed" data-dependent-target="#input-group_status" data-dependent-value="3,4,5,6">
+										</div>
 									</div>
 								</div>
 							</div>
@@ -289,7 +293,7 @@ class ClimberDBExpeditions extends ClimberDB {
 													</div>
 													<div class="field-container-row">
 														<div class="field-container col-sm-6">
-															<select id="input-reservation_status" class="input-field default reservation-status-field" name="reservation_status_code" data-table-name="expedition_members" data-lookup-table="group_status_codes" placeholder="Reservation status" title="Reservation status" data-default-value="1" value="1"></select>
+															<select id="input-reservation_status" class="input-field default reservation-status-field revertable" name="reservation_status_code" data-table-name="expedition_members" data-lookup-table="group_status_codes" placeholder="Reservation status" title="Reservation status" data-default-value="1" value="1"></select>
 															<label class="field-label" for="input-reservation_status">Reservation status</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>	
@@ -344,8 +348,8 @@ class ClimberDBExpeditions extends ClimberDB {
 													</div>
 													<div class="field-container-row" style="">
 														<div class="field-container col-6">
-															<input id="input-datetime_reserved" class="input-field" name="datetime_reserved" data-table-name="expedition_members" placeholder="Date reserved" title="Date reserved" type="date"  autocomplete="off" required="">
-															<label class="field-label" for="input-datetime_reserved">Date reserved</label>
+															<input id="input-datetime_reserved" class="input-field" name="datetime_reserved" data-table-name="expedition_members" placeholder="Date added to expedition" title="Date added to expedition" type="date"  autocomplete="off" required="">
+															<label class="field-label" for="input-datetime_reserved">Date added to expedition</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 														<div class="field-container collapse col-6">
@@ -512,12 +516,16 @@ class ClimberDBExpeditions extends ClimberDB {
 							<div id="routes-accordion" class="accordion" data-table-name="expedition_member_routes" data-item-display-name="expedition route">
 								<div id="cloneable-card-routes" class="card expedition-card cloneable hidden" >
 									<div class="card-header" id="cardHeader-routes-cloneable">
-										<select id="mountain-code-header-input" class="input-field card-link-label route-code-header-input mountain-code-header-input expedition-member-card-link-label col-2" name="mountain_code">
-											<option value="">Select mountain</option>
-										</select>
-										<select id="route-code-header-input" class="input-field card-link-label route-code-header-input expedition-member-card-link-label no-option-fill col-2" name="route_code">
-											<option value="">Select route</option>
-										</select>
+										<div class="col-2 d-flex">
+											<select id="mountain-code-header-input" class="input-field card-link-label route-code-header-input mountain-code-header-input expedition-member-card-link-label" name="mountain_code">
+												<option value="">Select mountain</option>
+											</select>
+										</div>
+										<div class="col-4 d-flex">
+											<select id="route-code-header-input" class="input-field card-link-label route-code-header-input expedition-member-card-link-label no-option-fill" name="route_code">
+												<option value="">Select route</option>
+											</select>
+										</div>
 										<a class="card-link" data-toggle="collapse" href="#collapse-routes-cloneable" data-target="collapse-routes-cloneable">
 											<div class="card-link-content">
 												<!--<h6 class="card-link-label expedition-member-card-link-label"></h6>-->
@@ -540,7 +548,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<label class="data-list-col data-list-header-label col-1"></label>
 											</div>
 											<ul id="route-member-list" class="data-list route-member-list">
-												<li class="data-list-item cloneable hidden">
+												<li class="data-list-item cloneable show-children-on-hover hidden">
 													<!-- route_code and route_order inputs are hidden because the select in the .card-header controls the value for all of them-->
 													<input id="input-route_code" class="input-field hidden" type="number" name="route_code" data-table-name="expedition_member_routes">
 													<input id="input-route_order" class="input-field hidden" type="number" name="route_order" data-table-name="expedition_member_routes">
@@ -564,7 +572,7 @@ class ClimberDBExpeditions extends ClimberDB {
 														</div>
 													</div>
 													<div class="col-1">
-														<button class="icon-button delete-button delete-route-member-button">
+														<button class="icon-button delete-button delete-route-member-button show-on-parent-hover">
 															<i class="fas fa-trash fa-lg"></i>
 														</button>
 													</div>
@@ -600,7 +608,7 @@ class ClimberDBExpeditions extends ClimberDB {
 								<label class="data-list-col data-list-header-label col-1"></label>
 							</div>
 							<ul id="cmc-list" class="data-list cmc-list">
-								<li class="data-list-item cloneable hidden">
+								<li class="data-list-item cloneable show-children-on-hover hidden">
 									<div class="cmc-col col-2">
 										<select id="input-cmc_id" class="input-field no-option-fill default" name="cmc_id" data-table-name="cmc_checkout" title="CMC ID" required="required"></select>
 										<span class="required-indicator">*</span>
@@ -613,7 +621,7 @@ class ClimberDBExpeditions extends ClimberDB {
 										<input id="input-return_date" class="input-field" name="return_date" type="date" data-table-name="cmc_checkout" title="CMC Return Date"> 
 									</div>
 									<div class="col-1">
-										<button class="icon-button delete-button delete-cmc-button">
+										<button class="icon-button delete-button delete-cmc-button show-on-parent-hover">
 											<i class="fas fa-trash fa-lg"></i>
 										</button>
 									</div>
@@ -639,7 +647,7 @@ class ClimberDBExpeditions extends ClimberDB {
 								<label class="data-list-col data-list-header-label col-1"></label>
 							</div>
 							<ul id="comms-list" class="data-list cmc-list">
-								<li class="data-list-item cloneable hidden">
+								<li class="data-list-item show-children-on-hover cloneable hidden">
 									<div class="cmc-col col-3">
 										<select id="input-communication_device_type" class="input-field default" name="communication_device_type_code" data-table-name="communication_devices" title="Device Type" placeholder="Device type" required="required"></select>
 										<span class="required-indicator">*</span>
@@ -651,7 +659,7 @@ class ClimberDBExpeditions extends ClimberDB {
 										<select id="input-owner" class="input-field no-option-fill default" name="expedition_member_id" data-table-name="communication_devices" title="Device owner"></select>
 									</div>
 									<div class="col-1">
-										<button class="icon-button delete-button delete-comms-button">
+										<button class="icon-button delete-button delete-comms-button show-on-parent-hover">
 											<i class="fas fa-trash fa-lg"></i>
 										</button>
 									</div>
@@ -1011,7 +1019,9 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 		// ----------- Expedition -------------------
-
+		$('#input-date_confirmed').change(e => {
+			this.onDateConfirmedChange(e);
+		});
 		// ^^^^^^^^^^^ Expedition ^^^^^^^^^^^^^^^^^^^
 
 
@@ -1065,43 +1075,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Set the canceled time when the reservation status is set to canceled
 		// also check all other reservation status fields to see if the whole group is ready
 		$(document).on('change', '.reservation-status-field', e => {
-			const $select = $(e.target);
-			const $card = $select.closest('.card');
-			const value = $select.val();
-			const isCanceled = value == 6;
-
-			// If this is the group's leader, ask the user to confirm
-			/*if ($card.find('.input-field[name=is_trip_leader]').prop('checked')) {
-				showModal('Are ')
-				return;
-			}*/
-
-			// Set the datetime_canceled field
-			const now = getFormattedTimestamp();
-			const cardID = $select.attr('id').match(/-\d+$/).toString();
-			$(`#input-datetime_canceled${cardID}`).val(isCanceled ? now : null).change();
-
-			// Show as canceled and move to bottom
-			$card.toggleClass('canceled', isCanceled);
-			if (isCanceled) $card.appendTo($card.closest('.accordion'));
-
-			// Hide/show this expedition member in any routes 
-			const expeditionMemberID = $card.data('table-id');
-			if (expeditionMemberID) {
-				$(`.route-member-list .data-list-item[data-expedition-member-id=${expeditionMemberID}]`)
-					.ariaHide(isCanceled);
-			}
-
-			// Change the group's status if all 
-			const reservationStatuses = $select.closest('.accordion').find('.card:not(.cloneable) .reservation-status-field')
-				.map((_, el) => el.value)
-				.get();
-			const firstStatus = reservationStatuses[0];
-			const $groupStatusSelect = $('#input-group_status');
-
-			if (reservationStatuses.every(v => v == firstStatus || v == 6) && $groupStatusSelect.val() != firstStatus) { 
-				$groupStatusSelect.val(firstStatus).change();
-			}
+			this.onReservationStatusFieldChange(e);
 		});
 
 		$(document).on('change', '.input-field[name="flagged"]', e => {
@@ -1395,6 +1369,10 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// query climbers to fill select
 		$('#modal-climber-search-bar').keyup(() => {
+			this.onClimberFormSearchKeyup();
+		});
+		// guide and 7-day filters
+		$('.climber-search-filter').change(() => {
 			this.onClimberFormSearchKeyup();
 		});
 
@@ -2253,6 +2231,109 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	onDateConfirmedChange(e) {
+		const dateConfirmed = e.target.value;
+		const $plannedDepartureInput = $('#input-planned_departure_date');
+		const departureDate = new Date($plannedDepartureInput.val() + ' 00:00');
+		const now = new Date();
+		const minDaysAfterConfirm = this.config.minimum_days_after_confirm;
+		const daysToDeparture = parseInt(Math.round((departureDate - now) / this.millisecondsPerDay));
+		if (daysToDeparture < minDaysAfterConfirm) { // if minimum_days_after_confirm is not in the config table, do nothing
+			const newDepartureDate = new Date(now.getTime() //timestamp in milliseconds
+				+ (minDaysAfterConfirm * this.millisecondsPerDay) // add milliseconds in minDaysAfterConfirm
+				//+ (60000 * now.getTimezoneOffset()) // add timezone offset (.getTimezoneOffset() returns offset in minutes)
+			);
+			const message = `You've marked this expedition as confirmed on ${departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'})} but they're scheduled to depart <strong>${daysToDeparture} days</strong> from now. Would you like to set the departure date to <strong>${newDepartureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'})}</strong>, ${minDaysAfterConfirm} days from now?`
+			const eventHandlerCallable = () => {
+				$('#alert-modal .confirm-button').click(() => { 
+					$('#input-planned_departure_date')
+						.val(getFormattedTimestamp(newDepartureDate))
+						.change(); 
+				})
+			}
+			showModal(message, 'Update Planned Departure?', 'confirm', '', {eventHandlerCallable: eventHandlerCallable});
+		}
+	}
+
+
+	onReservationStatusFieldChange(e) {
+		const $select = $(e.target);
+		const $card = $select.closest('.card');
+		const value = parseInt($select.val());
+		const isCanceled = value === 6;
+
+		// If this is the group's leader, ask the user to confirm
+		/*if ($card.find('.input-field[name=is_trip_leader]').prop('checked')) {
+			showModal('Are ')
+			return;
+		}*/
+
+		// Set the datetime_canceled field
+		const now = getFormattedTimestamp();
+		const cardID = $select.attr('id').match(/-\d+$/).toString();
+		$(`#input-datetime_canceled${cardID}`).val(isCanceled ? now : null).change();
+
+		// Show as canceled and move to bottom
+		$card.toggleClass('canceled', isCanceled);
+		if (isCanceled) {
+			$card.appendTo($card.closest('.accordion'));
+		}
+		// If the user is confirming this expedition member, check that they've paid and turned everything in 
+		else if (value === 3) { //confirmed
+			const $card = $select.closest('.card');
+
+			//const climbingFeePaid = $card.find('.climbing-fee-icon').is('.transparent');
+			let reasons = '';
+			if ($card.find('.climbing-fee-icon').is('.transparent')) 
+				reasons += '<li>have not paid their climber fee</li>';
+			if ($card.find('.input-field[name=application_complete]').is(':not(:checked)')) 
+				reasons += '<li>have not completed their SUP application</li>';
+			if ($card.find('.input-field[name=psar_complete]').is(':not(:checked)')) 
+				reasons += '<li>have not completed their PSAR form</li>';
+			// If any conditions aren't met, tell the user and revert the res. status field's value
+			if (reasons) {
+				const memberInfo = this.expeditionInfo.expedition_members.data[$card.data('expedition-member-id')] || {};
+				const climberName = memberInfo.first_name ? `${memberInfo.first_name} ${memberInfo.last_name}` : 'This expedition member';
+				const message = `${climberName} can't be confirmed because they: <ul>${reasons}</ul> All climbers must have a climbing fee payment or waiver in their transaction history and the SUP app. and PSAR checkboxes must be checked before they can be marked as confirmed.`;
+				//******* this doesn't work
+				const eventHandlerCallable = () => {
+					$('#alert-modal button').click(() => {this.revertInputValue($select)})
+				}
+				showModal(message, 'Missing Payment/Information', {eventHandlerCallable: eventHandlerCallable})
+				
+				return;
+			} 
+			 
+		}
+
+		// Hide/show this expedition member in any routes 
+		const expeditionMemberID = $card.data('table-id');
+		if (expeditionMemberID) {
+			$(`.route-member-list .data-list-item[data-expedition-member-id=${expeditionMemberID}]`)
+				.ariaHide(isCanceled);
+		}
+
+		// Change the group's status if all equal the same value
+		const reservationStatuses = $select.closest('.accordion').find('.card:not(.cloneable) .reservation-status-field')
+			.map((_, el) => el.value)
+			.get();
+		const minStatus = Math.min(...reservationStatuses);//[0];
+		const $groupStatusSelect = $('#input-group_status');
+
+		//if (reservationStatuses.every(v => v == firstStatus || v == 6) && $groupStatusSelect.val() != firstStatus) { 
+		if ($groupStatusSelect.val() != minStatus) {
+			$groupStatusSelect.val(minStatus).change();
+
+			// If the date_confirmed field isn't blank, fill it
+			// ******* 
+			const $dateConfirmedField = $('#input-date_confirmed'); 
+			if (value == 3 && !$dateConfirmedField.val()) {
+				$dateConfirmedField.val(getFormattedTimestamp()).change();
+			}
+		}
+	}
+
+
 	/*
 	*/
 	onModalExpeditionSearchOptionClick(e) {
@@ -2431,13 +2512,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*Show modal climber form to allow the user to select a climber to add to the expedition*/
-	showModalAddMemberForm() {
-
-		// If the climber select has a valid value (climber ID from a previous query)
-		//	load the currently selected climber
-		const $select = $('#modal-climber-select');
-		const climberID = $select.val();
-		
+	showModalAddMemberForm({limitToPreviousClimbers=false}={}) {
 
 		$('#add-climber-form-modal-container').ariaHide(false);
 		this.climberForm.$el.addClass('climberdb-modal');
@@ -2445,6 +2520,12 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $climberForm = this.climberForm.$el;
 		this.clearInputFields({parent: $climberForm, triggerChange: false});
 
+		$('#7-day-only-filter').prop('checked', limitToPreviousClimbers);
+
+		// If the climber select has a valid value (climber ID from a previous query)
+		//	load the currently selected climber
+		const $select = $('#modal-climber-select');
+		const climberID = $select.val();
 		if (climberID === '') {
 			$('.climber-form .result-details-summary-container.collapse').collapse('hide');
 		} else {
@@ -2468,7 +2549,66 @@ class ClimberDBExpeditions extends ClimberDB {
 	/* Event handler for add expedition member button. If the user has a new expedition member 
 	they haven't saved, ask them to confirm those edits before showing the form*/
 	onAddExpeditionMemberButtonClick() {
-		this.showModalAddMemberForm();
+		
+		const departureDateString = $('#input-planned_departure_date').val();
+		const departureDate = new Date(departureDateString + ' 00:00');
+		const now = new Date();
+		const isPrivate = $('#input-guide_company').val() === '';
+		const climberAdditionDayRestriction = this.config.days_before_climber_addition_restriction;
+
+		// If this is not a guided expedtion and the group is confirmed
+		if (climberAdditionDayRestriction && isPrivate) {
+			const dateConfirmed = new Date($('$input-date_confirmed').val() + ' 00:00');
+			
+			// check that another member hasn't been added within 30 days
+			for (const el of $('.input-field[name=datetime_reserved]')) {
+				const dateAdded = new Date(el.value + ' 00:00');
+				const daysReservedToDeparture = (departureDate - dateAdded) / this.millisecondsPerDay;
+				if (daysReservedToDeparture < climberAdditionDayRestriction) {
+					const message = `An expedition member has already been added within`
+						+ ` ${climberAdditionDayRestriction} days of this group's planned departure of ` 
+						+ departureDateString.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'});
+					showModal(message, 'WARNING: 30-Day Rule Violation');
+					break;
+				}
+			}
+
+		}
+
+		// Check if there's already the max number of climbers
+		const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.canceled)').length;
+		let maxClimbers = this.config.max_expedition_members
+		if ($('#input-guide_company')) maxClimbers ++;
+		if (nMembers >= maxClimbers) {
+			showModal(
+				`This group has reached or exceeded the maximum group size of ${maxClimbers} with ${nMembers} expedition members`,
+				'WARNING: Group Size Violation'
+			)
+		}
+
+		// If this is within seven days, automatically limit results to just climbers who have 
+		//	already been on Denali or Foraker this year
+		const daysToDeparture = (departureDate - now) / this.millisecondsPerDay;
+		const previousClimberAdditionDays = this.config.days_before_previous_climber_addition_restriction;
+		const limitToPreviousClimbers = 
+			previousClimberAdditionDays && 
+			daysToDeparture > 0 && 
+			daysToDeparture <= previousClimberAdditionDays;
+		if (limitToPreviousClimbers)	{
+			showModal('This expedition is scheduled to depart in ' + previousClimberAdditionDays + ' days or less. Only climbers who have previously climbed Denali or Foraker can be added to this expedition. When you search for climbers, the results will automatically be limited to only climbers who meet this criteria.', 
+				'WARNING: 7-Day Rule in Effect',
+				'alert',
+				'',
+				{
+					eventHandlerCallable: () => {
+						$('.confirm-button').click(() => {$('#modal-climber-search-bar').focus()})
+					}
+				}
+			);
+			
+		}	
+
+		this.showModalAddMemberForm({limitToPreviousClimbers: limitToPreviousClimbers});
 
 	}
 
@@ -2477,8 +2617,16 @@ class ClimberDBExpeditions extends ClimberDB {
 	Populate the modal climber select options
 	*/
 	fillClimberFormSelectOptions(searchString) {
+		// ******** add guide and 7-day filters
+
+		let whereClause = '';
+		if ($('#7-day-only-filter').prop('checked')) 
+			whereClause += ' JOIN seven_day_rule_view ON climber_info_view.id = seven_day_rule_view.climber_id ';
+		if ($('#guide-only-filter').prop('checked')) 
+			whereClause += ' WHERE is_guide';
+		
 		const queryFields = 'id, full_name';
-		const sql = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields});
+		const sql = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields, whereClause: whereClause});
 		return this.queryDB(sql, {returnTimestamp: true})
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
@@ -2904,13 +3052,14 @@ class ClimberDBExpeditions extends ClimberDB {
 					accordionName: 'routes'
 				}
 			);
-			$newCard.find('.mountain-code-header-input')
+			const $mountainCodeInput = $newCard.find('.mountain-code-header-input')
 				.val(mountainCode)
 				.removeClass('default')//set in addNewCard()
 				.change()
-					.siblings('.route-code-header-input, .input-field[name="route_code"]')
-					.val(routeCode)
-					.removeClass('default');
+			$newCard.find('.route-code-header-input, .input-field[name="route_code"]')
+				.not($mountainCodeInput)
+				.val(routeCode)
+				.removeClass('default');
 
 			const $routeMemberList = $newCard.find('.route-member-list');
 			$routeMemberList.attr('id', $routeMemberList.attr('id') + '-' + routeCode);
@@ -3312,7 +3461,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $transactionsList = $listItem.closest('.data-list');
 
 		const transactionType = $listItem.find('.transaction-type-field').val();
-		const $relatedTransactionItem = $('#' + $listItem.data('related-transaction'));
+		const relatedTransactionID = $listItem.data('related-transaction');
+		const $relatedTransactionItem = relatedTransactionID ? $('#' + relatedTransactionID) : $();
 
 		const dbID = $listItem.data('table-id');
 		// If the delete succeeds, update the transaction balance 
@@ -3561,10 +3711,10 @@ class ClimberDBExpeditions extends ClimberDB {
 	show60DayWarning() {
 		const departureDate = new Date($('#input-planned_departure_date').val() + ' 00:00');
 		const now = new Date();
-		const daysToDeparture = (departureDate - now)/(1000 * 60 * 60 * 24);
-		
+		const daysToDeparture = (departureDate - now) / this.millisecondsPerDay;
+		const isGuided = $('#input-guide_company').val() !== '';
 		// If this expedition's departure has already passed or it's more than 60 days away, do nothing
-		if (daysToDeparture < 0 || daysToDeparture > 60) {
+		if (isGuided || daysToDeparture < 0 || daysToDeparture > 60) {
 			return;
 		}
 

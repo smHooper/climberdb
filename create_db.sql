@@ -89,7 +89,6 @@ CREATE TABLE IF NOT EXISTS emergency_contacts (
 CREATE TABLE IF NOT EXISTS expeditions (
 	id SERIAL PRIMARY KEY,
 	expedition_name VARCHAR(100),
-	permit_number SERIAL NULL,
 	planned_departure_date DATE,
 	planned_return_date DATE,
 	actual_departure_date DATE,
@@ -104,6 +103,7 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	sanitation_problems VARCHAR(255),
 	equipment_loss VARCHAR(255),
 	group_status_code INTEGER REFERENCES group_status_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	date_confirmed DATE,
 	needs_special_use_permit BOOLEAN, 
 	special_group_type_code INTEGER REFERENCES special_group_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	last_modified_by VARCHAR(50),
@@ -136,7 +136,6 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	had_hace BOOLEAN,
 	had_hape BOOLEAN,
 	medical_notes TEXT,
-	--highest_elevation_ft INTEGER,
 	climber_comments TEXT, --ClimberNotes
 	internal_notes TEXT, --ResNotes
 	entered_by VARCHAR(50),
@@ -263,41 +262,271 @@ END$$;
 -- climber info
 --CREATE MATERIALIZED VIEW climber_info_matview AS 
 CREATE VIEW climber_info_view AS
-SELECT DISTINCT ON (climbers.first_name, climbers.last_name, climbers.id)
- 	climbers.first_name || ' ' || climbers.last_name AS full_name,
-    climbers.id,
-    climbers.first_name,
-    climbers.last_name,
-    climbers.address,
-    climbers.city,
-    climbers.state_code,
-    climbers.other_state_name,
-    climbers.country_code,
-    climbers.postal_code,
-    climbers.dob,
-    COALESCE(climbers.age, (now()::date - climbers.dob) / 365) AS age,
-    climbers.email_address,
-    climbers.phone,
-    climbers.sex_code,
-    climbers.solo_form_signed,
-    climbers.received_pro_pin,
-    climbers.is_guide, 
-    climbers.hx_of_frostbite,
-    climbers.hx_of_ams,
-    climbers.hx_of_hace,
-    climbers.hx_of_hape,
-    climbers.hx_notes,
-    climbers.internal_notes,
-    climbers.entered_by,
-   	to_char(climbers.entry_time, 'Mon DD, YYYY') AS entry_time,
-    climbers.last_modified_by,
-    to_char(climbers.last_modified_time, 'Mon DD, YYYY') AS last_modified_time,
-    expeditions.expedition_name,
-    to_char(coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date), 'Mon DD, YYYY') AS expedition_date
-   FROM climbers
-	 LEFT JOIN expedition_members ON climbers.id = expedition_members.climber_id
-     LEFT JOIN expeditions ON expeditions.id = expedition_members.expedition_id
-  ORDER BY climbers.first_name, climbers.last_name, climbers.id, abs(extract(epoch FROM planned_departure_date - now()));
+	SELECT DISTINCT ON (climbers.first_name, climbers.last_name, climbers.id)
+	 	climbers.first_name || ' ' || climbers.last_name AS full_name,
+	    climbers.id,
+	    climbers.first_name,
+	    climbers.last_name,
+	    climbers.address,
+	    climbers.city,
+	    climbers.state_code,
+	    climbers.other_state_name,
+	    climbers.country_code,
+	    climbers.postal_code,
+	    climbers.dob,
+	    COALESCE(climbers.age, (now()::date - climbers.dob) / 365) AS age,
+	    climbers.email_address,
+	    climbers.phone,
+	    climbers.sex_code,
+	    climbers.solo_form_signed,
+	    climbers.received_pro_pin,
+	    climbers.is_guide, 
+	    climbers.hx_of_frostbite,
+	    climbers.hx_of_ams,
+	    climbers.hx_of_hace,
+	    climbers.hx_of_hape,
+	    climbers.hx_notes,
+	    climbers.internal_notes,
+	    climbers.entered_by,
+	   	to_char(climbers.entry_time, 'Mon DD, YYYY') AS entry_time,
+	    climbers.last_modified_by,
+	    to_char(climbers.last_modified_time, 'Mon DD, YYYY') AS last_modified_time,
+	    expeditions.expedition_name,
+	    to_char(coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date), 'Mon DD, YYYY') AS expedition_date
+	   FROM climbers
+		 LEFT JOIN expedition_members ON climbers.id = expedition_members.climber_id
+	     LEFT JOIN expeditions ON expeditions.id = expedition_members.expedition_id
+	  ORDER BY climbers.first_name, climbers.last_name, climbers.id, abs(extract(epoch FROM planned_departure_date - now()));
+
+
+-- climber history view
+CREATE VIEW climber_history_view AS 
+	SELECT 
+		expeditions.expedition_name,  
+		expedition_member_routes.id AS expedition_member_route_id,
+		expedition_members.id AS expedition_member_id,
+		expedition_members.climber_id,
+		expedition_members.permit_number,
+		expedition_members.datetime_reserved::date AS datetime_reserved,
+		expedition_members.datetime_canceled,
+		expedition_members.early_return_date,
+		expedition_members.is_checked_in,
+		expedition_members.reservation_status_code,
+		expedition_members.flagged,
+		expedition_members.flagged_reason,
+		expedition_members.flagged_by,
+		expedition_members.is_illegal_guide,
+		expedition_members.is_trip_leader,
+		expedition_members.is_guiding,
+		expedition_members.is_interpreter,
+		expedition_members.received_pro_pin,
+		expedition_members.reason_for_pro_pin,
+		expedition_members.application_complete,
+		expedition_members.psar_complete,
+		expedition_members.frostbite_severity_code,
+		expedition_members.frostbite_details,
+		expedition_members.had_ams,
+		expedition_members.had_hace,
+		expedition_members.had_hape,
+		expedition_members.medical_notes,
+		expedition_members.climber_comments,
+		expedition_members.internal_notes,
+		expedition_member_routes.route_code,
+		expedition_member_routes.route_order,
+		expedition_member_routes.route_was_summited,
+		expedition_member_routes.summit_date,
+		expedition_member_routes.highest_elevation_ft,
+		expeditions.sanitation_problems, 
+		expeditions.equipment_loss,
+		expeditions.actual_departure_date, 
+		expeditions.actual_return_date,
+		expeditions.group_status_code  
+	FROM expedition_member_routes 
+		JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id 
+		JOIN expeditions ON expedition_members.expedition_id=expeditions.id 
+		JOIN climbers ON expedition_members.climber_id=climbers.id 
+	WHERE 
+		expeditions.actual_departure_date < now() 
+	ORDER BY 
+		expeditions.actual_departure_date DESC, 
+		expedition_member_routes.route_order ASC;
+
+CREATE VIEW expedition_info_view AS 
+	SELECT 
+		expedition_member_routes.id AS expedition_member_route_id,
+		transactions.id AS transaction_id,
+		climbers.first_name,
+		climbers.last_name,
+		to_char(expeditions.entry_time, 'Mon DD, YYYY'::text) AS expeditions_entry_time,
+		expeditions.entered_by AS expeditions_entered_by,
+		to_char(expedition_members.entry_time, 'Mon DD, YYYY'::text) AS expedition_members_entry_time,
+		expedition_members.entered_by AS expedition_members_entered_by,
+		to_char(transactions.entry_time, 'Mon DD, YYYY'::text) AS transactions_entry_time,
+		transactions.entered_by AS transactions_entered_by,
+		expeditions.id AS expedition_id,
+		expeditions.expedition_name,
+		expeditions.date_confirmed,
+		expeditions.planned_departure_date,
+		expeditions.planned_return_date,
+		expeditions.actual_departure_date,
+		expeditions.actual_return_date,
+		expeditions.guide_company_code,
+		expeditions.air_taxi_code,
+		expeditions.entered_by,
+		expeditions.entry_time,
+		expeditions.reviewed_by,
+		expeditions.briefed_by,
+		expeditions.checked_in_datetime,
+		expeditions.sanitation_problems,
+		expeditions.equipment_loss,
+		COALESCE(gb.expedition_status, 6) AS group_status_code,
+		expeditions.needs_special_use_permit,
+		expeditions.special_group_type_code,
+		expeditions.last_modified_by,
+		expeditions.last_modified_time,
+		expedition_members.id AS expedition_member_id,
+		expedition_members.climber_id,
+		expedition_members.permit_number,
+		expedition_members.datetime_reserved::date AS datetime_reserved,
+		expedition_members.datetime_canceled,
+		expedition_members.early_return_date,
+		expedition_members.is_checked_in,
+		expedition_members.reservation_status_code,
+		expedition_members.flagged,
+		expedition_members.flagged_reason,
+		expedition_members.flagged_by,
+		expedition_members.is_illegal_guide,
+		expedition_members.is_trip_leader,
+		expedition_members.is_guiding,
+		expedition_members.is_interpreter,
+		expedition_members.received_pro_pin,
+		expedition_members.reason_for_pro_pin,
+		expedition_members.application_complete,
+		expedition_members.psar_complete,
+		expedition_members.frostbite_severity_code,
+		expedition_members.frostbite_details,
+		expedition_members.had_ams,
+		expedition_members.had_hace,
+		expedition_members.had_hape,
+		expedition_members.medical_notes,
+		expedition_members.climber_comments,
+		expedition_members.internal_notes,
+		expedition_member_routes.route_code,
+		expedition_member_routes.route_order,
+		expedition_member_routes.route_was_summited,
+		expedition_member_routes.summit_date,
+		expedition_member_routes.highest_elevation_ft,
+		transactions.transaction_type_code,
+		transactions.transaction_value,
+		transactions.transaction_notes,
+		transactions.transaction_date,
+		transactions.payment_method_code,
+		cmc_checkout.id AS cmc_checkout_id,
+		cmc_checkout.cmc_id,
+		cmc_checkout.issued_by,
+		cmc_checkout.checkout_date,
+		cmc_checkout.checked_in_by,
+		cmc_checkout.return_date,
+		briefings.id AS briefing_id,
+		briefings.briefing_start::date AS briefing_date,
+		to_char(briefings.briefing_start, 'FMHH:MI am'::text) AS briefing_time,
+		to_char(briefings.briefing_start, 'Mon FMDD, FMHH:MI am'::text) AS briefing_datetime
+	FROM expeditions
+	LEFT JOIN (expedition_members
+	JOIN climbers ON expedition_members.climber_id = climbers.id) ON expeditions.id = expedition_members.expedition_id
+	LEFT JOIN briefings ON expeditions.id = briefings.expedition_id
+	LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
+	LEFT JOIN transactions ON expedition_members.id = transactions.expedition_member_id
+	LEFT JOIN cmc_checkout ON expeditions.id = cmc_checkout.expedition_id
+	LEFT JOIN ( 
+		SELECT 
+			expedition_members_1.expedition_id AS gb_expedition_id,
+			min(expedition_members_1.reservation_status_code) AS expedition_status
+		FROM expedition_members expedition_members_1
+		WHERE expedition_members_1.reservation_status_code >= 0 AND expedition_members_1.reservation_status_code <= 5
+		GROUP BY expedition_members_1.expedition_id
+	) gb ON gb.gb_expedition_id = expeditions.id
+	ORDER BY 
+		(
+			CASE
+				WHEN expedition_members.reservation_status_code <> 6 THEN 1
+				ELSE 2
+			END
+		), 
+		climbers.last_name, 
+		climbers.first_name, 
+		transactions.transaction_date, 
+		transactions.id;
+
+
+CREATE VIEW seven_day_rule_view AS 
+	SELECT climber_id FROM 
+	climber_history_view 
+	WHERE actual_return_date BETWEEN (extract(year FROM now())::text || '-1-1')::date AND now()
+	;
+
+
+CREATE VIEW briefings_view AS
+	SELECT briefings.id,
+	  briefings.expedition_id,
+	  briefings.briefing_start,
+	  briefings.briefing_ranger_user_id,
+	  briefings.briefing_end,
+	  briefings.briefing_start::date AS briefing_date,
+	  regexp_replace(to_char(briefings.briefing_start, 'HH24:MI'::text), '^0'::text, ''::text) AS briefing_start_time,
+	  regexp_replace(to_char(briefings.briefing_end, 'HH24:MI'::text), '^0'::text, ''::text) AS briefing_end_time,
+	  t.n_members,
+	  t.expedition_name,
+	  users.first_name AS ranger_first_name,
+	  users.last_name AS ranger_last_name,
+	  users.ad_username AS ranger_username
+	 FROM briefings
+	   JOIN ( SELECT expeditions.expedition_name,
+	          expedition_members.expedition_id,
+	          count(*) AS n_members
+	         FROM expedition_members
+	           JOIN expeditions ON expeditions.id = expedition_members.expedition_id
+	        GROUP BY expedition_members.expedition_id, expeditions.expedition_name) t ON briefings.expedition_id = t.expedition_id
+	  LEFT JOIN users ON users.id = briefings.briefing_ranger_user_id;
+
+CREATE VIEW breifings_expedition_info_view AS 
+  SELECT gb.expedition_id,
+     gb.n_members,
+     expeditions.expedition_name,
+     expeditions.planned_departure_date,
+     briefings.expedition_id IS NULL AS unscheduled
+    FROM ( SELECT expedition_members.expedition_id,
+             count(*) AS n_members
+            FROM expeditions expeditions_1
+              JOIN expedition_members ON expeditions_1.id = expedition_members.expedition_id
+           GROUP BY expedition_members.expedition_id) gb
+      LEFT JOIN briefings ON gb.expedition_id = briefings.expedition_id
+      JOIN expeditions ON expeditions.id = gb.expedition_id
+   WHERE EXTRACT(year FROM now()) = EXTRACT(year FROM expeditions.planned_departure_date);
+
+
+CREATE MATERIALIZED VIEW table_info_matview AS 
+   SELECT columns.column_name,
+  		columns.table_name,
+  		columns.data_type,
+  		columns.character_maximum_length,
+  		fk.foreign_table_name,
+  		fk.foreign_column_name
+  	 FROM information_schema.columns columns
+  		 LEFT JOIN ( SELECT columns_1.table_name,
+  						columns_1.column_name,
+  						ccu.table_name AS foreign_table_name,
+  						ccu.column_name AS foreign_column_name
+  					 FROM information_schema.table_constraints tc
+  						 JOIN information_schema.key_column_usage kcu ON tc.constraint_name::name = kcu.constraint_name::name
+  						 JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name::name = tc.constraint_name::name
+  						 JOIN information_schema.columns columns_1 ON tc.table_name::name = columns_1.table_name::name AND kcu.column_name::name = columns_1.column_name::name
+  					WHERE tc.constraint_type::text = 'FOREIGN KEY'::text AND ccu.column_name::name = 'id'::name
+  			) fk ON columns.table_name::name = fk.table_name::name AND columns.column_name::name = fk.column_name::name
+  		 LEFT JOIN insert_order_matview i ON i.table_name=columns.table_name  
+  	WHERE columns.table_schema::name = 'public'::name AND columns.table_name::name !~~ 'pg_%'::text AND columns.table_name::name !~~ '%_codes'::text AND columns.table_name::name !~~ '%view'::text
+  	ORDER BY i.level, columns.table_name, columns.column_name;
+
 
 -- CREATE OR REPLACE FUNCTION refresh_climber_info_matview()
 -- RETURNS trigger language plpgsql

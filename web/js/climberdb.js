@@ -22,16 +22,15 @@ function print(i) {
 
 function getDefaultModalFooterButtons(modalType) {
 	return  modalType === 'confirm' ? 
-		(
-			'button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>' +
-			'<button class="generic-button modal-button close-modal" data-dismiss="modal">OK</button>'
-		 ) :
-		'<button class="generic-button modal-button close-modal" data-dismiss="modal">Close</button>'
+			'<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>' +
+			'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
+		  :
+		'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
 		;
 }
 
 
-function showModal(message, title, modalType='alert', footerButtons='', {dismissable=true}={}) {
+function showModal(message, title, modalType='alert', footerButtons='', {dismissable=true, eventHandlerCallable=()=>{}}={}) {
 
 	const $modal = $('#alert-modal');
 
@@ -81,6 +80,8 @@ function showModal(message, title, modalType='alert', footerButtons='', {dismiss
 	$modal.on('hide.bs.modal', () => {
 		$modal.removeClass('showing')
 	})
+
+	eventHandlerCallable.call();
 
 	return $modal;
 }
@@ -204,6 +205,7 @@ class ClimberDB {
 		this.entryMetaFields = ['entry_time', 'entered_by', 'last_modified_time', 'last_modified_by'];
 		this.config = {};
 		this.loginInfo = {}; //{username: {expires: } }
+		this.millisecondsPerDay = 1000 * 60 * 60 * 24;
 	}
 
 	getUserInfo() {
@@ -224,6 +226,14 @@ class ClimberDB {
 				if ($changePasswordButton.length) $changePasswordButton[0].href = window.encodeURI(
 						`${window.location.origin}/index.html?reset=true&id=${this.userInfo.id}&referer=${window.location.href}`
 					);
+				
+				if (this.userInfo.user_role_code === 3) {
+					// Make fields only editable by admins editable
+					$('.admin-only-edit').removeClass('admin-only-edit');
+				} else {
+					//*****TODO: add info button explaining that this field isn't editable
+					$('.admin-only-edit').insertAfter('')
+				}
 			}
 		});
 	}
@@ -860,6 +870,24 @@ class ClimberDB {
 	}
 
 	/*
+	Use the current-value data property to reset an input's value
+	*/
+	resetRevertableField($input, {triggerChange=true}={}) {
+		const previousValue = $input.data('current-value');
+		if ($input.is('[type=checkbox]')) {
+			$input.prop('checked', previousValue === 'true')
+		} else if ($input.is('select')) {
+			if (previousValue) {
+				$input.val(previousValue)
+			}
+		} else {
+			$input.val(previousValue)
+		}
+		if (triggerChange) $input.change();
+	}
+
+
+	/*
 	Helper function to check a Postgres query result for an error
 	*/
 	queryReturnedError(queryResultString) {
@@ -1125,7 +1153,7 @@ class ClimberDB {
 	/*
 	Helper methods to generate SQL statement for querying climber_info_view
 	*/
-	getCoreClimberSQL({searchString='', queryFields='*'} = {}) {
+	getCoreClimberSQL({searchString='', queryFields='*', whereClause=''} = {}) {
 		if (queryFields !== '*') {
 			if (!queryFields.includes('first_name')) queryFields = queryFields + ', first_name';
 			if (!queryFields.includes('first_name')) queryFields = queryFields + ', middle_name';
@@ -1180,12 +1208,14 @@ class ClimberDB {
 						GROUP BY full_name, id
 					) gb 
 				JOIN climber_info_view ON gb.id = climber_info_view.id 
+				${whereClause}
 				ORDER BY first_sort_order::text || full_name
 			` :
 			`
 				SELECT 
 					* 
 				FROM climber_info_view 
+				${whereClause}
 			`
 			;
 	}

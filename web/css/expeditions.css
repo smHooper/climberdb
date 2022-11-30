@@ -360,6 +360,12 @@
 	padding-right: 0px;
 	padding-left: 0px;
 }
+/*.input-field.result-details-summary-value:not(:valid) {
+	display: none;
+}
+.input-field.result-details-summary-value:not(:valid)::after {
+	content: "not set";
+}*/
 /*add up/down arrows to bottom/top jump links*/
 .page-bottom-jump-link,
 .page-top-jump-link {
@@ -455,6 +461,9 @@
 .input-field.card-link-label.route-code-header-input {
 	border-bottom: 2px solid rgba(255, 255, 255, 0.5);
 	/* border-radius: 7px; */
+}
+.uneditable .input-field.card-link-label.route-code-header-input {
+	border-bottom: none;
 }
 .input-field.card-link-label.route-code-header-input:focus {
 	background-color: rgba(255, 255, 255, 0.25);
@@ -581,7 +590,10 @@
 	margin-right: 10px;
 }
 
-/*-------modal climber form ---------*/
+/*########################################################################################*/
+/*-----------------------------modal climber form ----------------------------------------*/
+/*########################################################################################*/
+
 /*override hidden climber history (hidden in climbers.css because modal is
 used to show climber form in "add climber" mode)*/
 .climber-form-modal-container > .climber-form.climberdb-modal #climber-history-list-item {
@@ -638,6 +650,17 @@ used to show climber form in "add climber" mode)*/
 }
 .uneditable .input-field.text-center {
 	text-align: center !important;
+}
+.always-editable .checkmark-container {
+	margin-bottom: 0.5rem;
+	pointer-events: all;
+	cursor: pointer;
+}
+.climberdb-modal .always-editable .checkmark {
+	border: 3px solid #219EBC;
+}
+.climberdb-modal .always-editable .checkmark-container input:checked ~ .checkmark {
+    background-color: #219EBC;
 }
 
 /*move expedition member modal*/

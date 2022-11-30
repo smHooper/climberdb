@@ -49,16 +49,20 @@ class ClimberForm {
 								</button>
 							</div>	
 						</div>	
-						<!--<div class="expedition-modal-climber-form-navigation-container">
-							<div class="col-6">
-							</div>
-							<div class="col-3">
-								<a id="expedition-modal-add-new-climber-button" class="generic-button" href="climbers.html?newClimber=true" target="_blank">Create new climber</a>
-							</div>
-							<div class="col-3">
-								<a id="edit-climber-info-button" class="generic-button" href="climbers.html?" target="_blank">Edit climber info</a>
-							</div>
-						</div>-->
+						<div class="field-container checkbox-field-container always-editable col-sm-3 pl-3">
+							<label class="checkmark-container">
+								<input id="guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="guide_only">
+								<span class="checkmark data-input-checkmark"></span>
+							</label>
+							<label class="field-label checkbox-label" for="guide-only-filter">Commercial guide</label>
+						</div>	
+						<div class="field-container checkbox-field-container always-editable col-sm-3">
+							<label class="checkmark-container">
+								<input id="7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="7_day_only">
+								<span class="checkmark data-input-checkmark"></span>
+							</label>
+							<label class="field-label checkbox-label" for="7-day-only-filter">7-day only</label>
+						</div>
 					</div>
 					<div class="result-details-header-container">
 						<div class="result-details-title-container">
@@ -735,15 +739,15 @@ class ClimberForm {
 			//	the group status is "Checked back from mountain"
 			qualifiesFor7DayPermit = qualifiesFor7DayPermit || 
 				(
-					((actualReturnDate <= now && formattedReturn) || row.group_status_code == 3) && 
-					actualReturnDate.getFullYear() === now.getFullYear() - 1
+					((actualReturnDate <= now && formattedReturn) || row.group_status_code == 5) && 
+					actualReturnDate.getFullYear() === now.getFullYear()
 				)
 
 			receivedProPin = receivedProPin || row.received_pro_pin === 't';
 		}	
 
-		$('#7-day-badge').toggleClass('hidden', !qualifiesFor7DayPermit);
-		$('#pro-pin-badge').toggleClass('hidden', !receivedProPin);
+		$('#7-day-badge').ariaHide(!qualifiesFor7DayPermit);
+		$('#pro-pin-badge').ariaHide(!receivedProPin);
 
 		// .change() events on .input-fields will add dirty class
 		$('.climber-form .input-field').removeClass('dirty');
@@ -808,29 +812,8 @@ class ClimberForm {
 
 	*/
 	queryClimberHistory(climberID) {
-		const historySQL = `
-			SELECT 
-				expeditions.expedition_name, 
-				expeditions.permit_number,
-				expedition_member_routes.*, 
-				expedition_member_routes.id AS expedition_member_route_id,
-				expedition_members.*, 
-				expeditions.sanitation_problems, 
-				expeditions.equipment_loss,
-				expeditions.actual_departure_date, 
-				expeditions.actual_return_date,
-				expeditions.group_status_code  
-			FROM expedition_member_routes 
-				JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id 
-				JOIN expeditions ON expedition_members.expedition_id=expeditions.id 
-				JOIN climbers ON expedition_members.climber_id=climbers.id 
-			WHERE 
-				expeditions.actual_departure_date < now() AND 
-				climbers.id=${climberID} 
-			ORDER BY 
-				expeditions.actual_departure_date DESC, 
-				expedition_member_routes.route_order ASC
-		;`;
+		const historySQL = `SELECT * FROM climber_history_view WHERE climber_id=${climberID}`;
+		//`SELECT * FROM WHERE  climbers.id=${climberID} `
 		const contactsSQL = `SELECT * FROM emergency_contacts WHERE climber_id=${climberID}`;
 
 		const historyDeferred = climberDB.queryDB(historySQL)

@@ -33,7 +33,7 @@ class ClimberDBBriefings extends ClimberDB {
 		const startDate = startOfCalendar.getDate();
 		for (let i = 0; i < startDayOfWeek; i++) {
 			$calendarBody.append(`
-				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(startOfCalendar + 3600000 * 24 * i))}">
+				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(startOfCalendar + this.millisecondsPerDay * i))}">
 					<label class="calendar-cell-date-label">${startDate + i}</label>
 					<div class="calendar-cell-body"></div>
 				</div>
@@ -61,7 +61,7 @@ class ClimberDBBriefings extends ClimberDB {
 		const endDayOfWeek = lastDayOfMonth.getDay();
 		for (let i = 0; i + endDayOfWeek < 6; i++) { // < 6 because getDay() returns 0-indexed day od week
 			$calendarBody.append(`
-				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(date + 3600000 * 24 * i))}">
+				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(date + this.millisecondsPerDay * i))}">
 					<label class="calendar-cell-date-label">${i + 1}</label>
 					<div class="calendar-cell-body"></div>
 				</div>

@@ -229,8 +229,8 @@ class ClimberDBDashboard extends ClimberDB {
 							<table class="climberdb-dashboard-table">
 								<thead>
 									<tr>
-										<th>
-											<button class="text-only-button sort-column-button col-4" data-field-name="expedition_name">
+										<th class="col-4">
+											<button class="text-only-button sort-column-button" data-field-name="expedition_name">
 												<span>Name</span>
 												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
 											</button>
@@ -243,7 +243,7 @@ class ClimberDBDashboard extends ClimberDB {
 										</th>
 										<th>Missing SUP</th>
 										<th>Missing payment</th>
-									</r>
+									</tr>
 								</thead>
 								<tbody>
 									<tr class="cloneable hidden">
@@ -869,9 +869,8 @@ class ClimberDBDashboard extends ClimberDB {
 	        		const now = new Date();
 	        		const minDate = new Date(`${xlabels[0]}, ${now.getFullYear()}`);
 	        		const maxDate = new Date(`${xlabels[xlabels.length - 1]}, ${now.getFullYear()}`);
-	        		const millisecondsPerDay = 1000 * 60 * 60 * 24;
-	        		const nTotalDays = (maxDate.getTime() - minDate.getTime()) / millisecondsPerDay;
-	        		const minDateToNow = (now.getTime() - minDate.getTime()) / millisecondsPerDay;
+	        		const nTotalDays = (maxDate.getTime() - minDate.getTime()) / this.millisecondsPerDay;
+	        		const minDateToNow = (now.getTime() - minDate.getTime()) / this.millisecondsPerDay;
 	        		const scrollDistance = (minDateToNow / nTotalDays) * scrollWidth;
 	        		$outerWrapper.scrollLeft(scrollDistance);
 	        	}

@@ -700,6 +700,132 @@ textarea.input-field:valid + .required-indicator {
 }
 /* -------------------------------------------*/
 
+/*#########################################################################
+  --------------- Style inputs for toggling editablity ------------------- 
+  #########################################################################*/
+.query-result-pane.result-details-pane .input-field,
+.query-result-pane.result-details-pane .field-label {
+  transition: .3s all;
+}
+.uneditable .field-container-row {
+  /*too much space between rows so get rid of the margin*/
+  margin-bottom: 0;
+}
+.uneditable .checkbox-field-container {
+  /*checkboxes and their labels are on a single row, so add a margin*/
+  margin-bottom: 20px;
+}
+.uneditable .checkmark {
+  border: solid 3px rgb(125, 125, 125);
+}
+.uneditable .checkmark-container input:checked ~ .checkmark {
+  /*checkboxes and their labels are on a single row, so add a margin*/
+  border: none;
+  background-color: rgb(125, 125, 125);
+}
+
+.uneditable .input-field,
+.uneditable .null-input-indicator,
+.uneditable .checkmark-container,
+.query-result-pane.result-details-pane .uneditable-units-text,
+.input-field.admin-only-edit {
+  border-bottom: solid 2px rgba(0, 0, 0, 0);
+  text-indent: 0;
+  margin-bottom: .75rem;
+  appearance: none;
+  pointer-events: none;
+  cursor: default;
+  text-align: left !important;/*necessary to override bootstrap .text-right*/
+}
+
+/*make sure $ does not overlap input for money fields*/
+.query-result-pane.result-details-pane .input-field.money-field.uneditable .unit-symbol-left{
+  margin-left: 5px;
+  width: calc(100% - 35px);
+}
+.uneditable .field-container {
+  margin-left: 0;
+}
+/*make sure narrative field extends 100% of width*/
+.uneditable textarea.input-field {
+  width: 100%;
+  background-color: rgba(0,0,0,0);
+}
+/*override disabled color styling for selects*/
+.uneditable select.input-field:disabled {
+  color: black;
+}
+/*place field labels above fields and set them to bold*/
+.uneditable .input-field ~ .field-label:not(.checkbox-label),
+.uneditable .field-container .field-label:not(.checkbox-label) {
+  order: -2;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-bottom: 0;
+  /*padding-left: 0;*/
+  transform: unset;
+}
+.uneditable .input-field ~ .field-label,
+.uneditable .field-container .field-label {
+/*  font-weight: 600;*/
+  font-size: 17px;
+}
+
+/* hide all required indicators*/
+.uneditable .required-indicator {
+  display: none;
+}
+/*hide any fields that are blank and show as <null>*/
+.uneditable .input-field:placeholder-shown,
+.uneditable select.input-field.default,
+.uneditable .input-field:placeholder-shown ~ .unit-symbol,
+.uneditable .flex-field-container ~ .units-field-container {
+  display: none;
+}
+/* styling for any elements that are shown only when editing is disabled*/
+.null-input-indicator,
+.uneditable-units-text {
+  display: none;
+  font-style: italic;
+  font-size: 14px;
+  line-height: 30px;
+}
+.uneditable .flex-field-container {
+  max-width: 100%;
+}
+.uneditable .input-field:placeholder-shown ~ .null-input-indicator,
+.uneditable select.input-field.default ~ .null-input-indicator,
+.uneditable .uneditable-units-text {
+  display: block;
+}
+.uneditable .input-field:placeholder-shown ~ .field-label:not(.checkbox-label),
+.uneditable select.input-field.default ~ .field-label:not(.checkbox-label)  {
+  /*padding-left: .5rem;*/
+  visibility: visible;
+  color: #00679b;
+  /*padding-top: .75rem;*/
+}
+/* handle units fields that should be right-justified*/
+.uneditable .input-with-unit-symbol.text-right,
+.uneditable .input-field.text-right-when-valid {
+  margin-right: 0;
+  flex: 0 1 auto;
+}
+.uneditable .unit-symbol,
+.uneditable .uneditable-units-text {
+  max-width: 100%;
+  flex: 1 1 auto;
+}
+.uneditable .input-field::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  --------------- Style inputs for toggling editablity ------------------- 
+  #########################################################################*/
+
 
 /*--- modal stuff ---*/
 .modal-background {
@@ -801,8 +927,6 @@ textarea.input-field:valid + .required-indicator {
   flex-direction: column;
   justify-content: center;
 }
-
-
 /*------- -------*/
 
 
