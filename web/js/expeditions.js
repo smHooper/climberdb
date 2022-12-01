@@ -1109,7 +1109,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						+ `&edit=true" target="_blank">edit their climber profile</a>. You can then reload`
 						+ ` this page and mark them as a guide on this expedition.`;
 					showModal(message, 'Climber Is Not A Guide');
-					$checkbox.prop('checked', false).removeClass('dirty');
+					$checkbox.prop('checked', false).change();
 				}
 			}
 			$card.find('.guide-icon')
@@ -1137,7 +1137,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#routes-data-container .add-card-button').click(e => {
 
 			if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
-				showModal('You must add at least one expedition member before you can add a route.', 'Invalid action');
+				showModal('You must add at least one expedition member before you can add a route.', 'Invalid Action');
 				return;
 			}
 
@@ -1454,7 +1454,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#modal-save-to-expedition-button').click(e => {
-			this.onAddClimberToExpeditionClick();
+			this.onAddClimberToExpeditionClick(e);
 		})
 		// ^^^^^ Climber form stuff ^^^^^^
 	}
@@ -2173,19 +2173,52 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 	}
 
+	/*
+	Event handler for #delete-expedition-button
+	*/
 	onDeleteExpeditionButtonClick() {
-		const message = this.expeditionInfo.expeditions.id ? 
-			'Are you sure you want to delete this expedition? All expedition member, transaction,' + 
-				' and route information for this expedition will be deleted. <strong>This action'  + 
-				' is permanent and cannot be undone.</strong>' :
-			'Are you sure you want to delete this new expedition? If you click "Delete", all your' + 
+		let message,
+			title = 'Delete Expedition?',
+			footerButtons = 
+				'<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>' +
+				'<button class="generic-button modal-button danger-button close-modal confirm-delete" data-dismiss="modal">Delete</button>',
+			eventHandler = () => {$('.confirm-delete').click(() => {this.deleteExpedition()})}
+			; 
+		// Check the 
+		const hasData = $(`
+			#expedition-members-accordion .card:not(.cloneable), 
+			.transactions-tab-pane .data-list-item:not(.cloneable), 
+			#cmc-list .data-list-item:not(.cloneable)
+		`).filter((_, el) => $(el).data('table-id')).length;
+
+		// If expeditions.id is in memory, this expedition has already been saved to the database 
+		if (this.expeditionInfo.expeditions.id && hasData) {
+			// if the user is an administar, let them know they'll be deleting all related records
+			if (this.userInfo.user_role_code === 3) { 
+				message = 'Are you sure you want to delete this expedition? All expedition member, transaction,' + 
+					' and route information for this expedition will also be deleted. <strong>This action'  + 
+					' is permanent and cannot be undone.</strong>';
+			} 
+			// if not, prevent them from deleting it
+			else {
+				message = 'You can\'t delete this expedition because it already has expedition member information' +
+				' saved to it like transaction history, route information, etc. Only an adminstrator can delete it.';
+				title = 'Insufficient Permissions'
+				footerButtons = ''
+			}
+		} 
+		// Let any user delete a new expedition. This should only ever be possible when 
+		//	the user is deleting a saved expedition that doesn't have any related table 
+		//	information (expedition members, etc) because the delete button is hidden 
+		//	for new expeditions
+		else {
+			message = 'Are you sure you want to delete this expedition? If you click "Delete", all your' + 
 				' edits will be removed.';
-		const footerButtons = `
-			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.deleteExpedition()">Delete</button>
-		`;
-		showModal(message, 'Delete Expedition?', 'confirm', footerButtons);
+		}
+		
+		showModal(message, title, 'alert', footerButtons, {eventHandlerCallable: eventHandler});
 	} 
+
 
 	/*
 	@param $card: the parent .card of the clicked change-expedition-button 
@@ -2224,6 +2257,12 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	onDateConfirmedChange(e) {
 		const dateConfirmed = e.target.value;
+		
+		// When clearing form for new expedition, dateConfirmed changes before planned departure 
+		//	does, but it's the planned departure value that determines whether the user should 
+		//	be prompted. So if dateConfirmed is null, just exit
+		if (!dateConfirmed) return;
+
 		const $plannedDepartureInput = $('#input-planned_departure_date');
 		const departureDate = new Date($plannedDepartureInput.val() + ' 00:00');
 		const now = new Date();
@@ -2608,7 +2647,6 @@ class ClimberDBExpeditions extends ClimberDB {
 	Populate the modal climber select options
 	*/
 	fillClimberFormSelectOptions(searchString) {
-		// ******** add guide and 7-day filters
 
 		let whereClause = '';
 		if ($('#7-day-only-filter').prop('checked')) 
@@ -2674,7 +2712,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Get info from climber form's currently selected climber and add a new card
 	*/
-	onAddClimberToExpeditionClick() {
+	onAddClimberToExpeditionClick(e) {
 
 		// Check if the climber is already a member of this expedition
 		const currentClimberIDs = Object.values(climberDB.expeditionInfo.expedition_members.data)
