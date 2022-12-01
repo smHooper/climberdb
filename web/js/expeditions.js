@@ -217,7 +217,7 @@ class ClimberDBExpeditions extends ClimberDB {
 										<a id="expedition-briefing-link" class="briefing-link" href="briefings.html" target="_blank" aria-hidden="true">Set briefing time</a>
 								</div>
 								<div class="col-6 pl-0">
-									<a class="page-bottom-jump-link" href="#cmcs-data-container">CMC and Comms Info</a>
+									<button class="text-only-button jump-link page-bottom-jump-link" role="button" data-target="#cmcs-data-container">CMC and Comms Info</button>
 								</div>
 							</div>
 						</div>
@@ -630,7 +630,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							</ul>
 						</div>
 						<div class="expedition-data-content-footer w-100">
-							<a class="page-top-jump-link" href="#page-top-bookmark">Back To Top</a>
+							
 						</div>
 					</div>
 				</div>
@@ -667,11 +667,11 @@ class ClimberDBExpeditions extends ClimberDB {
 								</li>
 							</ul>
 						</div>
-						<div class="expedition-data-content-footer w-100">
-							<a class="page-top-jump-link" href="#page-top-bookmark">Back To Top</a>
-						</div>
 					</div>
 				</div>
+			</div>
+			<div class="w-100 d-flex justify-content-center">
+				<button class="text-only-button jump-link page-top-jump-link my-3" role="button" data-target="#page-top-bookmark">Back To Top</button>
 			</div>
 		`);
 
@@ -821,8 +821,22 @@ class ClimberDBExpeditions extends ClimberDB {
 						this.currentHistoryIndex = state.historyIndex;
 					}
 				}
+			} else {
+				// this is a jump link
+				// if (window.location.href.match('#')) {
+				// 	const expeditionID = this.expeditionInfo.expeditions.id;
+				// 	const state = expeditionID ? 
+				// 		{id: expeditionID, historyIndex: 0} :
+				// 		null;
+				// 	window.history.replaceState(state, '', window.location.href.split('#')[0])
+				// }
 			}
 		}
+
+		$('.text-only-button.jump-link').click(e => {
+			const $button = $(e.target).closest('button');
+			document.querySelector($button.data('target')).scrollIntoView() 
+		})
 
 		// If the group status changes to "confirmed", make actual departure and actual return dates not required
 		$('#input-group_status').change(e => {
@@ -930,6 +944,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				showModal(message, `Delete ${displayName}?`, 'confirm', footerButtons);
 			}
 		})
+		
 
 		// ------------ Query stuff -------------------
 		// Set the default expedition query to only show this year's expeditions

@@ -360,16 +360,16 @@
 	padding-right: 0px;
 	padding-left: 0px;
 }
-/*.input-field.result-details-summary-value:not(:valid) {
-	display: none;
-}
-.input-field.result-details-summary-value:not(:valid)::after {
-	content: "not set";
-}*/
 /*add up/down arrows to bottom/top jump links*/
-.page-bottom-jump-link,
-.page-top-jump-link {
+/*need to use buttons instead of jump links to avoid affecting window.history */
+.text-only-button.jump-link {
 	line-height: 20px;
+	color: #219ebc;
+	font-weight: bold;
+}
+.text-only-button.jump-link:hover {
+	color: #00679b; 
+	text-decoration: underline;
 }
 .page-bottom-jump-link::after {
 	font-size: 20px;
