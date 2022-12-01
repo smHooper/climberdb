@@ -821,18 +821,11 @@ class ClimberDBExpeditions extends ClimberDB {
 						this.currentHistoryIndex = state.historyIndex;
 					}
 				}
-			} else {
-				// this is a jump link
-				// if (window.location.href.match('#')) {
-				// 	const expeditionID = this.expeditionInfo.expeditions.id;
-				// 	const state = expeditionID ? 
-				// 		{id: expeditionID, historyIndex: 0} :
-				// 		null;
-				// 	window.history.replaceState(state, '', window.location.href.split('#')[0])
-				// }
-			}
+			} 
 		}
 
+		// Use buttons instead of anchor tag for scrolling to top and bottom of page 
+		//	to avoid adding to window.history
 		$('.text-only-button.jump-link').click(e => {
 			const $button = $(e.target).closest('button');
 			document.querySelector($button.data('target')).scrollIntoView() 
@@ -2041,9 +2034,15 @@ class ClimberDBExpeditions extends ClimberDB {
 					const id = returnedIDs.id;
 					if (id == null || id === '') continue;
 
-					// Set the card's/list item's class and inputs' attributes so changes will register as updates
 					const {container, tableName} = inserts[i];
-					if (tableName === 'expeditions') expeditionID = id;
+					if (tableName === 'expeditions') {
+						expeditionID = id;
+						
+						// this was a new expedition, so add the expedition to the URL history
+						this.updateURLHistory(expeditionID, $('#expedition-id-input'));
+					}
+
+					// Set the card's/list item's class and inputs' attributes so changes will register as updates
 					const $container = $(container).closest('.data-list-item, .card');
 					const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
 					if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
@@ -2066,10 +2065,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				const expeditionInfo = this.expeditionInfo;
 				const $editedInputs =  $('.input-field.dirty').removeClass('dirty');
 				this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
-					// .done(() => {
-					// 	//
-					// 	setTimeout(() => {$('#input-group_status').change()}, 500);
-					// });
+
 
 				// Hide the save button again since there aren't any edits
 				$('#save-expedition-button').ariaHide(true);
@@ -3313,7 +3309,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					return;
 				} else {
 					const expeditionResult = $.parseJSON(expeditionInfoResult[0]);
-					const openCardIDs = '#' + $('.card:not(.cloneable) .card-collapse.show').map((_, el) => el.id).get().join(',#');
+					const $openCards = $('.card:not(.cloneable) .card-collapse.show');
+					const openCardIDs = '#' + $openCards.map((_, el) => el.id).get().join(',#');
 					
 					// Get expedition info
 					if (expeditionResult.length) {
@@ -3424,7 +3421,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					
 					this.fillFieldValues(false);//don't trigger change
 					// If the data are being re-loaded after a save, show the cards that were open before
-					if (!showOnLoadWarnings) $(openCardIDs).addClass('show');
+					if (!showOnLoadWarnings && $openCards.length) $(openCardIDs).addClass('show');
 
 					// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
 					const $searchBar = $('#expedition-search-bar');
