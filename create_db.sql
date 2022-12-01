@@ -260,12 +260,12 @@ END$$;
 
 -- VIEWS/MAT VIEWS
 -- climber info
---CREATE MATERIALIZED VIEW climber_info_matview AS 
 CREATE VIEW climber_info_view AS
-	SELECT DISTINCT ON (climbers.first_name, climbers.last_name, climbers.id)
+	SELECT DISTINCT ON (climbers.first_name, middle_name, climbers.last_name, climbers.id)
 	 	climbers.first_name || ' ' || climbers.last_name AS full_name,
 	    climbers.id,
 	    climbers.first_name,
+	    coalesce(climbers.middle_name, '') as middle_name,
 	    climbers.last_name,
 	    climbers.address,
 	    climbers.city,
@@ -297,7 +297,8 @@ CREATE VIEW climber_info_view AS
 	   FROM climbers
 		 LEFT JOIN expedition_members ON climbers.id = expedition_members.climber_id
 	     LEFT JOIN expeditions ON expeditions.id = expedition_members.expedition_id
-	  ORDER BY climbers.first_name, climbers.last_name, climbers.id, abs(extract(epoch FROM planned_departure_date - now()));
+	  ORDER BY climbers.first_name, middle_name, climbers.last_name, climbers.id, abs(extract(epoch FROM planned_departure_date - now()))
+	  ;
 
 
 -- climber history view
