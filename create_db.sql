@@ -291,6 +291,7 @@ CREATE VIEW climber_info_view AS
 	   	to_char(climbers.entry_time, 'Mon DD, YYYY') AS entry_time,
 	    climbers.last_modified_by,
 	    to_char(climbers.last_modified_time, 'Mon DD, YYYY') AS last_modified_time,
+	    expeditions.id AS expedition_id,
 	    expeditions.expedition_name,
 	    to_char(coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date), 'Mon DD, YYYY') AS expedition_date
 	   FROM climbers

@@ -78,6 +78,7 @@ class ClimberForm {
 							<div id="expedition-name-result-summary-item" class="result-details-summary-item col">
 								<label class="result-details-summary-label">Most recent/next expedition</label>
 								<label class="result-details-summary-value"></label>
+								<a class="result-details-summary-value result-details-summary-link hidden" target="_blank" aria-hidden="true"></a>
 							</div>								
 							<div id="entered-by-result-summary-item" class="result-details-summary-item col">
 								<div id="entered-by-result-summary-item" class="col">
@@ -669,8 +670,20 @@ class ClimberForm {
 
 		$('#result-details-header-title').text(this.getFullName(climberInfo.first_name, climberInfo.last_name, climberInfo.middle_name));
 
-		$('#expedition-name-result-summary-item > .result-details-summary-value')
-			.text(climberInfo.expedition_name ? climberInfo.expedition_name + ' - ' + climberInfo.expedition_date : 'None');
+		if (climberInfo.expedition_name) {
+			$('#expedition-name-result-summary-item > .result-details-summary-link')
+				.ariaHide(false)
+				.attr('href', 'expeditions.html?id=' + climberInfo.expedition_id)
+				.html(climberInfo.expedition_name + ' - ' + climberInfo.expedition_date)
+				.siblings('.result-details-summary-value:not(a)')
+					.ariaHide(true);
+		} else {
+			$('#expedition-name-result-summary-item > .result-details-summary-value:not(a)')
+				.ariaHide(false)
+				.text('None')
+				.siblings('.result-details-summary-link')
+					.ariaHide(true);
+		}
 		$('#entered-by-result-summary-item > .result-details-summary-value').text(climberInfo.entered_by);
 		$('#entry-time-result-summary-item > .result-details-summary-value').text(climberInfo.entry_time);
 
