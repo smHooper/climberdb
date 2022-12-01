@@ -670,7 +670,7 @@ class ClimberForm {
 		$('#result-details-header-title').text(this.getFullName(climberInfo.first_name, climberInfo.last_name, climberInfo.middle_name));
 
 		$('#expedition-name-result-summary-item > .result-details-summary-value')
-			.text(climberInfo.expedition_name + ' - ' + climberInfo.expedition_date);
+			.text(climberInfo.expedition_name ? climberInfo.expedition_name + ' - ' + climberInfo.expedition_date : 'None');
 		$('#entered-by-result-summary-item > .result-details-summary-value').text(climberInfo.entered_by);
 		$('#entry-time-result-summary-item > .result-details-summary-value').text(climberInfo.entry_time);
 
@@ -1517,7 +1517,7 @@ class ClimberDBClimbers extends ClimberDB {
 				<li id="item-${climber.id}" class="query-result-list-item ${climber.id == currentSelectedID ? 'selected' : ''}" role="row" tabindex=${liTabIndex}>
 					<label class="result-summary-label col" role="gridcell">${climber.full_name}</label>
 					<label class="result-summary-label col" role="gridcell">${localeString || '<em>no locale entered</em>'}</label>
-					<label class="result-summary-label col" role="gridcell">${climber.expedition_name}</label>
+					<label class="result-summary-label col" role="gridcell">${climber.expedition_name || '<em>None</em>'}</label>
 				</li>
 			`);
 			liTabIndex ++;
@@ -1679,6 +1679,7 @@ class ClimberDBClimbers extends ClimberDB {
 	This CLimberForm.detelClimber() handles generic errors
 	*/
 	deleteClimber(climberID) {
+
 		this.climberForm.deleteClimber(climberID)
 			.done(queryResultString => {
 				if (!this.queryReturnedError(queryResultString)) {
@@ -1712,6 +1713,16 @@ class ClimberDBClimbers extends ClimberDB {
 	Ask the user to confirm deleting the selected climber
 	*/
 	onDeleteClimberClick(e) {
+		const currentIndex = $('.query-result-list-item.selected').index();
+		const climberInfo = this.climberInfo[currentIndex];
+
+		// If this isn't an admin, check if the climber belongs to any expeditions
+		if (this.userInfo.user_role_code !== 3) {
+			if (climberInfo.expedition_name) { // will be null if climber isn't/wasn't on any expeditions
+				showModal(`You can't delete ${climberInfo.first_name} ${climberInfo.last_name}'s climber profile because they are a member of at least one expedition. You must remove them from all expeditions they're a member of before their profile can be deleted.`, 'Invalid Operation')
+				return;
+			}
+		}
 
 		const climberID = $('.query-result-list-item.selected').attr('id').replace('item-','');
 		const onConfirmClick = `
@@ -1722,7 +1733,9 @@ class ClimberDBClimbers extends ClimberDB {
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
 			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
 		`;
-		showModal(`Are you sure you want to <strong>permanently delete this climber</strong>? This action cannot be undone.`, `Delete climber?`, 'confirm', footerButtons);
+		let message = `Are you sure you want to <strong>permanently delete this climber</strong>? This action cannot be undone`;
+		if (climberInfo.expedition_name) message += ' and all information about their climbs will be delete including transaction history, medical issues, and whether or not they summited.'
+		showModal(message, `Delete climber?`, 'confirm', footerButtons);
 	}
 
 	init() {
