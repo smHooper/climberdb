@@ -13,9 +13,9 @@ class ClimberDBDashboard extends ClimberDB {
 		$('.main-content-wrapper').append(`
 			<div class="main-dashboard-container container-fluid">
 				<!-- season mountain stats -->
-				<div class="col-md card-container">
+				<div class="col-md col-lg-4 card-container">
 					<div id="season-mountain-stats-card" class="card dashboard-card">
-						<h3 class="dashboard-card-header">Mountain Stats This Season</h3>
+						<h4 class="dashboard-card-header">Mountain Stats This Season</h4>
 						<div class="dashboard-card-body">
 							<table class="climberdb-dashboard-table">
 								<thead>
@@ -31,9 +31,9 @@ class ClimberDBDashboard extends ClimberDB {
 					</div>
 				</div>
 				<!-- flagged and solo expeditions -->
-				<div class="col-md card-container">
+				<div class="col-md col-lg-4 card-container">
 					<div id="flagged-groups-card" class="card dashboard-card half-height-card">
-						<h3 class="dashboard-card-header">Flagged Expeditions</h3>
+						<h4 class="dashboard-card-header">Flagged Expeditions</h4>
 						<div class="dashboard-card-body mt-0">
 							<table class="climberdb-dashboard-table">
 								<thead>
@@ -64,7 +64,7 @@ class ClimberDBDashboard extends ClimberDB {
 						</div>
 					</div>
 					<div id="solo-climbers-card" class="card dashboard-card half-height-card">
-						<h3 class="dashboard-card-header">Solo Climbers</h3>
+						<h4 class="dashboard-card-header">Solo Climbers</h4>
 						<div class="dashboard-card-body mt-0">
 							<table class="climberdb-dashboard-table">
 								<thead>
@@ -109,9 +109,9 @@ class ClimberDBDashboard extends ClimberDB {
 				</div>
 
 				<!-- group status -->
-				<div class="col-md card-container">
+				<div class="col-md col-lg-4 card-container">
 					<div id="group-status-card" class="card dashboard-card">
-						<h3 class="dashboard-card-header w-100 centered-text">Group Status</h3>
+						<h4 class="dashboard-card-header w-100 centered-text">Group Status</h4>
 						<div class="dashboard-card-body h-100">
 							<div class="group-status-graph-container">
 								<div class="group-status-row" data-status-code="1">
@@ -206,9 +206,9 @@ class ClimberDBDashboard extends ClimberDB {
 				<div class="w-100"></div>
 
 				<!-- breifings per day -->
-				<div class="col-lg-8 card-container">
+				<div class="col-md col-lg-8 card-container">
 					<div class="card dashboard-card">
-						<h3 class="dashboard-card-header w-100 centered-text">Scheduled Expedition Briefings per Day</h3>
+						<h4 class="dashboard-card-header w-100 centered-text">Scheduled Expedition Briefings per Day</h4>
 						<div class="scrollable-chart-and-axis-wrapper">
 							<div class="scrollable-chart-outer-wrapper">
 								<div class="scrollable-chart-inner-wrapper">
@@ -222,9 +222,9 @@ class ClimberDBDashboard extends ClimberDB {
 				</div>
 
 				<!-- expeditions that still need to pay and turn in application -->
-				<div class="col-md card-container">
+				<div class="col-md col-lg-4 card-container">
 					<div id="missing-sup-fee-groups-card" class="card dashboard-card">
-						<h3 class="dashboard-card-header">Missing SUP or Climber Fee</h3>
+						<h4 class="dashboard-card-header">Missing SUP or Climber Fee</h4>
 						<div class="dashboard-card-body">
 							<table class="climberdb-dashboard-table">
 								<thead>
@@ -242,7 +242,7 @@ class ClimberDBDashboard extends ClimberDB {
 											</button>
 										</th>
 										<th>Missing SUP</th>
-										<th>Missing payment</th>
+										<th>Missing Fee</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -380,12 +380,12 @@ class ClimberDBDashboard extends ClimberDB {
 		`;
 		const onMountainDeferred =  this.queryDB(onMountainSQL)
 			.done(queryResultString => {
-				processResult(queryResultString, 'onMountain', 'On the mounain');
+				processResult(queryResultString, 'onMountain', 'On the mountain');
 			})
 			.fail((xhr, status, error) => {
 				print('Registered climber query failed with error: ' + error);
 				tableData.onMountain = {
-					displayName: 'On the mounain',
+					displayName: 'On the mountain',
 					data: [...nullResult]
 				};
 			});
@@ -691,7 +691,8 @@ class ClimberDBDashboard extends ClimberDB {
 						const nGroups = $dropdown.find('.group-status-link').length;
 						$dropdown.siblings('.group-status-bar-text').text(nGroups);
 						const width = Math.ceil(nGroups / maxGroups * 100);
-						const $bar = $dropdown.siblings('.group-status-bar').css('width', width  + '%');
+						const $bar = $dropdown.siblings('.group-status-bar').css('width', width  + '%')
+							.toggleClass('no-width', width === 0);
 						if (width == 0) {
 							$dropdown.closest('.group-status-bar-container').addClass('disabled');
 						}

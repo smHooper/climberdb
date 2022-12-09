@@ -234,36 +234,38 @@ class ClimberDBExpeditions extends ClimberDB {
 							<div id="expedition-members-accordion" class="accordion" data-table-name="expedition_members" data-item-display-name="expedition member">
 								<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
 									<div class="card-header show-children-on-hover" id="cardHeader-expedition-members-cloneable">
-										<a class="card-link collapsed col-7 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
-											<div class="card-link-content col-8 pl-0">
+										<a class="card-link collapsed col-6 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
+											<div class="card-link-content col-7 pl-0">
 												<h6 class="card-link-label expedition-member-card-link-label col px-0"></h6>
 											</div>
-											<div class="expedition-member-badge-container card-link-content col-4 pl-0">
+											<div class="expedition-member-badge-container card-link-content col-5 pl-0">
 												<img class="result-details-header-badge climbing-fee-icon transparent" src="imgs/climber_fee_icon_50px.svg" title="Climber fee paid" aria-hidden="true">
 												<img class="result-details-header-badge entrance-fee-icon transparent" src="imgs/entrance_fee_icon_100px.svg" title="Entrance fee paid" aria-hidden="true">
 												<img class="result-details-header-badge guide-icon transparent" src="imgs/guide_icon_100px.svg" title="Guiding on this expedition" aria-hidden="true">
 											</div>
 										</a>
-										<div class="card-header-content-container card-header-field-container leader-checkbox-container transparent">
-											<label class="checkmark-container">
-												<input id="input-is_trip_leader" class="input-field input-checkbox" type="checkbox" name="is_trip_leader" data-table-name="expedition_members" title="Is trip leader?">
-												<span class="checkmark data-input-checkmark"></span>
-											</label>
-											<label class="field-label checkbox-label" for="input-is_trip_leader">Leader</label>
-										</div>
-										<div class="card-header-content-container card-header-field-container">
-											<label class="checkmark-container">
-												<input id="input-application_complete" class="input-field input-checkbox" type="checkbox" name="application_complete" data-table-name="expedition_members" title="Permit application complete?">
-												<span class="checkmark data-input-checkmark"></span>
-											</label>
-											<label class="field-label checkbox-label" for="input-application_complete">SUP app.</label>
-										</div>
-										<div class="card-header-content-container card-header-field-container">
-											<label class="checkmark-container">
-												<input id="input-psar_complete" class="input-field input-checkbox" type="checkbox" name="psar_complete" data-table-name="expedition_members" title="PSAR form complete?">
-												<span class="checkmark data-input-checkmark"></span>
-											</label>
-											<label class="field-label checkbox-label" for="input-psar_complete">PSAR</label>
+										<div class="col d-flex justify-content-between pl-0">
+											<div class="col pl-0 card-header-content-container card-header-field-container leader-checkbox-container transparent">
+												<label class="checkmark-container">
+													<input id="input-is_trip_leader" class="input-field input-checkbox" type="checkbox" name="is_trip_leader" data-table-name="expedition_members" title="Is trip leader?">
+													<span class="checkmark data-input-checkmark"></span>
+												</label>
+												<label class="field-label checkbox-label" for="input-is_trip_leader">Leader</label>
+											</div>
+											<div class="col pl-0 card-header-content-container card-header-field-container">
+												<label class="checkmark-container">
+													<input id="input-application_complete" class="input-field input-checkbox" type="checkbox" name="application_complete" data-table-name="expedition_members" title="Permit application complete?">
+													<span class="checkmark data-input-checkmark"></span>
+												</label>
+												<label class="field-label checkbox-label" for="input-application_complete">SUP app.</label>
+											</div>
+											<div class="col px-0 card-header-content-container card-header-field-container">
+												<label class="checkmark-container">
+													<input id="input-psar_complete" class="input-field input-checkbox" type="checkbox" name="psar_complete" data-table-name="expedition_members" title="PSAR form complete?">
+													<span class="checkmark data-input-checkmark"></span>
+												</label>
+												<label class="field-label checkbox-label" for="input-psar_complete">PSAR</label>
+											</div>
 										</div>
 										<div class="member-card-header-chevron-container col-2 pr-0">
 											<button class="change-expedition-button icon-button show-on-parent-hover" title="Move to different expedition">
@@ -359,14 +361,7 @@ class ClimberDBExpeditions extends ClimberDB {
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 													</div>
-													<div class="field-container-row">
-														<!--<div class="field-container col-sm-6">
-															<input id="input-highest_elevation_ft" class="input-field" name="highest_elevation_ft" data-table-name="expedition_members" data-table-id="" placeholder="Highest Elevation (ft)" title="Highest Elevation in feet" type="number" autocomplete="off">
-															<span class="required-indicator">*</span>
-															<label class="field-label" for="input-highest_elevation_ft">Highest Elevation (ft)</label>
-															<span class="null-input-indicator">&lt; null &gt;</span>
-														</div>-->	
-
+													<div class="field-container-row">	
 														<div class="field-container col-sm-6">
 															<select id="input-frostbite_severity" class="input-field default" name="frostbite_severity_code" data-table-name="expedition_members" placeholder="Frostbite severity" title="Frostbite severity"></select>
 															<label class="field-label" for="input-frostbite_severity_code">Frostbite severity</label>
@@ -517,7 +512,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							<div id="routes-accordion" class="accordion" data-table-name="expedition_member_routes" data-item-display-name="expedition route">
 								<div id="cloneable-card-routes" class="card expedition-card cloneable hidden" >
 									<div class="card-header" id="cardHeader-routes-cloneable">
-										<div class="col-2 d-flex">
+										<div class="col-3 pr-0 d-flex">
 											<select id="mountain-code-header-input" class="input-field card-link-label route-code-header-input mountain-code-header-input expedition-member-card-link-label" name="mountain_code">
 												<option value="">Select mountain</option>
 											</select>
@@ -544,8 +539,8 @@ class ClimberDBExpeditions extends ClimberDB {
 											<div class="data-list-item data-list-item-header">
 												<label class="data-list-col data-list-header-label col-4"></label>
 												<label class="data-list-col data-list-header-label col-2 text-center">Summited?</label>
-												<label class="data-list-col data-list-header-label col-2 text-center">Summit date</label>
-												<label class="data-list-col data-list-header-label col-3">Highest elevation (ft)</label>
+												<label class="data-list-col data-list-header-label col-3 text-center">Summit date</label>
+												<label class="data-list-col data-list-header-label col-2">Highest elevation (ft)</label>
 												<label class="data-list-col data-list-header-label col-1"></label>
 											</div>
 											<ul id="route-member-list" class="data-list route-member-list">
@@ -562,13 +557,13 @@ class ClimberDBExpeditions extends ClimberDB {
 															<span class="checkmark data-input-checkmark"></span>
 														</label>
 													</div>
-													<div class="col-2">
+													<div class="col-3">
 														<div class="field-container collapse">
 															<input id="input-summit_date" class="input-field text-center" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
 														</div>
 													</div>
-													<div class="col-3">
-														<div class="field-container pr-5">
+													<div class="col-2">
+														<div class="field-container ">
 															<input id="input-highest_elevation" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest elevation in feet"> 
 														</div>
 													</div>
@@ -1368,8 +1363,8 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 		// ------ Climber form stuff ------
-		const $climberFormModal = $('#add-climber-form-modal-container')//$('<div id="add-climber-form-modal-container" class="climber-form-modal-container uneditable hidden" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>')
-			.appendTo('body');
+		//$('<div id="add-climber-form-modal-container" class="climber-form-modal-container uneditable hidden" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>')
+		const $climberFormModal = $('#add-climber-form-modal-container').appendTo('body');
 		this.climberForm = new ClimberForm(this, $climberFormModal);
 		this.climberForm.lastSearchQuery = (new Date()).getTime();
 
@@ -1378,22 +1373,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.onAddExpeditionMemberButtonClick();
 		});
 
-		$('#climber-form-modal-close-button').click(e => {
-			$climberFormModal.ariaHide(true);
-			this.climberForm.$el.removeClass('climberdb-modal');
-			
-			// Make the form blank so tha when the user opens it again, 
-			//	it's reset to it's original state
-			$('#modal-climber-search-bar').val('');
-			$('.modal-climber-select-container').collapse('hide')
-				.find('select > option:not([value=""])')
-					.remove();
-			$('#result-details-header-title').text('');
-			$('.result-details-summary-container').collapse('hide')
-
-			$('.result-details-header-badge').ariaHide(true);
-
-			$('#edit-climber-info-button').collapse('hide');
+		$('.close-modal-button').off('click');
+		$('#climber-form-modal-close-button, .close-modal-button').click(e => {
+			this.onCloseClimberFormModalClick(e)
 		})
 
 		// query climbers to fill select
@@ -1432,39 +1414,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#modal-climber-select').change(e => {
-			// Clear climber info regardless of selected climber ID value
-			this.climberForm.selectedClimberInfo = {};
-			
-			const $select = $(e.target);
-			const climberID = $select.val();
-			const climberIsSelected = climberID !== '';
-			$select.toggleClass('default', climberIsSelected);
-			if (!climberIsSelected) return;	
-			
-			const collapseCommand = climberIsSelected ? 'show' : 'hide';
-			$('#modal-save-to-expedition-button').collapse(collapseCommand);
-			$('.climber-form .result-details-summary-container.collapse').collapse(collapseCommand);
-
-			// Hide all badges
-			$('.result-details-header-badge').ariaHide(true);
-			
-			this.queryDB(`SELECT * FROM climber_info_view WHERE id=${parseInt(climberID)}`)
-				.done(queryResultString => {
-					const result = $.parseJSON(queryResultString);
-					if (this.queryReturnedError(queryResultString)) {
-						showModal(`An error occurred while retreiving climbering info: ${queryResultString}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
-					} else {
-						if (result.length) {
-							this.climberForm.fillClimberForm(climberID, result[0]);	
-							$('#edit-climber-info-button').attr('href', 'climbers.html?edit=true&id=' + climberID)
-								.collapse('show');
-						} else {
-							console.log('No climber found with ID ' + ClimberID);
-						}
-					}
-				})
-			
-
+			this.onModalClimberSelectChange(e);
 		});
 
 		$('#modal-save-to-expedition-button').click(e => {
@@ -2119,6 +2069,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// routes
 		for (const el of $('#routes-accordion .card:not(.cloneable) .input-field.dirty')) {
 			const $listItem = $(el).closest('.data-list-item')
+			// TODO: don't get route code from input because it might have changed (and therefore it wouldn't match in-memory data). Store the in-memory value in the card's data
 			const routeCode = $listItem.find('.input-field[name=route_code]').val();
 			const memberID = $listItem.data('expedition-member-id');
 			const routeMemberInfo = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID];
@@ -2707,6 +2658,28 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*
+	Event handler for a .close button on the modal climber form
+	*/
+	onCloseClimberFormModalClick(e) {
+		const $climberFormModal = $('#add-climber-form-modal-container')
+			.ariaHide(true);
+		this.climberForm.$el.removeClass('climberdb-modal');
+		
+		// Make the form blank so tha when the user opens it again, 
+		//	it's reset to it's original state
+		$('#modal-climber-search-bar').val('');
+		$('.modal-climber-select-container').collapse('hide')
+			.find('select > option:not([value=""])')
+				.remove();
+		$('#result-details-header-title').text('');
+		$('.result-details-summary-container').collapse('hide')
+
+		$climberFormModal.find('.result-details-header-badge').ariaHide(true);
+
+		$('#edit-climber-info-button').collapse('hide');
+	}
+
+	/*
 	Helper function called by either keyup event on modal climber search bar or select refresh button
 	This allows access to the deferred result of fillClimberFormSelectOptions
 	*/
@@ -2723,6 +2696,44 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $input = $('#modal-climber-search-bar');
 		const searchString = $input.val();
 		if (searchString.length >= 3) this.refreshClimberSelectOptions(searchString);
+	}
+
+
+	/*
+	Event handler for modal form climber select
+	*/
+	onModalClimberSelectChange(e) {
+		// Clear climber info regardless of selected climber ID value
+		this.climberForm.selectedClimberInfo = {};
+		
+		const $select = $(e.target);
+		const climberID = $select.val();
+		const climberIsSelected = climberID !== '';
+		$select.toggleClass('default', climberIsSelected);
+		if (!climberIsSelected) return;	
+		
+		const collapseCommand = climberIsSelected ? 'show' : 'hide';
+		$('#modal-save-to-expedition-button').collapse(collapseCommand);
+		$('.climber-form .result-details-summary-container.collapse').collapse(collapseCommand);
+
+		// Hide all badges
+		$('.climber-form .result-details-header-badge').ariaHide(true);
+		
+		this.queryDB(`SELECT * FROM climber_info_view WHERE id=${parseInt(climberID)}`)
+			.done(queryResultString => {
+				const result = $.parseJSON(queryResultString);
+				if (this.queryReturnedError(queryResultString)) {
+					showModal(`An error occurred while retreiving climbering info: ${queryResultString}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
+				} else {
+					if (result.length) {
+						this.climberForm.fillClimberForm(climberID, result[0]);	
+						$('#edit-climber-info-button').attr('href', 'climbers.html?edit=true&id=' + climberID)
+							.collapse('show');
+					} else {
+						console.log('No climber found with ID ' + ClimberID);
+					}
+				}
+			})
 	}
 
 
@@ -2764,6 +2775,11 @@ class ClimberDBExpeditions extends ClimberDB {
 		for (const ul of $('.card:not(.cloneable) .route-member-list')) {
 			this.addRouteMember(ul, `${climberInfo.last_name}, ${climberInfo.first_name}`, climberID);
 		}
+
+		// The guide fields are hidden by default so show them if this climber is a guide
+		$memberCard.find('.input-field[name=is_guiding]')
+			.closest('.collapse')
+				.collapse(climberInfo.is_guide ? 'show' : 'hide');
 
 		$(e.target).siblings('.close-modal-button').click();
 	}
@@ -3317,6 +3333,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					const expeditionResult = $.parseJSON(expeditionInfoResult[0]);
 					const $openCards = $('.card:not(.cloneable) .card-collapse.show');
 					const openCardIDs = '#' + $openCards.map((_, el) => el.id).get().join(',#');
+
+					//TODO: re-select open tabs
 					
 					// Get expedition info
 					if (expeditionResult.length) {

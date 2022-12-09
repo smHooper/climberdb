@@ -55,6 +55,7 @@
 	height: 1.75rem;
 	padding: 0;
 	align-items: center;
+	color: #4d819b;/*#888888;*/
 }
 .dashboard-card-body {
 	justify-content: center;
@@ -70,7 +71,7 @@
 
 .climberdb-dashboard-table {
 	min-width: 300px;
-	font-size: 20px;
+	font-size: 18px;
 	/*margin-top: 30px;*/
 	max-height: 100%;
 }
@@ -184,7 +185,7 @@
 }
 .group-status-bar-text {
 	width: 60px;
-	margin-left: 15px;
+/*	margin-left: 15px;*/
 	font-size: 30px;
 	text-align: left;
 }
@@ -193,6 +194,10 @@
 	max-width: calc(100% - 90px);
 	width: 0;
 	transition: 0.4s width;
+	margin-right: 15px;
+}
+.group-status-bar.no-width {
+	margin-right: 0; /*make 0s align with left side of other bars*/
 }
 .group-status-row[data-status-code="1"] .group-status-bar {
 	background-color: #219EBC;

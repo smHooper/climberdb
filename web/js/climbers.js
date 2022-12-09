@@ -1367,7 +1367,7 @@ class ClimberDBClimbers extends ClimberDB {
 			.addClass('collapsed');
 		this.clearInputFields({parent: $climberForm, triggerChange: false});
 
-		$('.result-details-header-badge').addClass('hidden');
+		$climberForm.find('.result-details-header-badge').addClass('hidden');
 
 		//$climberForm.find('#edit-button, #delete-button').ariaHide(true);
 
