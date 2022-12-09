@@ -458,18 +458,18 @@ class ClimberDBExpeditions extends ClimberDB {
 														<ul id="transactions-list" class="data-list">
 															<li class="data-list-item show-children-on-hover cloneable hidden">
 																<div class="col-3 d-flex">
-																	<select id="input-transaction_type" class="input-field transaction-type-field dirty" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
+																	<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
 																	<span class="required-indicator">*</span>
 																</div>
 																<div class="col-2">
 																	<div class="w-100 d-flex collapse">
-																		<select id="input-payment_method" class="input-field keep-default-option default dirty" name="payment_method_code" data-table-name="transactions" placeholder="Payment method" title="Payment method" required=""></select>
+																		<select id="input-payment_method" class="input-field keep-default-option default" name="payment_method_code" data-table-name="transactions" placeholder="Payment method" title="Payment method" required=""></select>
 																		<span class="required-indicator">*</span>
 																	</div>
 																</div>
 																<div class="col col-13-percent">
 																	<span class="unit-symbol">$</span>
-																	<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field dirty" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
+																	<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
 																</div>
 																<div class="col-2 d-flex">
 																	<input id="input-transaction_date" class="input-field" type="date" name="transaction_date" data-table-name="transactions"> 
@@ -1334,6 +1334,12 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// -----------Comms ---------------
 		$('.add-comms-button').click(e => {
+			
+			if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
+				showModal('You must add at least one expedition member before you can add a communcation device.', 'Invalid Action');
+				return;
+			}
+
 			const $button = $(e.target);
 			const $ul = $($button.data('target'));
 			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item'});
@@ -3657,6 +3663,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const amount = $valueField.val();
 		const $transactionTypeField = $valueField.closest('li').find('.transaction-type-field');
 		const transactionType = parseInt($transactionTypeField.val());
+		if (!transactionType) return;
 		const isCredit = this.defaultTransactionFees[transactionType].is_credit === 't';
 		if (isCredit && amount > 0) {
 			$valueField.val(amount * -1);

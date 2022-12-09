@@ -1310,6 +1310,93 @@ when the user clicks the button*/
   width: 100%;
   border-radius: 3px;
 }
+
+
+/*########################################################
+--------- styling for standalone data tables ------------ 
+#########################################################*/
+.climberdb-data-table-wrapper table,
+.climberdb-data-table-wrapper .input-field {
+  font-size: 20px;
+}
+.climberdb-data-table-wrapper table { 
+border-collapse: separate;
+border-radius: 10px;
+border-spacing: 0px;
+}
+.climberdb-data-table td,
+.climberdb-data-table th {
+  /*border:  1px solid #f28100;*/
+  padding: 4px;
+}
+.climberdb-data-table th {
+  background-color: #6bb6b9;
+  color:  white;
+  text-align: center;
+  position: sticky;
+  top: 0;
+}
+/*Make corners round for header*/
+.climberdb-data-table th:first-of-type {
+  border-top-left-radius: 10px;
+}
+.climberdb-data-table th:last-of-type {
+  border-top-right-radius: 10px;
+}
+/*Make corners round for bottom two rows*/
+.climberdb-data-table tr:last-of-type td:first-of-type, /*when editing*/
+.climberdb-data-table tr:last-of-type td:first-of-type > span {
+  border-bottom-left-radius: 10px;
+}
+.climberdb-data-table tr:last-of-type td:nth-of-type(5),
+.climberdb-data-table tr:last-of-type td:nth-of-type(5) > span {
+  border-bottom-right-radius: 10px;
+}
+.climberdb-data-table tbody tr td:not(.no-border) {
+  padding: 2px;
+}
+.climberdb-data-table tbody tr td:first-of-type {
+  padding-left: 0;
+}
+.climberdb-data-table tbody tr td:nth-of-type(5) {
+  padding-right: 0;
+}
+
+td.no-border {
+  border: none !important;
+}
+
+.climberdb-data-table tr {
+  /*text-align: center;*/
+  height: 60px;
+}
+.climberdb-data-table tbody tr {
+  /*height: 50px;*/
+  transition: 0.25s all;
+}
+.climberdb-data-table tbody tr td:not(.no-border) > span {
+  /*background-color: rgba(33, 158, 188, 0.2);/* rgba(255, 182, 0, 0.45);*//**/
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #219ebc1c;
+  transition: 0.25s all;
+  padding: 10px 0;
+}
+.climberdb-data-table tbody tr:hover td:not(.no-border) > span {
+  background-color: #219ebc40;
+}
+.climberdb-data-table .input-field {
+  border-bottom: none;
+  border-radius: 5px;
+  height: 100%;
+}
+/*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------- styling for standalone data tables ------------ 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
+
+
 /*@keyframes collapse-sidebar-button {
   0% {
     height: 3px;
@@ -1334,6 +1421,7 @@ when the user clicks the button*/
     border-radius: 10px;
   }
 }*/
+
 
 /*--- */
 .blink {

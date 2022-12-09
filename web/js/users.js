@@ -10,8 +10,8 @@ class ClimberDBUsers extends ClimberDB {
 
 	configureMainContent() {
 		$('.main-content-wrapper').append(`
-			<div id="main-table-wrapper">
-				<table id="main-data-table">
+			<div id="main-table-wrapper" class="climberdb-data-table-wrapper">
+				<table id="main-data-table" class="climberdb-data-table">
 					<thead>
 						<tr>
 							<th>Windows Username</th>

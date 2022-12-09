@@ -6,102 +6,28 @@
 	border-right: 15px solid #adcbb4;
 }
 
-#main-table-wrapper {
+.climberdb-data-table-wrapper {
 	display: flex;
 	justify-content: center;
 	position: relative;
 	padding-top: 30px;
 }
 
-/* --------- table styling ------- */
-#main-table-wrapper table,
-#main-table-wrapper .input-field {
-	font-size: 20px;
+
+.climberdb-data-table tbody > tr:not(.uneditable) td:not(.no-border) {
+  background-color: rgba(255, 182, 0, 0.65);
 }
-/* ******* fine tune this   */
-#main-table-wrapper table { 
+.climberdb-data-table tbody > tr:not(.uneditable) td:not(.no-border) > span{
+  background-color: transparent;
+}
+.climberdb-data-table-wrapper table { 
 border-collapse: separate;
 border-radius: 10px;
 border-spacing: 0px;
 transform: translateX(105px); /*offset for the usually hidden edit buttons*/
 }
-#main-table-wrapper td,
-#main-table-wrapper th {
-	/*border:  1px solid #f28100;*/
-	padding: 4px;
-}
-#main-table-wrapper th {
-	background-color: #6bb6b9;
-	color:  white;
-	text-align: center;
-	position: sticky;
-	top: 0;
-}
-/*Make corners round for header*/
-#main-table-wrapper th:first-of-type {
-  border-top-left-radius: 10px;
-}
-#main-table-wrapper th:last-of-type {
-  border-top-right-radius: 10px;
-}
-/*Make corners round for bottom two rows*/
-#main-table-wrapper tr:last-of-type td:first-of-type, /*when editing*/
-#main-table-wrapper tr:last-of-type td:first-of-type > span {
-  border-bottom-left-radius: 10px;
-}
-#main-table-wrapper tr:last-of-type td:nth-of-type(5),
-#main-table-wrapper tr:last-of-type td:nth-of-type(5) > span {
-  border-bottom-right-radius: 10px;
-}
-#main-table-wrapper tbody tr td:not(.no-border) {
-	padding: 2px;
-}
-#main-table-wrapper tbody tr td:first-of-type {
-	padding-left: 0;
-}
-#main-table-wrapper tbody tr td:nth-of-type(5) {
-	padding-right: 0;
-}
-
-td.no-border {
-	border: none !important;
-}
-
-#main-table-wrapper tr {
-	/*text-align: center;*/
-	height: 60px;
-}
-#main-table-wrapper tbody tr {
-	/*height: 50px;*/
-	transition: 0.25s all;
-}
-#main-table-wrapper tbody tr td:not(.no-border) > span {
-	/*background-color: rgba(33, 158, 188, 0.2);/* rgba(255, 182, 0, 0.45);*//**/
-	height: 60px;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	background-color: #219ebc1c;
-	transition: 0.25s all;
-	padding: 10px 0;
-}
-#main-table-wrapper tbody tr:hover td:not(.no-border) > span {
-	background-color: #219ebc40;
-}
-
-#main-table-wrapper tbody > tr:not(.uneditable) td:not(.no-border) {
-	background-color: rgba(255, 182, 0, 0.65);
-}
-#main-table-wrapper tbody > tr:not(.uneditable) td:not(.no-border) > span{
-	background-color: transparent;
-}
 
 /*----- input field -------*/
-.input-field {
-	border-bottom: none;
-	border-radius: 5px;
-	height: 100%;
-}
 .input-field:focus, /*override default styling*/
 .input-field:hover {
 	border-bottom: none;
@@ -129,7 +55,7 @@ tr.inactive .input-field {
 }
 /*^^^^^^^ input filed ^^^^^^^^^*/
 
-#main-table-wrapper tr:hover .edit-button,
+.climberdb-data-table tr:hover .edit-button,
 .edit-button:focus {/* add focus for tabbing*/
 	opacity: 1;
 	pointer-events: all;

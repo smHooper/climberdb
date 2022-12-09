@@ -222,12 +222,14 @@ CREATE DOMAIN config_data_type AS VARCHAR(25) CHECK (
         'string',
         'integer',
         'float',
-        'boolean'
+        'boolean',
+        'money'
     )
 );
 CREATE TABLE IF NOT EXISTS config (
 	id SERIAL PRIMARY KEY,
 	property VARCHAR(50) UNIQUE,
+	display_name VARCHAR(255) UNIQUE,
 	data_type config_data_type,
 	value VARCHAR(255)
 );
