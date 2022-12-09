@@ -612,7 +612,7 @@ class ClimberDBDashboard extends ClimberDB {
 					expedition_id, 
 					count(id) AS missing_sup
 				FROM expedition_members 
-				WHERE NOT application_complete
+				WHERE NOT application_complete AND reservation_status_code <> 6
 				GROUP BY expedition_id
 			) sup ON expeditions.id=sup.expedition_id 
 			LEFT JOIN (
