@@ -507,7 +507,7 @@ CREATE VIEW breifings_expedition_info_view AS
            GROUP BY expedition_members.expedition_id) gb
       LEFT JOIN briefings ON gb.expedition_id = briefings.expedition_id
       JOIN expeditions ON expeditions.id = gb.expedition_id
-   WHERE EXTRACT(year FROM now()) = EXTRACT(year FROM expeditions.planned_departure_date);
+   WHERE EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions.planned_departure_date);
 
 
 CREATE MATERIALIZED VIEW table_info_matview AS 

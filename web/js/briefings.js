@@ -585,6 +585,8 @@ class ClimberDBBriefings extends ClimberDB {
 			}
 		}
 
+		//TODO: changing ranger of existing briefing fails with PG error
+
 		// Add last modified fields
 		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
 		fields = fields.concat(['last_modified_time', 'last_modified_by']);
@@ -768,6 +770,8 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	deleteBriefing(briefingID) {
+		//TODO: handle deleting breifing that was created in this session
+
 		// send delete query
 		this.queryDB(`DELETE FROM briefings WHERE id=${briefingID} RETURNING id, briefing_start::date AS briefing_date`)
 			.done(queryResultString => {
@@ -1289,7 +1293,7 @@ class ClimberDBBriefings extends ClimberDB {
 	queryBriefings(year=(new Date()).getFullYear()) {
 		const sql = `
 			SELECT * FROM briefings_view 
-			WHERE extract(year FROM briefing_start)=${year}
+			WHERE extract(year FROM briefing_start) >= ${year}
 		`;
 
 		return this.queryDB(sql)
@@ -1371,7 +1375,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	getExpeditionInfo(year=(new Date().getFullYear())) {
-		const sql = `SELECT * FROM briefings_expedition_info_view WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year + 1}-1-1' ORDER BY expedition_name`;
+		const sql = `SELECT * FROM briefings_expedition_info_view WHERE planned_departure_date > '${year}-1-1' ORDER BY expedition_name`;
 		return this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
