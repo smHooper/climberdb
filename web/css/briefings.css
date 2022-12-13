@@ -138,6 +138,7 @@ label {
 	display: flex;
 	overflow-y: auto;
 	padding-top: 10px;
+	scroll-behavior: smooth;
 }
 .time-label-container {
 	height: 100%;
@@ -166,6 +167,9 @@ label {
 	height: 30px;
 	color: unset;
 	padding: 0;
+	position: relative;
+	cursor: pointer;
+/*	z-index: 3;*/
 }
 .schedule-background .half-hour-block:nth-child(odd) {
 	border-top: 1px solid rgb(185,185,185);
@@ -183,6 +187,7 @@ label {
 	grid-template-columns: repeat(5, 1fr);
 	grid-template-rows: repeat(22, 40px); /*this should maybe be set at runtime based on open/close time user setting*/
 	grid-auto-columns: 1fr;
+	pointer-events: none;
 }
 .briefing-appointment-container {
 	position: relative;
@@ -195,6 +200,7 @@ label {
 	cursor: pointer;
 	padding: 10px;
 	transition: all 0.3s;
+	pointer-events: all;
 }
 .briefing-appointment-container.selected {
 	z-index: 100;

@@ -338,7 +338,9 @@ class ClimberDBBriefings extends ClimberDB {
 		$('button.half-hour-block:not(:last-child)')
 			.hover(e => {this.onTimeSlotHover(e)}, e => {this.onTimeSlotLostHover(e)})
 			.click(e => {this.onTimeSlotClick(e)});
-
+		$('.schedule-background .half-hour-block')
+			.hover(e => {this.onScheduleHover(e)}, e => {this.onScheduleLostHover(e)})
+			.click(e => {this.onScheduleSlotClick(e)})
 
 		// bind click events to any .briefing-appointment-containers that might be clicked
 		$(document).on('click', '.briefing-appointment-container', e => {
@@ -521,6 +523,10 @@ class ClimberDBBriefings extends ClimberDB {
 		}
 
 		$('.appointment-details-drawer').addClass('show');
+
+		// Scroll to the selected container, but delay for a half second so that the 
+		//	.show transition can start first
+		setTimeout(() => {$container[0].scrollIntoView()}, 50);
 
 		// clear data-current-value properties
 		for (const input of $('.input-field')) {
@@ -1197,6 +1203,24 @@ class ClimberDBBriefings extends ClimberDB {
 		$(`.potential-appointment-container[data-time="${time}"]`).remove();
 	}
 
+	/*
+	When the user hovers over the schedule, call event handlers for time slot buttons
+	*/
+	onScheduleHover(e) {
+		const $target = $(e.target);
+		if ($target.closest('.briefing-appointment-container').length) return;
+
+		const $scheduleSlot = $target.closest('.half-hour-block');
+		const timeIndex = $scheduleSlot.index();
+		this.onTimeSlotHover({target: $('.time-label-container').children().eq(timeIndex)})
+
+	}
+
+	onScheduleLostHover(e) {
+		const time = $(e.target).data('time');
+		$(`.potential-appointment-container[data-time="${time}"]`).remove();
+	}
+
 
 	onTimeSlotClick(e) {
 		const [timeIndex, time, nAppointmenTimes] = this.getTimeSlotEventInfo(e);
@@ -1242,6 +1266,12 @@ class ClimberDBBriefings extends ClimberDB {
 
 	}
 
+
+	onScheduleSlotClick(e) {
+		const $scheduleSlot = $(e.target);
+		const index = $scheduleSlot.index();
+		this.onTimeSlotClick({target: $('button.half-hour-block').eq(index)})
+	}
 
 	toggleBriefingCalendarCellEntries($cell) {
 		// Check if there are too many briefings to show in the cell without scrolling 
