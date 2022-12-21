@@ -783,43 +783,56 @@ class ClimberDBBriefings extends ClimberDB {
 	}
 
 
+	/*
+	Helper function to remove a briefing from the sidebar schedule UI
+	*/
+	removeBriefingFromSchedule(briefingID, {briefingDate=''}={}) {
+		// remove from daily detail sidebar schedule
+		$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`)
+			.fadeRemove();
+
+		// remove briefing from calendar
+		$(`.briefing-calendar-entry[data-briefing-id=${briefingID}]`)
+			.remove();
+		if (!briefingDate) briefingDate = $('.calendar-cell.selected').data('date');
+		this.toggleBriefingCalendarCellEntries($(`.calendar-cell[data-date="${briefingDate}"]`));
+
+		// Hide appointment details
+		this.closeAppointmentDetailsDrawer();
+	}
+
+
 	deleteBriefing(briefingID) {
 		//TODO: handle deleting breifing that was created in this session
 
-		// send delete query
-		this.queryDB(`DELETE FROM briefings WHERE id=${briefingID} RETURNING id, briefing_start::date AS briefing_date`)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An error occurred while deleting the briefing: ${queryResultString}. Try again and if this problem persists, contact IT for assistance.`, 'Unexpected Error')
-				} else {
-					const result = $.parseJSON(queryResultString);
-					// empty edits
-					this.edits = {};
+		if ($('.new-briefing').length) {
+			this.removeBriefingFromSchedule(briefingID);
+		}
+		else {
+			// send delete query
+			this.queryDB(`DELETE FROM briefings WHERE id=${briefingID} RETURNING id, briefing_start::date AS briefing_date`)
+				.done(queryResultString => {
+					if (this.queryReturnedError(queryResultString)) {
+						showModal(`An error occurred while deleting the briefing: ${queryResultString}. Try again and if this problem persists, contact IT for assistance.`, 'Unexpected Error')
+					} else {
+						const result = $.parseJSON(queryResultString);
+						// empty edits
+						this.edits = {};
 
-					// add expedition to unscheduled list
-					const briefingInfo = this.getBriefingInfo(briefingID);
-					this.expeditionInfo.unscheduled.push(briefingInfo.expedition_id);
-					
-					// remove briefing from info
-					const briefingDate = result[0].briefing_date;
-					delete this.briefings[briefingDate][briefingID];
+						// add expedition to unscheduled list
+						const briefingInfo = this.getBriefingInfo(briefingID);
+						this.expeditionInfo.unscheduled.push(briefingInfo.expedition_id);
+						
+						// remove briefing from info
+						const briefingDate = result[0].briefing_date;
+						delete this.briefings[briefingDate][briefingID];
 
-					// remove from daily detail sidebar schedule
-					$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`)
-						.fadeRemove();
-
-					// remove briefing from calendar
-					$(`.briefing-calendar-entry[data-briefing-id=${briefingID}]`)
-						.remove();
-					this.toggleBriefingCalendarCellEntries($(`.calendar-cell[data-date="${briefingDate}"]`));
-
-					// Hide appointment details
-					this.closeAppointmentDetailsDrawer();
-				}
-			}).fail((xhr, status, error) => {
-				console.log('Delete failed because ' + error)
-			}).always(() => {hideLoadingIndicator()});
-
+						this.removeBriefingFromSchedule(briefingID, {briefingDate: briefingDate});
+					}
+				}).fail((xhr, status, error) => {
+					console.log('Delete failed because ' + error)
+				}).always(() => {hideLoadingIndicator()});
+		}
 	}
 
 
