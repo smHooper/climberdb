@@ -647,6 +647,8 @@ class ClimberDBBriefings extends ClimberDB {
 				info.expedition_name = this.expeditionInfo.expeditions[info.expedition_id].expedition_name;
 				info.n_members = this.expeditionInfo.expeditions[info.expedition_id].n_members;
 				info.id = briefingID;
+
+				this.briefings[briefingDate][briefingID] = {...info};
 				
 				const rangerID = info.briefing_ranger_user_id;
 				if (rangerID) {
@@ -662,6 +664,12 @@ class ClimberDBBriefings extends ClimberDB {
 
 					// Add to the calendar cell
 					this.addBriefingToCalendarCell($('.calendar-cell.selected'), info);
+
+					this.onExpeditionChange();
+					this.onBriefingTimeChange($('#input-briefing_start_time'));
+					this.onBriefingTimeChange($('#input-briefing_end_time'));
+					this.onBriefingRangerChange();
+
 				}
 
 				$('.input-field.dirty').removeClass('dirty');
