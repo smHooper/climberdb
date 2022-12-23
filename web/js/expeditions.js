@@ -1138,60 +1138,11 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// When new route card is added, make sure it has all of the (not canceled) expedition members
 		$('#routes-data-container .add-card-button').click(e => {
-
-			if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
-				showModal('You must add at least one expedition member before you can add a route.', 'Invalid Action');
-				return;
-			}
-
-			const $newCard = this.addNewCard($($(e.target).data('target')), {accordionName: 'routes', newCardClass: 'new-card'});
-			
-			// Use the UI to rather than in-memory data to add all active expedition members because
-			//	a new card would be in the in-memory data
-			const $list = $newCard.find('.route-member-list');
-			for (const el of $('#expedition-members-accordion > .card:not(.cloneable)')) {
-				const $memberCard = $(el);
-				// if this expedition member isn't canceled, add a new row
-				if ($memberCard.find('.input-field[name="reservation_status_code"]').val() != 6) {
-					const $listItem = this.addNewListItem($list)
-						.attr('data-climber-id', $memberCard.data('climber-id'))
-						.data('parent-table-id', $memberCard.data('table-id'));
-					$listItem.find('.name-label').text($memberCard.find('.expedition-member-card-link-label').text());
-				}
-			}
+			this.onAddRouteButtonClick(e)
 		});
 
 		$(document).on('change', '.route-code-header-input', e => {
-			const $target = $(e.target);
-			var $select; 
-			if ($target.attr('name') === 'mountain_code') {
-				// Set the route code select options
-				const mountainCode = $target.val();
-				const $routeHeaderSelect = $target.siblings('.route-code-header-input')
-					.empty();//remove all options
-				const mountainRoutes = Object.values(this.routeCodes)
-					.filter(r => r.mountain_code == mountainCode)
-					.sort((a, b) => a.sort_order - b.sort_order);
-				for (const route of mountainRoutes) {
-					$routeHeaderSelect.append($(`<option value="${route.code}">${route.name}</option>`))
-				}
-				// Just set to the first one
-				$routeHeaderSelect.val(mountainRoutes[0].code).change();
-			} else {
-				// Set the hidden route code and route order inputs in the card (which are the actual inputs tied to DB values)
-				const routeCode = $target.val();
-				const $card = $target.closest('.card');
-				$card.find('.data-list-item:not(.cloneable) .input-field:not(.route-code-header-input)[name="route_code"]')
-						.val(routeCode)
-						.change();
-				if ($card.is('.new-card')) {
-					$card.find('.data-list-item:not(.cloneable) .input-field:not(.route-code-header-input)[name="route_order"]')
-							.val($card.index() - 1) // -1 because .cloneable card is 0th
-							.change();
-				}
-			}
-			// Remove default placeholder option
-			$target.find('option[value=""]').remove();
+			this.onRouteCardHeaderInputChange(e)
 		});
 
 		$(document).on('click', '.add-expedition-route-member-button', e => {
@@ -2067,13 +2018,30 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		// routes
-		for (const el of $('#routes-accordion .card:not(.cloneable) .input-field.dirty')) {
-			const $listItem = $(el).closest('.data-list-item')
-			// TODO: don't get route code from input because it might have changed (and therefore it wouldn't match in-memory data). Store the in-memory value in the card's data
-			const routeCode = $listItem.find('.input-field[name=route_code]').val();
-			const memberID = $listItem.data('expedition-member-id');
-			const routeMemberInfo = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID];
-			this.setInputFieldValue(el, routeMemberInfo);
+		const memberRoutes = this.expeditionInfo.expedition_member_routes;
+		for (const card of $('#routes-accordion .card:not(.cloneable)')) {
+			const $card = $(card);
+			// get the route code from the card's data because if the user has changed the route, the input value won't match the in-memory route code
+			const routeCode = $card.data('route-code');//memberRoutes.order[$card.index() - 1]
+			const mountainCode = this.routeCodes[routeCode].mountain_code;
+			
+			// Manually revert mountain and route code fields
+			const $mountainCodeInput = $card.find('.input-field[name=mountain_code]')
+			if (mountainCode != $mountainCodeInput.val()) {
+				// don't use .change event so that this runs synchronously
+				$mountainCodeInput.val(mountainCode).removeClass('dirty');
+				this.onRouteCardHeaderInputChange({target: $mountainCodeInput});
+			}
+			$card.find('.input-field[name=route_code]').val(routeCode);
+
+			// Reset all other input field values using in-memory data
+			for (const el of  $card.find('.input-field.dirty')) {
+				const $listItem = $(el).closest('.data-list-item')
+				//const routeCode = $listItem.find('.input-field[name=route_code]').val();
+				const memberID = $listItem.data('expedition-member-id');
+				const routeMemberInfo = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID];
+				this.setInputFieldValue(el, routeMemberInfo);
+			}
 		}
 
 		//cmcs
@@ -3158,7 +3126,10 @@ class ClimberDBExpeditions extends ClimberDB {
 				{
 					accordionName: 'routes'
 				}
-			);
+			)
+			// store the in-memory route code in the card's data because if the user changes the route and then tries to discard the edits, the input value of the route code and the in-meemory data won't match
+			.data('route-code', routeCode);
+
 			const $mountainCodeInput = $newCard.find('.mountain-code-header-input')
 				.val(mountainCode)
 				.removeClass('default')//set in addNewCard()
@@ -3717,6 +3688,66 @@ class ClimberDBExpeditions extends ClimberDB {
 			`
 			showModal(message, 'Permanently Delete Transaction?', 'confirm', footerButtons);
 		}
+	}
+
+
+	onAddRouteButtonClick(e) {
+		if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
+			showModal('You must add at least one expedition member before you can add a route.', 'Invalid Action');
+			return;
+		}
+
+		const $newCard = this.addNewCard($($(e.target).data('target')), {accordionName: 'routes', newCardClass: 'new-card'});
+		
+		// Use the UI to rather than in-memory data to add all active expedition members because
+		//	a new card wouldn't be in the in-memory data
+		const $list = $newCard.find('.route-member-list');
+		for (const el of $('#expedition-members-accordion > .card:not(.cloneable)')) {
+			const $memberCard = $(el);
+			// if this expedition member isn't canceled, add a new row
+			if ($memberCard.find('.input-field[name="reservation_status_code"]').val() != 6) {
+				const expeditionMemberID = $memberCard.data('table-id');
+				const $listItem = this.addNewListItem($list)
+					.attr('data-climber-id', $memberCard.data('climber-id'))
+					.data('parent-table-id', expeditionMemberID)
+					.data('expedition-member-id', expeditionMemberID);
+				$listItem.find('.name-label').text($memberCard.find('.expedition-member-card-link-label').text());
+			}
+		}
+	}
+
+
+	onRouteCardHeaderInputChange(e) {
+		const $target = $(e.target);
+		var $select; 
+		if ($target.attr('name') === 'mountain_code') {
+			// Set the route code select options
+			const mountainCode = $target.val();
+			const $routeHeaderSelect = $target.closest('.card-header').find('.input-field[name=route_code]')
+				.empty();//remove all options
+			const mountainRoutes = Object.values(this.routeCodes)
+				.filter(r => r.mountain_code == mountainCode)
+				.sort((a, b) => a.sort_order - b.sort_order);
+			for (const route of mountainRoutes) {
+				$routeHeaderSelect.append($(`<option value="${route.code}">${route.name}</option>`))
+			}
+			// Just set to the first one
+			$routeHeaderSelect.val(mountainRoutes[0].code).change();
+		} else {
+			// Set the hidden route code and route order inputs in the card (which are the actual inputs tied to DB values)
+			const routeCode = $target.val();
+			const $card = $target.closest('.card');
+			$card.find('.data-list-item:not(.cloneable) .input-field:not(.route-code-header-input)[name="route_code"]')
+					.val(routeCode)
+					.change();
+			if ($card.is('.new-card')) {
+				$card.find('.data-list-item:not(.cloneable) .input-field:not(.route-code-header-input)[name="route_order"]')
+						.val($card.index() - 1) // -1 because .cloneable card is 0th
+						.change();
+			}
+		}
+		// Remove default placeholder option
+		$target.find('option[value=""]').remove();
 	}
 
 
