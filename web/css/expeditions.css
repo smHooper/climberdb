@@ -24,7 +24,7 @@
 	/*width: 100%;*/
 }
 .fuzzy-search-bar.default,
-.climber-form .fuzzy-search-bar::placeholder {
+.fuzzy-search-bar::placeholder {
 	color: #5d7785;
 }
 .fuzzy-search-bar > option {

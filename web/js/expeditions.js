@@ -2885,7 +2885,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	Helper function to clear UI for creating a new expedition. Mostly necessary to ask user 
 	to save edits if there are any and for after a successful expedition delete
 	*/
-	createNewExpedition() {
+	createNewExpedition({triggerChange=true}={}) {
 		// Reset the search bar value to the default 
 		const $searchBar = $('#expedition-search-bar').val('');
 		// var $defaultOption = $searchBar.find('option[value=""]'); 
@@ -2904,7 +2904,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.toggleEditing(true);
 
 		// Clear fields and data
-		this.clearExpeditionInfo({triggerChange: true});
+		this.clearExpeditionInfo({triggerChange: triggerChange});
 
 		// Set header values
 		$('#expedition-entered-by-result-summary-item .result-details-summary-value')
@@ -3961,9 +3961,11 @@ class ClimberDBExpeditions extends ClimberDB {
 					});
 					window.history.replaceState({id: params.id, historyIndex: 0}, '', window.location.href);
 					$('#expedition-search-bar').data('current-value', params.id);
+				} else {
+					this.createNewExpedition({triggerChange: false});
 				}
 			} else {
-
+				this.createNewExpedition({triggerChange: false});
 			}
 			$('.select2-no-tag').select2({
 				width: '100%'
