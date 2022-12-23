@@ -544,10 +544,24 @@ class ClimberForm {
 		let dbID = $input.data('table-id');
 
 		const editObject = this.edits.updates; // get reference for shorthand
-		if (!(tableName in editObject)) editObject[tableName] = {};
-		if (!(dbID in editObject[tableName])) editObject[tableName][dbID] = {};
-		editObject[tableName][dbID][fieldName] = this.getInputFieldValue($input);
-
+		const dbValue = this.selectedClimberInfo[tableName][dbID][fieldName];
+		// If the input value matches the DB value, remove the edit and the .dirty class
+		if (dbValue == $input.val()) {
+			$input.removeClass('dirty');
+			if (editObject[tableName]) {
+				if (editObject[tableName][dbID]) {
+					if (editObject[tableName][dbID][fieldName]) {
+						delete editObject[tableName][dbID][fieldName];
+					}
+				}
+			}
+		} 
+		// Otherwise record the update in as an edit
+		else {
+			if (!(tableName in editObject)) editObject[tableName] = {};
+			if (!(dbID in editObject[tableName])) editObject[tableName][dbID] = {};
+			editObject[tableName][dbID][fieldName] = this.getInputFieldValue($input);
+		}
 	}
 
 
@@ -1004,16 +1018,20 @@ class ClimberForm {
 			for (const id in updates[tableName]) {
 				let parameters = hasLastModifiedBy ? [now, userName] : [];
 				let parametized = hasLastModifiedBy ? ['last_modified_time=$1', 'last_modified_by=$2'] : [];
+				let hasUpdates = false;
 				for (const fieldName in updates[tableName][id]) {
 					const value = updates[tableName][id][fieldName];
 					parameters.push(value);
 					parametized.push(`${fieldName}=$${parametized.length + 1}`);
 
 					if (fieldName in climberInfo) climberInfo[fieldName] = value;
+					hasUpdates = true;
 				}
 				
-				sqlStatements.push(`UPDATE ${tableName} SET ${parametized.join(', ')} WHERE id=${id} RETURNING id`);
-				sqlParameters.push(parameters);
+				if (hasUpdates) {
+					sqlStatements.push(`UPDATE ${tableName} SET ${parametized.join(', ')} WHERE id=${id} RETURNING id`);
+					sqlParameters.push(parameters);
+				}
 			}
 		}
 
@@ -1047,21 +1065,28 @@ class ClimberForm {
 
 					// Set the card's class and inputs' attributes so it changes will register as updates
 					const {container, tableName} = inserts[i];
-					$(container)
-						.removeClass('new-card')
+					const $container = $(container)
+						.removeClass('new-card');
+					$container
 						.find('.input-field')
 							.data('table-name', tableName)
 							.data('table-id', id);
+					if (!(tableName in this.selectedClimberInfo)) this.selectedClimberInfo[tableName] = {};
+					this.selectedClimberInfo[tableName][id] = {};
+					for (const el of $container.find('.input-field')) {
+						this.selectedClimberInfo[tableName][id][el.name] = el.value;
+					}
 				}
 
 				// Make sure the .selectedClimberInfo is updated
-				/*for (const tableName in updates) {
-					for (const dbID in updates[tableName]) {
-						for (const fieldName in updates[tableName][dbID]) {
-							this.selectedClimberInfo[tableName][dbID][fieldName] = updates[tableName][dbID][fieldName];
+				for (const tableName in updates) {
+					for (const id in updates[tableName]) {
+						for (const fieldName in updates[tableName][id]) {
+							this.selectedClimberInfo[tableName][id][fieldName] = updates[tableName][id][fieldName];
 						}
 					}
-				}*/
+				}
+
 
 				$('.climber-form .input-field.dirty').removeClass('dirty');
 			}
