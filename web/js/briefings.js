@@ -567,6 +567,12 @@ class ClimberDBBriefings extends ClimberDB {
 	saveEdits() {
 		showLoadingIndicator('saveEdits');
 
+		if (!$('.appointment-details-drawer .input-field.dirty').length) {
+			showModal('You have not made any edits to save yet.', 'No edits to save');
+			hideLoadingIndicator();
+			return;
+		}
+
 		for (const el of $('.input-field:required')) {
 			if (el.value === '') {
 				const $input = $(el);
@@ -590,8 +596,6 @@ class ClimberDBBriefings extends ClimberDB {
 				values.push(el.value);
 			}
 		}
-
-		//TODO: changing ranger of existing briefing fails with PG error
 
 		// Add last modified fields
 		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
@@ -803,13 +807,12 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	deleteBriefing(briefingID) {
-		//TODO: handle deleting breifing that was created in this session
-
+		// if this is a new briefing, just remove it from the UI
 		if ($('.new-briefing').length) {
 			this.removeBriefingFromSchedule(briefingID);
 		}
+		// Otherwise, delete it from the DB
 		else {
-			// send delete query
 			this.queryDB(`DELETE FROM briefings WHERE id=${briefingID} RETURNING id, briefing_start::date AS briefing_date`)
 				.done(queryResultString => {
 					if (this.queryReturnedError(queryResultString)) {
@@ -877,8 +880,25 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	onInputChange(e) {
 		const input = e.target;
-		this.edits[input.name] = input.value;
-		$(input).addClass('dirty');
+		const fieldName = input.name;
+		const inputValue = input.value;
+		this.edits[fieldName] = inputValue;
+		const $input = $(input);
+		$input.addClass('dirty');
+		
+		// If this is a new briefing, there's no in-memory data to compare to
+		const $selectedAppointment = $('.briefing-appointment-container.selected');
+		if ($selectedAppointment.is('.new-briefing')) return;
+
+		// Check if the in-memory data matches the input value. If so, remove .dirty class
+		const dateString = $('.calendar-cell.selected').data('date');
+		const briefingID = $selectedAppointment.data('briefing-id');
+		const dbValue = this.briefings[dateString][briefingID][fieldName];
+		if (inputValue == dbValue) {
+			$input.removeClass('dirty');
+			delete this.edits[fieldName];
+		}
+		
 	}
 
 
@@ -1015,14 +1035,14 @@ class ClimberDBBriefings extends ClimberDB {
 			info = briefings[briefingID];
 		}
 
+		const $input = $('#input-expedition');
 		if (!this.checkRangerAvailability(briefingID, startTime, endTime, {rangerID: rangerID})) {
-			this.revertInputValue($target, {briefingInfo: info});
+			this.revertInputValue($input, {briefingInfo: info});
 			return;
 		}
 
 		// Set the appointment container text
 		// 	expedition name header
-		const $input = $('#input-expedition');
 		const expeditionID = $input.val();
 		const expeditionName = $(`#input-expedition option[value="${expeditionID}"]`).text();
 		$selectedAppointment.find('.briefing-appointment-header').text(expeditionName);
