@@ -3302,10 +3302,15 @@ class ClimberDBExpeditions extends ClimberDB {
 					return;
 				} else {
 					const expeditionResult = $.parseJSON(expeditionInfoResult[0]);
+
+					// Gather IDs of open cards and tabs in case this is being reloaded after the user saves. 
+					//	Get the IDs, in particular, because .clearExpeditionInfo() wipes the cards and jQuery 
+					//	references go with them. The element IDs will be the same once the data are reloaded, 
+					//	though, so use those to re-reference the elements
 					const $openCards = $('.card:not(.cloneable) .card-collapse.show');
 					const openCardIDs = '#' + $openCards.map((_, el) => el.id).get().join(',#');
-
-					//TODO: re-select open tabs
+					const $activeTabs = $('.card:not(.cloneable) .nav-tabs .nav-link.active');
+					const activeTabIDs = '#' + $activeTabs.map((_, el) => el.id).get().join(',#');
 					
 					// Get expedition info
 					if (expeditionResult.length) {
@@ -3415,8 +3420,12 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 					
 					this.fillFieldValues(false);//don't trigger change
-					// If the data are being re-loaded after a save, show the cards that were open before
-					if (!showOnLoadWarnings && $openCards.length) $(openCardIDs).addClass('show');
+					// If the data are being re-loaded after a save, show the cards and tabs that were open before
+					if (!showOnLoadWarnings && $openCards.length) {
+						$(openCardIDs).addClass('show');
+						//$('.nav-tabs .nav-link.active').removeClass('active');
+						$(activeTabIDs).click();
+					}
 
 					// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
 					const $searchBar = $('#expedition-search-bar');
