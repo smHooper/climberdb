@@ -3018,29 +3018,30 @@ class ClimberDBExpeditions extends ClimberDB {
 			// 	.text(transactionTotal.toFixed(2));
 			this.getTransactionBalance($transactionsList);
 		} else {
+			const today = getFormattedTimestamp()
+
 			// Set deault values for new members
 			$newCard.find('.input-field[name="reservation_status_code"]')
 				.val(1)//pending
 				.change();
 			$newCard.find('.input-field[name="datetime_reserved"]')
-				.val(getFormattedTimestamp())
+				.val(today)
 				.change();
 
 			// set default tansactions (debits)
-			const now = getFormattedTimestamp(new Date(), {format: 'datetime'})
 			const $supFee = this.addNewListItem($transactionsList);
 			$supFee.find('.input-field[name=transaction_type_code]')
 				.val(10)//code for SUP fee
 				.change();
 			$supFee.find('.input-field[name=transaction_date]')
-				.val(now)
+				.val(today)
 				.change();
 			const $entranceFee = this.addNewListItem($transactionsList);
 			$entranceFee.find('.input-field[name=transaction_type_code]')
 				.val(11)//code for entrance fee
 				.change();
 			$entranceFee.find('.input-field[name=transaction_date]')
-				.val(now)
+				.val(today)
 				.change();
 
 			// If the climber is a minor, flag the expedition member
@@ -3887,7 +3888,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				(groupStatusCode === 1 || groupStatusCode === 2) && //group is not confirmed
 				(climbingFeesNotPaid || supsNotComplete || psarNotComplete)
 			) {
-			const newDepartureDate = new Date(departureDate.getTime() + (1000 * 60 * 60 * 24) * 60)
+			const newDepartureDate = new Date(departureDate.getTime() + this.millisecondsPerDay * 60)
 				.toLocaleDateString('en-US', {month: 'long', day: 'numeric'});
 			let reasons = '';
 			if (climbingFeesNotPaid) reasons += `<li>${nClimbingFeesNotPaid} climber${nClimbingFeesNotPaid > 1 ? 's have' : ' has'} not paid their climbing permit fee</li>`;
