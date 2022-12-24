@@ -763,13 +763,15 @@ textarea.input-field:valid + .required-indicator {
   overflow: hidden;
   white-space: nowrap;
   margin-bottom: 0;
-  /*padding-left: 0;*/
+  padding-left: 0;
   transform: unset;
 }
 .uneditable .input-field ~ .field-label,
 .uneditable .field-container .field-label {
 /*  font-weight: 600;*/
-  font-size: 17px;
+/*  font-size: 17px;*/
+  font-size: 20px;
+  height: 26px;
 }
 
 /* hide all required indicators*/
