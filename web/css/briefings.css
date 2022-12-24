@@ -124,10 +124,29 @@ label {
 	display: flex;
 	flex-direction: column;
 	padding: 10px 0px 0px 20px;
+	transition: max-width 0.3s ease-in;
+	right: 0;/*for .expanded*/
+}
+.briefing-details-sidebar.expanded {
+	position: absolute;
+	max-width: 50%;
+	box-shadow: 0px 2px 15px 0px rgb(0 0 0 / 30%);
+}
+/*toggle visibility of expand/contract buttons*/
+.briefing-details-sidebar:not(.expanded) .contract-briefing-details-button,
+.briefing-details-sidebar.expanded .expand-briefing-details-button {
+	opacity: 0;
+	pointer-events: none;
 }
 
+.briefing-details-sidebar-header-container {
+	display: flex;
+}
+.briefing-details-sidebar-header-container .icon-button {
+	width: 40px;
+}
 .briefing-details-sidebar-header {
-	width: 100%;
+	max-width: calc(100% - 80px);
 	text-align: center;
 	flex: 0 0 auto;
 }

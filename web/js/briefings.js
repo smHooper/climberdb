@@ -141,11 +141,11 @@ class ClimberDBBriefings extends ClimberDB {
 			<div class="calendar-container col-9">
 				<div class="calendar-header-container">
 					<div class="month-navigation-container">
-						<button class="icon-button show-previous-month-button" role="button">
+						<button class="icon-button show-previous-month-button" role="button" title="Show previous month">
 							<i class="fa fa-chevron-left"></i>
 						</button>
 						<label id="current-month-label" class="month-label" aria-live="polite" data-current-date="${getFormattedTimestamp(calendarDate)}">${this.getFormattedMonth(calendarDate)}</label>
-						<button class="icon-button show-next-month-button" role="button">
+						<button class="icon-button show-next-month-button" role="button" title="Show next month">
 							<i class="fa fa-chevron-right"></i>
 						</button>
 						
@@ -165,7 +165,16 @@ class ClimberDBBriefings extends ClimberDB {
 
 			</div>
 			<div class="briefing-details-sidebar col-3">
-				<h3 class="briefing-details-sidebar-header">${calendarDate.toLocaleDateString('en-us', {weekday: 'long', month: 'long', day: 'numeric' })}</h3>
+				<div class="briefing-details-sidebar-header-container">
+					<button class="icon-button change-briefing-details-size-button expand-briefing-details-button" role="button" title="Expand briefing schedule details">
+						<i class="fas fa-arrow-left fa-arrow-from-right fa-lg"></i>
+					</button>
+					<h3 class="briefing-details-sidebar-header col">${calendarDate.toLocaleDateString('en-us', {weekday: 'long', month: 'long', day: 'numeric' })}
+					</h3>
+					<button class="icon-button change-briefing-details-size-button contract-briefing-details-button" role="button" title="Contract briefing schedule details">
+						<i class="fas fa-arrow-right fa-arrow-to-right fa-lg"></i>
+					</button>
+				</div>
 				<div class="briefing-details-sidebar-body">
 					<div class="time-label-container">
 						<button class="text-only-button half-hour-block">
@@ -341,6 +350,14 @@ class ClimberDBBriefings extends ClimberDB {
 		$('.schedule-background .half-hour-block')
 			.hover(e => {this.onScheduleHover(e)}, e => {this.onScheduleLostHover(e)})
 			.click(e => {this.onScheduleSlotClick(e)})
+
+		// When the user clicks the expand or contract sidebar button, expand or contract it accordingly
+		$('.change-briefing-details-size-button').click(e => {
+			const $target = $(e.target);
+			const $sideBar = $('.briefing-details-sidebar');
+			const isExpanded = $sideBar.is('.expanded');
+			$sideBar.toggleClass('expanded', $target.closest('button').is('.expand-briefing-details-button'));
+		})
 
 		// bind click events to any .briefing-appointment-containers that might be clicked
 		$(document).on('click', '.briefing-appointment-container', e => {
