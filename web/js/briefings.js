@@ -929,6 +929,7 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	checkRangerAvailability(briefingID, startTime, endTime, {rangerID=null, date=''}={}) {
 		
+
 		// Get the duration of the briefing in question
 		const selectedDate = date || $('.calendar-cell.selected').data('date');
 		const startDatetime = new Date(`${selectedDate} ${startTime}`);
@@ -954,6 +955,10 @@ class ClimberDBBriefings extends ClimberDB {
 				this.briefings[$('.calendar-cell.selected').data('date')].n_members
 		);
 		rangerID = rangerID || briefingAppointments[briefingID].briefing_ranger_user_id;
+		
+		// The ranger has not yet been filled in so ignore this
+		if (!rangerID) return true;
+
 		const rangerName = $(`#input-ranger option[value=${rangerID}]`).text();
 		var isAvailable = true;
 		var nClimbersScheduled = 0;
