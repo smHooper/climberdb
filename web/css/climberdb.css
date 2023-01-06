@@ -190,7 +190,7 @@ button > img {
 /*---------------------------------*/
 
 /* -----Toggle switch ------------- */
-.slider-container {
+.switch-container {
   white-space: nowrap;
   display: flex;
 }
@@ -318,11 +318,11 @@ input:checked:focus + .slider:before {
   left: -.05rem;
 }
 .query-option-operator,
-.query-option-input-field:not(.slider-container) {
+.query-option-input-field:not(.switch-container) {
   min-height: 32px;
 }
 .query-option-operator,
-.query-option-input-field:not(.slider-container),
+.query-option-input-field:not(.switch-container),
 .climberdb-main .select2-container--default .select2-search--inline 
   .select2-search__field {
   color: white;

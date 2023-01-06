@@ -281,7 +281,7 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 	padding: 20px;
 	overflow-y: auto;
 }
-.slider-container {
+.switch-container {
 	align-items: flex-end;
 }
 .switch-label {

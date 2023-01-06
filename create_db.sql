@@ -306,7 +306,8 @@ CREATE VIEW climber_info_view AS
 -- climber history view
 CREATE VIEW climber_history_view AS 
 	SELECT 
-		expeditions.expedition_name,  
+		expeditions.expedition_name, 
+		expeditions.id AS expedition_id, 
 		expedition_member_routes.id AS expedition_member_route_id,
 		expedition_members.id AS expedition_member_id,
 		expedition_members.climber_id,
@@ -465,11 +466,12 @@ CREATE VIEW expedition_info_view AS
 
 
 CREATE VIEW seven_day_rule_view AS 
-	SELECT climber_id FROM 
+	SELECT DISTINCT climber_id FROM 
 	climber_history_view 
 	WHERE 
-		actual_return_date < now() AND 
-		reservation_status_code <> 6 -- cancelled
+		actual_return_date < now() AND
+		highest_elevation_ft > (SELECT value FROM config WHERE property='minimum_elevation_for_7_day')::int AND 
+		reservation_status_code <> 6 -- not cancelled
 	;
 
 

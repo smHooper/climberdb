@@ -2588,7 +2588,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		if ($('#7-day-only-filter').prop('checked')) 
 			whereClause += ' WHERE climber_info_view.id IN (SELECT climber_id FROM seven_day_rule_view) ';
 		if ($('#guide-only-filter').prop('checked')) 
-			whereClause += ' WHERE is_guide';
+			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
 		
 		const queryFields = 'id, full_name';
 		const sql = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields, whereClause: whereClause});

@@ -161,11 +161,11 @@
 	left: -.05rem;
 }
 .query-option-operator,
-.query-option-input-field:not(.slider-container) {
+.query-option-input-field:not(.switch-container) {
 	min-height: 32px;
 }
 .query-option-operator,
-.query-option-input-field:not(.slider-container),
+.query-option-input-field:not(.switch-container),
 .fuzzy-search-bar-drawer .select2-container--default .select2-search--inline 
 	.select2-search__field {
 	color: white;
