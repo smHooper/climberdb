@@ -15,7 +15,7 @@ class ClimberForm {
 		$parent.append(`
 			<div class="climber-form" autocomplete="off">
 				<div class="climber-form-content">
-					<div class="close-button-container">
+					<div class="header-button-container">
 						<div class="editing-buttons-container">
 							<button id="save-button" class="query-result-edit-button icon-button save-edits-button hidden" type="button" aria-label="Save edits" title="Save edits">
 								<i class="fas fa-save"></i>
@@ -27,10 +27,18 @@ class ClimberForm {
 								<i class="fas fa-edit"></i>
 							</button>
 						</div>
-						<button id="climber-form-close-button" class="close expedition-modal-hidden" type="button" aria-label="Close">
-							<span>&times;</span>
-						</button>	
-		
+						<div class="close-button-container">
+							<div id="disable-required-slider-container" class="slider-container hidden" aria-hidden="true">
+								<label class="switch-label">Disable required</label>
+								<label class="switch mx-10">
+									<input type="checkbox">
+									<span class="slider round"></span>
+								</label>
+							</div>
+							<button id="climber-form-close-button" class="close expedition-modal-hidden" type="button" aria-label="Close">
+								<span>&times;</span>
+							</button>	
+						</div>
 						<button id="climber-form-modal-close-button" class="close expedition-modal-only hidden" type="button" aria-label="Close" aria-hidden="true">
 							<span>&times;</span>
 						</button>
@@ -467,6 +475,10 @@ class ClimberForm {
 		});
 
 		$('.climber-form .delete-card-button').click(this.onDeleteCardButtonClick);
+
+		$('#disable-required-slider-container input[type=checkbox]').change(e => {
+			this.onToggleRequiredChange(e);
+		})
 
 		// Country/state lookup from postal code
 		$(document).on('change', '.zip-lookup-field', e => {this.onPostalCodeFieldChange(e)});
@@ -930,7 +942,7 @@ class ClimberForm {
 				#emergency-contacts-tab-content .card:not(.cloneable)
 			`)
 			.has('.input-field.dirty');
-		if (!this._parent.validateFields($editParents)) {
+		if (!$('#disable-required-slider-container input[type=checkbox]').prop('checked') && !this._parent.validateFields($editParents)) {
 			showModal('One or more required fields are not filled. All required fields must be filled before you can save your edits.', 'Required field is empty');
 			hideLoadingIndicator();
 			return;
@@ -1218,6 +1230,13 @@ class ClimberForm {
 	}
 
 
+	onToggleRequiredChange(e) {
+		$('.input-field.error').removeClass('error');
+		const $switch = $(e.target);
+		$('.required-indicator').ariaHide($switch.prop('checked'));
+	}
+
+
 	/* 
 	Helper method to turn editing mode on or off
 	*/
@@ -1228,9 +1247,11 @@ class ClimberForm {
 		if (!allowEdits && $('.climber-form .input-field.dirty').length && confirm) {
 			this.confirmSaveEdits();
 		} else {
-			$('.save-edits-button, .delete-climber-button, .climber-form .delete-card-button').ariaHide(!allowEdits);
+			$('.save-edits-button, .delete-climber-button, .climber-form .delete-card-button, #disable-required-slider-container').ariaHide(!allowEdits);
 			$detailsPane.toggleClass('uneditable', !allowEdits);
 		}
+		// If edits are being turned off, reset slider
+		if (!allowEdits) $('#disable-required-slider-container input[type=checkbox]').prop('checked', false).change();
 	}
 }
 
@@ -1278,7 +1299,7 @@ class ClimberDBClimbers extends ClimberDB {
 				</div>
 			</div>
 			<div class="query-result-container">
-				<!-- order is switched betweeb result and details pane so I can use .collapsed ~ -->
+				<!-- order is switched between result and details pane so I can use .collapsed ~ -->
 				<div class="query-result-pane result-details-pane collapsed uneditable" aria-hidden="true">
 					<div class="query-result-edit-button-container">
 						<button id="add-new-climber-button" class="generic-button">Add new climber</button>
@@ -1412,6 +1433,9 @@ class ClimberDBClimbers extends ClimberDB {
 			.addClass('collapsed');
 		this.clearInputFields({parent: $climberForm, triggerChange: false});
 
+		// Make sure required fields are required
+		$('#disable-required-slider-container input[type=checkbox]').prop('checked', false).change();
+
 		$climberForm.find('.result-details-header-badge').addClass('hidden');
 
 		//$climberForm.find('#edit-button, #delete-button').ariaHide(true);
@@ -1535,6 +1559,9 @@ class ClimberDBClimbers extends ClimberDB {
 		const climberIndex = this.climberIDs[climberID];
 		const climberInfo = this.climberInfo[climberIndex];
 		this.climberForm.fillClimberForm(climberID, climberInfo);
+
+		// Make sure required fields are required
+		$('#disable-required-slider-container input[type=checkbox]').prop('checked', false);
 		
 	}
 

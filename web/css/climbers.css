@@ -252,11 +252,16 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 	transition: 0.4s ease-in-out all;
 }
 
-.result-details-pane .close-button-container {
+.result-details-pane .header-button-container {
 	width: 100%;
 	display: flex;
 	justify-content: space-between;
-	font-size: 30px;
+/*	font-size: 30px;*/
+}
+.close-button-container {
+	display: flex;
+	max-width: 300px;
+	justify-content: space-between;
 }
 .close-button-container button.close {
 	width: 30px;
@@ -275,6 +280,16 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 	width: 100%;
 	padding: 20px;
 	overflow-y: auto;
+}
+.slider-container {
+	align-items: flex-end;
+}
+.switch-label {
+	font-size: 16px;
+	line-height: 30px;
+  color: #00679b;
+  margin-bottom: 0px;
+  margin-right: 15px;
 }
 /*show as modal*/
 .climber-form.climberdb-modal {
