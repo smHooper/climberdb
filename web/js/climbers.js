@@ -1624,7 +1624,7 @@ class ClimberDBClimbers extends ClimberDB {
 		
 		var whereClause = '';
 		if ($('#7-day-only-filter').prop('checked')) 
-			whereClause += ' JOIN seven_day_rule_view ON climber_info_view.id = seven_day_rule_view.climber_id ';
+			whereClause += ' WHERE climber_info_view.id IN (SELECT climber_id FROM seven_day_rule_view)';
 		if ($('#guide-only-filter').prop('checked')) 
 			whereClause += ' WHERE is_guide';
 
