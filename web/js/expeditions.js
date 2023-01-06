@@ -2663,7 +2663,18 @@ class ClimberDBExpeditions extends ClimberDB {
 	onClimberFormSearchKeyup() {
 		const $input = $('#modal-climber-search-bar');
 		const searchString = $input.val();
-		if (searchString.length >= 3) this.refreshClimberSelectOptions(searchString);
+		// If a search string was entered or the guide filter was checked, search
+		if (searchString.length >= 3 || $('#guide-only-filter').prop('checked')) { 
+			this.refreshClimberSelectOptions(searchString);
+		} 
+		// Otherwise, hide the select
+		else {
+			$('#modal-climber-select')
+				.empty()
+				.closest('.collapse')
+				.collapse('hide');
+			$input.focus();
+		}
 	}
 
 
