@@ -467,7 +467,9 @@ CREATE VIEW expedition_info_view AS
 CREATE VIEW seven_day_rule_view AS 
 	SELECT climber_id FROM 
 	climber_history_view 
-	WHERE actual_return_date BETWEEN (extract(year FROM now())::text || '-1-1')::date AND now()
+	WHERE 
+		actual_return_date < now() AND 
+		reservation_status_code <> 6 -- cancelled
 	;
 
 

@@ -46,6 +46,11 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 .fuzzy-search-bar:focus ~ button {
 	z-index: 1; /* place in front when background of input is transulcent */
 }
+.climber-search-filter-container {
+	display: flex;
+	max-width: 400px;
+	margin-left: 20px;
+}
 
 .empty-result-message {
 	width: 100%;

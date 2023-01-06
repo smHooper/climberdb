@@ -1240,9 +1240,9 @@ class ClimberDB {
 			;
 	}
 
-	getClimberQuerySQL({searchString='', minIndex=1, climberID=undefined, queryFields='*'} = {}) {
+	getClimberQuerySQL({searchString='', minIndex=1, climberID=undefined, queryFields='*', coreWhereClause=''} = {}) {
 		const withSearchString = searchString.length > 0;
-		const coreQuery = this.getCoreClimberSQL({searchString: searchString, queryFields: queryFields});
+		const coreQuery = this.getCoreClimberSQL({searchString: searchString, queryFields: queryFields, whereClause: coreWhereClause});
 		var maxIndex = minIndex + this.recordsPerSet - 1;
 		const whereClause = isNaN(maxIndex) ? 
 			'' : 

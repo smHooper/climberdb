@@ -1258,8 +1258,24 @@ class ClimberDBClimbers extends ClimberDB {
 	configureMainContent() {
 		$('.main-content-wrapper').append(`
 			<div class="fuzzy-search-bar-container">
-				<input id="climber-search-bar" class="fuzzy-search-bar" placeholder="Search climbers">
+				<input id="climber-search-bar" class="fuzzy-search-bar" placeholder="Search climbers" autocomplete="off">
 				<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
+				<div class="climber-search-filter-container">	
+					<div class="field-container checkbox-field-container">
+						<label class="checkmark-container">
+							<input id="guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="guide_only">
+							<span class="checkmark data-input-checkmark"></span>
+						</label>
+						<label class="field-label checkbox-label text-nowrap" for="guide-only-filter">Commercial guide</label>
+					</div>	
+					<div class="field-container checkbox-field-container ml-4">
+						<label class="checkmark-container">
+							<input id="7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="7_day_only">
+							<span class="checkmark data-input-checkmark"></span>
+						</label>
+						<label class="field-label checkbox-label" for="7-day-only-filter">7-day only</label>
+					</div>
+				</div>
 			</div>
 			<div class="query-result-container">
 				<!-- order is switched betweeb result and details pane so I can use .collapsed ~ -->
@@ -1323,6 +1339,10 @@ class ClimberDBClimbers extends ClimberDB {
 				this.currentRecordSetIndex = 1;
 			}
 		});
+
+		$('.climber-search-filter').change(e => {
+			this.queryClimbers();
+		})
 
 		// Configure click events for the result nav buttons
 		$('.show-previous-result-set-button, .show-next-result-set-button').click(e => {
@@ -1428,6 +1448,8 @@ class ClimberDBClimbers extends ClimberDB {
 					const lastName = $('#input-last_name').val();
 					const climberName = `${firstName} ${lastName}`;
 					$('#climber-search-bar').val(climberName);//.change();
+					// Uncheck the filters in case this climber was marked as not a guide
+					$('#7-day-only-filter, #guide-only-filter').prop('checked', false);
 
 					this.queryClimbers({searchString: climberName})
 						.done(() => {
@@ -1599,10 +1621,18 @@ class ClimberDBClimbers extends ClimberDB {
 	queryClimbers({searchString='', minIndex=1, climberID=undefined} = {}) {
 		const withSearchString = searchString.length > 0;
 		var minIndex = minIndex; // not sure why but for some reason this needs to be used here to be defined later
+		
+		var whereClause = '';
+		if ($('#7-day-only-filter').prop('checked')) 
+			whereClause += ' JOIN seven_day_rule_view ON climber_info_view.id = seven_day_rule_view.climber_id ';
+		if ($('#guide-only-filter').prop('checked')) 
+			whereClause += ' WHERE is_guide';
+
 		const [sql, coreQuery] = this.getClimberQuerySQL({
 			searchString: searchString, 
 			minIndex: minIndex, 
-			climberID: climberID
+			climberID: climberID,
+			coreWhereClause: whereClause
 		});
 		return this.queryDB(sql, {returnTimestamp: true})
 		//return this.queryDB(sql)
