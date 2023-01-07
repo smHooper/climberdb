@@ -191,16 +191,16 @@ class ClimberDBUsers extends ClimberDB {
 			<tr class="uneditable" data-table-id="${data.id}">
 				<td class="uneditable">
 					<span>
-						<input class="input-field user-table-input" type="text" name="ad_username" title="Username" placeholder="username" value="${data.ad_username}" autocomplete="off" tabindex=-1>
+						<input class="input-field user-table-input" type="text" name="ad_username" title="Username" placeholder="username" value="${data.ad_username}" autocomplete="__never" tabindex=-1>
 				</span></td>
 				<td>
 					<span>
-						<input class="input-field user-table-input" type="text" name="first_name" title="First Name" placeholder="First name" value="${data.first_name}" autocomplete="off" tabindex=-1>
+						<input class="input-field user-table-input" type="text" name="first_name" title="First Name" placeholder="First name" value="${data.first_name}" autocomplete="__never" tabindex=-1>
 					</span>
 				</td>
 				<td>
 					<span>
-						<input class="input-field user-table-input" type="text" name="last_name" title="Last Name" placeholder="Last name" value="${data.last_name}" autocomplete="off" tabindex=-1>
+						<input class="input-field user-table-input" type="text" name="last_name" title="Last Name" placeholder="Last name" value="${data.last_name}" autocomplete="__never" tabindex=-1>
 					</span>
 				</td>
 				<td>

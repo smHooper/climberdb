@@ -41,7 +41,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			<div class="main-content-header">
 				<input id="expedition-id-input" class="hidden" aria-hidden="True">
 				<div class="fuzzy-search-bar-container">
-					<input id="expedition-search-bar" class="fuzzy-search-bar" placeholder="Type to search expeditions" title="Expedition search bar" autocomplete="off">
+					<input id="expedition-search-bar" class="fuzzy-search-bar" placeholder="Type to search expeditions" title="Expedition search bar" autocomplete="__never">
 					<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 					<button class="show-query-options-button icon-button" title="Expedition filter options">
 						<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg">
@@ -128,8 +128,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<div class="expedition-data-header-content">	
-								<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Expedition Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="off" required="">
-								<select id="input-group_status" class="input-field filled-by-default needs-filled-by-default" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="off" data-default-value=1 tabindex=-1></select>
+								<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Expedition Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="__never" required="">
+								<select id="input-group_status" class="input-field filled-by-default needs-filled-by-default" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="__never" data-default-value=1 tabindex=-1></select>
 							</div>
 							<div class="expedition-data-header-content">							
 								<div class="result-details-summary-item col-6">
@@ -159,13 +159,13 @@ class ClimberDBExpeditions extends ClimberDB {
 						<div class="expedition-data-content-body">
 							<div class="field-container-row">
 								<div class="field-container col-6">
-									<input id="input-planned_departure_date" class="input-field" name="planned_departure_date" data-table-name="expeditions" placeholder="Planned departure" title="Planned departure" type="date" autocomplete="off" required="">
+									<input id="input-planned_departure_date" class="input-field" name="planned_departure_date" data-table-name="expeditions" placeholder="Planned departure" title="Planned departure" type="date" autocomplete="__never" required="">
 									<span class="required-indicator">*</span>
 									<label class="field-label" for="input-planned_departure_date">Planned departure</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>
 								<div class="field-container col-6">
-									<input id="input-planned_return_date" class="input-field" name="planned_return_date" data-table-name="expeditions" placeholder="Planned return" title="Planned return" type="date" autocomplete="off" required="">
+									<input id="input-planned_return_date" class="input-field" name="planned_return_date" data-table-name="expeditions" placeholder="Planned return" title="Planned return" type="date" autocomplete="__never" required="">
 									<span class="required-indicator">*</span>
 									<label class="field-label" for="input-planned_return_date">Planned return</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
@@ -173,13 +173,13 @@ class ClimberDBExpeditions extends ClimberDB {
 							</div>
 							<div class="field-container-row collapse">
 								<div class="field-container col-6">
-									<input id="input-actual_departure_date" class="input-field" name="actual_departure_date" data-table-name="expeditions" placeholder="Actual departure" title="Actual departure" type="date" data-dependent-target="#input-group_status" data-dependent-value="3,4,5" autocomplete="off" required="">
+									<input id="input-actual_departure_date" class="input-field" name="actual_departure_date" data-table-name="expeditions" placeholder="Actual departure" title="Actual departure" type="date" data-dependent-target="#input-group_status" data-dependent-value="3,4,5" autocomplete="__never" required="">
 									<span class="required-indicator">*</span>
 									<label class="field-label" for="input-actual_departure_date">Actual departure</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>
 								<div class="field-container col-6">
-									<input id="input-actual_return_date" class="input-field" name="actual_return_date" data-table-name="expeditions" placeholder="Actual return" title="Actual return" type="date" autocomplete="off" required="">
+									<input id="input-actual_return_date" class="input-field" name="actual_return_date" data-table-name="expeditions" placeholder="Actual return" title="Actual return" type="date" autocomplete="__never" required="">
 									<span class="required-indicator">*</span>
 									<label class="field-label" for="input-actual_return_date">Actual return</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
@@ -187,20 +187,20 @@ class ClimberDBExpeditions extends ClimberDB {
 							</div>
 							<div class="field-container-row">
 								<div class="field-container col-sm-6">
-									<select id="input-guide_company" class="input-field filled-by-default needs-filled-by-default" name="guide_company_code" data-table-name="expeditions" title="Guide company" type="text" autocomplete="off" data-default-value="-1"></select>
+									<select id="input-guide_company" class="input-field filled-by-default needs-filled-by-default" name="guide_company_code" data-table-name="expeditions" title="Guide company" type="text" autocomplete="__never" data-default-value="-1"></select>
 									<span class="required-indicator">*</span>
 									<label class="field-label" for="input-guide_company">Guide company</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
 								<div class="field-container col-sm-6">
-									<select id="input-air_taxi" class="input-field default filled-by-default needs-filled-by-default" name="air_taxi_code" data-table-name="expeditions" data-default-value="-1" placeholder="Air taxi" title="Air taxi" type="text" autocomplete="off"></select>
+									<select id="input-air_taxi" class="input-field default filled-by-default needs-filled-by-default" name="air_taxi_code" data-table-name="expeditions" data-default-value="-1" placeholder="Air taxi" title="Air taxi" type="text" autocomplete="__never"></select>
 									<label class="field-label" for="input-air_taxi">Air taxi</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
 							</div>
 							<div class="field-container-row">
 								<div class="field-container col-sm-6">
-									<select id="input-special_group_type" class="input-field default filled-by-default needs-filled-by-default" name="special_group_type_code" data-table-name="expeditions" placeholder="Special group type" title="Special group type" type="text" autocomplete="off"></select>
+									<select id="input-special_group_type" class="input-field default filled-by-default needs-filled-by-default" name="special_group_type_code" data-table-name="expeditions" placeholder="Special group type" title="Special group type" type="text" autocomplete="__never"></select>
 									<label class="field-label" for="input-special_group_type">Special group type</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
@@ -312,7 +312,7 @@ class ClimberDBExpeditions extends ClimberDB {
 													<div class="field-container-row">
 														<div class="field-container col collapse">
 															<label class="field-label" for="input-flagged_reason">Reason for flagging this expedition member</label>
-															<textarea id="input-flagged_reason" class="input-field" name="flagged_reason" data-table-name="expedition_members" placeholder="Describe why you flagged this expedition member" title="Flagged reason" type="text" autocomplete="off" data-dependent-target="#input-flagged" data-dependent-value="true" required=""></textarea>
+															<textarea id="input-flagged_reason" class="input-field" name="flagged_reason" data-table-name="expedition_members" placeholder="Describe why you flagged this expedition member" title="Flagged reason" type="text" autocomplete="__never" data-dependent-target="#input-flagged" data-dependent-value="true" required=""></textarea>
 															<span class="required-indicator">*</span>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>	
@@ -322,7 +322,7 @@ class ClimberDBExpeditions extends ClimberDB {
 													</div>
 													<div class="field-container-row">
 														<div class="field-container col-sm-6">
-															<input id="input-permit_number" class="input-field" name="permit_number" data-table-name="expedition_members" placeholder="Permit number" title="Permit number" type="number" autocomplete="off">
+															<input id="input-permit_number" class="input-field" name="permit_number" data-table-name="expedition_members" placeholder="Permit number" title="Permit number" type="number" autocomplete="__never">
 															<label class="field-label" for="input-permit_number">Permit number</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>	
@@ -352,12 +352,12 @@ class ClimberDBExpeditions extends ClimberDB {
 													</div>
 													<div class="field-container-row" style="">
 														<div class="field-container col-6">
-															<input id="input-datetime_reserved" class="input-field" name="datetime_reserved" data-table-name="expedition_members" placeholder="Date added to expedition" title="Date added to expedition" type="date"  autocomplete="off" required="">
+															<input id="input-datetime_reserved" class="input-field" name="datetime_reserved" data-table-name="expedition_members" placeholder="Date added to expedition" title="Date added to expedition" type="date"  autocomplete="__never" required="">
 															<label class="field-label" for="input-datetime_reserved">Date added to expedition</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 														<div class="field-container collapse col-6">
-															<input id="input-datetime_canceled" class="input-field" name="datetime_canceled" data-table-name="expedition_members" placeholder="Date canceled" title="Date canceled" type="date" data-dependent-target="#input-reservation_status" data-dependent-value="6" autocomplete="off">
+															<input id="input-datetime_canceled" class="input-field" name="datetime_canceled" data-table-name="expedition_members" placeholder="Date canceled" title="Date canceled" type="date" data-dependent-target="#input-reservation_status" data-dependent-value="6" autocomplete="__never">
 															<label class="field-label" for="input-datetime_canceled">Date canceled</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
@@ -388,7 +388,7 @@ class ClimberDBExpeditions extends ClimberDB {
 													<div class="field-container-row">
 														<div class="field-container col collapse">
 															<label class="field-label" for="input-reason_for_pro_pin">Reason this climber received a Pro Pin</label>
-															<textarea id="input-reason_for_pro_pin" class="input-field" name="reason_for_pro_pin" data-table-name="expedition_members" placeholder="Describe why this climber received a Pro Pin" title="Reason for Pro Pin" type="text" autocomplete="off" data-dependent-target="#input-received_pro_pin" data-dependent-value="true"></textarea>
+															<textarea id="input-reason_for_pro_pin" class="input-field" name="reason_for_pro_pin" data-table-name="expedition_members" placeholder="Describe why this climber received a Pro Pin" title="Reason for Pro Pin" type="text" autocomplete="__never" data-dependent-target="#input-received_pro_pin" data-dependent-value="true"></textarea>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 													</div>
@@ -418,21 +418,21 @@ class ClimberDBExpeditions extends ClimberDB {
 													<div class="field-container-row">
 														<div class="field-container col">
 															<label class="field-label" for="input-medical_notes">Medical notes</label>
-															<textarea id="input-medical_notes" class="input-field" name="medical_notes" data-table-name="expedition_members" placeholder="Enter notes about medical issues that occurred during this climb" title="Medical notes" type="text" autocomplete="off"></textarea>
+															<textarea id="input-medical_notes" class="input-field" name="medical_notes" data-table-name="expedition_members" placeholder="Enter notes about medical issues that occurred during this climb" title="Medical notes" type="text" autocomplete="__never"></textarea>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 													</div>													
 													<div class="field-container-row">
 														<div class="field-container col">
 															<label class="field-label" for="input-internal_notes">Internal notes about this expedition member</label>
-															<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="expedition_members" placeholder="Enter notes for other rangers to see about this expedition member" title="Internal notes" type="text" autocomplete="off"></textarea>
+															<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="expedition_members" placeholder="Enter notes for other rangers to see about this expedition member" title="Internal notes" type="text" autocomplete="__never"></textarea>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 													</div>													
 													<div class="field-container-row">
 														<div class="field-container col">
 															<label class="field-label" for="input-climber_comments">Climber's comments</label>
-															<textarea id="input-climber_comments" class="input-field" name="climber_comments" data-table-name="expedition_members" placeholder="Enter comments from the climber" title="Climber comments" type="text" autocomplete="off"></textarea>
+															<textarea id="input-climber_comments" class="input-field" name="climber_comments" data-table-name="expedition_members" placeholder="Enter comments from the climber" title="Climber comments" type="text" autocomplete="__never"></textarea>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 													</div>
@@ -650,7 +650,7 @@ class ClimberDBExpeditions extends ClimberDB {
 										<span class="required-indicator">*</span>
 									</div>
 									<div class="cmc-col col-4">
-										<input id="input-number_or_address" class="input-field" name="number_or_address" data-table-name="communication_devices" title="Device number/address" autocomplete="off"> 
+										<input id="input-number_or_address" class="input-field" name="number_or_address" data-table-name="communication_devices" title="Device number/address" autocomplete="__never"> 
 									</div>
 									<div class="cmc-col col-3">
 										<select id="input-owner" class="input-field no-option-fill default" name="expedition_member_id" data-table-name="communication_devices" title="Device owner"></select>

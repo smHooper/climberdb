@@ -13,7 +13,7 @@ class ClimberForm {
 		const $parent = $($parentElement);
 
 		$parent.append(`
-			<div class="climber-form" autocomplete="off">
+			<div class="climber-form" autocomplete="__never">
 				<div class="climber-form-content">
 					<div class="header-button-container">
 						<div class="editing-buttons-container">
@@ -47,7 +47,7 @@ class ClimberForm {
 					<div class="expedition-modal-only expedition-modal-climber-form-header hidden">
 						<div class="expedition-modal-search-container" aria-hidden="true">
 							<div class="fuzzy-search-bar-container col-6">
-								<input id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Climber name search" autocomplete="off">
+								<input id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Climber name search" autocomplete="__never">
 								<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 							</div>	
 							<div class="modal-climber-select-container collapse">
@@ -110,18 +110,18 @@ class ClimberForm {
 							<div id="climber-info-tab-content" class="tab-content" role="tabpanel" aria-labelledby="climber-info-tab" aria-hidden="false">
 								<div class="field-container-row">
 									<div class="field-container col-sm-4">
-										<input id="input-first_name" class="input-field climber-form-title-field always-required" name="first_name" data-table-name="climbers" placeholder="First name" title="First name" type="text" autocomplete="off" required="">
+										<input id="input-first_name" class="input-field climber-form-title-field always-required" name="first_name" data-table-name="climbers" placeholder="First name" title="First name" type="text" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-first_name">First name</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
 									<div class="field-container col-sm-4">
-										<input id="input-middle_name" class="input-field climber-form-title-field" name="middle_name" data-table-name="climbers" placeholder="Middle name" title="Middle name" type="text" autocomplete="off">
+										<input id="input-middle_name" class="input-field climber-form-title-field" name="middle_name" data-table-name="climbers" placeholder="Middle name" title="Middle name" type="text" autocomplete="__never">
 										<label class="field-label" for="input-middle_name">Middle name</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
 									<div class="field-container col-sm-4">
-										<input id="input-last_name" class="input-field climber-form-title-field always-required" name="last_name" data-table-name="climbers" placeholder="Last name" title="Last name" type="text" autocomplete="off" required="">
+										<input id="input-last_name" class="input-field climber-form-title-field always-required" name="last_name" data-table-name="climbers" placeholder="Last name" title="Last name" type="text" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-last_name">Last name</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -129,7 +129,7 @@ class ClimberForm {
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col">
-										<input id="input-address" class="input-field" name="address" data-table-name="climbers" placeholder="Address" title="Address" type="text" autocomplete="off" required="">
+										<input id="input-address" class="input-field" name="address" data-table-name="climbers" placeholder="Address" title="Address" type="text" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-address">Address</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -137,13 +137,13 @@ class ClimberForm {
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col-sm-6">
-										<select id="input-country" class="input-field default zip-lookup-field" name="country_code" data-table-name="climbers" placeholder="Country" title="Country" type="text" autocomplete="off" required=""></select>
+										<select id="input-country" class="input-field default zip-lookup-field" name="country_code" data-table-name="climbers" placeholder="Country" title="Country" type="text" autocomplete="__never" required=""></select>
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-country">Country</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6">
-										<input id="input-postal_code" class="input-field zip-lookup-field" name="postal_code" data-table-name="climbers" placeholder="Postal code" title="Postal code" type="text" autocomplete="off" required="">
+										<input id="input-postal_code" class="input-field zip-lookup-field" name="postal_code" data-table-name="climbers" placeholder="Postal code" title="Postal code" type="text" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-postal_code">Postal code</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -151,13 +151,13 @@ class ClimberForm {
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col-sm-6">
-										<input id="input-city" class="input-field" name="city" data-table-name="climbers" placeholder="City" title="City" type="text" autocomplete="off" required="">
+										<input id="input-city" class="input-field" name="city" data-table-name="climbers" placeholder="City" title="City" type="text" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-city">City</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6 collapse">
-										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State" title="State" type="text" autocomplete="off" required="" data-dependent-target="#input-country" data-dependent-value=236></select>
+										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State" title="State" type="text" autocomplete="__never" required="" data-dependent-target="#input-country" data-dependent-value=236></select>
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-state">State</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -165,13 +165,13 @@ class ClimberForm {
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col-sm-6">
-										<input id="input-phone" class="input-field" name="phone" data-table-name="climbers" placeholder="Phone" title="Phone" type="text" autocomplete="off" required="">
+										<input id="input-phone" class="input-field" name="phone" data-table-name="climbers" placeholder="Phone" title="Phone" type="text" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-phone">Phone</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6">
-										<input id="input-email" class="input-field default" name="email_address" data-table-name="climbers" placeholder="Email" title="Email" type="text" autocomplete="off" required="">
+										<input id="input-email" class="input-field default" name="email_address" data-table-name="climbers" placeholder="Email" title="Email" type="text" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-email">Email</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -179,18 +179,18 @@ class ClimberForm {
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col-sm-4">
-										<input id="input-dob" class="input-field" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" autocomplete="off">
+										<input id="input-dob" class="input-field" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" autocomplete="__never">
 										<label class="field-label" for="input-dob">D.O.B.</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-2">
-										<input id="input-age" class="input-field" name="age" data-table-name="climbers" placeholder="Age" title="Age" type="text" autocomplete="off">
+										<input id="input-age" class="input-field" name="age" data-table-name="climbers" placeholder="Age" title="Age" type="text" autocomplete="__never">
 										<!--<span class="required-indicator">*</span>-->
 										<label class="field-label" for="input-age">Age</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6">
-										<select id="input-sex" class="input-field default" name="sex_code" data-table-name="climbers" placeholder="Gender" title="Gender" type="text" autocomplete="off"></select>
+										<select id="input-sex" class="input-field default" name="sex_code" data-table-name="climbers" placeholder="Gender" title="Gender" type="text" autocomplete="__never"></select>
 										<!--<span class="required-indicator">*</span>-->
 										<label class="field-label" for="input-sex">Gender</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -215,7 +215,7 @@ class ClimberForm {
 								<div class="field-container-row">
 									<div class="field-container col">
 										<label class="field-label" for="input-internal_notes">Notes about this climber</label>
-										<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="climbers" placeholder="Enter notes about climber that other rangers should see" title="Notes about this climber" type="text" autocomplete="off"></textarea>
+										<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="climbers" placeholder="Enter notes about climber that other rangers should see" title="Notes about this climber" type="text" autocomplete="__never"></textarea>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
 								</div>
@@ -249,7 +249,7 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<input id="input-highest_elevation_ft" class="input-field" name="highest_elevation_ft" data-table-name="expedition_members" data-table-id="" placeholder="Highest Elevation (ft)" title="Highest Elevation in feet" type="number" autocomplete="off">
+														<input id="input-highest_elevation_ft" class="input-field" name="highest_elevation_ft" data-table-name="expedition_members" data-table-id="" placeholder="Highest Elevation (ft)" title="Highest Elevation in feet" type="number" autocomplete="__never">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-highest_elevation_ft">Highest Elevation (ft)</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -262,7 +262,7 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col">
-														<input id="input-frostbite_details" class="input-field" name="frostbite_details" data-table-name="expedition_members" data-table-id="" placeholder="Frostbite details" title="Frostbite details" type="text" autocomplete="off">
+														<input id="input-frostbite_details" class="input-field" name="frostbite_details" data-table-name="expedition_members" data-table-id="" placeholder="Frostbite details" title="Frostbite details" type="text" autocomplete="__never">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-frostbite_details">Frostbite details</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -294,21 +294,21 @@ class ClimberForm {
 												<div class="field-container-row">
 													<div class="field-container col">
 														<label class="field-label" for="input-medical_notes">Medical notes</label>
-														<textarea id="input-medical_notes" class="input-field" name="medical_notes" data-table-name="expedition_members" placeholder="Enter notes about medical issues that occurred during this climb" title="Medical notes" type="text" autocomplete="off"></textarea>
+														<textarea id="input-medical_notes" class="input-field" name="medical_notes" data-table-name="expedition_members" placeholder="Enter notes about medical issues that occurred during this climb" title="Medical notes" type="text" autocomplete="__never"></textarea>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>
 												</div>													
 												<div class="field-container-row">
 													<div class="field-container col">
 														<label class="field-label" for="input-internal_notes">Internal notes about this climb</label>
-														<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="expedition_members" placeholder="Enter notes for other rangers to see about this climb" title="Internal notes" type="text" autocomplete="off"></textarea>
+														<textarea id="input-internal_notes" class="input-field" name="internal_notes" data-table-name="expedition_members" placeholder="Enter notes for other rangers to see about this climb" title="Internal notes" type="text" autocomplete="__never"></textarea>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>
 												</div>													
 												<div class="field-container-row">
 													<div class="field-container col">
 														<label class="field-label" for="input-climber_comments">Climber comments</label>
-														<textarea id="input-climber_comments" class="input-field" name="climber_comments" data-table-name="expedition_members" placeholder="Enter comments from the climber" title="Climber comments" type="text" autocomplete="off"></textarea>
+														<textarea id="input-climber_comments" class="input-field" name="climber_comments" data-table-name="expedition_members" placeholder="Enter comments from the climber" title="Climber comments" type="text" autocomplete="__never"></textarea>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>
 												</div>
@@ -347,7 +347,7 @@ class ClimberForm {
 											<div class="card-body">
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<input id="input-relationship" class="input-field card-label-field" name="relationship" data-table-name="emergency_contacts" placeholder="Relationship to climber" title="Relationship to climber" type="text" autocomplete="off">
+														<input id="input-relationship" class="input-field card-label-field" name="relationship" data-table-name="emergency_contacts" placeholder="Relationship to climber" title="Relationship to climber" type="text" autocomplete="__never">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-relationship">Relationship to climber</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -355,13 +355,13 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<input id="input-first_name_contact" class="input-field card-label-field" name="first_name" data-table-name="emergency_contacts" placeholder="First name" title="First name" type="text" autocomplete="off" required="">
+														<input id="input-first_name_contact" class="input-field card-label-field" name="first_name" data-table-name="emergency_contacts" placeholder="First name" title="First name" type="text" autocomplete="__never" required="">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-first_name">First name</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>
 													<div class="field-container col-sm-6">
-														<input id="input-last_name_contact" class="input-field card-label-field" name="last_name" data-table-name="emergency_contacts" placeholder="Last name" title="Last name" type="text" autocomplete="off" required="">
+														<input id="input-last_name_contact" class="input-field card-label-field" name="last_name" data-table-name="emergency_contacts" placeholder="Last name" title="Last name" type="text" autocomplete="__never" required="">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-last_name">Last name</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -369,7 +369,7 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col">
-														<input id="input-address_contact" class="input-field" name="address" data-table-name="emergency_contacts" placeholder="Address" title="Address" type="text" autocomplete="off" required="">
+														<input id="input-address_contact" class="input-field" name="address" data-table-name="emergency_contacts" placeholder="Address" title="Address" type="text" autocomplete="__never" required="">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-address">Address</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -377,13 +377,13 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<select id="input-country_contact" class="input-field default zip-lookup-field" name="country_code" data-table-name="emergency_contacts" placeholder="Country" title="Country" type="text" autocomplete="off" required=""></select>
+														<select id="input-country_contact" class="input-field default zip-lookup-field" name="country_code" data-table-name="emergency_contacts" placeholder="Country" title="Country" type="text" autocomplete="__never" required=""></select>
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-country">Country</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 													<div class="field-container col-sm-6">
-														<input id="input-postal_code_contact" class="input-field zip-lookup-field" name="postal_code" data-table-name="emergency_contacts" placeholder="Postal code" title="Postal code" type="text" autocomplete="off" required="">
+														<input id="input-postal_code_contact" class="input-field zip-lookup-field" name="postal_code" data-table-name="emergency_contacts" placeholder="Postal code" title="Postal code" type="text" autocomplete="__never" required="">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-postal_code">Postal code</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -391,13 +391,13 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<input id="input-city_contact" class="input-field" name="city" data-table-name="emergency_contacts" placeholder="City" title="City" type="text" autocomplete="off" required="">
+														<input id="input-city_contact" class="input-field" name="city" data-table-name="emergency_contacts" placeholder="City" title="City" type="text" autocomplete="__never" required="">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-city">City</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 													<div class="field-container col-sm-6 collapse">
-														<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State" title="State" type="text" autocomplete="off" required="" data-dependent-target="#input-country_contact" data-dependent-value=236></select>
+														<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State" title="State" type="text" autocomplete="__never" required="" data-dependent-target="#input-country_contact" data-dependent-value=236></select>
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-state">State</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -405,13 +405,13 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<input id="input-phone_contact" class="input-field" name="primary_phone" data-table-name="emergency_contacts" placeholder="Phone" title="Phone" type="text" autocomplete="off" required="">
+														<input id="input-phone_contact" class="input-field" name="primary_phone" data-table-name="emergency_contacts" placeholder="Phone" title="Phone" type="text" autocomplete="__never" required="">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-phone">Phone</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 													<!--<div class="field-container col-sm-6">
-														<input id="input-email_contact" class="input-field default" name="email_address" data-table-name="emergency_contacts" placeholder="Email" title="Email" type="text" autocomplete="off" required="">
+														<input id="input-email_contact" class="input-field default" name="email_address" data-table-name="emergency_contacts" placeholder="Email" title="Email" type="text" autocomplete="__never" required="">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-email">Email</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -420,7 +420,7 @@ class ClimberForm {
 												<div class="field-container-row">
 													<div class="field-container col">
 														<label class="field-label" for="input-internal_notes">Notes about this contact</label>
-														<textarea id="input-internal_notes_contact" class="input-field" name="internal_notes" data-table-name="emergency_contacts" placeholder="Enter notes about this emergency contact that other rangers should see" title="Notes about this contact" type="text" autocomplete="off"></textarea>
+														<textarea id="input-internal_notes_contact" class="input-field" name="internal_notes" data-table-name="emergency_contacts" placeholder="Enter notes about this emergency contact that other rangers should see" title="Notes about this contact" type="text" autocomplete="__never"></textarea>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>
 												</div>
@@ -1301,7 +1301,7 @@ class ClimberDBClimbers extends ClimberDB {
 	configureMainContent() {
 		$('.main-content-wrapper').append(`
 			<div class="fuzzy-search-bar-container">
-				<input id="climber-search-bar" class="fuzzy-search-bar" placeholder="Search climbers" autocomplete="off">
+				<input id="climber-search-bar" class="fuzzy-search-bar" placeholder="Search climbers" autocomplete="__never">
 				<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 				<div class="climber-search-filter-container">	
 					<div class="field-container checkbox-field-container">
