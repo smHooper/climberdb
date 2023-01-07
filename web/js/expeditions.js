@@ -1,3 +1,4 @@
+//TODO: reload climber search fails if no matches
 
 class ClimberDBExpeditions extends ClimberDB {
 	
@@ -829,6 +830,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// If the group status changes to "confirmed", make actual departure and actual return dates not required
 		$('#input-group_status').change(e => {
 			const statusCode = parseInt(e.target.value || 0);
+			this.toggleRequiredOnInput($('#input-planned_return_date'), statusCode > 1) //1 === pending
 			this.toggleRequiredOnInput($('#input-actual_departure_date'), statusCode !== 3);//3 === confirmed
 			this.toggleRequiredOnInput($('#input-actual_return_date'), statusCode === 5);//5 === off mountain
 		})
@@ -1339,29 +1341,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#refresh-modal-climber-select').click(() => {
-			// show loading indicator
-			// get currently selected climber and reselect it after refresh
-			const $select = $('#modal-climber-select');
-			const currentSelection = $select.val();
-			const $input = $('#modal-climber-search-bar');
-			const searchString = $input.val();
-			showLoadingIndicator('refresh-modal-climber-select');
-			if (searchString.length >= 3) {
-				this.refreshClimberSelectOptions(searchString)
-					.done(() => {
-						// Check every 50 milliseconds if the option has been added to the select
-						//	If so, breack out of the interval loop 
-						var intervalID;
-						const callback = () => {
-							if ($select.find(`option[value=${currentSelection}]`).length) {
-								$select.val(currentSelection).change();
-								clearInterval(intervalID);
-								hideLoadingIndicator();
-							}
-						}
-						intervalID = setInterval(callback, 20);
-					})
-			}
+			this.onRefreshModalClimberSelectClick()
 		});
 
 		$('#modal-climber-select').change(e => {
@@ -1801,7 +1781,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		var expeditionValues = [];
 		var expeditionFields = []; 
 		for (const el of $('#expedition-data-container .input-field.dirty')) {
-			expeditionValues.push(el.value);
+			expeditionValues.push(this.getInputFieldValue($(el)));
 			expeditionFields.push(el.name);
 		}
 		if (expeditionValues.length) {
@@ -2012,8 +1992,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		// transactions
 		const $transactionInputs = $('.card:not(.cloneable) .transactions-tab-pane .data-list-item:not(.cloneable):not(.new-list-item) .input-field.dirty');
 		for (const el of $transactionInputs) {
-			const memberID = $(el).closest('card').data('table-id');
-			const transactionInfo = this.expeditionInfo.transactions.data[memberID];
+			const $el = $(el);
+			const memberID = $el.closest('.card').data('table-id');
+			const transactionID = $el.data('table-id'); 
+			const transactionInfo = this.expeditionInfo.transactions[memberID].data[transactionID];
 			this.setInputFieldValue(el, transactionInfo);
 		}
 
@@ -2261,8 +2243,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				const memberInfo = this.expeditionInfo.expedition_members.data[$card.data('expedition-member-id')] || {};
 				const climberName = memberInfo.first_name ? `${memberInfo.first_name} ${memberInfo.last_name}` : 'This expedition member';
 				const message = `${climberName} can't be confirmed because they: <ul>${reasons}</ul> All climbers must have a climbing fee payment or waiver in their transaction history and the SUP app. and PSAR checkboxes must be checked before they can be marked as confirmed.`;
-				//******* this doesn't work
 				const eventHandlerCallable = () => {
+					//TODO: revert doesn't work
 					$('#alert-modal button').click(() => {this.revertInputValue($select)})
 				}
 				showModal(message, 'Missing Payment/Information', {eventHandlerCallable: eventHandlerCallable})
@@ -2615,6 +2597,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						for (const row of result) {
 							$select.append(`<option value="${row.id}">${row.full_name}</option>`);
 						}
+						// TODO: don't select first one. Show number of results instead
 						$select.val(result[0].id).change();
 					}
 				}
@@ -2674,6 +2657,42 @@ class ClimberDBExpeditions extends ClimberDB {
 				.closest('.collapse')
 				.collapse('hide');
 			$input.focus();
+		}
+	}
+
+	onRefreshModalClimberSelectClick() {
+
+		// get currently selected climber and reselect it after refresh
+		const $select = $('#modal-climber-select');
+		const currentSelection = $select.val();
+		const $input = $('#modal-climber-search-bar');
+		const searchString = $input.val();
+		showLoadingIndicator('onRefreshModalClimberSelectClick');
+		if (searchString.length >= 3) {
+			this.refreshClimberSelectOptions(searchString)
+				.done(resultString => {
+					// Try to reselect the previously selected climber, if one was selected
+					
+					// If there was no selection, just exit
+					if (!currentSelection) {
+						hideLoadingIndicator();
+						return;
+					}
+					// Otherwise, check every 20 milliseconds if the option has been added to the select
+					else {
+						var intervalID;
+						const callback = () => {
+							if ($select.find(`option[value=${currentSelection}]`).length) {
+								// Select the option again
+								$select.val(currentSelection).change();
+								//	If so, breack out of the interval loop 
+								clearInterval(intervalID);
+								hideLoadingIndicator();
+							}
+						}
+						intervalID = setInterval(callback, 20);
+					}
+				})
 		}
 	}
 
