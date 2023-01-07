@@ -28,8 +28,8 @@ class ClimberForm {
 							</button>
 						</div>
 						<div class="close-button-container">
-							<div id="disable-required-slider-container" class="slider-container hidden" aria-hidden="true">
-								<label class="switch-label">Disable required</label>
+							<div id="disable-required-switch-container" class="switch-container hidden" aria-hidden="true">
+								<label class="switch-label">Disable required fields (<span class="required-indicator">*</span> )</label>
 								<label class="switch mx-10">
 									<input type="checkbox">
 									<span class="slider round"></span>
@@ -39,6 +39,7 @@ class ClimberForm {
 								<span>&times;</span>
 							</button>	
 						</div>
+						<!-- need a different button for expeditions.html because on-close behavior is different--> 
 						<button id="climber-form-modal-close-button" class="close expedition-modal-only hidden" type="button" aria-label="Close" aria-hidden="true">
 							<span>&times;</span>
 						</button>
@@ -109,7 +110,7 @@ class ClimberForm {
 							<div id="climber-info-tab-content" class="tab-content" role="tabpanel" aria-labelledby="climber-info-tab" aria-hidden="false">
 								<div class="field-container-row">
 									<div class="field-container col-sm-4">
-										<input id="input-first_name" class="input-field climber-form-title-field" name="first_name" data-table-name="climbers" placeholder="First name" title="First name" type="text" autocomplete="off" required="">
+										<input id="input-first_name" class="input-field climber-form-title-field always-required" name="first_name" data-table-name="climbers" placeholder="First name" title="First name" type="text" autocomplete="off" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-first_name">First name</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -120,7 +121,7 @@ class ClimberForm {
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
 									<div class="field-container col-sm-4">
-										<input id="input-last_name" class="input-field climber-form-title-field" name="last_name" data-table-name="climbers" placeholder="Last name" title="Last name" type="text" autocomplete="off" required="">
+										<input id="input-last_name" class="input-field climber-form-title-field always-required" name="last_name" data-table-name="climbers" placeholder="Last name" title="Last name" type="text" autocomplete="off" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-last_name">Last name</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -183,14 +184,14 @@ class ClimberForm {
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-2">
-										<input id="input-age" class="input-field" name="age" data-table-name="climbers" placeholder="Age" title="Age" type="text" autocomplete="off" required="">
-										<span class="required-indicator">*</span>
+										<input id="input-age" class="input-field" name="age" data-table-name="climbers" placeholder="Age" title="Age" type="text" autocomplete="off">
+										<!--<span class="required-indicator">*</span>-->
 										<label class="field-label" for="input-age">Age</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6">
-										<select id="input-sex" class="input-field default" name="sex_code" data-table-name="climbers" placeholder="Gender" title="Gender" type="text" autocomplete="off" required=""></select>
-										<span class="required-indicator">*</span>
+										<select id="input-sex" class="input-field default" name="sex_code" data-table-name="climbers" placeholder="Gender" title="Gender" type="text" autocomplete="off"></select>
+										<!--<span class="required-indicator">*</span>-->
 										<label class="field-label" for="input-sex">Gender</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
@@ -476,7 +477,7 @@ class ClimberForm {
 
 		$('.climber-form .delete-card-button').click(this.onDeleteCardButtonClick);
 
-		$('#disable-required-slider-container input[type=checkbox]').change(e => {
+		$('#disable-required-switch-container input[type=checkbox]').change(e => {
 			this.onToggleRequiredChange(e);
 		})
 
@@ -614,6 +615,10 @@ class ClimberForm {
 		const $resultPane = $('.result-details-pane');
 		$resultPane.addClass('collapsed');
 		
+		$('#disable-required-switch-container').ariaHide(true)
+			.find('checkbox')
+				.prop('checked', false)
+				.change();
 
 		const $climberForm = $button.closest('.climber-form');
 		const climberFormWasModal = $climberForm.is('.climberdb-modal');
@@ -747,6 +752,7 @@ class ClimberForm {
 			const formattedDeparture = (new Date(row.actual_departure_date + ' 12:00')).toLocaleDateString(); //add a time otherwise the date will be a day before
 			const actualReturnDate = new Date(row.actual_return_date + ' 12:00');
 			const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
+			//TODO: handle routes that don't have a sort_order (and aren't in route_codes)
 			const cardTitle = `${this._parent.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}`;
 			const $card = this._parent.addNewCard(
 				$accordion, 
@@ -781,15 +787,20 @@ class ClimberForm {
 			//	the group status is "Checked back from mountain"
 			qualifiesFor7DayPermit = qualifiesFor7DayPermit || 
 				(
-					((actualReturnDate <= now && formattedReturn) || row.group_status_code == 5) && 
-					actualReturnDate.getFullYear() === now.getFullYear()
+					((actualReturnDate <= now && formattedReturn) || row.group_status_code == 5) &&
+					row.highest_elevation_ft >= this._parent.config.minimum_elevation_for_7_day || 10000
 				)
 
 			receivedProPin = receivedProPin || row.received_pro_pin === 't';
 		}	
 
-		$('#7-day-badge').ariaHide(!qualifiesFor7DayPermit);
-		$('#pro-pin-badge').ariaHide(!receivedProPin);
+		// Only show badges if this the climber form is NOT being shpwn as a modal and this is on the
+		//	climbers page. Without this extra criterion, fillClimberHistory() is often called after the 
+		//	showModalClimberForm() stuff that hides badges. So if the climber page is opened with the 
+		//	addClimber=true URL query, any badges from the first climber loaded will be shown
+		const isShowingModal = $('.result-details-pane').is('.collapsed');
+		$('#7-day-badge').ariaHide(isShowingModal || !qualifiesFor7DayPermit);
+		$('#pro-pin-badge').ariaHide(isShowingModal || !receivedProPin);
 
 		// .change() events on .input-fields will add dirty class
 		$('.climber-form .input-field').removeClass('dirty');
@@ -937,13 +948,24 @@ class ClimberForm {
 			climberInfo = this._parent.climberInfo[currentIndex];
 		}
 
-		const $editParents = $(`
+		// If the user disabled required fields, still make validate first and last name fields. Otherwise, validate all
+		const requiredFieldsDisabled = $('#disable-required-switch-container input[type=checkbox]').prop('checked');
+		const $editParents = requiredFieldsDisabled ? 
+			$('.input-field.always-required.dirty').closest('.field-container-row') : 
+			$(`
 				#climber-info-tab-content,
 				#emergency-contacts-tab-content .card:not(.cloneable)
 			`)
 			.has('.input-field.dirty');
-		if (!$('#disable-required-slider-container input[type=checkbox]').prop('checked') && !this._parent.validateFields($editParents)) {
-			showModal('One or more required fields are not filled. All required fields must be filled before you can save your edits.', 'Required field is empty');
+		
+		if (!this._parent.validateFields($editParents)) {
+			let message = 
+				'One or more required fields are not filled. All required fields' + 
+				' must be filled before you can save your edits.'
+			if (requiredFieldsDisabled) message += 
+				' Even though you disabled required fields,' + 
+				' first and last name are always required.'
+			showModal(message, 'Required field is empty');
 			hideLoadingIndicator();
 			return;
 		};
@@ -1231,9 +1253,9 @@ class ClimberForm {
 
 
 	onToggleRequiredChange(e) {
-		$('.input-field.error').removeClass('error');
+		$('.input-field.error:not(.always-required)').removeClass('error');
 		const $switch = $(e.target);
-		$('.required-indicator').ariaHide($switch.prop('checked'));
+		$('.input-field:not(.always-required) ~ .required-indicator').ariaHide($switch.prop('checked'));
 	}
 
 
@@ -1247,11 +1269,11 @@ class ClimberForm {
 		if (!allowEdits && $('.climber-form .input-field.dirty').length && confirm) {
 			this.confirmSaveEdits();
 		} else {
-			$('.save-edits-button, .delete-climber-button, .climber-form .delete-card-button, #disable-required-slider-container').ariaHide(!allowEdits);
+			$('.save-edits-button, .delete-climber-button, .climber-form .delete-card-button, #disable-required-switch-container').ariaHide(!allowEdits);
 			$detailsPane.toggleClass('uneditable', !allowEdits);
 		}
-		// If edits are being turned off, reset slider
-		if (!allowEdits) $('#disable-required-slider-container input[type=checkbox]').prop('checked', false).change();
+		// If edits are being turned off, reset switch
+		if (!allowEdits) $('#disable-required-switch-container input[type=checkbox]').prop('checked', false).change();
 	}
 }
 
@@ -1353,17 +1375,28 @@ class ClimberDBClimbers extends ClimberDB {
 		// When a user types anything in the search bar, filter the climber results.
 		$('#climber-search-bar').keyup(() => {
 			const $input = $('#climber-search-bar');
-			const value = $input.val();
+			const searchString = $input.val();
 			
-			if (value.length >= 3 || value.length === 0) {
-				this.queryClimbers({searchString: value});
+			if (searchString.length >= 3 || searchString.length === 0) {
+				this.queryClimbers({searchString: searchString});
 				this.currentRecordSetIndex = 1;
 			}
 		});
 
 		$('.climber-search-filter').change(e => {
-			this.queryClimbers();
-		})
+			const $input = $('#climber-search-bar');
+			const searchString = $input.val();
+			// If the search string is empty, search without a search string
+			if (searchString.length === 0) {
+				this.queryClimbers();
+				this.currentRecordSetIndex = 1;
+			} 
+			// Otherwise, only search if the search string is >=3 characters 
+			else if (searchString.length >= 3) {
+				this.queryClimbers({searchString: searchString});
+				this.currentRecordSetIndex = 1;
+			}
+		});
 
 		// Configure click events for the result nav buttons
 		$('.show-previous-result-set-button, .show-next-result-set-button').click(e => {
@@ -1405,14 +1438,7 @@ class ClimberDBClimbers extends ClimberDB {
 		});
 
 		$('#add-new-climber-button').click(e => {
-
-			const $climberForm = this.climberForm.$el;
-			if ($climberForm.find('.input-field.dirty').length) {
-				this.climberForm.confirmSaveEdits('climberDB.showModalClimberForm()');
-			} else {
-				this.showModalClimberForm($climberForm);
-			}
-
+			this.onAddNewClimberClick(e)
 		});
 
 		$('#modal-save-climber-button').click(e => {this.onSaveModalClimberClick(e)});
@@ -1433,8 +1459,10 @@ class ClimberDBClimbers extends ClimberDB {
 			.addClass('collapsed');
 		this.clearInputFields({parent: $climberForm, triggerChange: false});
 
-		// Make sure required fields are required
-		$('#disable-required-slider-container input[type=checkbox]').prop('checked', false).change();
+		// Make sure required fields are not required for new climbers because
+		//	all the info isn't given at first
+		$('#disable-required-switch-container').ariaHide(false);
+		$('#disable-required-switch-container input[type=checkbox]').prop('checked', true).change();
 
 		$climberForm.find('.result-details-header-badge').addClass('hidden');
 
@@ -1464,9 +1492,10 @@ class ClimberDBClimbers extends ClimberDB {
 	after a successful save will be different depending on where the modal form is shown
 	from.
 	*/
-	saveModalClimber(a=1) {
-		this.climberForm.saveEdits()
-			.done(resultString => {
+	saveModalClimber() {
+		const deferred = this.climberForm.saveEdits();
+		if (deferred) {	
+			deferred.done(resultString => {
 				if (!this.queryReturnedError(resultString) && resultString.length) {
 					const firstName = $('#input-first_name').val();
 					const lastName = $('#input-last_name').val();
@@ -1486,6 +1515,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 				}
 			});
+		}
 	}
 
 	/*
@@ -1517,6 +1547,17 @@ class ClimberDBClimbers extends ClimberDB {
 				}
 			})
 	}
+
+	onAddNewClimberClick(e) {
+
+		const $climberForm = this.climberForm.$el;
+		if ($climberForm.find('.input-field.dirty').length) {
+			this.climberForm.confirmSaveEdits('climberDB.showModalClimberForm()');
+		} else {
+			this.showModalClimberForm($climberForm);
+		}
+	}
+
 
 	saveEdits() {
 		this.climberForm.saveEdits();
@@ -1561,7 +1602,7 @@ class ClimberDBClimbers extends ClimberDB {
 		this.climberForm.fillClimberForm(climberID, climberInfo);
 
 		// Make sure required fields are required
-		$('#disable-required-slider-container input[type=checkbox]').prop('checked', false);
+		$('#disable-required-switch-container input[type=checkbox]').prop('checked', false).change();
 		
 	}
 
@@ -1653,7 +1694,7 @@ class ClimberDBClimbers extends ClimberDB {
 		if ($('#7-day-only-filter').prop('checked')) 
 			whereClause += ' WHERE climber_info_view.id IN (SELECT climber_id FROM seven_day_rule_view)';
 		if ($('#guide-only-filter').prop('checked')) 
-			whereClause += ' WHERE is_guide';
+			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
 
 		const [sql, coreQuery] = this.getClimberQuerySQL({
 			searchString: searchString, 
@@ -1834,6 +1875,7 @@ class ClimberDBClimbers extends ClimberDB {
 	}
 
 	init() {
+
 		// Call super.init()
 		this.showLoadingIndicator('init');
 		var deferreds = super.init();
