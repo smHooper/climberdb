@@ -262,7 +262,8 @@ label {
 
 
 .appointment-details-drawer {
-	flex: 1 1 auto%;
+	flex: 1 1 auto;
+	max-height: 400px;
 	height: 0px;
 	overflow: hidden; /* necessary to hide children when height is 0*/
 	flex-wrap: wrap;
@@ -272,7 +273,6 @@ label {
 	transition: all 0.3s;
 	/*background-color: rgba(255,255,255, 0.5);*/
 }
-
 .appointment-details-drawer.show {
 	height: 100%; /*will only be 50% because it's flexed*/
 	box-shadow: -3px -1px 12px 2px rgb(0 0 0 / 30%);
@@ -308,5 +308,11 @@ label {
 }
 .appointment-details-body {
 	padding: 10px 0px 10px 20px;
+	overflow: auto;
+	max-height: calc(100% - 50px);
 }
+#appointment-details-route-list-container {
+	color: #888888;
+}
+
 /*^^^^^^--details slider --^^^^^^*/

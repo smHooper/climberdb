@@ -498,17 +498,32 @@ CREATE VIEW briefings_view AS
 	        GROUP BY expedition_members.expedition_id, expeditions.expedition_name) t ON briefings.expedition_id = t.expedition_id
 	  LEFT JOIN users ON users.id = briefings.briefing_ranger_user_id;
 
-CREATE VIEW breifings_expedition_info_view AS 
+CREATE VIEW briefings_expedition_info_view AS 
   SELECT gb.expedition_id,
      gb.n_members,
      expeditions.expedition_name,
      expeditions.planned_departure_date,
-     briefings.expedition_id IS NULL AS unscheduled
-    FROM ( SELECT expedition_members.expedition_id,
-             count(*) AS n_members
-            FROM expeditions expeditions_1
-              JOIN expedition_members ON expeditions_1.id = expedition_members.expedition_id
-           GROUP BY expedition_members.expedition_id) gb
+     briefings.expedition_id IS NULL AS unscheduled,
+     routes
+    FROM ( 
+    		SELECT
+    			expedition_id,
+    			routes,
+            	count(*) AS n_members
+	            FROM (
+	            	SELECT
+	            		expedition_members.expedition_id,
+	            		expedition_members.id AS expedition_member_id,
+	            		string_agg(route_codes.name, '; ') AS routes
+		            FROM expeditions expeditions_1
+		             	JOIN expedition_members ON expeditions_1.id = expedition_members.expedition_id
+		             	JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
+		             	JOIN route_codes ON route_codes.code=expedition_member_routes.route_code
+		            GROUP BY 
+		             	expedition_members.expedition_id, expedition_members.id
+		        ) t
+        	GROUP BY expedition_id, routes
+        ) gb
       LEFT JOIN briefings ON gb.expedition_id = briefings.expedition_id
       JOIN expeditions ON expeditions.id = gb.expedition_id
    WHERE EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions.planned_departure_date);

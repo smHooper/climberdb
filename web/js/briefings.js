@@ -315,6 +315,10 @@ class ClimberDBBriefings extends ClimberDB {
 								<span class="null-input-indicator">&lt; null &gt;</span>
 							</div>
 						</div>
+						<div id="appointment-details-route-list-container">
+							<h5 class="w-100">Routes</h5>
+							<ul id="appointment-details-route-list"></ul>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -470,8 +474,9 @@ class ClimberDBBriefings extends ClimberDB {
 			<div class="briefing-appointment-container" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}" data-briefing-id=${briefingInfo.id}>
 				<label class="briefing-appointment-header">${briefingInfo.expedition_name}</label>
 				<p class="briefing-appointment-text">
-				<span class="briefing-details-n-climbers">${briefingInfo.n_members}</span> climber<span class="briefing-details-climber-plural">${briefingInfo.n_members > 1 ? 's' : ''}</span><br>
-				<span class="briefing-details-ranger-name">${briefingInfo.ranger_last_name || ''}</span>
+					<span class="briefing-details-n-climbers">Routes: ${briefingInfo.routes.replace(/; /g, ', ')}</span><br>
+					<span class="briefing-details-n-climbers">${briefingInfo.n_members}</span> climber<span class="briefing-details-climber-plural">${briefingInfo.n_members > 1 ? 's' : ''}</span><br>
+					<span class="briefing-details-ranger-name">${briefingInfo.ranger_last_name || ''}</span>
 				</p>
 			</div>
 		`);
@@ -523,6 +528,7 @@ class ClimberDBBriefings extends ClimberDB {
 			.addClass('selected');
 		const selectedDate = $('.calendar-cell.selected').data('date');
 		const briefingID = $container.data('briefing-id');
+		const $routeList = $('#appointment-details-route-list').empty();
 		var info; 
 		if (briefingID) {
 			info = this.briefings[selectedDate][briefingID];
@@ -532,12 +538,16 @@ class ClimberDBBriefings extends ClimberDB {
 			for (const el of $('.appointment-details-drawer .input-field')) {
 				this.setInputFieldValue(el, info)
 			}
+			for (const routeName of info.routes.split('; ')) {
+				$routeList.append(`<li>${routeName}</li>`)
+			}
 		} else {
 			const expeditionOptions = Object.values(this.expeditionInfo.expeditions)
 				.filter(i => this.expeditionInfo.unscheduled.includes(i.expedition_id));
 			this.fillExpeditionsSelectOptions(expeditionOptions);
 			this.clearInputFields({parent: '.appointment-details-drawer', triggerChange: false});
 		}
+
 
 		$('.appointment-details-drawer').addClass('show');
 
@@ -667,6 +677,7 @@ class ClimberDBBriefings extends ClimberDB {
 				info.briefing_end = info.briefing_date + ' '  + info.briefing_end_time;
 				info.expedition_name = this.expeditionInfo.expeditions[info.expedition_id].expedition_name;
 				info.n_members = this.expeditionInfo.expeditions[info.expedition_id].n_members;
+				info.routes = this.expeditionInfo.expeditions[info.expedition_id].routes.replace(/; /g, ', ');
 				info.id = briefingID;
 
 				this.briefings[briefingDate][briefingID] = {...info};
@@ -1402,6 +1413,8 @@ class ClimberDBBriefings extends ClimberDB {
 							this.briefings[briefingDate] = {};
 						}
 						
+						const expeditionInfo = this.expeditionInfo.expeditions[row.expedition_id];
+						row.routes = expeditionInfo.routes;
 						this.briefings[briefingDate][row.id] = row;
 					}
 
@@ -1475,11 +1488,11 @@ class ClimberDBBriefings extends ClimberDB {
 					console.log('Could not get expedition info because ' + queryResultString);
 				} else {
 					const result = $.parseJSON(queryResultString);
-					this.fillExpeditionsSelectOptions(result);
 					for (const row of result) {
 						this.expeditionInfo.expeditions[row.expedition_id] = {...row};
 						if (row.unscheduled === 't') this.expeditionInfo.unscheduled.push(row.expedition_id);
 					}
+					this.fillExpeditionsSelectOptions(result);
 				}
 			})
 	}
@@ -1491,7 +1504,7 @@ class ClimberDBBriefings extends ClimberDB {
 		// Do synchronous stuff
 		this.configureMainContent();
 
-		this.fillBriefingDetailSelects();
+		deferreds = deferreds.concat(this.fillBriefingDetailSelects());
 
 		$.when(...deferreds).then(() => {
 			this.queryBriefings();
