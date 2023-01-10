@@ -64,7 +64,7 @@ class ClimberDBDashboard extends ClimberDB {
 						</div>
 					</div>
 					<div id="solo-climbers-card" class="card dashboard-card half-height-card">
-						<h4 class="dashboard-card-header">Solo Climbers</h4>
+						<h4 class="dashboard-card-header">Confirmed Solo Climbers</h4>
 						<div class="dashboard-card-body mt-0">
 							<table class="climberdb-dashboard-table">
 								<thead>
@@ -203,10 +203,8 @@ class ClimberDBDashboard extends ClimberDB {
 					</div>
 				</div>
 
-				<div class="w-100"></div>
-
 				<!-- breifings per day -->
-				<div class="col-md col-lg-8 card-container">
+				<div class="col-md col-lg-8 card-container small-row">
 					<div class="card dashboard-card">
 						<h4 class="dashboard-card-header w-100 centered-text">Scheduled Expedition Briefings per Day</h4>
 						<div class="scrollable-chart-and-axis-wrapper">
@@ -222,7 +220,7 @@ class ClimberDBDashboard extends ClimberDB {
 				</div>
 
 				<!-- expeditions that still need to pay and turn in application -->
-				<div class="col-md col-lg-4 card-container">
+				<div class="col-md col-lg-4 card-container small-row">
 					<div id="missing-sup-fee-groups-card" class="card dashboard-card">
 						<h4 class="dashboard-card-header">Missing SUP or Climber Fee</h4>
 						<div class="dashboard-card-body">
@@ -599,12 +597,13 @@ class ClimberDBDashboard extends ClimberDB {
 
 
 	configureMisingPaymentOrSUP() {
+		//TODO: winter solo expedition URL doesn't have id
 		const sql = `
 			SELECT 
 				expedition_name, 
 				extract(days FROM planned_departure_date - now()) AS days_to_departure, 
 				sup.missing_sup, 
-				sup.expedition_id,
+				coalesce(sup.expedition_id, fee.expedition_id) AS expedition_id,
 				fee.missing_payment 
 			FROM expeditions 
 			LEFT JOIN (
@@ -719,9 +718,9 @@ class ClimberDBDashboard extends ClimberDB {
 			FROM 
 				(
 					SELECT 
-						generate_series(min(briefing_start), max(briefing_start), '1d')::date AS briefing_date 
+						generate_series(min(briefing_start), max(briefing_start + '1d'::interval), '1d')::date AS briefing_date 
 					FROM briefings 
-					WHERE extract(year FROM briefing_start) = extract(year FROM now())
+					WHERE extract(year FROM briefing_start) >= extract(year FROM now()) 
 				) series 
 			LEFT JOIN 
 				(
@@ -729,7 +728,7 @@ class ClimberDBDashboard extends ClimberDB {
 						briefing_start::date AS briefing_date, 
 						count(*) AS n_briefings 
 					FROM briefings 
-					WHERE extract(year FROM briefing_start) = extract(year FROM now())
+					WHERE extract(year FROM briefing_start) >= extract(year FROM now())
 					GROUP BY briefing_date
 				) n 
 			USING (briefing_date) 
@@ -868,12 +867,14 @@ class ClimberDBDashboard extends ClimberDB {
 	        		const $outerWrapper = $canvas.closest('.scrollable-chart-outer-wrapper');
 	        		const scrollWidth = $outerWrapper[0].scrollWidth;
 	        		const now = new Date();
-	        		const minDate = new Date(`${xlabels[0]}, ${now.getFullYear()}`);
-	        		const maxDate = new Date(`${xlabels[xlabels.length - 1]}, ${now.getFullYear()}`);
+	        		const minDate = new Date(`${fullDates[0]} 00:00`);
+	        		const maxDate = new Date(`${fullDates[fullDates.length - 1]} 00:00`);
 	        		const nTotalDays = (maxDate.getTime() - minDate.getTime()) / this.millisecondsPerDay;
-	        		const minDateToNow = (now.getTime() - minDate.getTime()) / this.millisecondsPerDay;
+	        		const minDateToNow = minDate < now ? 
+        				(now.getTime() - minDate.getTime()) / this.millisecondsPerDay :
+        				0;
 	        		const scrollDistance = (minDateToNow / nTotalDays) * scrollWidth;
-	        		$outerWrapper.scrollLeft(scrollDistance);
+	        		$outerWrapper.scrollLeft(scrollDistance);//scrollDistance);
 	        	}
 			})
 			.fail((xhr, status, error) => {
