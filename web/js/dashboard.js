@@ -775,7 +775,7 @@ class ClimberDBDashboard extends ClimberDB {
 	        		var rectangleSet = false;
 					const $canvas = $('#daily-briefings-chart');
 					const $canvasWrapper = $canvas.parent();
-					const canvasWidth = $canvasWrapper.width() * data.length / 14;
+					const canvasWidth = Math.max($canvasWrapper.width(), data.length * 40) //width is either current width or just make bars 40px;
 					$canvasWrapper.width(canvasWidth);
 
 					var chart = new Chart($canvas, {
@@ -784,8 +784,9 @@ class ClimberDBDashboard extends ClimberDB {
 							labels: xlabels,
 							datasets: [{
 								data: data,
-								backgroundColor: '#f28100',//'#FFB600'//,
-								borderColor: '#f28100'//'#FFB600'//,
+								backgroundColor: '#f28100',
+								borderColor: '#f28100',
+								maxBarThickness: '60' //in pixels
 							}],
 						},
 			            maintainAspectRatio: true,
