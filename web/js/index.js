@@ -340,6 +340,12 @@ class ClimberDBIndex extends ClimberDB {
 			$('#sign-in-button').data('target', encodeURI(urlParams.referer));
 		}
 
+		if ('testClientSecret' in urlParams) {
+			let targetURL = new URL($('#sign-in-button').data('target'), window.location.origin);
+			targetURL.searchParams.set('testClientSecret', urlParams.testClientSecret);
+			$('#sign-in-button').data('target', targetURL.href);
+		}
+
 		if ( ('activation' in urlParams) || ('reset' in urlParams) ) {
 			this.toggleFormElements('.activation-element' + ('changePassword' in urlParams ? ', .change-password-element' : '') );
 			$formContainer.addClass('activation');

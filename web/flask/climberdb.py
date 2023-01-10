@@ -148,11 +148,18 @@ def get_user_info():
 	if not username:
 		return 'ERROR: no auth_user'
 
+	data = request.form
+	if 'client_secret' in data:
+		if data['client_secret'] == app.config['TEST_CLIENT_SECRET']:
+			username = 'test'
+		else:
+			return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
+
 	sql = f'''SELECT id, '{username}' AS ad_username, user_role_code, user_status_code, first_name, last_name FROM users WHERE ad_username='{username}' '''
 	engine = connect_db()
 	user_info = pd.read_sql(sql, engine)
 	if len(user_info) == 0:
-		return json.dumps({'ad_user': username, 'user_role_code': None, 'user_status_code': None})
+		return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
 	else:
 		# Rather than {column: {row_index: val}}, transform result to {row_index: {column: value}}
 		return user_info.T.to_dict()[0]
@@ -277,6 +284,8 @@ def send_reset_password_request():
 		reply_to=app.config['db_admin_email']
 	)
 	mailer.send(msg)
+
+	#TODO: set user status to inactive
 
 	return 'true';
 

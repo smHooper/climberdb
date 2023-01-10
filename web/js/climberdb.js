@@ -209,16 +209,30 @@ class ClimberDB {
 	}
 
 	getUserInfo() {
+		
+		const urlParams = this.parseURLQueryString();
 		return $.ajax({
 			url: 'flask/userInfo',
 			method: 'POST',
+			data: urlParams.testClientSecret ? {client_secret: urlParams.testClientSecret} : {},
 			cache: false
 		}).done((resultString) => {
 			if (this.queryReturnedError(resultString)) {
 				throw 'User role query failed: ' + resultString;
 			} else {
 				const result = typeof resultString === 'object' ? resultString : $.parseJSON(resultString);
+				
+				if (!(result.user_status_code && result.user_role_code)) {
+					// user isn't authorized 
+					const program_admin = this.config.program_admin_email;
+					const message = `There is no user account for Windows user <strong>${result.ad_username}</strong>. Contact the program adminstrator at <a href="mailto:${program_admin}">${program_admin}</a> if you have questions.`;
+					const footerButtons = '<a class="generic-button" href="index.html">OK</a>';
+					showModal(message, 'User Not Authorized', 'alert', footerButtons);
+					return;
+				}
+
 				this.userInfo = {...result};
+
 				$('#username').text(`Hi, ${this.userInfo.first_name}!`);
 
 				// Set the href attribute of the user account dropdown (if it exists. It won't on pages that are initiated with addMenu: false)
@@ -1307,10 +1321,10 @@ class ClimberDB {
 				.addClass('selected');
 		
 		const userDeferred = this.getUserInfo()
-			.done((response) => {
+			.done(response => {
 				const result = response;
 				const username = result.ad_username;
-				if (addMenu) {
+				if (addMenu && username !== 'test') {
 					if (this.loginInfo.username !== username || this.loginInfo.expiration < new Date().getTime()) {
 						$('#climberdb-main-content').empty();
 						hideLoadingIndicator();
