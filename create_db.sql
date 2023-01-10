@@ -529,6 +529,41 @@ CREATE VIEW briefings_expedition_info_view AS
    WHERE EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions.planned_departure_date);
 
 
+CREATE VIEW registered_climbers_view AS 
+	SELECT climbers.state_code,
+		climbers.country_code,
+		climbers.dob,
+		climbers.age,
+		climbers.sex_code,
+		expeditions.planned_departure_date,
+		expeditions.actual_departure_date,
+		expeditions.actual_return_date,
+		expeditions.guide_company_code,
+		expeditions.air_taxi_code,
+		expeditions.reviewed_by,
+		expeditions.briefed_by,
+		expeditions.group_status_code,
+		expeditions.special_group_type_code,
+		expedition_members.expedition_id,
+		expedition_members.climber_id,
+		expedition_members.reservation_status_code,
+		expedition_member_routes.expedition_member_id,
+		expedition_member_routes.route_code,
+		expedition_member_routes.route_was_summited,
+		expedition_member_routes.summit_date,
+		route_codes.mountain_code,
+		route_codes.name AS route_name,
+		mountain_codes.name AS mountain_name
+	FROM expeditions
+		JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
+		JOIN climbers ON expedition_members.climber_id = climbers.id
+		JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
+		JOIN route_codes ON expedition_member_routes.route_code = route_codes.code
+		JOIN mountain_codes ON route_codes.mountain_code = mountain_codes.code
+	 WHERE (expedition_members.reservation_status_code <> 6) AND (expeditions.group_status_code <> 6);
+
+
+
 CREATE MATERIALIZED VIEW table_info_matview AS 
    SELECT columns.column_name,
   		columns.table_name,

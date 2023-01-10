@@ -315,7 +315,7 @@ class ClimberDBDashboard extends ClimberDB {
 						climber_id, 
 						planned_departure_date, --remove if counting climbers not climbs
 						mountain_name
-					FROM all_checked_in_climbers_view
+					FROM registered_climbers_view
 					WHERE planned_departure_date >= '${year}-1-1'
 				) t
 			GROUP BY mountain_name
@@ -368,7 +368,7 @@ class ClimberDBDashboard extends ClimberDB {
 						climber_id, 
 						planned_departure_date, --remove if counting climbers not climbs
 						mountain_name
-					FROM all_checked_in_climbers_view
+					FROM registered_climbers_view
 					WHERE 
 						planned_departure_date >= '${year}-1-1' AND 
 						reservation_status_code = 4 --4 == briefing complete
@@ -398,7 +398,7 @@ class ClimberDBDashboard extends ClimberDB {
 					SELECT DISTINCT 
 						climber_id, 
 						mountain_name
-					FROM all_checked_in_climbers_view
+					FROM registered_climbers_view
 					WHERE 
 						planned_departure_date >= '${year}-1-1' AND 
 						reservation_status_code = 5 --5 == returned
@@ -430,7 +430,7 @@ class ClimberDBDashboard extends ClimberDB {
 						planned_departure_date,
 						mountain_name,
 						reservation_status_code
-					FROM all_checked_in_climbers_view
+					FROM registered_climbers_view
 					WHERE 
 						planned_departure_date >= '${year}-1-1' AND 
 						reservation_status_code = 5 AND
