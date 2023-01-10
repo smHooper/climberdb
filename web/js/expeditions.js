@@ -1,4 +1,7 @@
-//TODO: reload climber search fails if no matches
+/*
+expeditions.js
+author: Sam Hooper
+*/
 
 class ClimberDBExpeditions extends ClimberDB {
 	
@@ -989,6 +992,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			const value = $searchBar.val();
 			if (value.length >= 5 || value.length === 0) { 
 				this.fillExpeditionSearchSelect({$searchBar: $searchBar, showExpeditionOptions: true});
+			} else {
+				//TODO: scroll to first match in the list alphabetically
 			}
 		}).click(e => {
 			// Toggle the options drawer when the search bar is clicked
@@ -1028,6 +1033,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#input-date_confirmed').change(e => {
 			this.onDateConfirmedChange(e);
 		});
+		// When an expedition changes, check that the name is unique for the current year
+		$('#input-expedition_name').blur(e => {
+			this.onExpeditionNameLostFocus(e)
+		})
 		// ^^^^^^^^^^^ Expedition ^^^^^^^^^^^^^^^^^^^
 
 
@@ -1753,7 +1762,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				#expedition-members-accordion .card:not(.cloneable) .card-header,
 				#expedition-data-container
 			`)
-			.has('.input-field.dirty');
+			.has('.input-field.dirty, .input-field:required:invalid');
 		if (!this.validateFields($editParents)) {
 			showModal('One or more required fields are not filled. All required fields must be filled before you can save your edits.', 'Required field is empty');
 			hideLoadingIndicator();
@@ -2170,6 +2179,41 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Save the expedition member ID in the data of the confirm button
 		$('#confirm-change-expedition-button').data('expedition-member-id', expeditionMemberID);
+	}
+
+	/*
+	When the user changes the expedition name, check to make sure it doesn't already exist for this year
+	*/
+	onExpeditionNameLostFocus(e) {
+		const $input = $(e.target);
+		if ($input.is('.ignore-duplicates')) return;
+
+		const expeditionName = $input.val();
+		
+		// If the the name matches the current expedition name, do nothing because the user didn't change anything
+		const currentExpeditionName = this.expeditionInfo.expeditions.expedition_name;
+		if (expeditionName === currentExpeditionName) return;
+
+		const $expeditionOptions = $('.expedition-search-bar-option');
+		const existingExpeditions = $expeditionOptions.map((i, el) => el.innerHTML).get();
+		const existingIndex = existingExpeditions.indexOf(expeditionName);
+		if (existingIndex !== -1) {
+			const expeditionID = $expeditionOptions.eq(existingIndex).data('expedition-id');
+			const message = `An expedition with the name "${expeditionName}" has already been created. <a href="expeditions.html?id=${expeditionID}">Click here</a> to open that expedition. To change the name to something unique like "${expeditionName}-1", click <strong>OK</strong>. To disable this message for this session, click <strong>Disable warning</strong>.`;
+			const footerButtons =
+				'<button class="generic-button danger-button modal-button close-modal disable-warning-button" data-dismiss="modal">Disable warning</button>' +
+				'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
+			
+			const eventHandler = () => {
+				$('.modal-footer .confirm-button').click(e => {
+					$('#input-expedition_name').focus();
+				});
+				$('.modal-footer .disable-warning-button').click(e => {
+					$('#input-expedition_name').addClass('ignore-duplicates');
+				});
+			}
+			showModal(message, 'Duplicate Expedition Name', 'alert', footerButtons, {eventHandlerCallable: eventHandler});
+		}
 	}
 
 
@@ -3076,7 +3120,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			// If the climber is a minor, flag the expedition member
 			const climberAge = climberInfo.age;
-			if (!((climberAge === undefined) || (climberAge === null)) && (climberAge < 18) ) {
+			if (!((climberAge === undefined) || (climberAge === null)) && (climberAge > 0 && climberAge < 18) ) {
 				$newCard.find('.input-field[name=flagged]')
 					.prop('checked', true)
 					.change();
@@ -3388,7 +3432,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						}
 						const transactionID = row.transaction_id;
 						if (transactionID != null) {
-							if (!(transactionID in transactions[memberID])) {
+							if (!(transactionID in transactions[memberID].data)) {
 								transactions[memberID].data[transactionID] = {};
 								transactions[memberID].order.push(transactionID);
 								for (const fieldName in this.tableInfo.tables.transactions.columns) {
@@ -3982,21 +4026,24 @@ class ClimberDBExpeditions extends ClimberDB {
 			initDeferreds, 
 			...lookupDeferreds
 		).then(() => {
-			if (window.location.search.length) {
-				const params = this.parseURLQueryString();
-				if ('id' in params) {
+			const params = this.parseURLQueryString();
+			// if the URL specifies a specific expedition (id) to load, do so
+			if ('id' in params) {
 					this.queryExpedition(params.id).done(() => {
 						// add to history buffer for keeping track of browser nav via back/forward buttons
 						this.historyBuffer.push(params.id);
 					});
 					window.history.replaceState({id: params.id, historyIndex: 0}, '', window.location.href);
 					$('#expedition-search-bar').data('current-value', params.id);
-				} else {
-					this.createNewExpedition({triggerChange: false});
-				}
-			} else {
+			} 
+			// Otherwise, prepare the page for creating a new expedition
+			else {
 				this.createNewExpedition({triggerChange: false});
+				// Make sure all things that depend on group status are in their proper state 
+				//	for a new expedition
+				$('#input-group_status').change().removeClass('dirty');
 			}
+
 			$('.select2-no-tag').select2({
 				width: '100%'
 			});
