@@ -1,3 +1,4 @@
+//TODO: make sure only super users can access dev site
 /* Global functions */
 function getFormattedTimestamp(date, {format='date'}={}) {
 
@@ -1183,6 +1184,16 @@ class ClimberDB {
 		return $input.is('.input-checkbox') ? $input.prop('checked') : $input.val();
 	}
 	
+
+	/*
+	Helper function to revert an input field back to a previous value. 
+	*/
+	revertInputValue($input) {
+		$input = $($input);
+		const oldValue = $input.data('current-value');
+		
+		return $input.val(oldValue);
+	}
 
 	/*
 	Helper methods to generate SQL statement for querying climber_info_view
