@@ -839,103 +839,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		})
 
 		$(document).on('click', '.delete-card-button', (e) => {
-			e.stopPropagation(); // don't close or open the card
-
-			const $card = $(e.target).closest('.card');
-			const $accordion = $card.closest('.accordion');
-			const displayName = $accordion.data('item-display-name');
-			const tableName = $accordion.data('table-name');
-			const dbID = $card.data('table-id');
-			if ($card.is('.new-card')) {
-				if (tableName === 'expedition_members') {
-					const climberID = $card.data('climber-id');
-					$(`#routes-accordion .route-member-list .data-list-item[data-climber-id="${climberID}"`).fadeRemove(500);
-					setTimeout(() => {this.updateExpeditionMemberCount()}, 550);
-				}
-				$card.fadeRemove();
-			} else {
-				// confirm delete
-
-				var message = '',
-					onConfirmClick = '';
-
-				if  (tableName === 'expedition_members') { 
-					onConfirmClick = `
-						climberDB.queryDB('DELETE FROM expedition_members WHERE id=${dbID}')
-							.done(() => {
-								const $card = $('#${$card.attr('id')}');
-								delete climberDB.expeditionInfo.expedition_members.data[${dbID}];
-								// remove member from in-memory .order
-								climberDB.expeditionInfo.expedition_members.order = climberDB.expeditionInfo.expedition_members.order.filter(id => id != ${dbID});
-								delete climberDB.expeditionInfo.transactions[${dbID}];
-								const memberRoutes = climberDB.expeditionInfo.expedition_member_routes.data;
-								for (const routeCode in memberRoutes) {
-									const thisRoute = memberRoutes[routeCode];
-									delete thisRoute[${dbID}];
-								}
-
-								// remove expedition member from all route cards
-								const climberID = $card.data('climber-id');
-								$('#routes-accordion .route-member-list .data-list-item[data-climber-id=' + climberID + ']').remove();
-
-								 $('#${$card.attr('id')}').fadeRemove(500);
-
-								 // Wait just over a half second for the card to be removed
-								 setTimeout(() => {climberDB.updateExpeditionMemberCount(); climberDB.updateCommsDeviceOwnerOptions()}, 550);
-							})
-							.fail((xhr, status, error) => {
-								console.log('delete failed because ' + error)
-							});
-					`;
-					message = 
-						`Are you sure you want to delete this expedition member` +
-						` and all related transactions and routes for this member? This action` +
-						` is permanent and cannot be undone.`;
-
-
-
-				} else if (tableName === 'expedition_member_routes') {
-					// get DB IDs for all member route records that are saved in the DB
-					const memberRouteIDs = $card.find('.route-member-list .data-list-item:not(.cloneable):not(.new-list-item)')
-						.map((_, el) => $(el).data('table-id'))
-						.get()
-						.join(', ');
-					const $routeCodeInput = $card.find('.route-code-header-input:not(.mountain-code-header-input)');
-					const routeCode = $routeCodeInput.val();
-					onConfirmClick = `
-						const sql = 'DELETE FROM expedition_member_routes WHERE id IN (${memberRouteIDs})';
-						climberDB.queryDB(sql)
-							.done(queryResultString => {
-								if (climberDB.queryReturnedError(queryResultString)) {
-									showModal(
-										'And error occurred while attempting to delete this route: ' + queryResultString.trim() + 
-											'. Try again and contact your database adminstrator if the problem continues.', 
-										'Database Error'
-									);
-								} else {
-									const routeCode = ${routeCode};
-									const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
-									if (routeDeleted) {
-										// remove the route from in-memory .order
-										climberDB.expeditionInfo.expedition_member_routes.order = climberDB.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
-									}
-									$('#${$card.attr('id')}').fadeRemove();
-								}
-							}).fail((xhr, status, error) => {
-
-							})
-					`;
-					const routeName = $routeCodeInput.find(`option[value=${routeCode}]`).text();
-					message = `Are you sure you want to delete the ${routeName} route? This action` +
-						` is permanent and cannot be undone.`;
-				}
-
-				const footerButtons = `
-					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-					<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
-				`;
-				showModal(message, `Delete ${displayName}?`, 'confirm', footerButtons);
-			}
+			this.onDeleteCardButtonClick(e)
 		})
 		
 
@@ -1523,6 +1427,106 @@ class ClimberDBExpeditions extends ClimberDB {
 	
 	}
 
+
+	onDeleteCardButtonClick(e) {
+		e.stopPropagation(); // don't close or open the card
+
+		const $card = $(e.target).closest('.card');
+		const $accordion = $card.closest('.accordion');
+		const displayName = $accordion.data('item-display-name');
+		const tableName = $accordion.data('table-name');
+		const dbID = $card.data('table-id');
+		if ($card.is('.new-card')) {
+			if (tableName === 'expedition_members') {
+				const climberID = $card.data('climber-id');
+				$(`#routes-accordion .route-member-list .data-list-item[data-climber-id="${climberID}"`).fadeRemove(500);
+				setTimeout(() => {this.updateExpeditionMemberCount()}, 550);
+			}
+			$card.fadeRemove();
+		} else {
+			// confirm delete
+
+			var message = '',
+				onConfirmClick = '';
+
+			if  (tableName === 'expedition_members') { 
+				onConfirmClick = `
+					climberDB.queryDB('DELETE FROM expedition_members WHERE id=${dbID}')
+						.done(() => {
+							const $card = $('#${$card.attr('id')}');
+							delete climberDB.expeditionInfo.expedition_members.data[${dbID}];
+							// remove member from in-memory .order
+							climberDB.expeditionInfo.expedition_members.order = climberDB.expeditionInfo.expedition_members.order.filter(id => id != ${dbID});
+							delete climberDB.expeditionInfo.transactions[${dbID}];
+							const memberRoutes = climberDB.expeditionInfo.expedition_member_routes.data;
+							for (const routeCode in memberRoutes) {
+								const thisRoute = memberRoutes[routeCode];
+								delete thisRoute[${dbID}];
+							}
+
+							// remove expedition member from all route cards
+							const climberID = $card.data('climber-id');
+							$('#routes-accordion .route-member-list .data-list-item[data-climber-id=' + climberID + ']').remove();
+
+							 $('#${$card.attr('id')}').fadeRemove(500);
+
+							 // Wait just over a half second for the card to be removed
+							 setTimeout(() => {climberDB.updateExpeditionMemberCount(); climberDB.updateCommsDeviceOwnerOptions()}, 550);
+						})
+						.fail((xhr, status, error) => {
+							console.log('delete failed because ' + error)
+						});
+				`;
+				message = 
+					`Are you sure you want to delete this expedition member` +
+					` and all related transactions and routes for this member? This action` +
+					` is permanent and cannot be undone.`;
+
+
+
+			} else if (tableName === 'expedition_member_routes') {
+				// get DB IDs for all member route records that are saved in the DB
+				const memberRouteIDs = $card.find('.route-member-list .data-list-item:not(.cloneable):not(.new-list-item)')
+					.map((_, el) => $(el).data('table-id'))
+					.get()
+					.join(', ');
+				const $routeCodeInput = $card.find('.route-code-header-input:not(.mountain-code-header-input)');
+				const routeCode = $routeCodeInput.val();
+				onConfirmClick = `
+					const sql = 'DELETE FROM expedition_member_routes WHERE id IN (${memberRouteIDs})';
+					climberDB.queryDB(sql)
+						.done(queryResultString => {
+							if (climberDB.queryReturnedError(queryResultString)) {
+								showModal(
+									'And error occurred while attempting to delete this route: ' + queryResultString.trim() + 
+										'. Try again and contact your database adminstrator if the problem continues.', 
+									'Database Error'
+								);
+							} else {
+								const routeCode = ${routeCode};
+								const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
+								if (routeDeleted) {
+									// remove the route from in-memory .order
+									climberDB.expeditionInfo.expedition_member_routes.order = climberDB.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
+								}
+								$('#${$card.attr('id')}').fadeRemove();
+							}
+						}).fail((xhr, status, error) => {
+
+						})
+				`;
+				const routeName = $routeCodeInput.find(`option[value=${routeCode}]`).text();
+				message = `Are you sure you want to delete the ${routeName} route? This action` +
+					` is permanent and cannot be undone.`;
+			}
+
+			const footerButtons = `
+				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
+				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
+			`;
+			showModal(message, `Delete ${displayName}?`, 'confirm', footerButtons);
+		}
+	}
 
 	onModalAddRouteMemberClick(e) {
 		// If there's more than one expedition member not on this route, show a modal that allows the user 
