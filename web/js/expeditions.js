@@ -766,7 +766,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		// Record current value for .revertable inputs so the value can be reverted after a certain event
-		$(document).on('change', '.input-field.revertable', e => {
+		$(document).on('focus', '.input-field.revertable', e => {
 			const $target = $(e.target);
 			$target.data('current-value', $target.val());
 		});
@@ -934,6 +934,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 		// ----------- Expedition -------------------
+		//TODO: allow group status to change all members' status at once
 		$('#input-date_confirmed').change(e => {
 			this.onDateConfirmedChange(e);
 		});
@@ -2292,10 +2293,9 @@ class ClimberDBExpeditions extends ClimberDB {
 				const climberName = memberInfo.first_name ? `${memberInfo.first_name} ${memberInfo.last_name}` : 'This expedition member';
 				const message = `${climberName} can't be confirmed because they: <ul>${reasons}</ul> All climbers must have a climbing fee payment or waiver in their transaction history and the SUP app. and PSAR checkboxes must be checked before they can be marked as confirmed.`;
 				const eventHandlerCallable = () => {
-					//TODO: revert doesn't work
 					$('#alert-modal button').click(() => {this.revertInputValue($select)})
 				}
-				showModal(message, 'Missing Payment/Information', {eventHandlerCallable: eventHandlerCallable})
+				showModal(message, 'Missing Payment/Information', 'alert', '', {eventHandlerCallable: eventHandlerCallable})
 				
 				return;
 			} 
