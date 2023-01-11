@@ -555,7 +555,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 		// Scroll to the selected container, but delay for a half second so that the 
 		//	.show transition can start first
-		setTimeout(() => {$container[0].scrollIntoView()}, 50);
+		setTimeout(() => {$container[0].scrollIntoViewIfNeeded()}, 50);
 
 		// clear data-current-value properties
 		for (const input of $('.input-field')) {
@@ -1416,6 +1416,7 @@ class ClimberDBBriefings extends ClimberDB {
 						}
 						
 						const expeditionInfo = this.expeditionInfo.expeditions[row.expedition_id];
+						if (!expeditionInfo) continue;
 						row.routes = expeditionInfo.routes || '<em>none</em>';
 						this.briefings[briefingDate][row.id] = row;
 					}
