@@ -39,6 +39,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	configureMainContent() {
+		//const autocompleteRandomizer = Math.random().toString(36).slice(2);
 		$('.main-content-wrapper').append(`
 			<div id="page-top-bookmark" aria-hidden="true"></div> <!--dummy element to allow scrolling back to top of page-->
 			<div class="main-content-header">
@@ -881,28 +882,20 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		})
 		
-		$('.fuzzy-search-bar').keyup( e => {
-			const $searchBar = $(e.target);
-			
-			// If the user pressed the escape key, hide the options drawer
-			if (e.key === 'Escape') {
-				$searchBar.siblings('.fuzzy-search-bar-drawer.collapse').collapse('hide');
-				return;
-			}
-
-			// Only query the DB for options if the search string's length is more than 5 characters or 0.
-			//	0-length will show all options but 1-4 chars will not produce reliable search results.
-			//	Also no expedition name should be less than 5 characters long
-			const value = $searchBar.val();
-			if (value.length >= 5 || value.length === 0) { 
-				this.fillExpeditionSearchSelect({$searchBar: $searchBar, showExpeditionOptions: true});
-			} else {
-				//TODO: scroll to first match in the list alphabetically
-			}
+		// Handle keyboard and click events for expedition search bar
+		$('#expedition-search-bar').keyup( e => {
+			this.onExpeditionSearchBarKeyup(e);
 		}).click(e => {
 			// Toggle the options drawer when the search bar is clicked
 			const $optionsDrawer = $(e.target).siblings('.expedition-options-container.collapse');
 			$optionsDrawer.collapse('toggle')
+		});
+
+		// Handle when the user presses either the up/down arrow key or the enter key and an 
+		//	expedition-search-option is selected. Use keydown so the user can hold the up or down 
+		//	key to scroll down continuously
+		$(document).on('keydown', '.expedition-search-bar-option', e => {
+			this.onExpeditionSearchOptionKeydown(e);
 		});
 
 		// When a user selects an option in the main search bar, load the expedition
@@ -1376,6 +1369,71 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Push the new entry here because loadExpedition() is also called when the user clicks the back or forward button, and adding a history entry then will muck up the history sequence 
 		this.historyBuffer.push(expeditionID);
 		window.history.pushState({id: expeditionID, historyIndex: this.currentHistoryIndex + 1}, '', url);
+	}
+
+	/*
+	Keyboard event handler while expedition search bar has focus.
+	*/
+	onExpeditionSearchBarKeyup(e) {
+		const $searchBar = $(e.target);
+		const $searchOptionDrawer = $('#expedition-options-drawer');
+
+		// If the user pressed the escape key, hide the options drawer
+		if (e.key === 'Escape') {
+			$searchBar.siblings('.fuzzy-search-bar-drawer.collapse').collapse('hide');
+			return;
+		} 
+		else if (e.key === 'ArrowDown') {
+			const scrollIndex = $searchOptionDrawer[0].scrollTop / $('.expedition-search-bar-option')[0].scrollHeight;
+			$('.expedition-search-bar-option').eq(scrollIndex).focus();
+			return;
+		}
+
+		// Only query the DB for options if the search string's length is more than 5 characters or 0.
+		//	0-length will show all options but 1-4 chars will not produce reliable search results.
+		//	Also no expedition name should be less than 5 characters long
+		const searchString = $searchBar.val();
+		if (searchString.length >= 5 || searchString.length === 0) { 
+			this.fillExpeditionSearchSelect({$searchBar: $searchBar, showExpeditionOptions: true});
+		} 
+		// If it is 1-5 characters, scroll to the first option whose start matches the search string
+		else {
+			const $options = $('.expedition-search-bar-option');
+			const expeditionNames = $options.map((_, el) => el.innerHTML).get();
+			for (const i in expeditionNames) {
+				if (expeditionNames[i].toLowerCase().startsWith(searchString)) {
+					// Scroll the drawer instead of .scrollIntoView(), which will move all ancestor 
+					//	scroll bars
+					const $searchOptionDrawer = $('#expedition-options-drawer').collapse('show');
+					const scrollPosition =  $options[0].scrollHeight * i;
+					$searchOptionDrawer[0].scrollTo({top: scrollPosition});
+					break;
+				}
+			}
+		}
+	}
+
+	/*
+	Focus/simulate clicks for expedition options using keyboard
+	*/
+	onExpeditionSearchOptionKeydown(e) {
+		const $focusedExpeditionOption = $('.expedition-search-bar-option:focus');
+		if ($focusedExpeditionOption.length) {
+			e.preventDefault();
+			const keyName = e.key;
+			// If the user pressed the up or down key, focus next/previous option
+			if (keyName === 'ArrowDown' || keyName === 'ArrowUp' ) {
+				// :nth-child css selector is a 1-based index whereas .index() is 0 based, so either 
+				//	add 2 or nothing depending on whether the user is moving up or down in the options
+				const nthChildAdjustment = keyName === 'ArrowDown' ? 2 : 0
+				const nextIndex = $focusedExpeditionOption.index() + nthChildAdjustment;
+				$(`.expedition-search-bar-option:nth-child(${nextIndex})`).focus();
+			}
+			// if the user pressed the enter key, load that expedition
+			else if (e.key === 'Enter') {
+				$focusedExpeditionOption.click();
+			}
+		}
 	}
 
 
@@ -2944,7 +3002,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					if (result.length) {
 						//$drawer.append('<option value="">Click to select an expedition</option>')
 						for (const row of result) {
-							$drawer.append(`<div class="expedition-search-bar-option" data-expedition-id="${row.expedition_id}">${row.expedition_name}</div>`)
+							$drawer.append(`<div class="expedition-search-bar-option" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
 						}
 					} else {
 						$drawer.append('<div class="expedition-search-bar-option">No expeditions match your search</div>');
