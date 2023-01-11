@@ -677,7 +677,7 @@ class ClimberDBBriefings extends ClimberDB {
 				info.briefing_end = info.briefing_date + ' '  + info.briefing_end_time;
 				info.expedition_name = this.expeditionInfo.expeditions[info.expedition_id].expedition_name;
 				info.n_members = this.expeditionInfo.expeditions[info.expedition_id].n_members;
-				info.routes = this.expeditionInfo.expeditions[info.expedition_id].routes.replace(/; /g, ', ');
+				info.routes = (this.expeditionInfo.expeditions[info.expedition_id].routes || '<em>none</em>').replace(/; /g, ', ');
 				info.id = briefingID;
 
 				this.briefings[briefingDate][briefingID] = {...info};
@@ -1414,7 +1414,7 @@ class ClimberDBBriefings extends ClimberDB {
 						}
 						
 						const expeditionInfo = this.expeditionInfo.expeditions[row.expedition_id];
-						row.routes = expeditionInfo.routes;
+						row.routes = expeditionInfo.routes || '<em>none</em>';
 						this.briefings[briefingDate][row.id] = row;
 					}
 

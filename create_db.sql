@@ -517,8 +517,8 @@ CREATE VIEW briefings_expedition_info_view AS
 	            		string_agg(route_codes.name, '; ') AS routes
 		            FROM expeditions expeditions_1
 		             	JOIN expedition_members ON expeditions_1.id = expedition_members.expedition_id
-		             	JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
-		             	JOIN route_codes ON route_codes.code=expedition_member_routes.route_code
+		             	LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
+		             	LEFT JOIN route_codes ON route_codes.code=expedition_member_routes.route_code
 		            GROUP BY 
 		             	expedition_members.expedition_id, expedition_members.id
 		        ) t
