@@ -29,11 +29,13 @@ class ClimberDBBriefings extends ClimberDB {
 
 		// Add days leading up to this month
 		const startDayOfWeek = date.getDay(); 
-		const startOfCalendar = new Date(year, month, -startDayOfWeek);
+		//	Date(year, month, 0) will give last date of previous month, so use negative 
+		//	start day of week + 1 to get previous month's first date of the week
+		const startOfCalendar = new Date(year, month, -startDayOfWeek + 1);
 		const startDate = startOfCalendar.getDate();
 		for (let i = 0; i < startDayOfWeek; i++) {
 			$calendarBody.append(`
-				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(startOfCalendar + this.millisecondsPerDay * i))}">
+				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(startOfCalendar.getTime() + this.millisecondsPerDay * i))}">
 					<label class="calendar-cell-date-label">${startDate + i}</label>
 					<div class="calendar-cell-body"></div>
 				</div>
@@ -61,7 +63,7 @@ class ClimberDBBriefings extends ClimberDB {
 		const endDayOfWeek = lastDayOfMonth.getDay();
 		for (let i = 0; i + endDayOfWeek < 6; i++) { // < 6 because getDay() returns 0-indexed day od week
 			$calendarBody.append(`
-				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(date + this.millisecondsPerDay * i))}">
+				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(date.getTime() + this.millisecondsPerDay * i))}">
 					<label class="calendar-cell-date-label">${i + 1}</label>
 					<div class="calendar-cell-body"></div>
 				</div>
