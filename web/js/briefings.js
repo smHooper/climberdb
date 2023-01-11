@@ -1381,10 +1381,18 @@ class ClimberDBBriefings extends ClimberDB {
 		for (const el of $('.calendar-cell')) {
 			const $cell = $(el);
 			const dateString = $cell.data('date');
+			// sort appointments by time, then expedition name
 			const briefingAppointments = this.briefings[dateString];
 			if (briefingAppointments) {
-				for (const briefingID in briefingAppointments) {
-					const info = briefingAppointments[briefingID];
+				const sortedAppointments = Object.values(briefingAppointments).sort((a, b) =>  
+					a.briefing_start < b.briefing_start ? -1 : 			 // time a is before time b
+					a.briefing_start > b.briefing_start ?  1 : 			 // time a is after time b
+					a.expedition_name < b.expedition_name ? -1 : // times are the same and expedition name a is first
+					a.expedition_name > b.expedition_name ?  1 : // times are the same and expedition name b is first 
+					0 											 // times and names are the same (should never happen)
+				);
+				for (const info of sortedAppointments) {
+					//const info = briefingAppointments[briefingID];
 					this.addBriefingToCalendarCell($cell, info);
 				}
 			}
