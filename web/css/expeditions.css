@@ -327,12 +327,15 @@
 .expedition-data-header-content select.input-field {
 	font-weight: 600;
 	color: #00679b;
-	text-align: center;
+	/*text-align: center;
 	border-bottom: none;
 	-moz-appearance: none;
 	-webkit-appearance: none;
 	appearance: none;
-	pointer-events: none;
+	pointer-events: none;*/
+}
+.expedition-data-header-content select.input-field option {
+	color: #023047;
 }
 .expedition-data-header-content {
 	display: flex;

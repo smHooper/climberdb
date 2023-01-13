@@ -1186,13 +1186,21 @@ class ClimberDB {
 	
 
 	/*
-	Helper function to revert an input field back to a previous value. 
+	Helper function to revert an input field back to a previous value. The input needs to 
+	have the current-value data attribute set. This works best if it's set when the input 
+	receives focus so that the value is always set before .change() event is triggered, 
+	which might call this function
 	*/
-	revertInputValue($input) {
+	revertInputValue($input, {removeDirty=false, triggerChange=false}={}) {
 		$input = $($input);
 		const oldValue = $input.data('current-value');
+		// reset to old value
+		$input.val(oldValue);
+
+		if (removeDirty) $input.removeClass('dirty');
+		if (triggerChange) $input.change();
 		
-		return $input.val(oldValue);
+		return $input;
 	}
 
 	/*

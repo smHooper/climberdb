@@ -133,7 +133,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						<div class="expedition-data-header-container">
 							<div class="expedition-data-header-content">	
 								<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Expedition Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="__never" required="">
-								<select id="input-group_status" class="input-field filled-by-default needs-filled-by-default" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="__never" data-default-value=1 tabindex=-1></select>
+								<select id="input-group_status" class="input-field filled-by-default needs-filled-by-default revertable" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="__never" data-default-value=1 tabindex=-1></select>
 							</div>
 							<div class="expedition-data-header-content">							
 								<div class="result-details-summary-item col-6">
@@ -928,6 +928,10 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// ----------- Expedition -------------------
 		//TODO: allow group status to change all members' status at once
+		$('#input-group_status').change(e => {
+			this.onGroupStatusFieldChange(e)
+		});
+
 		$('#input-date_confirmed').change(e => {
 			this.onDateConfirmedChange(e);
 		});
@@ -1261,11 +1265,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		// ^^^^^ Climber form stuff ^^^^^^
 	}
 
-	onInputChange(e) {
-		const $input = $(e.target);
-
-		if ($input.is('.ignore-changes') || $input.closest('.uneditable').length) return;
-
+	/*
+	Helper function to determine if the value of an input field changed
+	*/
+	inputValueDidChange($input) {
 		// check if the value is different from in-memory data
 		var valueChanged = false;
 		// 	if it's inside a new card or list item, it has to be an insert
@@ -1311,8 +1314,15 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			valueChanged = valueChanged || dbValue != newValue;
 		}
+	}
 
-		$input.toggleClass('dirty', valueChanged);
+
+	onInputChange(e) {
+		const $input = $(e.target);
+
+		if ($input.is('.ignore-changes') || $input.closest('.uneditable').length) return;
+
+		$input.toggleClass('dirty', this.inputValueDidChange($input));
 		$('#save-expedition-button').ariaHide(!$('.input-field.dirty').length);
 
 	}
@@ -2311,17 +2321,48 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	/*
+	Helper method to check if a climber can be confirmed. Shows message and reverts 
+	value if not. Called in reservation and group status change events 
+	*/
+	climberCanBeConfirmed($card, $select) {
+		// Check that the climber is actually being confirmed
+		const isBeingConfirmed = $select.val() == 3;
+		if (!isBeingConfirmed) return true;
+
+		let reasons = '';
+		if ($card.find('.climbing-fee-icon').is('.transparent')) 
+			reasons += '<li>have not paid their climber fee</li>';
+		if ($card.find('.input-field[name=application_complete]').is(':not(:checked)')) 
+			reasons += '<li>have not completed their SUP application</li>';
+		// only check for PSAR form is the user is being marked as confirmed
+		if (isBeingConfirmed && $card.find('.input-field[name=psar_complete]').is(':not(:checked)')) 
+			reasons += '<li>have not completed their PSAR form</li>';
+		// If any conditions aren't met, tell the user and revert the res. status field's value
+		if (reasons) {
+			const memberInfo = this.expeditionInfo.expedition_members.data[$card.data('table-id')] || {};
+			const climberName = memberInfo.first_name ? `${memberInfo.first_name} ${memberInfo.last_name}` : 'This expedition member';
+			const statusDescription = $select.find(`option[value=${$select.val()}]`).text();
+			const message = 
+				`${climberName}'s status can't be changed to '${statusDescription}' because they: <ul>${reasons}</ul> All climbers` +
+				` must have a climbing fee payment or waiver in their transaction history and the <strong>SUP app</strong> and` +
+				` <strong>PSAR</strong> checkboxes must be checked before they can be marked as '${statusDescription}'.`;
+			const eventHandlerCallable = () => {
+				$('#alert-modal button').click(() => {this.revertInputValue($select)})
+			}
+			showModal(message, 'Missing Payment/Information', 'alert', '', {eventHandlerCallable: eventHandlerCallable})
+			return false;
+		} else {
+			return true;
+		}
+	}
+
+
 	onReservationStatusFieldChange(e) {
 		const $select = $(e.target);
 		const $card = $select.closest('.card');
 		const value = parseInt($select.val());
 		const isCanceled = value === 6;
-
-		// If this is the group's leader, ask the user to confirm
-		/*if ($card.find('.input-field[name=is_trip_leader]').prop('checked')) {
-			showModal('Are ')
-			return;
-		}*/
 
 		// Set the datetime_canceled field
 		const now = getFormattedTimestamp();
@@ -2336,52 +2377,85 @@ class ClimberDBExpeditions extends ClimberDB {
 		// If the user is confirming this expedition member, check that they've paid and turned everything in 
 		else if (value === 3) { //confirmed
 			const $card = $select.closest('.card');
+			if (!this.climberCanBeConfirmed($card, $select)) return;
+		}
 
-			//const climbingFeePaid = $card.find('.climbing-fee-icon').is('.transparent');
-			let reasons = '';
-			if ($card.find('.climbing-fee-icon').is('.transparent')) 
-				reasons += '<li>have not paid their climber fee</li>';
-			if ($card.find('.input-field[name=application_complete]').is(':not(:checked)')) 
-				reasons += '<li>have not completed their SUP application</li>';
-			if ($card.find('.input-field[name=psar_complete]').is(':not(:checked)')) 
-				reasons += '<li>have not completed their PSAR form</li>';
-			// If any conditions aren't met, tell the user and revert the res. status field's value
-			if (reasons) {
-				const memberInfo = this.expeditionInfo.expedition_members.data[$card.data('expedition-member-id')] || {};
-				const climberName = memberInfo.first_name ? `${memberInfo.first_name} ${memberInfo.last_name}` : 'This expedition member';
-				const message = `${climberName} can't be confirmed because they: <ul>${reasons}</ul> All climbers must have a climbing fee payment or waiver in their transaction history and the SUP app. and PSAR checkboxes must be checked before they can be marked as confirmed.`;
-				const eventHandlerCallable = () => {
-					$('#alert-modal button').click(() => {this.revertInputValue($select)})
+		if (!e.preventStatusPropagation) {
+			// Hide/show this expedition member in any routes 
+			const expeditionMemberID = $card.data('table-id');
+			if (expeditionMemberID) {
+				$(`.route-member-list .data-list-item[data-expedition-member-id=${expeditionMemberID}]`)
+					.ariaHide(isCanceled);
+			}
+
+			// Change the group's status if all equal the same value
+			const reservationStatuses = $select.closest('.accordion').find('.card:not(.cloneable) .reservation-status-field')
+				.map((_, el) => el.value)
+				.get();
+			const minStatus = Math.min(...reservationStatuses);//[0];
+			const $groupStatusSelect = $('#input-group_status');
+
+			//if (reservationStatuses.every(v => v == firstStatus || v == 6) && $groupStatusSelect.val() != firstStatus) { 
+			if ($groupStatusSelect.val() != minStatus) {
+				$groupStatusSelect.val(minStatus).change();
+
+				// If the date_confirmed field isn't blank, fill it 
+				const $dateConfirmedField = $('#input-date_confirmed'); 
+				if (value == 3 && !$dateConfirmedField.val()) {
+					$dateConfirmedField.val(getFormattedTimestamp()).change();
 				}
-				showModal(message, 'Missing Payment/Information', 'alert', '', {eventHandlerCallable: eventHandlerCallable})
-				
+			}
+		}
+	}
+
+
+	onGroupStatusFieldChange(e) {
+		// Only do stuff if the event was triggered by the user, not with .change()
+		if (e.originalEvent) {
+			const $select = $(e.target);
+			const statusCode = $select.val();
+			const status = $select.find(`option[value=${statusCode}]`).text();
+			const $memberCards = $('#expedition-members-accordion .card:not(.cloneable)');
+			
+			if ($memberCards.length === 0) {
+				showModal(`You have not added any expedition members yet, so this expedition's status can't be changed to ${status}.`, 'No Expedition Members');
+				this.revertInputValue($select, {triggerChange: true})
 				return;
-			} 
-			 
-		}
+			} else if ($memberCards.length === 1) {
+				$memberCards.find('.input-field[name=reservation_status_code]')
+					.val(statusCode)
+					.change();
+			} else {
+				for (const el of $memberCards) {
+					const $card = $(el);
+					if (!this.climberCanBeConfirmed($card, $select)) {
+						// ^ warning already issued so just revert the group status field
+						this.revertInputValue($select, {triggerChange: true})
+						return;
+					} else {
+						// Don't trigger change
+						const $reservationStatus = $card.find('.input-field[name=reservation_status_code]')
+							.val(statusCode);
+						// Instead, call the change handler manually so that things that downstream 
+						//	things that the group status shouldn't influence are unaffected. This also avoids 
+						//	and endless loop because onReservationStatusFieldChange also calls .change() on 
+						//	the group status field
+						this.onReservationStatusFieldChange({
+							target: $reservationStatus[0], 
+							preventStatusPropagation: true
+						});
+						this.toggleDependentFields($reservationStatus); // this also needs to be called manually
 
-		// Hide/show this expedition member in any routes 
-		const expeditionMemberID = $card.data('table-id');
-		if (expeditionMemberID) {
-			$(`.route-member-list .data-list-item[data-expedition-member-id=${expeditionMemberID}]`)
-				.ariaHide(isCanceled);
-		}
+						// If the value is different from the in-memory value, manually add the .dirty class
+						if (this.inputValueDidChange($reservationStatus)) $reservationStatus.addClass('dirty');
 
-		// Change the group's status if all equal the same value
-		const reservationStatuses = $select.closest('.accordion').find('.card:not(.cloneable) .reservation-status-field')
-			.map((_, el) => el.value)
-			.get();
-		const minStatus = Math.min(...reservationStatuses);//[0];
-		const $groupStatusSelect = $('#input-group_status');
+					}
+				}	
+			}
 
-		//if (reservationStatuses.every(v => v == firstStatus || v == 6) && $groupStatusSelect.val() != firstStatus) { 
-		if ($groupStatusSelect.val() != minStatus) {
-			$groupStatusSelect.val(minStatus).change();
-
-			// If the date_confirmed field isn't blank, fill it
-			// ******* 
+			// If the date_confirmed field isn't blank, fill it 
 			const $dateConfirmedField = $('#input-date_confirmed'); 
-			if (value == 3 && !$dateConfirmedField.val()) {
+			if (statusCode == 3 && !$dateConfirmedField.val()) {
 				$dateConfirmedField.val(getFormattedTimestamp()).change();
 			}
 		}
