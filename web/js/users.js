@@ -337,8 +337,9 @@ class ClimberDBUsers extends ClimberDB {
 						.addClass('uneditable');
 
 					const username = $tr.find('.input-field[name="ad_username"]').val();
-					const firstName = $tr.find('.input-field[name="first_name"]').val()
-					const activationURL = `${window.location.origin}/index.html?activation=true&id=${userID}`;
+					const firstName = $tr.find('.input-field[name="first_name"]').val();
+					const activationURL = `${window.location.origin}/index.html?activation=true&id=${userID}`
+						.replace(':9006', ':9007'); // make sure the URL is for the prod. site
 
 					// Send an activation email to the user 
 					return $.post({

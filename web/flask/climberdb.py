@@ -276,7 +276,7 @@ def send_reset_password_request():
 	data = dict(request.form)
 
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
-	data['button_url'] = f'''{request.url_root.strip('/')}/index.html?reset=true&id={data['user_id']}'''
+	data['button_url'] = f'''{request.url_root.strip('/').replace(':9006', ':9007')}/index.html?reset=true&id={data['user_id']}'''
 	data['button_text'] = 'Reset Password'
 	data['heading_title'] = 'Reset Denali Climbing Permit Portal account password'
 
