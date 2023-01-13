@@ -1312,7 +1312,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// If this is a checkbox, the new value needs to be converted to PostreSQL's boolean as intepreted by PHP
 			if ($input.is('.input-checkbox')) newValue = newValue ? 't' : 'f';
 
-			valueChanged = valueChanged || dbValue != newValue;
+			return valueChanged || dbValue != newValue;
 		}
 	}
 
