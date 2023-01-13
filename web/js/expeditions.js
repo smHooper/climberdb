@@ -2194,7 +2194,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// If expeditions.id is in memory, this expedition has already been saved to the database 
 		if (this.expeditionInfo.expeditions.id && hasData) {
 			// if the user is an administar, let them know they'll be deleting all related records
-			if (this.userInfo.user_role_code === 3) { 
+			if (this.userInfo.user_role_code >= 3) { 
 				message = 'Are you sure you want to delete this expedition? All expedition member, transaction,' + 
 					' and route information for this expedition will also be deleted. <strong>This action'  + 
 					' is permanent and cannot be undone.</strong>';

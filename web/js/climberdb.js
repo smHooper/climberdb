@@ -1,4 +1,3 @@
-//TODO: make sure only super users can access dev site
 /* Global functions */
 function getFormattedTimestamp(date, {format='date'}={}) {
 
@@ -242,7 +241,7 @@ class ClimberDB {
 						`${window.location.origin}/index.html?reset=true&id=${this.userInfo.id}&referer=${window.location.href}`
 					);
 				
-				if (this.userInfo.user_role_code === 3) {
+				if (this.userInfo.user_role_code >= 3) {
 					// Make fields only editable by admins editable
 					$('.admin-only-edit').removeClass('admin-only-edit');
 					$('.admin-only-nav-item').removeClass('hidden');
@@ -261,7 +260,7 @@ class ClimberDB {
 	*/
 	checkUserRole() {
 		const deferred = $.Deferred();
-		if (this.userInfo.user_role_code !== 3) {
+		if (this.userInfo.user_role_code < 3) {
 			const adminEmail = this.config.program_admin_email;
 			const footerButtons = '<a href="dashboard.html" class="generic-button modal-button close-modal confirm-button">OK</a>'
 			showModal(`You do not have sufficient permissions to view this page. If you think this is an error, contact the program adminstrator at <a href="mailto:${adminEmail}">${adminEmail}</a>.`, 'Permission Error', 'alert', footerButtons, {dismissable: false})

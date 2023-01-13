@@ -156,6 +156,12 @@ def get_user_info():
 			return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
 
 	sql = f'''SELECT id, '{username}' AS ad_username, user_role_code, user_status_code, first_name, last_name FROM users WHERE ad_username='{username}' '''
+	
+	# If this is a production, make sure the user is a super user
+	if not '\\prod\\' in os.path.abspath(__file__):
+		sql += ' AND user_role_code=4' 
+
+	
 	engine = connect_db()
 	user_info = pd.read_sql(sql, engine)
 	if len(user_info) == 0:
