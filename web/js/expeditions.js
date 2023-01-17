@@ -1312,8 +1312,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			// If this is a checkbox, the new value needs to be converted to PostreSQL's boolean as intepreted by PHP
 			if ($input.is('.input-checkbox')) newValue = newValue ? 't' : 'f';
 
-			return valueChanged || dbValue != newValue;
 		}
+
+		return valueChanged || dbValue != newValue;
 	}
 
 
@@ -1403,23 +1404,28 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	0-length will show all options but 1-4 chars will not produce reliable search results.
 		//	Also no expedition name should be less than 5 characters long
 		const searchString = $searchBar.val();
-		if (searchString.length >= 5 || searchString.length === 0) { 
+		if (searchString.length >= 5) { 
 			this.fillExpeditionSearchSelect({$searchBar: $searchBar, showExpeditionOptions: true});
 		} 
-		// If it is 1-5 characters, scroll to the first option whose start matches the search string
+		// If character length < 5, make sure all expeditions are options, then scroll to the 
+		//	first option whose start matches the search string
 		else {
-			const $options = $('.expedition-search-bar-option');
-			const expeditionNames = $options.map((_, el) => el.innerHTML).get();
-			for (const i in expeditionNames) {
-				if (expeditionNames[i].toLowerCase().startsWith(searchString)) {
-					// Scroll the drawer instead of .scrollIntoView(), which will move all ancestor 
-					//	scroll bars
-					const $searchOptionDrawer = $('#expedition-options-drawer').collapse('show');
-					const scrollPosition =  $options[0].scrollHeight * i;
-					$searchOptionDrawer[0].scrollTo({top: scrollPosition});
-					break;
-				}
-			}
+			this.fillExpeditionSearchSelect({searchString: '', showExpeditionOptions: true})
+				.done(() => {
+					const $options = $('.expedition-search-bar-option');
+					const expeditionNames = $options.map((_, el) => el.innerHTML).get();
+					for (const i in expeditionNames) {
+						if (expeditionNames[i].toLowerCase().startsWith(searchString.toLowerCase())) {
+							// Scroll the drawer instead of .scrollIntoView(), which will move all ancestor 
+							//	scroll bars
+							const $searchOptionDrawer = $('#expedition-options-drawer').collapse('show');
+							const scrollPosition =  $options[0].scrollHeight * i;
+							$searchOptionDrawer[0].scrollTo({top: scrollPosition});
+							break;
+						}
+					}
+				});
+
 		}
 	}
 
@@ -2160,8 +2166,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					return;
 				} else {
 					// Remove the expedition from the search bar (if it exists, i.e., is from the current year)
-					//$(`#expedition-search-bar option[value=${expeditionID}]`).remove();
-					$(`#expedition-search-bar .expedition-search-bar-option[data-expedition-id=${expeditionID}]`).remove();
+					$(`#expedition-options-drawer .expedition-search-bar-option[data-expedition-id=${expeditionID}]`).remove();
 					this.createNewExpedition();
 				}
 			}).fail((xhr, status, error) => {
@@ -2557,7 +2562,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				.find(`option[value="${pdfData[property]}"]`).text();
 		}
 
-		pdfData.cancellation_fee = pdfData.cancellation_fee.toFixed(2);
+		pdfData.cancellation_fee = pdfData.cancellation_fee || '100.00';
 
 		// Get climber and leader info
 		const climbers = Object.values(this.expeditionInfo.expedition_members.data).flatMap(info => {
@@ -2622,8 +2627,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		pdfData.routes = JSON.stringify(pdfData.routes);
 
 		this.showLoadingIndicator('makePDF');
-
-		print(pdfData);
 
 		return $.post({
 			url: `flask/reports/${exportType}/${this.expeditionInfo.expeditions.id}.pdf`,
@@ -2989,7 +2992,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	fillExpeditionSearchSelect({$searchBar='#expedition-search-bar', showExpeditionOptions=false, queryStrings={}}={}) {
+	fillExpeditionSearchSelect({$searchBar='#expedition-search-bar', searchString=null, showExpeditionOptions=false, queryStrings={}}={}) {
 		
 		$searchBar = $($searchBar);
 
@@ -3019,7 +3022,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		// If a search string is given and the expedition_name filter isn't filled, use Postgres trigram fuzzy search
-		const searchString = $searchBar.val();
+		if (searchString === null) searchString = $searchBar.val();
 		var orderBy, 
 			similarity = '';
 		if (searchString && !queryStrings.expedition_name) {
@@ -3054,7 +3057,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			FROM expedition_info_view 
 			${whereClause} 
 			ORDER BY ${orderBy}`;
-		this.queryDB(sql, {returnTimestamp: true})
+		return this.queryDB(sql, {returnTimestamp: true})
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
 
