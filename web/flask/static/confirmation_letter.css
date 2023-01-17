@@ -37,8 +37,8 @@ body {
     text-transform: uppercase;
 }
 .climber-list {
-    height: 60px;
+    max-height: 60px;
     list-style: none; 
-    column-fill: auto;
-    column-width: 150px;
+    column-fill: balance;
+    column-width: 120px;
 }

@@ -2,7 +2,6 @@
 <head>
 	<title>Confirmation Letter - {{expedition_name}}</title>
 	<link rel=stylesheet href="{{ url_for('static', filename='confirmation_letter.css') }}" />
-</head>
 
 <body>
 	<section class="letterhead">
@@ -16,18 +15,19 @@
 			<p class="letterhead-address">
 				<span class="large-text">United States Department of the Interior</span><br>
 				<span class="uppercase">National Park Service</span><br>
-				<span>Demali National Park &amp; Preserve</span><br>
-				<span>Mile 237 Parks Highway</span><br>
-				<span>P.O. Box 9</span><br>
-				<span>Denali Park, AK 99755</span><br>
+				<span>Denali National Park &amp; Preserve</span><br>
+				<span>Walter Harper Talkeetna Ranger Station</span><br>
+				<span>22241 S. B Street</span><br>
+				<span>Talkeetna, AK  99676</span><br>
 			</p>
 	    </div>
 	</section>
 	<section class="greeting">
 		<p>
 			{{current_date}}<br>
+			{{expedition_name}}<br>
+			<br>
 			Dear {{leader_full_name}},<br>
-			{{expedition_name}}
 		</p>
 	</section>
 	<section class="letter-body">
@@ -36,7 +36,7 @@
 			you have completed all required steps for your trip departing on {{planned_departure_date}}.
 		</p>
 		<p>
-			Your payment of ${{ total_payment }} for {{ total_climbers }} climbers in your expedition has been processed. The
+			Your payment of ${{ total_payment }} for {{ total_climbers }} climber{{'s' if climbers|length > 1 else ''}} in your expedition has been processed. The
 			 climbers registered for your expedition are: 
 			 <ul class="climber-list">
 			     {% for climber in climbers %}
@@ -51,8 +51,8 @@
 			 when presented at check-in. Climbing permits will not be issued more than 24 hours before your departure date.
 		</p>
 		<p>
-			If you cancel your climb on or before January 15, all but ${{cancellation_fee}} of the registration fee will be refunded.
-			 Cancellations after January 15 will not be refunded. Climbers should consider purchasing trip insurance in the event
+			If you cancel your climb on or before February 15, all but ${{cancellation_fee}} of the registration fee will be refunded.
+			 Cancellations after February 15 will not be refunded. Climbers should consider purchasing trip insurance in the event
 			 an expedition is cancelled due to unforeseeable circumstances.
 		</p>
 		<p>
@@ -70,19 +70,15 @@
 			 Ranger Station. Driver’s license, Passport, or other official identification will be accepted.
 		</p>
 		<p>
-			Our park partner Denali Education Center will be providing rapid COVID-19 testing free of charge in downtown Talkeetna
-			 this season. Testing is NOT required for a Denali expedition, however it is encouraged for your team's health and safety.
-			 Click here for location, hours of operation, scheduling and other information: 
-			 <a href=https://www.denali.org/covid-testing>https://www.denali.org/covid-testing</a>
-		</p>
-		<p>
 			The Walter Harper Talkeetna Ranger Station is staffed year round. Please contact us via telephone: 
 			(907) 733-2231, fax: (907) 733-1465, or email: <a href="mailto:dena_talkeetna_office@nps.gov">dena_talkeetna_office@nps.gov</a>
 		</p>
 	</section>
 	<section class="letter-footer">
+		<br>
 		<p>Sincerely,</p>
-		<p></p>
+		<br>
+		<br>
 		<p>
 			Tucker Chenoweth<br>
 			South District Ranger<br>
