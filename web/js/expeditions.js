@@ -2614,15 +2614,6 @@ class ClimberDBExpeditions extends ClimberDB {
 				const mountainName = $card.find(`.route-code-header-input[name="mountain_code"] option[value="${route.mountain_code}"]`).text();
 				pdfData.routes.push({mountain: mountainName, route: route.name});
 			} 	
-			// pdfData.routes = $('#routes-accordion > .card:not(.cloneable)').map(
-			// 	(_, card) => Object.fromEntries(
-			// 			new Map(
-			// 				$(card).find('.route-code-header-input')
-			// 					.get()
-			// 					.map(el => [el.name, el.value])
-			// 			)
-			// 		)
-			// ).get()
 		}
 		pdfData.routes = JSON.stringify(pdfData.routes);
 
@@ -2757,6 +2748,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		const queryFields = 'id, full_name';
 		const sql = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields, whereClause: whereClause});
+
+		$('#climber-search-result-count').text('')
+			.ariaHide(true);
+
 		return this.queryDB(sql, {returnTimestamp: true})
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
@@ -2774,14 +2769,27 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 					const $select = $('#modal-climber-select').empty();
 					result = result.data;
-					if (result.length === 0) {
-						$select.append('<option value="">No climbers match your search</option>');
+					const resultCount = result.length;
+					if (resultCount === 0) {
+						$select.append('<option value="">No climbers match your search</option>')
+
+						// Because results are asynchonous, make sure result count is hidden
+						$('#climber-search-result-count').text('')
+							.ariaHide(true);
 					} else {
+						// Still show placeholder option because a climber should not be selected automatically
+						$select.append('<option value="">Select climber to view</option>')
 						for (const row of result) {
 							$select.append(`<option value="${row.id}">${row.full_name}</option>`);
 						}
-						// TODO: don't select first one. Show number of results instead
-						$select.val(result[0].id).change();
+						// Because the result is retrieved asynchonously and when a user types no search is done, 
+						//	
+						if ($('#modal-climber-search-bar').val().length >= 3 || $('#guide-only-filter').prop('checked')) {
+							$('#climber-search-result-count').text(
+									`${resultCount} climber${resultCount > 1 ? 's' : ''} found`
+								)
+								.ariaHide(false);
+						}
 					}
 				}
 			})
@@ -2805,6 +2813,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('.modal-climber-select-container').collapse('hide')
 			.find('select > option:not([value=""])')
 				.remove();
+		$('#climber-search-result-count').text('')
+			.ariaHide(true);
+		$('#climber-search-option-loading-indicator').ariaHide(true);
 		$('#result-details-header-title').text('');
 		$('.result-details-summary-container').collapse('hide')
 
@@ -2820,7 +2831,10 @@ class ClimberDBExpeditions extends ClimberDB {
 	refreshClimberSelectOptions(searchString) {
 
 		$('#modal-climber-select').closest('.collapse').collapse('show');
-		return this.fillClimberFormSelectOptions(searchString);
+
+		const $loadingIndicator = $('#climber-search-option-loading-indicator').ariaHide(false);
+		return this.fillClimberFormSelectOptions(searchString)
+			.always(() => {$loadingIndicator.ariaHide(true)});
 	}
 
 	/*
@@ -2839,6 +2853,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				.empty()
 				.closest('.collapse')
 				.collapse('hide');
+			$('#climber-search-result-count').text('');
 			$input.focus();
 		}
 	}

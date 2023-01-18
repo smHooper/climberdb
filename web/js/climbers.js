@@ -51,7 +51,7 @@ class ClimberForm {
 								<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 							</div>	
 							<div class="modal-climber-select-container collapse">
-								<select id="modal-climber-select" class="fuzzy-search-bar default">
+								<select id="modal-climber-select" class="fuzzy-search-bar default ml-1">
 									<option value="">Search climbers to filter results</option>
 								</select>
 								<button id="refresh-modal-climber-select" class="icon-button">
@@ -59,19 +59,29 @@ class ClimberForm {
 								</button>
 							</div>	
 						</div>	
-						<div class="field-container checkbox-field-container always-editable col-sm-3 pl-3">
-							<label class="checkmark-container">
-								<input id="guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="guide_only">
-								<span class="checkmark data-input-checkmark"></span>
-							</label>
-							<label class="field-label checkbox-label" for="guide-only-filter">Commercial guide</label>
-						</div>	
-						<div class="field-container checkbox-field-container always-editable col-sm-3">
-							<label class="checkmark-container">
-								<input id="7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="7_day_only">
-								<span class="checkmark data-input-checkmark"></span>
-							</label>
-							<label class="field-label checkbox-label" for="7-day-only-filter">7-day only</label>
+						<div class="expedition-modal-search-container" aria-hidden="true">
+							<div class="field-container checkbox-field-container always-editable col-sm-3 pl-3">
+								<label class="checkmark-container">
+									<input id="guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="guide_only">
+									<span class="checkmark data-input-checkmark"></span>
+								</label>
+								<label class="field-label checkbox-label" for="guide-only-filter">Commercial guide</label>
+							</div>	
+							<div class="field-container checkbox-field-container always-editable col-sm-3 pl-3">
+								<label class="checkmark-container">
+									<input id="7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="7_day_only">
+									<span class="checkmark data-input-checkmark"></span>
+								</label>
+								<label class="field-label checkbox-label" for="7-day-only-filter">7-day only</label>
+							</div>
+							<div class="col-sm-6 px-0 d-flex justify-content-end">
+								<span id="climber-search-result-count" class="pr-5 hidden" aria-hidden="true"></span>
+								<div id="climber-search-option-loading-indicator" class="loading-indicator-dot-container pr-5 hidden" aria-hidden="true">
+									<div class="loading-indicator-dot dot1"></div>
+									<div class="loading-indicator-dot dot2"></div>
+									<div class="loading-indicator-dot dot3"></div>
+								</div>
+							</div>
 						</div>
 					</div>
 					<div class="result-details-header-container">
