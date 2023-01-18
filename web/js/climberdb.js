@@ -304,13 +304,13 @@ class ClimberDB {
 					<h4 class="page-title">DENA Climbing Permit Portal</h4>
 				</div>
 				<div class="header-menu-item-group" id="username-container">
-					<button id="show-user-options-button" class="generic-button icon-button">
+					<button id="show-user-options-button" class="generic-button icon-button" title="User account">
 						<img id="username-icon" src="imgs/account_icon_50px.svg" alt="account icon">
 						<label id="username"></label>
 					</button>
 					<div class="user-account-dropdown" role="">
-						<button id="log-out-button" class="generic-button text-only-button w-100 centered-text account-button">Log out</button>
-						<a id="change-password-button" class="generic-button text-only-button w-100 centered-text account-button">Reset password</a>
+						<button id="log-out-button" class="generic-button text-only-button w-100 centered-text account-button" title="Log out">Log out</button>
+						<a id="change-password-button" class="generic-button text-only-button w-100 centered-text account-button" title="Reset password">Reset password</a>
 					</div>
 				</div>
 			</nav>

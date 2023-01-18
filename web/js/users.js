@@ -25,7 +25,7 @@ class ClimberDBUsers extends ClimberDB {
 				</table>
 			</div>
 			<div class="d-flex justify-content-center pt-2">
-				<button class="generic-button add-user-button">add new user</button>
+				<button class="generic-button add-user-button" title="Add new user">Add new user</button>
 			</div>
 		`);
 

@@ -54,7 +54,7 @@ class ClimberForm {
 								<select id="modal-climber-select" class="fuzzy-search-bar default ml-1">
 									<option value="">Search climbers to filter results</option>
 								</select>
-								<button id="refresh-modal-climber-select" class="icon-button">
+								<button id="refresh-modal-climber-select" class="icon-button" title="Refresh climber search results">
 									<i class="fas fa-sync-alt fa-solid fa-arrows-rotate fa-2x"></i>
 								</button>
 							</div>	
@@ -336,7 +336,7 @@ class ClimberForm {
 							</label>
 							<div id="emergency-contacts-tab-content" class="tab-content" role="tabpanel" aria-labelledby="emergency-contacts-tab" aria-hidden="false">
 								<div class="add-card-container">
-									<button class="generic-button add-card-button" data-target="#emergency-contacts-accordion">Add contact</button>
+									<button class="generic-button add-card-button" data-target="#emergency-contacts-accordion" title="Add emergency contact">Add contact</button>
 								</div>
 								<div id="emergency-contacts-accordion" class="accordion" data-table-name="emergency_contacts">
 									<div class="card cloneable hidden" id="cloneable-card-emergency-contacts" data-label-template="first_name last_name, relationship">
@@ -346,7 +346,7 @@ class ClimberForm {
 													<h5 class="card-link-label row-details-card-link-label climber-info-card-link-label">New Emergency Contact</h5>
 												</div>
 												<div class="card-link-content">
-													<button class="delete-button delete-card-button icon-button hidden" type="button" data-item-name="emergency contact" aria-hidden="true" aria-label="Delete emergency contact">
+													<button class="delete-button delete-card-button icon-button hidden" type="button" data-item-name="emergency contact" aria-hidden="true" aria-label="Delete emergency contact" title="Delete emergency contact">
 														<i class="fas fa-trash fa-lg"></i>
 													</button>
 													<i class="fa fa-chevron-down pull-right"></i>
@@ -444,12 +444,12 @@ class ClimberForm {
 				</div> <!--climber-form-content-->
 				
 				<div class="modal-save-button-container">
-					<button id="modal-save-climber-button" class="generic-button expedition-modal-hidden">Save new climber</button>
-					<button id="modal-save-to-expedition-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true">Add to expedition</button>
-					<button id="modal-save-new-climber-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true">Save new climber</button>
+					<button id="modal-save-climber-button" class="generic-button expedition-modal-hidden" title="Save new climber">Save new climber</button>
+					<button id="modal-save-to-expedition-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true" title="Add climber to expedition">Add to expedition</button>
+					<button id="modal-save-new-climber-button" class="generic-button expedition-modal-only collapse hidden" aria-hidden="true" title="Save new climber">Save new climber</button>
 					<a id="expedition-modal-add-new-climber-button" class="generic-button expedition-modal-only hidden" aria-hidden="true" href="climbers.html?addClimber=true" target="_blank">Create new climber</a>
 					<a id="edit-climber-info-button" class="generic-button expedition-modal-only collapse hidden" href="climbers.html?" target="_blank">Edit climber info</a>
-					<button class="generic-button close-modal-button">Cancel</button>
+					<button class="generic-button close-modal-button" title="Close modal climber form">Cancel</button>
 				</div>
 			
 			</div> <!--climber-form-->
@@ -1334,20 +1334,20 @@ class ClimberDBClimbers extends ClimberDB {
 				<!-- order is switched between result and details pane so I can use .collapsed ~ -->
 				<div class="query-result-pane result-details-pane collapsed uneditable" aria-hidden="true">
 					<div class="query-result-edit-button-container">
-						<button id="add-new-climber-button" class="generic-button">Add new climber</button>
+						<button id="add-new-climber-button" class="generic-button" title="Create new climber">Add new climber</button>
 					</div>
 
 				</div>
 				<div class="query-result-pane result-summary-pane">
 					<div id="result-navigation-header" class="hidden-on-invalid-result">
 						<div class="result-navigation-container">
-							<button class="icon-button show-previous-result-set-button disabled" role="button">
+							<button class="icon-button show-previous-result-set-button disabled" role="button" title="Show previous page">
 								<i class="fa fa-chevron-left"></i>
 							</button>
 							<label class="result-index-label hidden" aria-live="polite" aria-hidden="true">
 								<span id="min-record-index-span"></span>-<span id="max-record-index-span"></span> of <span id="total-records-span"></span>
 							</label>
-							<button class="icon-button show-next-result-set-button" role="button">
+							<button class="icon-button show-next-result-set-button" role="button" title="Show next page">
 								<i class="fa fa-chevron-right"></i>
 							</button>
 						</div>

@@ -105,7 +105,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							</div>
 
 							<div class="w-100 d-flex justify-content-center align-items-center pt-3">
-								<button id="update-search-filter-button" class="generic-button">update filter</button>
+								<button id="update-search-filter-button" class="generic-button" title="Update expedition search filter">update filter</button>
 							</div>
 						</div>
 					</div>
@@ -222,7 +222,7 @@ class ClimberDBExpeditions extends ClimberDB {
 										<a id="expedition-briefing-link" class="briefing-link" href="briefings.html" target="_blank" aria-hidden="true">Set briefing time</a>
 								</div>
 								<div class="col-6 pl-0">
-									<button class="text-only-button jump-link page-bottom-jump-link" role="button" data-target="#cmcs-data-container">CMC and Comms Info</button>
+									<button class="text-only-button jump-link page-bottom-jump-link" role="button" data-target="#cmcs-data-container" title="Scroll to CMC and Comms info">CMC and Comms Info</button>
 								</div>
 							</div>
 						</div>
@@ -233,7 +233,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<h3 id="expedition-data-header" class="expedition-data-header">Expedition members</h3>
-							<button id="show-modal-climber-form-button" class="generic-button add-data-button" data-target="#expedition-members-accordion">Add member</button>
+							<button id="show-modal-climber-form-button" class="generic-button add-data-button" data-target="#expedition-members-accordion" title="Add expedition member">Add member</button>
 						</div>
 						<div class="expedition-data-content-body">
 							<div id="expedition-members-accordion" class="accordion" data-table-name="expedition_members" data-item-display-name="expedition member">
@@ -286,10 +286,10 @@ class ClimberDBExpeditions extends ClimberDB {
 										<div class="card-body">
 											<ul id="expedition-member-tabs" class="nav nav-tabs" role="tablist">
 												<li class="nav-item" role="presentation">
-													<a id="expedition-info-tab-button" class="nav-link active" data-toggle="tab" href="#expedition-info-tab-pane" type="button" role="tab" aria-controls="expedition-info-tab-pane" aria-selected="true">Member info</a>
+													<a id="expedition-info-tab-button" class="nav-link active" data-toggle="tab" href="#expedition-info-tab-pane" type="button" role="tab" aria-controls="expedition-info-tab-pane" aria-selected="true" title="Show expedition member info">Member info</a>
 												</li>
 												<li class="nav-item show-transaction-tab-button" role="presentation">
-													<a id="transactions-tab-button" class="nav-link" data-toggle="tab" href="#transactions-tab-pane" type="button" role="tab" aria-controls="transactions-tab-pane" aria-selected="false">Transactions</a>
+													<a id="transactions-tab-button" class="nav-link" data-toggle="tab" href="#transactions-tab-pane" type="button" role="tab" aria-controls="transactions-tab-pane" aria-selected="false" title="Show expedition member transactions">Transactions</a>
 												</li>
 											</ul>
 											<div class="tab-content expedition-member-tab-content">
@@ -445,7 +445,7 @@ class ClimberDBExpeditions extends ClimberDB {
 													<div class="transactions-header-container">
 														
 														<h5 class="expedition-data-sub-header"></h5>
-														<button class="generic-button add-data-button add-transaction-button" role="button" type="button">Add transaction</button>
+														<button class="generic-button add-data-button add-transaction-button" role="button" type="button" title="Add transaction">Add transaction</button>
 													</div>
 													<div class="transactions-container-body">
 														<div class="data-list-item data-list-item-header">
@@ -477,7 +477,7 @@ class ClimberDBExpeditions extends ClimberDB {
 																<div class="col-4 d-flex">
 																	<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
 																	<div class="col-3 pl-1">
-																		<button class="icon-button delete-button delete-transaction-button show-on-parent-hover">
+																		<button class="icon-button delete-button delete-transaction-button show-on-parent-hover" title="Delete transaction">
 																			<i class="fas fa-trash fa-lg"></i>
 																		</button>
 																	</div>
@@ -511,7 +511,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<h3 id="expedition-data-header" class="expedition-data-header">Routes</h3>
-							<button class="generic-button add-card-button" data-target="#routes-accordion">Add route</button>
+							<button class="generic-button add-card-button" data-target="#routes-accordion" title="Add route">Add route</button>
 						</div>
 						<div class="expedition-data-content-body">
 							<div id="routes-accordion" class="accordion" data-table-name="expedition_member_routes" data-item-display-name="expedition route">
@@ -532,7 +532,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<!--<h6 class="card-link-label expedition-member-card-link-label"></h6>-->
 											</div>
 											<div class="card-link-content">
-												<button class="delete-card-button icon-button delete-route-button show-on-parent-hover">
+												<button class="delete-card-button icon-button delete-route-button show-on-parent-hover" title="Delete route">
 													<i class="fa fa-trash"></i>
 												</button>
 												<i class="fa fa-chevron-down pull-right"></i>
@@ -573,7 +573,7 @@ class ClimberDBExpeditions extends ClimberDB {
 														</div>
 													</div>
 													<div class="col-1">
-														<button class="icon-button delete-button delete-route-member-button show-on-parent-hover">
+														<button class="icon-button delete-button delete-route-member-button show-on-parent-hover" title="Delete expedition member route">
 															<i class="fas fa-trash fa-lg"></i>
 														</button>
 													</div>
@@ -581,10 +581,10 @@ class ClimberDBExpeditions extends ClimberDB {
 											</ul>
 											<div class="data-list-item data-list-footer">
 												<div class="data-list-col data-list-header-label col-4">
-													<button class="text-only-button route-list-footer-button add-expedition-route-member-button w-100 text-left px-0 mx-0 hidden" aria-hidden="True">Add member to route</button>
+													<button class="text-only-button route-list-footer-button add-expedition-route-member-button w-100 text-left px-0 mx-0 hidden" aria-hidden="True" title="Add expedition member to route">Add member to route</button>
 												</div>
 												<div class="data-list-col data-list-header-label center-checkbox-col col-2">
-													<button class="text-only-button route-list-footer-button check-all-summitted-button w-100">check all</button>
+													<button class="text-only-button route-list-footer-button check-all-summitted-button w-100" title="Mark all climbers as summited">check all</button>
 												</div>
 												<div class="data-list-col data-list-header-label col-6"></div>
 											</div>
@@ -599,7 +599,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					<div id="cmcs-data-container" class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<h3 id="expedition-data-header" class="expedition-data-header">CMCs</h3>
-							<button class="generic-button add-data-button add-cmc-button" data-target="#cmc-list">Add CMC</button>
+							<button class="generic-button add-data-button add-cmc-button" data-target="#cmc-list" title="Add CMC">Add CMC</button>
 						</div>
 						<div class="expedition-data-content-body">
 							<div class="data-list-item data-list-item-header">
@@ -622,7 +622,7 @@ class ClimberDBExpeditions extends ClimberDB {
 										<input id="input-return_date" class="input-field" name="return_date" type="date" data-table-name="cmc_checkout" title="CMC Return Date"> 
 									</div>
 									<div class="col-1">
-										<button class="icon-button delete-button delete-cmc-button show-on-parent-hover">
+										<button class="icon-button delete-button delete-cmc-button show-on-parent-hover" title="Delete CMC">
 											<i class="fas fa-trash fa-lg"></i>
 										</button>
 									</div>
@@ -638,7 +638,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					<div id="comms-data-container" class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<h3 id="expedition-data-header" class="expedition-data-header">Comms Devices</h3>
-							<button class="generic-button add-data-button add-comms-button" data-target="#comms-list">Add Comms</button>
+							<button class="generic-button add-data-button add-comms-button" data-target="#comms-list title="Add comms">Add comms</button>
 						</div>
 						<div class="expedition-data-content-body">
 							<div class="data-list-item data-list-item-header">
@@ -660,7 +660,7 @@ class ClimberDBExpeditions extends ClimberDB {
 										<select id="input-owner" class="input-field no-option-fill default" name="expedition_member_id" data-table-name="communication_devices" title="Device owner"></select>
 									</div>
 									<div class="col-1">
-										<button class="icon-button delete-button delete-comms-button show-on-parent-hover">
+										<button class="icon-button delete-button delete-comms-button show-on-parent-hover" title="Delete comms">
 											<i class="fas fa-trash fa-lg"></i>
 										</button>
 									</div>
@@ -671,7 +671,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				</div>
 			</div>
 			<div class="w-100 d-flex justify-content-center">
-				<button class="text-only-button jump-link page-top-jump-link my-3" role="button" data-target="#page-top-bookmark">Back To Top</button>
+				<button class="text-only-button jump-link page-top-jump-link my-3" role="button" data-target="#page-top-bookmark" title="Scroll back to top">Back To Top</button>
 			</div>
 		`);
 

@@ -179,51 +179,51 @@ class ClimberDBBriefings extends ClimberDB {
 				</div>
 				<div class="briefing-details-sidebar-body">
 					<div class="time-label-container">
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add appointment at 7 am">
 							<label class="time-label">7 am</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 7:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 8 am">
 							<label class="time-label">8 am</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 8:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 9 am">
 							<label class="time-label">9 am</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 9:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 10 am">
 							<label class="time-label">10 am</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 10:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 11 am">
 							<label class="time-label">11 am</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 11:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 12 pm">
 							<label class="time-label">12 pm</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 12:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 1 pm">
 							<label class="time-label">1 pm</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 1:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 2 pm">
 							<label class="time-label">2 pm</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 2:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 3 pm">
 							<label class="time-label">3 pm</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 3:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 4 pm">
 							<label class="time-label">4 pm</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 4:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 5 pm">
 							<label class="time-label">5 pm</label>
 						</button>
-						<button class="text-only-button half-hour-block"></button>
-						<button class="text-only-button half-hour-block">
+						<button class="text-only-button half-hour-block" title="Add Appointment at 5:30"></button>
+						<button class="text-only-button half-hour-block" title="Add appointment at 6 pm">
 							<label class="time-label">6 pm</label>
 						</button>
 					</div>
@@ -1452,7 +1452,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 		const $input = $('#input-expedition').empty();
 		$input.append(`<option class="" value="">Expedition</option>`);
-		for (const info of expeditions.sort((a, b) => a.expedition_name.localeCompare(b.expedition_name))) {
+		for (const info of expeditions.sort((a, b) => (a.expedition_name || '**No Expedition Name Entered**').localeCompare(b.expedition_name))) { 
 			$input.append(`<option class="" value="${info.expedition_id}">${info.expedition_name} (${info.n_members} climbers)</option>`);
 		}
 		$input.val('');
