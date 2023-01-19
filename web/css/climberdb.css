@@ -58,6 +58,11 @@ body a {
   background-color: hsl(231deg 3% 50%);
 }
 
+.modal,
+p {
+  color: #023047;
+}
+
 .modal-button {
   min-width: 75px;
   border-radius: 0.5rem;

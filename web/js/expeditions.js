@@ -2621,13 +2621,20 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		return $.post({
 			url: `flask/reports/${exportType}/${this.expeditionInfo.expeditions.id}.pdf`,
-            data: pdfData,
-        	xhrFields: {responseType: 'blob'}, 
+			data: pdfData,
+			//xhrFields: {responseType: 'blob'}, 
 			cache: false
 		}).done(responseData => {
-            var fileURL = URL.createObjectURL(responseData);
-            window.open(fileURL);
-            this.hideLoadingIndicator();
+			// var fileURL = URL.createObjectURL(responseData);
+			// window.open(fileURL, this.expeditionInfo.expedition_name);
+			if (this.pythonReturnedError(responseData)) {
+				showModal('Your PDF could not be exported because of an unexpected error: ' + responseData, 'Unexpected Error');
+				return;
+			}
+			window.open(responseData, '_blank')//></a>`).appendTo('body').click();
+			//setTimeout(()=>{a.remove()}, 500);
+        }).always(() => {
+        	this.hideLoadingIndicator()
         });
 
 	}

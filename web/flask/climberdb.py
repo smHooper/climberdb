@@ -67,6 +67,10 @@ def get_config_from_db():
 		)
 get_config_from_db()
 
+
+def get_exports_dir():
+	return os.path.join(os.path.dirname(__file__), '..', 'exports')
+
 # disable caching (this doesn't seem to work for some reason)
 #app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 @app.after_request
@@ -131,7 +135,7 @@ def add_header(response):
 @app.route('/flask/test', methods=['GET', 'POST'])
 def test():
 	
-	return json.dumps([request.url_root])
+	return json.dumps([os.getlogin()])
 
 
 # -------------- User Management ---------------- #
@@ -315,12 +319,21 @@ def get_confirmation_letter(expedition_id):
 	# Get HTML string
 	html = render_template('confirmation_letter.html', **data)
 
+	cleaned_expedition_name = re.sub(r'\W', '_', data['expedition_name'])
+	pdf_filename = f'confirmation_letter_{cleaned_expedition_name}.pdf'
+
 	# wait until the last moment to block for weasyprint to load
 	wait_for_weasyprint()
 
 	# return HTML as PDF binary data
-	pdf_data = weasyprint.render_pdf(weasyprint.HTML(string=html))
-	return pdf_data
+	html = weasyprint.HTML(string=html)
+	#pdf_data = weasyprint.render_pdf(html, download_filename=pdf_filename)
+	
+	# write to disk as PDF
+	pdf_path = os.path.join(get_exports_dir(), pdf_filename)
+	html.write_pdf(pdf_path)
+
+	return 'exports/' + pdf_filename #pdf_data
 
 
 @app.route('/flask/reports/registration_card/<expedition_id>.pdf', methods=['POST'])
@@ -341,11 +354,19 @@ def get_registration_card(expedition_id):
 	# Get HTML string
 	html = render_template('registration_card.html', **data)
 
-	# render pdf
+	cleaned_expedition_name = re.sub(r'\W', '_', data['expedition_name'])
+	pdf_filename = f'registration_card_{cleaned_expedition_name}.pdf'
+
+	# render html
 	wait_for_weasyprint()
-	pdf_data = weasyprint.render_pdf(weasyprint.HTML(string=html))
+	html = weasyprint.HTML(string=html)
 	
-	return pdf_data
+	# write to disk as PDF
+	pdf_path = os.path.join(get_exports_dir(), pdf_filename)
+	html.write_pdf(pdf_path)
+	#pdf_data = weasyprint.render_pdf()
+	
+	return 'exports/' + pdf_filename #pdf_data
 
 #--------------- Reports ---------------------#
 
