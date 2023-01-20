@@ -939,6 +939,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#input-expedition_name').blur(e => {
 			this.onExpeditionNameLostFocus(e)
 		})
+
+		//TODO: when date changes, make sure it's a reasonable value
+
 		// ^^^^^^^^^^^ Expedition ^^^^^^^^^^^^^^^^^^^
 
 
@@ -2984,6 +2987,21 @@ class ClimberDBExpeditions extends ClimberDB {
 			.closest('.collapse')
 				.collapse(climberInfo.is_guide ? 'show' : 'hide');
 
+		// If the climber is a guide and this is a guided expedition, ask if the climber is guiding on this expedition
+		if (climberInfo.is_guide && $('#input-guide_company').val() != -1) {
+			const message = 'This climber is marked as a guide in the database. Would you like to mark them as a guide on this expedition?'
+			const footerButtons = `
+			<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>
+			<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">Yes</button>
+			`;
+			const eventHandler = () => {
+				$('#alert-modal .confirm-button').click(() => {
+					$memberCard.find('.input-checkbox[name=is_guiding]').prop('checked', true);
+				})
+			}
+			showModal(message, 'Is This Climber Guiding?', 'confirm', footerButtons, {eventHandlerCallable: eventHandler});
+		}
+		
 		$(e.target).siblings('.close-modal-button').click();
 	}
 
