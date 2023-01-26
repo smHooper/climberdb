@@ -492,15 +492,21 @@ class ClimberDBDashboard extends ClimberDB {
 		});
 	}
 
+
+	
+
+
 	/*
 	Return an array of objects sorted by a given field
 	*/
 	sortDataArray(data, sortField, {ascending=true}={}) {
-		return data.sort((a, b) => {
-				const comparandA = a[sortField].match(/^\d+$/, a[sortField]) ? parseInt(a[sortField]) : a[sortField];
-				const comparandB = b[sortField].match(/^\d+$/, b[sortField]) ? parseInt(b[sortField]) : b[sortField];
-				return ((comparandA > comparandB) - (comparandB > comparandA)) * (ascending ? 1 : -1);
-			})
+		return data.sort( (a, b) => {
+			// If the values are integers, make them numeric before comparing because string 
+			//	numbers have a different result than actual numbers when comparing values
+			const comparandA = a[sortField].match(/^\d+$/, a[sortField]) ? parseInt(a[sortField]) : a[sortField];
+			const comparandB = b[sortField].match(/^\d+$/, b[sortField]) ? parseInt(b[sortField]) : b[sortField];
+			return ((comparandA > comparandB) - (comparandB > comparandA)) * (ascending ? 1 : -1);
+		})
 	}
 
 
@@ -597,7 +603,6 @@ class ClimberDBDashboard extends ClimberDB {
 
 
 	configureMisingPaymentOrSUP() {
-		//TODO: winter solo expedition URL doesn't have id
 		const sql = `
 			SELECT 
 				expedition_name, 
@@ -870,9 +875,9 @@ class ClimberDBDashboard extends ClimberDB {
 	        		const now = new Date();
 	        		const minDate = new Date(`${fullDates[0]} 00:00`);
 	        		const maxDate = new Date(`${fullDates[fullDates.length - 1]} 00:00`);
-	        		const nTotalDays = (maxDate.getTime() - minDate.getTime()) / this.millisecondsPerDay;
+	        		const nTotalDays = (maxDate.getTime() - minDate.getTime()) / this.constants.millisecondsPerDay;
 	        		const minDateToNow = minDate < now ? 
-        				(now.getTime() - minDate.getTime()) / this.millisecondsPerDay :
+        				(now.getTime() - minDate.getTime()) / this.constants.millisecondsPerDay :
         				0;
 	        		const scrollDistance = (minDateToNow / nTotalDays) * scrollWidth;
 	        		$outerWrapper.scrollLeft(scrollDistance);//scrollDistance);

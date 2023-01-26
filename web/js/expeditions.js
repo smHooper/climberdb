@@ -2065,7 +2065,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	discardEdits() {
 		
 		// remove any new cards or new list items. This means that only updates (not inserts) need to be reset
-		$('.new-card, .new-list-item').fadeRemove();
+		$('.new-card, .new-list-item, .refund-post-item').fadeRemove();
 
 		//expeditions
 		for (const el of $('#expedition-data-container .input-field.dirty')) {
@@ -2310,10 +2310,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		const departureDate = new Date($plannedDepartureInput.val() + ' 00:00');
 		const now = new Date();
 		const minDaysAfterConfirm = this.config.minimum_days_after_confirm;
-		const daysToDeparture = parseInt(Math.round((departureDate - now) / this.millisecondsPerDay));
+		const daysToDeparture = parseInt(Math.round((departureDate - now) / this.constants.millisecondsPerDay));
 		if (daysToDeparture < minDaysAfterConfirm) { // if minimum_days_after_confirm is not in the config table, do nothing
 			const newDepartureDate = new Date(now.getTime() //timestamp in milliseconds
-				+ (minDaysAfterConfirm * this.millisecondsPerDay) // add milliseconds in minDaysAfterConfirm
+				+ (minDaysAfterConfirm * this.constants.millisecondsPerDay) // add milliseconds in minDaysAfterConfirm
 				//+ (60000 * now.getTimezoneOffset()) // add timezone offset (.getTimezoneOffset() returns offset in minutes)
 			);
 			const message = `You've marked this expedition as confirmed on ${departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'})} but they're scheduled to depart <strong>${daysToDeparture} days</strong> from now. Would you like to set the departure date to <strong>${newDepartureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'})}</strong>, ${minDaysAfterConfirm} days from now?`
@@ -2695,7 +2695,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// check that another member hasn't been added within 30 days
 			for (const el of $('.input-field[name=datetime_reserved]')) {
 				const dateAdded = new Date(el.value + ' 00:00');
-				const daysReservedToDeparture = (departureDate - dateAdded) / this.millisecondsPerDay;
+				const daysReservedToDeparture = (departureDate - dateAdded) / this.constants.millisecondsPerDay;
 				if (daysReservedToDeparture < climberAdditionDayRestriction) {
 					const message = `An expedition member has already been added within`
 						+ ` ${climberAdditionDayRestriction} days of this group's planned departure of ` 
@@ -2720,7 +2720,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// If this is within seven days, automatically limit results to just climbers who have 
 		//	already been on Denali or Foraker this year
-		const daysToDeparture = (departureDate - now) / this.millisecondsPerDay;
+		const daysToDeparture = (departureDate - now) / this.constants.millisecondsPerDay;
 		const previousClimberAdditionDays = this.config.days_before_previous_climber_addition_restriction;
 		const limitToPreviousClimbers = 
 			previousClimberAdditionDays && 
@@ -3783,9 +3783,9 @@ class ClimberDBExpeditions extends ClimberDB {
 						.find('.transaction-amount-field');
 				const transactionValue = parseFloat($valueField.val() || 0)
 				const transactionTypeCode = parseInt(el.value);
-				if ([3, 10, 12, 14, 15, 23, 24].includes(transactionTypeCode)) { // climbing permit fee
+				if (this.constants.climbingFeeTransactionCodes.includes(transactionTypeCode)) { // climbing permit fee
 					climbingFeeBalance += transactionValue;
-				} else if ([11, 25, 8, 26].includes(transactionTypeCode)) {
+				} else if (this.constants.entranceFeeTransactionCodes.includes(transactionTypeCode)) {
 					entranceFeeBalance += transactionValue;
 				}
 			}
@@ -4121,7 +4121,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	show60DayWarning() {
 		const departureDate = new Date($('#input-planned_departure_date').val() + ' 00:00');
 		const now = new Date();
-		const daysToDeparture = (departureDate - now) / this.millisecondsPerDay;
+		const daysToDeparture = (departureDate - now) / this.constants.millisecondsPerDay;
 		const isGuided = $('#input-guide_company').val() !== '';
 		// If this expedition's departure has already passed or it's more than 60 days away, do nothing
 		if (isGuided || daysToDeparture < 0 || daysToDeparture > 60) {
@@ -4141,7 +4141,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				(groupStatusCode === 1 || groupStatusCode === 2) && //group is not confirmed
 				(climbingFeesNotPaid || supsNotComplete || psarNotComplete)
 			) {
-			const newDepartureDate = new Date(departureDate.getTime() + this.millisecondsPerDay * 60)
+			const newDepartureDate = new Date(departureDate.getTime() + this.constants.millisecondsPerDay * 60)
 				.toLocaleDateString('en-US', {month: 'long', day: 'numeric'});
 			let reasons = '';
 			if (climbingFeesNotPaid) reasons += `<li>${nClimbingFeesNotPaid} climber${nClimbingFeesNotPaid > 1 ? 's have' : ' has'} not paid their climbing permit fee</li>`;

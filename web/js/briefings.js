@@ -35,7 +35,7 @@ class ClimberDBBriefings extends ClimberDB {
 		const startDate = startOfCalendar.getDate();
 		for (let i = 0; i < startDayOfWeek; i++) {
 			$calendarBody.append(`
-				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(startOfCalendar.getTime() + this.millisecondsPerDay * i))}">
+				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(startOfCalendar.getTime() + this.constants.millisecondsPerDay * i))}">
 					<label class="calendar-cell-date-label">${startDate + i}</label>
 					<div class="calendar-cell-body"></div>
 				</div>
@@ -63,7 +63,7 @@ class ClimberDBBriefings extends ClimberDB {
 		const endDayOfWeek = lastDayOfMonth.getDay();
 		for (let i = 0; i + endDayOfWeek < 6; i++) { // < 6 because getDay() returns 0-indexed day od week
 			$calendarBody.append(`
-				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(date.getTime() + this.millisecondsPerDay * i))}">
+				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(date.getTime() + this.constants.millisecondsPerDay * i))}">
 					<label class="calendar-cell-date-label">${i + 1}</label>
 					<div class="calendar-cell-body"></div>
 				</div>
@@ -1352,8 +1352,14 @@ class ClimberDBBriefings extends ClimberDB {
 	toggleBriefingCalendarCellEntries($cell) {
 		// Check if there are too many briefings to show in the cell without scrolling 
 		const $cellBody = $cell.find('.calendar-cell-body');
-		const contentOverflows = $cellBody.height() < $cellBody[0].scrollHeight;
 		const $entries = $cellBody.find('.briefing-calendar-entry:not(.summary)');
+		
+		// Show entries and hide summary before testing for overflow
+		$entries.ariaHide(false)
+		$cellBody.find('.briefing-calendar-entry.summary').ariaHide(true);
+
+		// If the content is longer than the height of the cell, show just a summary
+		const contentOverflows = $cellBody.height() < $cellBody[0].scrollHeight; 
 		$entries.ariaHide(contentOverflows);
 		$cellBody.find('.briefing-calendar-entry.summary')
 			.text(`${$entries.length} briefings`)
@@ -1372,7 +1378,7 @@ class ClimberDBBriefings extends ClimberDB {
 			</p>
 		`);
 		 
-		 this.toggleBriefingCalendarCellEntries($cell);
+		this.toggleBriefingCalendarCellEntries($cell);
 	}
 
 
@@ -1396,6 +1402,7 @@ class ClimberDBBriefings extends ClimberDB {
 					this.addBriefingToCalendarCell($cell, info);
 				}
 			}
+			//this.toggleBriefingCalendarCellEntries($cell);
 		}
 	}
 
