@@ -458,6 +458,132 @@ class ClimberDBBriefings extends ClimberDB {
 		return new Date(`${$cell.data('date')} 00:00`);//needs time in string or it might return the wrong UTC date
 	}
 
+	leastCommonMultiple(array) {
+
+		const gcd = (a, b) => !b ? a : gcd(b, a % b);
+
+		const lcm = (a, b) => (a * b) / gcd(a, b);   
+
+		// drop 0s
+		array = array.filter(c => c)
+		
+		var multiple = Math.min(...array);
+		for (const n of array) {
+			if (!n) continue;
+			multiple = lcm(multiple, n);
+		}
+
+		return multiple;
+	}
+
+	/*
+	(re)Calculate the CSS grid start column (end column will fill to the max). 
+		1. Find the max number of columns for any time slot
+		2. Find the max start column for each briefing
+	*/
+	setBriefingAppointmentColumns({appointmentTimes=[]}={}) {
+		
+		if (!appointmentTimes.length) appointmentTimes = this.getAppointmentTimes();
+
+		const dateString = $('.calendar-cell.selected').data('date');
+
+		// First, loop through the briefings and determine the number of briefings per time slot
+		const allBriefings = Object.values(climberDB.briefings[dateString]);
+		let briefingsPerSlot = appointmentTimes.map(() => []);
+		let rowIndices = {};
+		let uniqueGridRows = {};
+		for (const briefing of allBriefings) {
+			const startIndex = appointmentTimes.indexOf(briefing.briefing_start_time);
+			const endIndex = appointmentTimes.indexOf(briefing.briefing_end_time);
+			const briefingID = briefing.id;
+			rowIndices[briefingID] = [startIndex, endIndex];
+			
+			// Gather sets of briefings with the same 
+			const gridRowString = `${startIndex + 1} / ${endIndex + 1}`;
+			if (!(gridRowString in uniqueGridRows)) {
+				uniqueGridRows[gridRowString] = {
+					startIndex: startIndex, 
+					endIndex: endIndex, 
+					briefingIDs: [briefingID]
+				}
+			} else {
+				uniqueGridRows[gridRowString].briefingIDs.push(briefingID)
+			}
+
+			for (let i = startIndex; i < endIndex; i++) {
+				briefingsPerSlot[i].push(briefingID)
+			}
+		}
+		const briefingCountPerSlot = briefingsPerSlot.map(a => a.length);
+		const uniqueCounts = [... new Set(briefingCountPerSlot)];
+		const nColumns = this.leastCommonMultiple(uniqueCounts);
+
+		// Get unique combinations of briefings.
+		//const briefingIDStrings = briefingsPerSlot.map(a => a.toString()); 
+		//const uniqueCombinations = [...new Set(briefingIDStrings)].filter(s => s !== '')
+
+		// Sort briefings that have the same start and end time in descending order of length
+		const sortedGridRows = Object.values(uniqueGridRows).sort( 
+			(a, b) =>  (b.length > a.length) - (a.length > b.length)
+		);
+		let placedBriefings = [];
+		for (const {startIndex, endIndex} of sortedGridRows) {
+			const maxCount = Math.max(...briefingCountPerSlot.slice(startIndex, endIndex));
+			// Get all briefings that intersect this set of briefings
+			const briefingIDs = [...new Set(briefingsPerSlot.slice(startIndex, endIndex).flat())]
+			const briefingWidth = nColumns / maxCount;
+			for (const i in briefingIDs) {
+				const id = parseInt(briefingIDs[i]);
+				// If this briefing has already been placed (i.e., it intersected with a previous set), skip it
+				if (id in placedBriefings) continue;
+				// Otherwise, set the grid-column
+				const startColumn = i * briefingWidth + 1; 
+				$(`.briefing-appointment-container[data-briefing-id=${id}]`).css('grid-column', `${startColumn} / ${startColumn + briefingWidth}`);
+				placedBriefings.push(id)
+			}
+		}
+		// next get the max briefing column time per briefing. Do so by figuring out the max number of appointments that occur 
+		// Determine if this briefing overlaps with more than one time slot that has more than 1 briefing, for each briefing I need to know if there's more than one time slot with > 1 briefings. For instance:
+		/*
+		|//////////////| |//////////////|
+		|//briefing 1//| |//briefing 2//| 
+		|//////////////| |//////////////| |//////////////|
+		                                  |//briefing 4//|
+		|//////////////|                  |//////////////|
+		|//briefing 3//|                  
+		|//////////////|
+		*/
+		// Add these ones last
+		// const staggeredBriefings = [];
+		// for (const id in rowIndices) {
+		// 	const [startIndex, endIndex] = rowIndices[id];
+		// 	const overlapCounts = briefingCountPerSlot.slice(startIndex, endIndex);
+		// 	if ([...new Set(overlapCounts)].length > 1) {
+		// 		//staggeredBriefings[id] = nColumns - nColumns / Math.max(...overlapCounts);
+		// 		//const overlappingIDs = ;
+		// 		// for (const overlappingID of [...Set(briefingsPerSlot.slice(startIndex, endIndex).flat())]) {
+		// 		// 	if (overlappingID == id || overlappingID in staggeredBriefings.flat()) continue;
+		// 		// 	const [overlappingStart, overlappingEnd] = indices[overlappingID];
+		// 		// 	if 
+		// 		// }
+		// 	}
+		// }
+		// for (const idString of uniqueCombinations) {
+		// 	const ids = idString.split(',');
+		// 	const briefingWidth = nColumns / ids.length;
+		// 	for (const i in ids) {
+		// 		const id = parseInt(ids[i]);
+		// 		if (id in staggeredBriefings) continue;
+		// 		const startColumn = i * briefingWidth + 1; 
+		// 		$(`.briefing-appointment-container[data-briefing-id=${id}]`).css('grid-column', `${startColumn} / ${startColumn + briefingWidth}`);
+		// 	}
+		// }
+		// for (const [id, position] of Object.entries(staggeredBriefings)) {
+		// 	$(`.briefing-appointment-container[data-briefing-id=${id}]`).css('grid-column-start', )
+		// }
+
+	}
+
 
 	/*
 	Helper method to add an appointment container to the sidebar schedule UI. This is 
@@ -471,9 +597,9 @@ class ClimberDBBriefings extends ClimberDB {
 		// Calculate the CSS grid row index for the given start and end times
 		const rowIndexStart = appointmentTimes.indexOf(briefingInfo.briefing_start_time) + 1;
 		const rowIndexEnd = appointmentTimes.indexOf(briefingInfo.briefing_end_time) + 1;
-		
+
 		$('.schedule-ui-container').append(`
-			<div class="briefing-appointment-container" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}" data-briefing-id=${briefingInfo.id}>
+			<div class="briefing-appointment-container" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}" data-briefing-id=${briefingInfo.id} title="${briefingInfo.expedition_name}">
 				<label class="briefing-appointment-header">${briefingInfo.expedition_name}</label>
 				<p class="briefing-appointment-text">
 					<span class="briefing-details-n-climbers">Routes: ${briefingInfo.routes.replace(/; /g, ', ')}</span><br>
@@ -482,6 +608,7 @@ class ClimberDBBriefings extends ClimberDB {
 				</p>
 			</div>
 		`);
+
 	}
 
 
@@ -490,14 +617,12 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	onCalendarCellClick(e) {
 		
+		// if the cell is already selected, do nothing
+		const $cell = $(e.target).closest('.calendar-cell');
+		if ($cell.is('.selected')) return;
+
 		// Clear old date's appointments
 		$('.schedule-ui-container .briefing-appointment-container').remove();
-
-		// Show cell as selected
-		const $cell = $(e.target).closest('.calendar-cell');
-		
-		// If this cell is already selected, exit
-		if ($cell.is('.selected')) return;
 
 		$('.calendar-cell.selected').removeClass('selected');
 		$cell.addClass('selected');
@@ -516,6 +641,7 @@ class ClimberDBBriefings extends ClimberDB {
 				const info = briefingAppointments[expeditionID];
 				this.addBriefingToSchedule(info, {appointmentTimes: appointmentTimes})
 			}
+			this.setBriefingAppointmentColumns();
 	
 		}
 		
@@ -555,7 +681,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 		// Scroll to the selected container, but delay for a half second so that the 
 		//	.show transition can start first
-		setTimeout(() => {$container[0].scrollIntoViewIfNeeded()}, 50);
+		setTimeout(() => {$container[0].scrollIntoView()}, 50);
 
 		// clear data-current-value properties
 		for (const input of $('.input-field')) {
@@ -742,7 +868,9 @@ class ClimberDBBriefings extends ClimberDB {
 			if ($dirtyInputs.length) {
 				$selectedAppointment.remove();
 				this.addBriefingToSchedule(briefingInfo);
+				this.setBriefingAppointmentColumns();
 			}
+
 		}
 
 		// Remove any edits
@@ -1303,10 +1431,12 @@ class ClimberDBBriefings extends ClimberDB {
 		const startIndex = timeIndex + 1;
 		const endIndex = Math.min(timeIndex + (this.config.default_briefing_length_hrs * 2) + 1, nAppointmenTimes);
 
+		//TODO: Prevent user from adding more than one briefing at a time without saving
+
 		// Add the appointment to the schedule
 		//	 Use date-change-not-called utility class to let the date field's .change() event know not to move the briefing
 		$(`
-			<div class="briefing-appointment-container selected new-briefing date-change-not-called" style="grid-row: ${startIndex} / ${endIndex}">
+			<div class="briefing-appointment-container selected new-briefing date-change-not-called" style="grid-row: ${startIndex} / ${endIndex}" title="New Appointment">
 				<label class="briefing-appointment-header">New Briefing</label>
 				<p class="briefing-appointment-text">
 				<span class="briefing-details-n-climbers"></span> <span class="briefing-details-climber hidden">climber</span><span class="briefing-details-climber-plural"></span><br>
@@ -1356,14 +1486,33 @@ class ClimberDBBriefings extends ClimberDB {
 		
 		// Show entries and hide summary before testing for overflow
 		$entries.ariaHide(false)
-		$cellBody.find('.briefing-calendar-entry.summary').ariaHide(true);
+		const $summaryEntry = $cellBody.find('.briefing-calendar-entry.summary').ariaHide(true);
+
+		// Loop through the entries and show them if the cell height can still accommodate it
+		const bodyHeight = $cellBody.height();
+		let contentHeight = 36; // height of two lines (one for a visual buffer)
+		let visibleEntries = [];
+		for (const el of $entries) {
+			const entryHeight = el.offsetHeight;
+			contentHeight += entryHeight;
+			if (bodyHeight < contentHeight) break;
+			visibleEntries.push(el);
+		}	
+		
+		const $hiddenEntries = $entries.not($(visibleEntries));
+		const nHidden = $hiddenEntries.length;
+		if (nHidden) {
+			$hiddenEntries.ariaHide(true);
+			$summaryEntry.text(`+${nHidden} more appointment${nHidden > 1 ? 's' : ''}`)
+				.ariaHide(false)
+		}
 
 		// If the content is longer than the height of the cell, show just a summary
-		const contentOverflows = $cellBody.height() < $cellBody[0].scrollHeight; 
-		$entries.ariaHide(contentOverflows);
-		$cellBody.find('.briefing-calendar-entry.summary')
-			.text(`${$entries.length} briefings`)
-			.ariaHide(!contentOverflows);
+		// const contentOverflows = bodyHeight < $cellBody[0].scrollHeight; 
+		// $entries.ariaHide(contentOverflows);
+		// $cellBody.find('.briefing-calendar-entry.summary')
+		// 	.text(`${$entries.length} briefings`)
+		// 	.ariaHide(!contentOverflows);
 	}
 
 
@@ -1372,11 +1521,11 @@ class ClimberDBBriefings extends ClimberDB {
 			.toLocaleTimeString('en-us', {hour: 'numeric', minute: 'numeric'})
 			.toLowerCase()
 			.replace(/\s|:00/g, '')
-		 $cell.find('.calendar-cell-body').append(`
+		 $(`
 			<p class="briefing-calendar-entry" data-briefing-id="${info.id}">
 				<strong>${startTime}</strong> ${info.expedition_name}
 			</p>
-		`);
+		`).insertBefore($cell.find('.calendar-cell-body .briefing-calendar-entry.summary'));
 		 
 		this.toggleBriefingCalendarCellEntries($cell);
 	}

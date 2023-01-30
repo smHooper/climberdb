@@ -4,13 +4,16 @@ label {
 
 .main-content-wrapper {
 	display: flex;
-	padding-right: 0;
+	padding: 0;
 	/*background: linear-gradient(2deg, #219ebc, #f9d67fb8);*/
+
 }
 /* ---- calendar --- */
 .calendar-container {
 	/*flex: 2 1 66.667%;*/
 	height: 100%;
+	padding: 20px;
+	overflow-y: auto;
 }
 .calendar-header-container {
 	width: 100%;
@@ -68,7 +71,7 @@ label {
 .calendar-cell {
 	display: flex;
 	flex-direction: column;
-	height: 110px;
+	height: 145px;
 	width: 13.8%;
 	background-color: rgb(235,235,235);/*rgb(235 235 235 / 70%);*/
 	color: #00679b;
@@ -123,7 +126,7 @@ label {
 	color: #00679b;
 	display: flex;
 	flex-direction: column;
-	padding: 10px 0px 0px 20px;
+	padding: 20px 0px 0px 20px;
 	transition: max-width 0.3s ease-in;
 	right: 0;/*for .expanded*/
 }
@@ -203,19 +206,20 @@ label {
 	position: relative;
 	top: -100%; /*overlay with background*/
 	z-index: 2;
-	grid-template-columns: repeat(5, 1fr);
+/*	grid-template-columns: repeat(5, 1fr);*/
 	grid-template-rows: repeat(22, 40px); /*this should maybe be set at runtime based on open/close time user setting*/
 	grid-auto-columns: 1fr;
 	pointer-events: none;
 }
+
 .briefing-appointment-container {
 	position: relative;
 	background-color: #f28100;
 	color: white;
 	border-radius: 7px;
-	grid-column-end: auto;
 	margin: 1px;
-	grid-column-end: span 4;
+	grid-column-end: fit-content;/*set default*/
+	min-width: 1px;
 	cursor: pointer;
 	padding: 10px;
 	transition: all 0.3s;
