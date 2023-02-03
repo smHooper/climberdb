@@ -47,7 +47,7 @@ class ClimberForm {
 					<div class="expedition-modal-only expedition-modal-climber-form-header hidden">
 						<div class="expedition-modal-search-container" aria-hidden="true">
 							<div class="fuzzy-search-bar-container col-6">
-								<input id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Climber name search" autocomplete="__never">
+								<input id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Type text to filter climbers" autocomplete="__never">
 								<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 							</div>	
 							<div class="modal-climber-select-container collapse">
@@ -62,17 +62,17 @@ class ClimberForm {
 						<div class="expedition-modal-search-container" aria-hidden="true">
 							<div class="field-container checkbox-field-container always-editable col-sm-3 pl-3">
 								<label class="checkmark-container">
-									<input id="guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="guide_only">
+									<input id="guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="guide_only" aria-labelledby="guide-only-filter-label">
 									<span class="checkmark data-input-checkmark"></span>
 								</label>
-								<label class="field-label checkbox-label" for="guide-only-filter">Commercial guide</label>
+								<label id="guide-only-filter-label" class="field-label checkbox-label" for="guide-only-filter">Commercial guide</label>
 							</div>	
 							<div class="field-container checkbox-field-container always-editable col-sm-3 pl-3">
 								<label class="checkmark-container">
-									<input id="7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="7_day_only">
+									<input id="7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="7_day_only" aria-labelledby="7-day-only-filter">
 									<span class="checkmark data-input-checkmark"></span>
 								</label>
-								<label class="field-label checkbox-label" for="7-day-only-filter">7-day only</label>
+								<label id="7-day-only-filter-label" class="field-label checkbox-label" for="7-day-only-filter">7-day only</label>
 							</div>
 							<div class="col-sm-6 px-0 d-flex justify-content-end">
 								<span id="climber-search-result-count" class="pr-5 hidden" aria-hidden="true"></span>
