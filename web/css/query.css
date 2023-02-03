@@ -1,0 +1,101 @@
+.main-content-wrapper {
+	display: flex;
+	flex-wrap: nowrap;
+	padding: 0;
+}
+.fuzzy-search-bar {
+	text-indent: 0;
+}
+.query-options-sidebar {
+	height: 100%;
+	overflow-y: auto;
+/*	border: 0 10px 0 0 #ddd;*/
+	position: relative;
+	z-index: 2;
+	box-shadow: 0px 14px 12px 8px #00000033;
+	padding: 20px;
+}
+.query-parameters-container {
+	width: 100%;
+	display: flex;
+	flex-wrap: wrap;
+}
+#query-option-list {
+	list-style: none;
+	padding: 30px 0px 10px 0px;
+	width: 100%;;
+}
+.query-option {
+	padding: 0 15px;
+	position: relative;
+	height: 60px;
+	line-height: 60px;
+	width:  100%;
+	margin-bottom: 2px;
+	background-color: #ddd;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+	cursor: pointer;
+	z-index: 0;
+	transition: 0.5s all;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.query-option:not(.selected):hover {
+	background-color: rgba(220, 220, 220);
+}
+.query-option.selected {
+	box-shadow: 1px 4px 5px 3px rgb(0 0 0 / 15%);
+	z-index: 1;
+	justify-content: space-between;
+	cursor: unset;
+	pointer-events: none;
+}
+.query-option.selected, 
+.query-option.selected {
+	color: #219ebc;
+}
+.query-details-container {
+	padding: 30px;
+	display: flex;
+	flex-direction: column;
+	max-height: 100%;
+	background: linear-gradient(2deg, #44a9ba, #ffe7aad1);
+}
+
+.query-result-container {
+	display: flex;
+	justify-content: center;
+	position: relative;
+	margin-top: 15px;
+	max-height: calc(100% - 100px);
+	border-radius: 10px;
+	overflow-y: auto;
+}
+.climberdb-data-table {
+	max-height: 100%;
+	min-width: 100%;
+}
+.climberdb-data-table tbody {
+	overflow-y: auto;
+	min-width: 100%;
+	color: #023047;
+}
+
+.climberdb-data-table tbody td {
+	padding: 2px;
+}
+.climberdb-data-table tbody td span.cell-content {
+	background: #ffffff20;
+	padding-left: 10px;
+	padding-right: 10px;
+}
+.climberdb-data-table tbody .cell-content a {
+	color: #00679b;
+}
+.climberdb-data-table tbody tr:hover td > span.cell-content {
+  background-color: #ffffff30;
+}

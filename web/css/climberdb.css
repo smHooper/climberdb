@@ -58,8 +58,7 @@ body a {
   background-color: hsl(231deg 3% 50%);
 }
 
-.modal,
-p {
+.modal {
   color: #023047;
 }
 
@@ -1403,6 +1402,7 @@ border-spacing: 0px;
   text-align: center;
   position: sticky;
   top: 0;
+  padding: 10px;
 }
 /*Make corners round for header*/
 .climberdb-data-table th:first-of-type {
@@ -1443,17 +1443,11 @@ td.no-border {
   transition: 0.25s all;
 }
 .climberdb-data-table tbody tr td:not(.no-border) > span {
-  /*background-color: rgba(33, 158, 188, 0.2);/* rgba(255, 182, 0, 0.45);*//**/
   height: 60px;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #219ebc1c;
   transition: 0.25s all;
-  padding: 10px 0;
-}
-.climberdb-data-table tbody tr:hover td:not(.no-border) > span {
-  background-color: #219ebc40;
 }
 .climberdb-data-table .input-field {
   border-bottom: none;
@@ -1464,6 +1458,51 @@ td.no-border {
 --------- styling for standalone data tables ------------ 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
 
+.fuzzy-search-bar-container {
+  display: flex;
+  height: 80px;
+  width: 100%;
+}
+.fuzzy-search-bar {
+  height: 60px;
+  line-height: 60px;
+  border: none;
+  border-bottom: solid 3px #219ebc;
+  background-color: rgba(255, 255, 255, 0);
+  transition: 0.3s ease;
+  cursor: pointer;
+  text-indent: 60px;
+  font-size: 20px;
+  color: #023047;
+}
+.fuzzy-search-bar:focus {
+  cursor: unset;
+  background-color: rgba(255, 255, 255, 0.4);
+  outline: none;
+}
+.fuzzy-search-bar:focus,
+input.fuzzy-search-bar:not(:placeholder-shown) {
+  width: unset;
+  flex: 1 1 auto;
+  border-radius: 5px;
+}
+.fuzzy-search-bar.default,
+.fuzzy-search-bar::placeholder {
+  color: #5d7785;
+}
+.fuzzy-search-bar-container > img.search-bar-icon,
+.fuzzy-search-bar-container > button {
+  position: relative;
+  height: 60px;
+  width: 60px;
+  padding: 15px;
+  z-index: -1; /* place behind input so the whole input is clickable*/
+  order: -1; /*has to be placed after search bar to use the sibling combinator*/
+}
+.fuzzy-search-bar:focus ~ img.search-bar-icon, 
+.fuzzy-search-bar:focus ~ button {
+  z-index: 1; /* place in front when background of input is transulcent */
+}
 
 /*@keyframes collapse-sidebar-button {
   0% {

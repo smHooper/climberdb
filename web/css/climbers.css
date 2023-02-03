@@ -1,50 +1,7 @@
-
-.fuzzy-search-bar-container {
-	display: flex;
-	height: 80px;
-	width: 100%;
-}
 .fuzzy-search-bar {
-	height: 60px;
-	line-height: 60px;
 	max-width: 800px;
-	width: 80px;
-	border: none;
-	border-bottom: solid 3px #219ebc;
-	background-color: rgba(255, 255, 255, 0);
-	transition: 0.3s ease;
-	cursor: pointer;
+	/*width: 80px;*/
 	margin-left: -60px;
-	text-indent: 60px;
-	font-size: 20px;
-	color: #023047;
-}
-.fuzzy-search-bar:focus {
-	cursor: unset;
-	background-color: rgba(255, 255, 255, 0.4);
-	outline: none;
-}
-.fuzzy-search-bar:focus,
-input.fuzzy-search-bar:not(:placeholder-shown) {
-	width: unset;
-	flex: 1 1 auto;
-	border-radius: 5px;
-}
-.fuzzy-search-bar::placeholder {
-	color: rgba(0, 0, 0, 0);
-}
-.fuzzy-search-bar-container > img.search-bar-icon,
-.fuzzy-search-bar-container > button {
-	position: relative;
-	height: 60px;
-	width: 60px;
-	padding: 15px;
-	z-index: -1; /* place behind input so the whole input is clickable*/
-	order: -1; /*has to be placed after search bar to use the sibling combinator*/
-}
-.fuzzy-search-bar:focus ~ img.search-bar-icon, 
-.fuzzy-search-bar:focus ~ button {
-	z-index: 1; /* place in front when background of input is transulcent */
 }
 .climber-search-filter-container {
 	display: flex;

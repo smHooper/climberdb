@@ -60,8 +60,12 @@ tr.inactive .input-field {
 	opacity: 1;
 	pointer-events: all;
 }
-
-
-
+.climberdb-data-table tbody tr td:not(.no-border) > span {
+	background-color: #219ebc1c; 
+	padding: 10px 0;
+}
+.climberdb-data-table tbody tr:hover td:not(.no-border) > span {
+  background-color: #219ebc40;
+}
 
 

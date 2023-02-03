@@ -2,6 +2,9 @@ import os
 import re
 import traceback
 import base64
+import secrets
+import string
+import shutil
 
 import sqlalchemy
 import bcrypt
@@ -48,11 +51,13 @@ if not os.path.isfile(CONFIG_FILE):
 if not app.config.from_file(CONFIG_FILE, load=json.load):
 	raise IOError(f'Could not read CONFIG_FILE: {CONFIG_FILE}')
 
+
 def connect_db():
 	return sqlalchemy.create_engine(
 		'postgresql://{username}:{password}@{host}:{port}/{db_name}'
 			.format(**app.config['DB_PARAMS'])
 	)
+
 
 def get_config_from_db():
 	engine = connect_db()
@@ -70,6 +75,12 @@ get_config_from_db()
 
 def get_exports_dir():
 	return os.path.join(os.path.dirname(__file__), '..', 'exports')
+
+
+def get_random_string(length=8):
+	alphabet = string.ascii_letters + string.digits
+	return ''.join(secrets.choice(alphabet) for i in range(length))
+
 
 # disable caching (this doesn't seem to work for some reason)
 #app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -135,7 +146,7 @@ def add_header(response):
 @app.route('/flask/test', methods=['GET', 'POST'])
 def test():
 	
-	return json.dumps([os.getlogin()])
+	return json.dumps([os.path.abspath(__file__)])
 
 
 # -------------- User Management ---------------- #
@@ -368,9 +379,104 @@ def get_registration_card(expedition_id):
 	
 	return 'exports/' + pdf_filename #pdf_data
 
+
+# Default 
+def write_query_to_excel(query_data, query_name, excel_path, excel_start_row=0, write_columns=True):
+
+	# Write to the excel file
+	with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+		query_data.to_excel(writer, startrow=excel_start_row, header=write_columns, index=False)
+
+
+# Handle guide_company_client_status and guide_company_briefings queries
+def write_guided_company_query_to_excel(client_status, briefings, excel_path, title_cell_text):
+
+	with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+		workbook = writer.book
+
+		if len(client_status):
+			client_status.to_excel(writer, sheet_name='Client Status', startrow=2, header=False, index=False)
+		else:
+			workbook.remove('Client Status')
+			workbook.save()
+
+		if len(briefings):
+			briefings.to_excel(writer, sheet_name='Briefings', startrow=1, header=False, index=False)
+
+		workbook['Client Status']['A1'] = title_cell_text
+
+
+# Export results of predefined queries
+@app.route('/flask/reports/export_query', methods=['POST'])
+def export_query():
+	
+	data = dict(request.form)
+
+	with open(os.path.join(get_exports_dir(), 'export_data.json'), 'w') as f:
+		json.dump(data, f)
+
+	# Make sure any filename is unique
+	random_string = get_random_string()
+
+	#TODO: consider re-writing so that temporary results get written when query is first run
+	query_name = data['query_name']
+	if data['export_type'] == 'excel':
+		
+		# If a template Excel file exists, make a copy in the exports directory to make a new file to write to
+		excel_filename =  data['base_filename'] + '.xlsx' if 'base_filename' in data else f'{query_name}_{random_string}.xlsx'
+		excel_path = os.path.join(get_exports_dir(), excel_filename)
+		excel_template_path = os.path.join(os.path.dirname(__file__), 'templates', f'{query_name}.xlsx')
+		if os.path.isfile(excel_template_path):
+			shutil.copy(excel_template_path, excel_path)
+		# If not, just write the file without using a template and return
+		else:
+			# maybe set up a default file
+			query_data = pd.DataFrame(json.loads(data['query_data'])).reindex(json.loads(data['columns']))
+			query_data.to_excel(excel_path, index=False)
+			return excel_path
+
+		if query_name == 'guide_company_client_status' or query_name == 'guide_company_briefings':
+			query_data = json.loads(data['query_data'])
+			client_status = pd.DataFrame(query_data['client_status']).reindex(columns=json.loads(data['client_status_columns']))
+			briefings = pd.DataFrame(query_data['briefings']).reindex(columns=json.loads(data['briefing_columns']))
+			write_guided_company_query_to_excel(
+				client_status, 
+				briefings, 
+				excel_path,
+				data['title_cell_text']
+			)
+		else:
+			query_data = pd.DataFrame(json.loads(data['query_data'])).reindex(json.loads(data['columns']))
+			write_query_to_excel(
+				query_data, 
+				query_name, 
+				excel_path, 
+				excel_start_row=data['excel_start_row'],
+				write_columns=data['excel_write_columns']
+			)
+
+		return 'exports/' + excel_filename
+
+	else:
+		template_name = f'{query_name}.html'
+		if not os.path.isfile(os.path.join(os.path.dirname(__file__), 'templates', template_name)):
+			template_name = 'export_query.html'
+		html = render_template(template_name, **data)
+
+		# render html
+		wait_for_weasyprint()
+		html = weasyprint.HTML(string=html)
+
+		# write to disk
+		pdf_filename = f'{query_name}_{random_string}.pdf'
+		pdf_path = os.path.join(get_exports_dir(), pdf_filename)
+		html.write_pdf(pdf_path)
+
+		return 'exports/' + pdf_filename
+
 #--------------- Reports ---------------------#
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 
 	app.run()#debug=True)
