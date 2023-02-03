@@ -45,8 +45,8 @@
 	display: flex;
 }
 .dashboard-card.half-height-card {
-	max-height: 50%;
-	flex: 0 1 50%;
+	max-height: calc(50% - 7.5px);
+	flex: 0 1 calc(50% - 7.5px);
 }
 .dashboard-card .dashboard-card-header {
 	border: none;
@@ -65,7 +65,8 @@
 	/*align-items: center;*/
 	display: flex;
 	/*margin-top: 20px;*/
-	overflow: auto;
+	overflow-y: auto;
+	overflow-x: hidden; /*prevent slivers of tables from showing horizontal scroll bar*/
 	/*flex: 1 1 auto;*/
 }
 #group-status-card .dashboard-card-body {

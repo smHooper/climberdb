@@ -40,7 +40,7 @@ class ClimberDBDashboard extends ClimberDB {
 									<tr>
 										<th>
 											<button class="text-only-button sort-column-button" data-field-name="expedition_name">
-												<span>Name</span>
+												<span>Expedition</span>
 												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
 											</button>
 										</th>
@@ -111,7 +111,7 @@ class ClimberDBDashboard extends ClimberDB {
 				<!-- group status -->
 				<div class="col-md col-lg-4 card-container">
 					<div id="group-status-card" class="card dashboard-card">
-						<h4 class="dashboard-card-header w-100 centered-text">Group Status</h4>
+						<h4 class="dashboard-card-header w-100 centered-text">Expedition Status</h4>
 						<div class="dashboard-card-body h-100">
 							<div class="group-status-graph-container">
 								<div class="group-status-row" data-status-code="1">
