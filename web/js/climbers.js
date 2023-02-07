@@ -265,8 +265,8 @@ class ClimberForm {
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 													<div class="field-container col-sm-6">
-														<select id="input-frostbite_severity" class="input-field default" name="frostbite_severity_code" data-table-name="expedition_members" placeholder="Frostbite severity" title="Frostbite severity"></select>
-														<label class="field-label" for="input-frostbite_severity_code">Frostbite severity</label>
+														<select id="input-frostbite_severity_history" class="input-field default" name="frostbite_severity_code" data-table-name="expedition_members" placeholder="Frostbite severity" title="Frostbite severity"></select>
+														<label class="field-label" for="input-frostbite_severity_history">Frostbite severity</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>		
 												</div>

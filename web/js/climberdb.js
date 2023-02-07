@@ -509,11 +509,11 @@ class ClimberDB {
 				}
 				if (queryResult) {
 					const $el = $('#' + selectElementID);
-					queryResult.forEach(function(object) {
+					for (const row of queryResult) {
 						$el.append(
-							`<option class="${optionClassName}" value="${object.value}">${object.name}</option>`
+							`<option class="${optionClassName}" value="${row.value}">${row.name}</option>`
 						);
-					})
+					}
 					const defaultValue = $el.data('default-value');
 					if (defaultValue !== undefined) $el.val(defaultValue);
 				} else {
