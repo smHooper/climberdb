@@ -208,7 +208,7 @@ class ClimberDB {
 		this.constants = { // values that aren't configurable but need to be accessible across multiple pages
 			millisecondsPerDay: 1000 * 60 * 60 * 24,
 			climbingFeeTransactionCodes: [3, 10, 12, 14, 15, 23, 24],
-			entranceFeeTransactionCodes: [11, 25, 8, 26]
+			entranceFeeTransactionCodes: [11, 12, 14, 15, 25, 8, 26]
 		}
 	}
 

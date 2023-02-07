@@ -3785,7 +3785,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				const transactionTypeCode = parseInt(el.value);
 				if (this.constants.climbingFeeTransactionCodes.includes(transactionTypeCode)) { // climbing permit fee
 					climbingFeeBalance += transactionValue;
-				} else if (this.constants.entranceFeeTransactionCodes.includes(transactionTypeCode)) {
+				} if (this.constants.entranceFeeTransactionCodes.includes(transactionTypeCode)) {
 					entranceFeeBalance += transactionValue;
 				}
 			}
