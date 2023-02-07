@@ -81,7 +81,6 @@ class ClimberDBQuery extends ClimberDB {
 					'SUP Application Complete',
 					'Climbing Fee Paid',
 					'Entrance Fee Paid',
-					'Registration Complete',
 				],
 				hrefs: {
 					'Group Name': 'expeditions.html?id={expedition_id}'
@@ -125,6 +124,11 @@ class ClimberDBQuery extends ClimberDB {
 					`	
 						SELECT 
 							coalesce(guide_company, 'All Expeditions') AS "Guide Company",
+							CASE 
+								WHEN guide_company IS NULL THEN 0
+								WHEN guide_company = 'Independent' THEN 1
+								ELSE 2
+							END AS result_order,
 							*
 						FROM (
 							SELECT 
@@ -135,7 +139,7 @@ class ClimberDBQuery extends ClimberDB {
 							FROM (
 								SELECT DISTINCT 
 									{group_by_field},
-									CASE guide_company_codes.name = 'None' THEN 'Independent' ELSE guide_company_codes.name AS guide_company,
+									CASE WHEN guide_company_codes.name = 'None' THEN 'Independent' ELSE guide_company_codes.name END AS guide_company,
 									CASE
 										WHEN extract(doy FROM planned_departure_date) BETWEEN 74 and 182  -- 3/15-7/1
 											THEN 1
@@ -156,7 +160,8 @@ class ClimberDBQuery extends ClimberDB {
 							) AS _
 							GROUP BY ROLLUP(guide_company)
 							ORDER BY guide_company
-						) __;
+						) __ 
+						ORDER BY result_order DESC, guide_company;
 					`,
 				columns: [
 					'Guide Company',
@@ -551,7 +556,8 @@ class ClimberDBQuery extends ClimberDB {
 				query_data: JSON.stringify(queryData),
 				client_status_columns: JSON.stringify(this.queries.guide_company_client_status.columns),
 				briefing_columns: JSON.stringify(this.queries.guided_company_briefings.columns),
-				title_cell_text: `Client Status for ${guideCompanyName} as of ${dateString}`
+				title_text: `Client Status for ${guideCompanyName} as of ${dateString}`,
+				columns: JSON.stringify(this.queries.guide_company_client_status.columns)
 			}
 		})
 	}
