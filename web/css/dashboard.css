@@ -60,6 +60,13 @@
 	align-items: center;
 	color: #4d819b;/*#888888;*/
 }
+.table-row-counter::before {
+	content: "(";
+}
+.table-row-counter::after {
+	content: ")";
+}
+
 .dashboard-card-body {
 	justify-content: center;
 	/*align-items: center;*/
@@ -73,9 +80,13 @@
 	overflow: unset; /*pop-up shouldn't trigger scroll*/
 }
 
+#season-mountain-stats-card .climberdb-dashboard-table {
+	font-size: 20px;
+}
+
 .climberdb-dashboard-table {
 	min-width: 300px;
-	font-size: 18px;
+	font-size: 20px;
 	/*margin-top: 30px;*/
 	max-height: 100%;
 }
@@ -84,6 +95,14 @@
 .climberdb-dashboard-table td {
 	border: none;
 	padding: 0.5rem 1rem;
+}
+.climberdb-dashboard-table.tight-layout {
+	width: 100%;
+	font-size: 15px;
+}
+.climberdb-dashboard-table.tight-layout th,
+.climberdb-dashboard-table.tight-layout td {
+	padding: unset;
 }
 .climberdb-dashboard-table th {/*:not(:first-of-type) {*/
 	/*background-color: #00679B;*/

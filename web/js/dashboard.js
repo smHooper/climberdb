@@ -33,9 +33,9 @@ class ClimberDBDashboard extends ClimberDB {
 				<!-- flagged and solo expeditions -->
 				<div class="col-md col-lg-4 card-container">
 					<div id="flagged-groups-card" class="card dashboard-card half-height-card">
-						<h4 class="dashboard-card-header">Flagged Expeditions</h4>
+						<h4 class="dashboard-card-header">Flagged Expeditions <span class="table-row-counter"></span></h4>
 						<div class="dashboard-card-body mt-0">
-							<table class="climberdb-dashboard-table">
+							<table class="climberdb-dashboard-table tight-layout">
 								<thead>
 									<tr>
 										<th>
@@ -64,9 +64,9 @@ class ClimberDBDashboard extends ClimberDB {
 						</div>
 					</div>
 					<div id="solo-climbers-card" class="card dashboard-card half-height-card">
-						<h4 class="dashboard-card-header">Confirmed Solo Climbers</h4>
+						<h4 class="dashboard-card-header">Confirmed Solo Climbers <span class="table-row-counter"></span></h4>
 						<div class="dashboard-card-body mt-0">
-							<table class="climberdb-dashboard-table">
+							<table class="climberdb-dashboard-table tight-layout">
 								<thead>
 									<tr>
 										<th>
@@ -222,9 +222,9 @@ class ClimberDBDashboard extends ClimberDB {
 				<!-- expeditions that still need to pay and turn in application -->
 				<div class="col-md col-lg-4 card-container small-row">
 					<div id="missing-sup-fee-groups-card" class="card dashboard-card">
-						<h4 class="dashboard-card-header">Missing SUP or Climber Fee</h4>
+						<h4 class="dashboard-card-header">Missing SUP or Climber Fee <span class="table-row-counter"></span></h4>
 						<div class="dashboard-card-body">
-							<table class="climberdb-dashboard-table">
+							<table class="climberdb-dashboard-table tight-layout">
 								<thead>
 									<tr>
 										<th class="col-4">
@@ -239,7 +239,7 @@ class ClimberDBDashboard extends ClimberDB {
 												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
 											</button>
 										</th>
-										<th>Missing SUP</th>
+										<th>Missing SUP App.</th>
 										<th>Missing Fee</th>
 									</tr>
 								</thead>
@@ -526,6 +526,11 @@ class ClimberDBDashboard extends ClimberDB {
 				html = html.replaceAll(`{${fieldName}}`, info[fieldName] || '');
 			}
 			$(html).appendTo($tableBody).removeClass('hidden cloneable');
+		}
+
+		const $rowCounter = $table.closest('.dashboard-card').find('.dashboard-card-header > .table-row-counter');
+		if ($rowCounter.length) {
+			$rowCounter.text(data.length);
 		}
 
 		return data;
