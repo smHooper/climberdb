@@ -3466,8 +3466,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		const briefingInfo = this.expeditionInfo.briefings;
 		const briefingDate = briefingInfo.briefing_date;
 		if (briefingDate) {
-			$briefingLink.attr('href', `briefings.html?date=${briefingDate}&id=${briefingInfo.id}`).text('View/Change');
-			$('.field-label[for=expedition-briefing-link]').text('Briefing time: ' + briefingInfo.briefing_datetime);
+			$briefingLink.attr('href', `briefings.html?date=${briefingDate}&id=${briefingInfo.id}`).text(briefingInfo.briefing_datetime);
+			$('.field-label[for=expedition-briefing-link]').text('Briefing time:');
 		} else if (expeditionData.planned_departure_date) {
 			$briefingLink.attr('href', `briefings.html?date=${expeditionData.planned_departure_date}`);
 		}//*/
