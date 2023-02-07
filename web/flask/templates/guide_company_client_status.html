@@ -1,0 +1,76 @@
+<!doctype html>
+<head>
+	<title>{{title_text}}</title>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+	<link rel=stylesheet href="{{ url_for('static', filename='export_query.css') }}" />
+	<link rel=stylesheet href="{{ url_for('static', filename='guide_company_client_status.css') }}" />
+</head>
+
+<body>
+
+	<h3 class="title-text">{{ title_text }}</h3>
+	<section id="client-status-section">
+		<table class="export-query-table client-status-table">
+			<thead>
+				<tr>
+					{% for column_ in client_status_columns %}
+						<th class="{{ column_.lower().replace(' ', '-') }}-column">{{ column_ }}</th>
+					{% endfor %}
+				</tr>
+			</thead>
+			<tbody>
+				<!-- 
+				for each row, loop through each column so the data are added in order. 
+				Use a sanitized column name as the class name to set column widths and 
+				to specify background colors for highlighting specific cells
+				 -->
+				{% for row in query_data['client_status'] %}
+					<tr>
+						{% for column_ in client_status_columns %}
+							<td class="{{ column_.lower().replace(' ', '-') }}-column {{ 
+								'highlighted' if 
+									(
+										'No' in [row['SUP Application Complete'], row['Climbing Fee Paid'], row['Entrance Fee Paid']] and 
+										column_.endswith(' Name')
+									) or 
+									(
+										row[column_] == 'No' and 
+										column_ in  ['SUP Application Complete', 'Climbing Fee Paid', 'Entrance Fee Paid']
+									)
+								else '' 
+							}}">{{ row[column_] }}</td>
+						{% endfor %}
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</section>
+
+	<h3 class="title-text">{{ briefing_title_text }}</h3>
+	<section>
+		<table class="export-query-table striped">
+			<thead>
+				<tr>
+					{% for column_ in briefing_columns %}
+						<th>{{ column_ }}</th>
+					{% endfor %}
+				</tr>
+			</thead>
+			<tbody>
+				{% for row in query_data.briefings %}
+					<tr>
+						{% for column_ in briefing_columns %}
+							<td>{{ row[column_] }}</td>
+						{% endfor %}
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</section>
+</body>
+
+</html>

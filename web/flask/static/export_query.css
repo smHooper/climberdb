@@ -1,0 +1,33 @@
+@page { 
+	size: letter landscape; 
+	margin: 0.25in; 
+}
+body { 
+	font-family: 'Lato', sans-serif;
+}
+
+.export-query-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+.export-query-table thead {
+	display: table-header-group;
+}
+.export-query-table thead tr {
+	height: 60px;
+	background: #023047;
+	color: white;
+}
+.export-query-table thead th {
+	border: none;
+}
+.export-query-table:not(.striped) tbody tr {
+	border-bottom: 1px solid #03578120;
+}
+.export-query-table.striped tbody tr:nth-child(odd) {
+	background-color: #03578120;
+}
+.export-query-table th,
+.export-query-table td {
+	padding: 10px;
+}

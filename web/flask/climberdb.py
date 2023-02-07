@@ -16,7 +16,7 @@ from datetime import datetime
 from flask import Flask, render_template, request, json, url_for
 from flask_mail import Mail, Message
 
-# Asynchronously load weasyprint because it takes forever and it will never need to be used immediately
+# Asynchronously load weasyprint because it takes forever and it should only block when it's needed (exporting PDFs)
 import threading
 import importlib
 
@@ -389,7 +389,7 @@ def write_query_to_excel(query_data, query_name, excel_path, excel_start_row=0, 
 
 
 # Handle guide_company_client_status and guide_company_briefings queries
-def write_guided_company_query_to_excel(client_status, briefings, excel_path, title_cell_text):
+def write_guided_company_query_to_excel(client_status, briefings, excel_path, title_text):
 
 	with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
 		workbook = writer.book
@@ -403,7 +403,7 @@ def write_guided_company_query_to_excel(client_status, briefings, excel_path, ti
 		if len(briefings):
 			briefings.to_excel(writer, sheet_name='Briefings', startrow=1, header=False, index=False)
 
-		workbook['Client Status']['A1'] = title_cell_text
+		workbook['Client Status']['A1'] = title_text
 
 
 # Export results of predefined queries
@@ -418,8 +418,18 @@ def export_query():
 	# Make sure any filename is unique
 	random_string = get_random_string()
 
-	#TODO: consider re-writing so that temporary results get written when query is first run
 	query_name = data['query_name']
+
+	# Convert JSON string arrays to lists because arrays can't be sent directly
+	data['columns'] = json.loads(data['columns'])
+	if query_name == 'guide_company_client_status' or query_name == 'guide_company_briefings':
+		data['client_status_columns'] = json.loads(data['client_status_columns'])
+		data['briefing_columns'] = json.loads(data['briefing_columns'])
+
+	data['query_data'] = json.loads(data['query_data'])
+
+	#TODO: consider re-writing so that temporary results get written when query is first run
+	
 	if data['export_type'] == 'excel':
 		
 		# If a template Excel file exists, make a copy in the exports directory to make a new file to write to
@@ -431,22 +441,22 @@ def export_query():
 		# If not, just write the file without using a template and return
 		else:
 			# maybe set up a default file
-			query_data = pd.DataFrame(json.loads(data['query_data'])).reindex(json.loads(data['columns']))
+			query_data = pd.DataFrame(data['query_data']).reindex(data['columns'])
 			query_data.to_excel(excel_path, index=False)
 			return excel_path
 
 		if query_name == 'guide_company_client_status' or query_name == 'guide_company_briefings':
-			query_data = json.loads(data['query_data'])
-			client_status = pd.DataFrame(query_data['client_status']).reindex(columns=json.loads(data['client_status_columns']))
-			briefings = pd.DataFrame(query_data['briefings']).reindex(columns=json.loads(data['briefing_columns']))
+			query_data = data['query_data']
+			client_status = pd.DataFrame(query_data['client_status']).reindex(columns=data['client_status_columns'])
+			briefings = pd.DataFrame(query_data['briefings']).reindex(columns=data['briefing_columns'])
 			write_guided_company_query_to_excel(
 				client_status, 
 				briefings, 
 				excel_path,
-				data['title_cell_text']
+				data['title_text']
 			)
 		else:
-			query_data = pd.DataFrame(json.loads(data['query_data'])).reindex(json.loads(data['columns']))
+			query_data = pd.DataFrame(data['query_data']).reindex(data['columns'])
 			write_query_to_excel(
 				query_data, 
 				query_name, 
@@ -461,14 +471,18 @@ def export_query():
 		template_name = f'{query_name}.html'
 		if not os.path.isfile(os.path.join(os.path.dirname(__file__), 'templates', template_name)):
 			template_name = 'export_query.html'
-		html = render_template(template_name, **data)
+			
+		if query_name == 'guide_company_client_status':
+			data['briefing_title_text'] = data['title_text'].replace('Client Status', 'Scheduled Briefings')
+			
+		html = render_template(template_name, **data) 
 
 		# render html
 		wait_for_weasyprint()
 		html = weasyprint.HTML(string=html)
 
 		# write to disk
-		pdf_filename = f'{query_name}_{random_string}.pdf'
+		pdf_filename = f'{query_name}.pdf' #f'{query_name}_{random_string}.pdf'
 		pdf_path = os.path.join(get_exports_dir(), pdf_filename)
 		html.write_pdf(pdf_path)
 

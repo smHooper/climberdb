@@ -1,0 +1,53 @@
+.title-text {
+	width: 100%;
+	text-align: center;
+}
+.export-query-table {
+	table-layout: fixed; /*otherwise % column widths are ignored*/
+	font-size: 14px;
+}
+
+.client-status-table th {
+	height: 70px;
+	text-align: center;
+	vertical-align: middle;
+}
+.group-name-column {
+	width: 25%;
+}
+.first-name-column,
+.last-name-column {
+	width: 20%;
+}
+.sup-application-complete-column,
+.climbing-fee-paid-column,
+.entrance-fee-paid-column {
+	width: 7%;
+}
+thead .sup-application-complete-column,
+thead .climbing-fee-paid-column,
+thead .entrance-fee-paid-column {
+	background-color: #147390;
+	text-align: center;
+}
+tbody .first-name-column.highlighted,
+tbody .last-name-column.highlighted {
+	background-color: #fabe00;
+	border: 1px solid #faa100;
+}
+tbody .sup-application-complete-column.highlighted,
+tbody .climbing-fee-paid-column.highlighted,
+tbody .entrance-fee-paid-column.highlighted {
+	background-color: #f3daa3;
+	border: 1px solid #e9ba87;
+}
+
+.client-status-table tbody td {
+	border: 1px solid #03578120;
+}
+
+@media print {
+	#client-status-section {
+		page-break-after: right;
+	}
+}
