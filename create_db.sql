@@ -436,7 +436,7 @@ CREATE VIEW expedition_info_view AS
 		briefings.id AS briefing_id,
 		briefings.briefing_start::date AS briefing_date,
 		to_char(briefings.briefing_start, 'FMHH:MI am'::text) AS briefing_time,
-		to_char(briefings.briefing_start, 'Mon FMDD, FMHH:MI am'::text) AS briefing_datetime
+		to_char(briefings.briefing_start, 'Dy Mon FMDD, FMHH:MI am'::text) AS briefing_datetime
 	FROM expeditions
 	LEFT JOIN (expedition_members
 	JOIN climbers ON expedition_members.climber_id = climbers.id) ON expeditions.id = expedition_members.expedition_id
