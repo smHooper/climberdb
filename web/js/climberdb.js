@@ -438,6 +438,21 @@ class ClimberDB {
 				return false;
 			}
 		})
+
+		// Add keyup event on all elements to make any click event on a focusable element 
+		//	triggerable from the keyboard
+		$(document).keyup( e => {
+			e.stopPropagation();
+			const target = e.target;
+			// check if it has a .click event
+			let events = $._data(target, 'events')
+
+			if (e.key === 'Enter' && events) {
+				if (events.click) {
+					$(target).click();
+				}
+			}
+		})
 	}
 
 	/*
