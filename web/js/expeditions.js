@@ -412,11 +412,16 @@ class ClimberDBExpeditions extends ClimberDB {
 															<label class="field-label checkbox-label" for="input-had_hape">HAPE</label>
 														</div>
 													</div>
-													<div class="field-container-row">
-														<div class="field-container col-sm-6 collapse">
+													<div class="field-container-row collapse">
+														<div class="field-container col-sm-6">
 															<select id="input-frostbite_severity" class="input-field default" name="frostbite_severity_code" data-table-name="expedition_members" placeholder="Frostbite severity" title="Frostbite severity" data-dependent-target="#input-had_frostbite" data-dependent-value="true" required="required"></select>
 															<span class="required-indicator">*</span>
 															<label class="field-label" for="input-frostbite_severity" required="required">Frostbite severity</label>
+															<span class="null-input-indicator">&lt; null &gt;</span>
+														</div>	
+														<div class="field-container col-sm-6">
+															<input id="input-frostbite_details" class="input-field" name="frostbite_details" data-table-name="expedition_members" placeholder="Frostbite details" title="Frostbite details" type="text" autocomplete="__never">
+															<label class="field-label" for="input-frostbite_details">Frostbite details</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>	
 													</div>
