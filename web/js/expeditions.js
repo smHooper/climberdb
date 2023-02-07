@@ -366,21 +366,7 @@ class ClimberDBExpeditions extends ClimberDB {
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 													</div>
-													<div class="field-container-row">	
-														<div class="field-container col-sm-6">
-															<select id="input-frostbite_severity" class="input-field default" name="frostbite_severity_code" data-table-name="expedition_members" placeholder="Frostbite severity" title="Frostbite severity"></select>
-															<label class="field-label" for="input-frostbite_severity_code">Frostbite severity</label>
-															<span class="null-input-indicator">&lt; null &gt;</span>
-														</div>		
-														<div class="field-container checkbox-field-container col-sm-6">
-															<label class="checkmark-container">
-																<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin" data-table-name="expedition_members">
-																<span class="checkmark data-input-checkmark"></span>
-															</label>
-															<label class="field-label checkbox-label" for="input-received_pro_pin">Received Pro Pin</label>
-														</div>	
-													</div>
-													<!--<div class="field-container-row">
+													<div class="field-container-row">		
 														<div class="field-container checkbox-field-container col-sm">
 															<label class="checkmark-container">
 																<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin" data-table-name="expedition_members">
@@ -388,7 +374,7 @@ class ClimberDBExpeditions extends ClimberDB {
 															</label>
 															<label class="field-label checkbox-label" for="input-received_pro_pin">Received Pro Pin</label>
 														</div>	
-													</div>-->
+													</div>
 													<div class="field-container-row">
 														<div class="field-container col collapse">
 															<label class="field-label" for="input-reason_for_pro_pin">Reason this climber received a Pro Pin</label>
@@ -397,27 +383,42 @@ class ClimberDBExpeditions extends ClimberDB {
 														</div>
 													</div>
 													<div class="field-container-row">
-														<div class="field-container checkbox-field-container col-sm-4">
+														<div class="field-container checkbox-field-container col-sm-3">
+															<label class="checkmark-container">
+																<input id="input-had_frostbite" class="input-field input-checkbox ignore-changes" type="checkbox" name="had_frostbite" data-table-name="expedition_members" title="Climber had frostbite">
+																<span class="checkmark data-input-checkmark"></span>
+															</label>
+															<label class="field-label checkbox-label" for="input-had_ams">Frostbite</label>
+														</div>
+														<div class="field-container checkbox-field-container col-sm-3">
 															<label class="checkmark-container">
 																<input id="input-had_ams" class="input-field input-checkbox" type="checkbox" name="had_ams" data-table-name="expedition_members" title="Climber had AMS">
 																<span class="checkmark data-input-checkmark"></span>
 															</label>
 															<label class="field-label checkbox-label" for="input-had_ams">AMS</label>
 														</div>
-														<div class="field-container checkbox-field-container col-sm-4">
+														<div class="field-container checkbox-field-container col-sm-3">
 															<label class="checkmark-container">
 																<input id="input-had_hace" class="input-field input-checkbox" type="checkbox" name="had_hace" data-table-name="expedition_members" title="Climber had HACE">
 																<span class="checkmark data-input-checkmark"></span>
 															</label>
 															<label class="field-label checkbox-label" for="input-had_hace">HACE</label>
 														</div>
-														<div class="field-container checkbox-field-container col-sm-4">
+														<div class="field-container checkbox-field-container col-sm-3">
 															<label class="checkmark-container">
 																<input id="input-had_hape" class="input-field input-checkbox" type="checkbox" name="had_hape" data-table-name="expedition_members" title="Climber had HAPE">
 																<span class="checkmark data-input-checkmark"></span>
 															</label>
 															<label class="field-label checkbox-label" for="input-had_hape">HAPE</label>
 														</div>
+													</div>
+													<div class="field-container-row">
+														<div class="field-container col-sm-6 collapse">
+															<select id="input-frostbite_severity" class="input-field default" name="frostbite_severity_code" data-table-name="expedition_members" placeholder="Frostbite severity" title="Frostbite severity" data-dependent-target="#input-had_frostbite" data-dependent-value="true" required="required"></select>
+															<span class="required-indicator">*</span>
+															<label class="field-label" for="input-frostbite_severity" required="required">Frostbite severity</label>
+															<span class="null-input-indicator">&lt; null &gt;</span>
+														</div>	
 													</div>
 													<div class="field-container-row">
 														<div class="field-container col">
@@ -947,7 +948,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// ---------- Members/transactions ----------
 
-		// for some reason, .collapses surrounding the is_guiding field doesn't 
+		// for some reason, .collapse surrounding the is_guiding field doesn't toggle automatically
 		$('#input-guide_company').change(e => {
 			const guideCompanyCode = $(e.target).val();
 			const isGuided = guideCompanyCode != -1;
@@ -960,6 +961,17 @@ class ClimberDBExpeditions extends ClimberDB {
 					.ariaTransparent( !(checkbox.checked && isGuided) );
 			}
 		});
+
+		// Set the frostbite severity to null when the user unchecks the frostbite checkbox
+		$('#input-had_frostbite').change(e => {
+			const $target = $(e.target);
+			if (!$target.prop('checked')) {
+				$target.closest('.expedition-member-tab-content')
+				.find('.input-field[name=frostbite_severity_code]')
+					.val('')
+					.change();
+			}
+		})
 
 		//$('select.input-field').change(e => {this.onSelectChange(e)})
 		$(document).on('click', '.add-transaction-button', e => {
@@ -3247,7 +3259,6 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			// Add transaction rows
 			const transactions = this.expeditionInfo.transactions[expeditionMemberID];
-			//var transactionTotal = 0;
 			for (const transactionID of transactions.order) {
 				const $item = this.addNewListItem(
 					$transactionsList, 
@@ -3261,15 +3272,13 @@ class ClimberDBExpeditions extends ClimberDB {
 				for (const el of $item.find('.input-field')) {
 					this.setInputFieldValue(el, thisTransaction, {dbID: transactionID, triggerChange: true});
 				}
-				//show the payment method field if this transactions is a payment
-				//const $paymentMethod = $item.find('.input-field[name=payment_method_code]');
-				//$paymentMethod.closest('.collapse').collapse(thisTransaction.payment_method_code ? 'show' : 'hide');
-
 			}
-			// $transactionsList.siblings('.data-list-footer')
-			// 	.find('.data-list-header-label.total-col .total-span')
-			// 	.text(transactionTotal.toFixed(2));
 			this.getTransactionBalance($transactionsList);
+
+			// Since the frostbite checbox is not a field in the database, it needs to be manually set when loading data
+			const frostbiteSeverity = $newCard.find('.input-field[name=frostbite_severity_code]').val();
+			$newCard.find('.input-field[name=had_frostbite]').prop('checked', frostbiteSeverity !== '').change();
+
 		} else {
 			const today = getFormattedTimestamp()
 
