@@ -82,6 +82,17 @@ body a {
 .icon-button:hover {
   opacity: 1;
 }
+/*minimally sized label mostly for screen readers*/
+.icon-button-label {
+  font-size: 12px;
+  width: 100%;
+  margin: 0;
+  margin-top: -5px;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+
 
 .modal-header-container .icon-button {
   height: 100%;

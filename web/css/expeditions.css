@@ -276,6 +276,18 @@
 	height: 500px;
 	max-height: calc(100vh - 60px - 100px);
 }*/
+.expedition-data-wrapper.expedition-modal {
+	position: absolute;
+	width: 100%;
+	z-index: 1000;
+	left: 0;
+	top: 60px;
+	bottom: 0;
+	display: block;
+	padding: 20px 10%;
+	background: #00000080;
+}
+
 /*show the expedition members taking up the 2 rows*/
 #expedition-member-data-container {
 	grid-row: 2 / span 2;
@@ -414,6 +426,9 @@
 	font-size: 14px;
 /*	max-width: 12.5%;*/
 	flex: 1 1 12.5%;
+}
+.expedition-member-card-header-group-container {
+	max-width: 400px;
 }
 .expedition-member-badge-container {
 	height: 100%;

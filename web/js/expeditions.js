@@ -124,7 +124,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						<i class="fas fa-2x fa-file-export"></i>
 					</button>
 				</div>
-				<button id="add-new-expedition-button" class="generic-button" title="New Expedition">new expedition</button>
+				<button id="add-new-expedition-button" class="generic-button" title="New Expedition">New expedition</button>
 			</div>
 			<div class="expedition-content uneditable">
 				<!-- expedition info --> 
@@ -232,13 +232,19 @@ class ClimberDBExpeditions extends ClimberDB {
 				<div id="expedition-member-data-container" class="expedition-data-wrapper">
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
-							<h3 id="expedition-data-header" class="expedition-data-header">Expedition members</h3>
+							<div class="d-flex">
+								<button class="expand-card-button icon-button" aria-label="Expand expedition members content" title="Expand expedition members content">
+									<i class="expand-card-icon fa-solid fas fa-2x fa-expand-alt"></i>
+									<label class="icon-button-label">maximize</label>
+								</button>
+								<h3 id="expedition-data-header" class="expedition-data-header">Expedition members</h3>
+							</div>
 							<button id="show-modal-climber-form-button" class="generic-button add-data-button" data-target="#expedition-members-accordion" title="Add expedition member">Add member</button>
 						</div>
 						<div class="expedition-data-content-body">
 							<div id="expedition-members-accordion" class="accordion" data-table-name="expedition_members" data-item-display-name="expedition member">
 								<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
-									<div class="card-header show-children-on-hover" id="cardHeader-expedition-members-cloneable">
+									<div class="card-header show-children-on-hover justify-content-between" id="cardHeader-expedition-members-cloneable">
 										<a class="card-link collapsed col-6 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
 											<div class="card-link-content col-7 pl-0">
 												<h6 class="card-link-label expedition-member-card-link-label col px-0"></h6>
@@ -249,7 +255,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<img class="result-details-header-badge guide-icon transparent" src="imgs/guide_icon_100px.svg" title="Guiding on this expedition" aria-hidden="true">
 											</div>
 										</a>
-										<div class="col d-flex justify-content-between pl-0">
+										<div class="col d-flex justify-content-between pl-0 expedition-member-card-header-group-container">
 											<div class="col pl-0 card-header-content-container card-header-field-container leader-checkbox-container transparent">
 												<label class="checkmark-container">
 													<input id="input-is_trip_leader" class="input-field input-checkbox" type="checkbox" name="is_trip_leader" data-table-name="expedition_members" title="Is trip leader?">
@@ -516,7 +522,13 @@ class ClimberDBExpeditions extends ClimberDB {
 				<div id="routes-data-container" class="expedition-data-wrapper">
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
-							<h3 id="expedition-data-header" class="expedition-data-header">Routes</h3>
+							<div class="d-flex">
+								<button class="expand-card-button icon-button" aria-label="Expand expedition members content" title="Expand expedition members content">
+									<i class="expand-card-icon fa-solid fas fa-2x fa-expand-alt"></i>
+									<label class="icon-button-label">maximize</label>
+								</button>
+								<h3 id="expedition-data-header" class="expedition-data-header">Routes</h3>
+							</div>
 							<button class="generic-button add-card-button" data-target="#routes-accordion" title="Add route">Add route</button>
 						</div>
 						<div class="expedition-data-content-body">
@@ -826,6 +838,10 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.onDeleteCardButtonClick(e)
 		})
 		
+
+		$('.expand-card-button').click(e => {
+			this.onExpandCardButtonClick(e);
+		})
 
 		// ------------ Query stuff -------------------
 		// Set the default expedition query to only show this year's expeditions
@@ -1465,6 +1481,31 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 		$input.val(expeditionID)
 			.data('current-value', expeditionID);
+	}
+
+
+	/*
+	Expand a card to take the whole screen as a modal when the expand button is clicked
+	*/
+	onExpandCardButtonClick(e) {
+
+		const $button = $(e.target).closest('button');
+		//const isExpanded = $button.find('.expand-button-icon').is('.fa-compress-alt');
+		const $wrapper = $button.closest('.expedition-data-wrapper');
+		const shouldExpand = !$wrapper.is('.expedition-modal');
+
+		// This probably isn't possible, but just in case, make sure there's only one modal card at once
+		$('.expedition-modal').not($wrapper).removeClass('expedition-modal');
+		
+		// Toggle modal
+		$wrapper.toggleClass('expedition-modal');
+
+		// Font awesome classes don't neatly override each other by last-in-wins so toggle each class separately
+		$button.find('.expand-card-icon')
+			.toggleClass('fa-expand-alt', !shouldExpand)
+			.toggleClass('fa-compress-alt', shouldExpand);
+
+		$button.find('.icon-button-label').text(shouldExpand ? 'minimize' : 'maximize')
 	}
 
 
@@ -2439,7 +2480,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $briefingLink = $('#expedition-briefing-link')
 			.text('Set briefing time');
 		$('.field-label[for=expedition-briefing-link]').text('No briefing scheduled');
-		
+
 		if (expeditionData.planned_departure_date) {
 			$briefingLink.attr('href', `briefings.html?date=${expeditionData.planned_departure_date}`);
 		} else {
