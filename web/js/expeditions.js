@@ -2429,6 +2429,25 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	/*
+	Reset the briefing link (and associated text) to the default (indicating there is no briefing). 
+	If planned departure is set, default to opening the briefings page with that date at least
+	*/
+	resetBriefingLink() {
+		const expeditionData = this.expeditionInfo.expeditions;
+		
+		const $briefingLink = $('#expedition-briefing-link')
+			.text('Set briefing time');
+		$('.field-label[for=expedition-briefing-link]').text('No briefing scheduled');
+		
+		if (expeditionData.planned_departure_date) {
+			$briefingLink.attr('href', `briefings.html?date=${expeditionData.planned_departure_date}`);
+		} else {
+			$briefingLink.attr('href', `briefings.html`);
+		}
+	}
+
+
 	onGroupStatusFieldChange(e) {
 		// Only do stuff if the event was triggered by the user, not with .change()
 		if (e.originalEvent) {
@@ -2477,6 +2496,31 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $dateConfirmedField = $('#input-date_confirmed'); 
 			if (statusCode == 3 && !$dateConfirmedField.val()) {
 				$dateConfirmedField.val(getFormattedTimestamp()).change();
+			}
+
+			// If the expedition is being cancelled, ask if the briefing should also be cancelled
+			const briefingInfo = this.expeditionInfo.briefings;
+			if (statusCode == 6 && briefingInfo.briefing_datetime) {
+				const expeditionName = $('#input-expedition_name').val();
+				const message = `Do you also want to cancel the briefing for ${expeditionName} scheduled` + 
+					` for ${briefingInfo.briefing_datetime}? <strong> This action is permanent and` + 
+					` cannot be undone</strong>.`
+				const footerButtons = 
+					'<button class="generic-button modal-button close-modal danger-button confirm-button" data-dismiss="modal">Yes</button>' + 
+					'<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>'
+				const eventHandler = () => {
+					$('#alert-modal .confirm-button').click(() => {
+						this.queryDB(`DELETE FROM briefings WHERE id=${briefingInfo.id} RETURNING id`)
+							.done(queryResultString => {
+								if (this.queryReturnedError(queryResultString)) {
+									showModal('Failed to delete briefing because ' + queryResultString, 'Unexpected Error')
+								} else {
+									this.resetBriefingLink()
+								}
+							})
+					})
+				}
+				showModal(message, 'Cancel Briefing?', 'confirm', footerButtons, {eventHandlerCallable: eventHandler})
 			}
 		}
 	}
@@ -3563,9 +3607,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#add-climber-form-modal-container .input-field.dirty').removeClass('dirty');
 
 		// reset briefing link
-		$('.field-label[for=expedition-briefing-link]').text('No briefing scheduled');
-		$('#expedition-briefing-link').attr('href', `briefings.html`).text('Set briefing time')
-			.closest('.collapse').collapse('hide');
+		this.resetBriefingLink()
 	}
 
 
