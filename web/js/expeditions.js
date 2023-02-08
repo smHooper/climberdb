@@ -741,30 +741,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#create-pdf-button').click(e => {
-			const exportType = $('#input-export_type').val();
-			const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.canceled)').length;
-			const nRoutes = $('#routes-accordion .card:not(.cloneable)').length;
-			if (nMembers === 0) {
-				showModal(
-					'There are no active members of this expedition. You must add at least one member or' +
-					' set at least one member\'s status to something other than "Canceled".', 
-					'No Expedition Members'
-				);
-				return;
-			} else if ((exportType === 'confirmation_letter') && !$('.input-field[name=is_trip_leader]:checked').length) {
-				showModal(
-					'No expedition member has been designated as the trip leader yet. You must' +
-						' specify a trip leader before you can export this expedition\'s confirmation letter.' +
-						' To specify the leader for the expedition, hover over the member you want to' + 
-						' designate as the leader and check the leader box that appears. ',
-					'No Trip Leader Specified'
-				);
-				return;
-			} else if ((exportType === 'registration_card') && (nRoutes === 0)) {
-				showModal('You must add at least one route before you can export the expedition\'s registration card', 'No Routes Entered');
-				return;
-			}	
-			this.makePDF();
+			this.onCreatePDFButtonClick();
 		})
 
 		$(document).on('change', '.input-field:not(.route-code-header-input)', e => {
@@ -946,6 +923,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.onExpeditionNameLostFocus(e)
 		})
 
+		$('#input-guide_company').change(e => {
+			this.onGuideCompanyInputChange(e);
+		});
 		//TODO: when date changes, make sure it's a reasonable value
 
 		// ^^^^^^^^^^^ Expedition ^^^^^^^^^^^^^^^^^^^
@@ -2315,6 +2295,17 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	/*
+	For some reason making the PSAR checkbox container a .collapse doesn't work, so just .ariaHide() it
+	*/
+	onGuideCompanyInputChange(e) {
+		const guideCompanyCode = $(e.target).val();
+		$('.input-checkbox[name=psar_complete]')
+			.closest('.card-header-field-container')
+				.ariaTransparent(guideCompanyCode != -1);
+	}
+
+
 	onDateConfirmedChange(e) {
 		const dateConfirmed = e.target.value;
 		
@@ -2351,6 +2342,10 @@ class ClimberDBExpeditions extends ClimberDB {
 	value if not. Called in reservation and group status change events 
 	*/
 	climberCanBeConfirmed($card, $select) {
+
+		// Check if this is a guided group. If so, PSAR checkbox doesn't need to be checked
+		const isGuided = $('#input-guide_company').val() != -1;
+
 		// Check that the climber is actually being confirmed
 		const isBeingConfirmed = $select.val() == 3;
 		if (!isBeingConfirmed) return true;
@@ -2360,8 +2355,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			reasons += '<li>have not paid their climber fee</li>';
 		if ($card.find('.input-field[name=application_complete]').is(':not(:checked)')) 
 			reasons += '<li>have not completed their SUP application</li>';
-		// only check for PSAR form is the user is being marked as confirmed
-		if (isBeingConfirmed && $card.find('.input-field[name=psar_complete]').is(':not(:checked)')) 
+		// only check for PSAR form if the group is guided and the user is being marked as confirmed
+		if (!isGuided && isBeingConfirmed && $card.find('.input-field[name=psar_complete]').is(':not(:checked)')) 
 			reasons += '<li>have not completed their PSAR form</li>';
 		// If any conditions aren't met, tell the user and revert the res. status field's value
 		if (reasons) {
@@ -2563,6 +2558,38 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.moveExpeditionMember();
 		}
 	}
+
+
+	/*
+	Check conditions before calling makePDF
+	*/
+	onCreatePDFButtonClick() {
+		const exportType = $('#input-export_type').val();
+		const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.canceled)').length;
+		const nRoutes = $('#routes-accordion .card:not(.cloneable)').length;
+		if (nMembers === 0) {
+			showModal(
+				'There are no active members of this expedition. You must add at least one member or' +
+				' set at least one member\'s status to something other than "Canceled".', 
+				'No Expedition Members'
+			);
+			return;
+		} else if ((exportType === 'confirmation_letter') && !$('.input-field[name=is_trip_leader]:checked').length) {
+			showModal(
+				'No expedition member has been designated as the trip leader yet. You must' +
+					' specify a trip leader before you can export this expedition\'s confirmation letter.' +
+					' To specify the leader for the expedition, hover over the member you want to' + 
+					' designate as the leader and check the leader box that appears. ',
+				'No Trip Leader Specified'
+			);
+			return;
+		} else if ((exportType === 'registration_card') && (nRoutes === 0)) {
+			showModal('You must add at least one route before you can export the expedition\'s registration card', 'No Routes Entered');
+			return;
+		}	
+		this.makePDF();
+	}
+
 
 	/*
 	Dynamically make a PDF of the specified type. Send a request to the Flask backend 
