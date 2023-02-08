@@ -647,7 +647,6 @@ class ClimberDB {
 			.attr('id', `collapse-${idSuffix}`)
 			.attr('aria-labelledby', `cardHeader-${idSuffix}`)
 			.addClass('validate-field-parent');
-				
 		
 		// Add to the accordion
 		$newCard.addClass(newCardClass).appendTo($accordion).fadeIn();
@@ -656,8 +655,13 @@ class ClimberDB {
 			const $el = $(el);
 			const newID = `${el.id}-${cardIndex}`;
 			const dataTable = $el.data('table-name');
-			if ($el.data('dependent-target'))
+			
+			// If this depends on another input AND that input has a .cloneable parent, update the 
+			//	dependent target attribute with the card id so the right input will find its dependents
+			const $dependentTarget = $($el.data('dependent-target'));
+			if ($dependentTarget.length && $dependentTarget.closest('.cloneable').length)
 				$el.data('dependent-target', `${$el.data('dependent-target')}-${cardIndex}`);
+
 			$el.removeClass('error')
 				.attr('id', newID)
 				.siblings('.field-label')
