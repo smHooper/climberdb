@@ -361,8 +361,8 @@ class ClimberDBExpeditions extends ClimberDB {
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 														<div class="field-container collapse col-6">
-															<input id="input-datetime_canceled" class="input-field" name="datetime_canceled" data-table-name="expedition_members" placeholder="Date canceled" title="Date canceled" type="date" data-dependent-target="#input-reservation_status" data-dependent-value="6" autocomplete="__never">
-															<label class="field-label" for="input-datetime_canceled">Date canceled</label>
+															<input id="input-datetime_cancelled" class="input-field" name="datetime_cancelled" data-table-name="expedition_members" placeholder="Date cancelled" title="Date cancelled" type="date" data-dependent-target="#input-reservation_status" data-dependent-value="6" autocomplete="__never">
+															<label class="field-label" for="input-datetime_cancelled">Date cancelled</label>
 															<span class="null-input-indicator">&lt; null &gt;</span>
 														</div>
 													</div>
@@ -989,7 +989,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.showChangeExpeditionModal($(e.target).closest('.card'));
 		});
 
-		// Set the canceled time when the reservation status is set to canceled
+		// Set the cancelled time when the reservation status is set to cancelled
 		// also check all other reservation status fields to see if the whole group is ready
 		$(document).on('change', '.reservation-status-field', e => {
 			this.onReservationStatusFieldChange(e);
@@ -1049,7 +1049,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// ---------- Route stuff ----------
 
-		// When new route card is added, make sure it has all of the (not canceled) expedition members
+		// When new route card is added, make sure it has all of the (not cancelled) expedition members
 		$('#routes-data-container .add-card-button').click(e => {
 			this.onAddRouteButtonClick(e)
 		});
@@ -2382,16 +2382,16 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $select = $(e.target);
 		const $card = $select.closest('.card');
 		const value = parseInt($select.val());
-		const isCanceled = value === 6;
+		const iscancelled = value === 6;
 
-		// Set the datetime_canceled field
+		// Set the datetime_cancelled field
 		const now = getFormattedTimestamp();
 		const cardID = $select.attr('id').match(/-\d+$/).toString();
-		$(`#input-datetime_canceled${cardID}`).val(isCanceled ? now : null).change();
+		$(`#input-datetime_cancelled${cardID}`).val(iscancelled ? now : null).change();
 
-		// Show as canceled and move to bottom
-		$card.toggleClass('canceled', isCanceled);
-		if (isCanceled) {
+		// Show as cancelled and move to bottom
+		$card.toggleClass('cancelled', iscancelled);
+		if (iscancelled) {
 			$card.appendTo($card.closest('.accordion'));
 		}
 		// If the user is confirming this expedition member, check that they've paid and turned everything in 
@@ -2405,7 +2405,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const expeditionMemberID = $card.data('table-id');
 			if (expeditionMemberID) {
 				$(`.route-member-list .data-list-item[data-expedition-member-id=${expeditionMemberID}]`)
-					.ariaHide(isCanceled);
+					.ariaHide(iscancelled);
 			}
 
 			// Change the group's status if all equal the same value
@@ -2609,12 +2609,12 @@ class ClimberDBExpeditions extends ClimberDB {
 	*/
 	onCreatePDFButtonClick() {
 		const exportType = $('#input-export_type').val();
-		const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.canceled)').length;
+		const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.cancelled)').length;
 		const nRoutes = $('#routes-accordion .card:not(.cloneable)').length;
 		if (nMembers === 0) {
 			showModal(
 				'There are no active members of this expedition. You must add at least one member or' +
-				' set at least one member\'s status to something other than "Canceled".', 
+				' set at least one member\'s status to something other than "cancelled".', 
 				'No Expedition Members'
 			);
 			return;
@@ -2657,7 +2657,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Get climber and leader info
 		const climbers = Object.values(this.expeditionInfo.expedition_members.data).flatMap(info => {
-			// Skip canceled climbers
+			// Skip cancelled climbers
 			if (info.reservation_status_code == 6) return []; // flatmap will remove this
 
 			// destructure the climber's info and get just first_name and last_name
@@ -2796,7 +2796,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		// Check if there's already the max number of climbers
-		const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.canceled)').length;
+		const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.cancelled)').length;
 		let maxClimbers = this.config.max_expedition_members
 		if ($('#input-guide_company')) maxClimbers ++;
 		if (nMembers >= maxClimbers) {
@@ -3272,7 +3272,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	updateExpeditionMemberCount() {
-		const nMembers = $('#expedition-members-accordion > .card:not(.cloneable):not(.canceled)').length;
+		const nMembers = $('#expedition-members-accordion > .card:not(.cloneable):not(.cancelled)').length;
 		$('#expedition-n-members-result-summary-item > .result-details-summary-value').text(nMembers)
 			.closest('.collapse').collapse(nMembers ? 'show' : 'hide');
 	}
@@ -3330,7 +3330,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				this.setInputFieldValue(el, expeditionMemberInfo, {dbID: expeditionMemberID, triggerChange: isNewCard})
 			}
 
-			if (expeditionMemberInfo.reservation_status_code == 6) $newCard.addClass('canceled');
+			if (expeditionMemberInfo.reservation_status_code == 6) $newCard.addClass('cancelled');
 			if (expeditionMemberInfo.is_guiding) $newCard.find('.guide-icon').ariaTransparent(false);
 
 			// Add transaction rows
@@ -3498,7 +3498,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					// Add the member ID to the list-item's data so the in-memory data can be linked back to the list item
 					$listItem.attr('data-expedition-member-id', memberID); 
 
-					// If the expedition member is canceled, hide the list item
+					// If the expedition member is cancelled, hide the list item
 					if (thisMember.reservation_status_code == 6) $listItem.ariaHide(true);
 
 					if (memberRouteID) {
@@ -4050,7 +4050,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $list = $newCard.find('.route-member-list');
 		for (const el of $('#expedition-members-accordion > .card:not(.cloneable)')) {
 			const $memberCard = $(el);
-			// if this expedition member isn't canceled, add a new row
+			// if this expedition member isn't cancelled, add a new row
 			if ($memberCard.find('.input-field[name="reservation_status_code"]').val() != 6) {
 				const expeditionMemberID = $memberCard.data('table-id');
 				const $listItem = this.addNewListItem($list)
@@ -4212,7 +4212,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		const groupStatusCode = parseInt($('#input-group_status').val());
-		const $cards = $('#expedition-members-accordion .card:not(.canceled)');
+		const $cards = $('#expedition-members-accordion .card:not(.cancelled)');
 		const nClimbingFeesNotPaid = $cards.find('.climbing-fee-icon.transparent').length;
 		const nSUPsNotComplete = $cards.find('.input-field[name=application_complete]:not(:checked)').length;
 		const nPSARNotComplete = $cards.find('.input-field[name=psar_complete]:not(:checked)').length;

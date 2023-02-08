@@ -397,10 +397,10 @@
 	color: white;
 	align-items: center;
 }
-.card.expedition-card.canceled .card-header {
+.card.expedition-card.cancelled .card-header {
 	background-color: #cccccc;
 }
-.card.canceled .expedition-member-card-link-label {
+.card.cancelled .expedition-member-card-link-label {
 	text-decoration: line-through;
 }
 .card.expedition-card .card-link-label,
