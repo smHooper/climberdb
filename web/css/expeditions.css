@@ -1,3 +1,7 @@
+:root {
+	--modal-bg-color: #00000080;
+}
+
 .main-content-header {
 	width: 100%;
 	display: inline-flex;
@@ -48,6 +52,35 @@
 /* 	background: #faaf00bb; */
 	background: #219ebc4d;
 }
+
+
+/* ----- stuff to show the edit buttons when expedition cards are shown as modals ----*/
+.main-content-header.modal-card-shown {
+	position: static;
+}
+.main-content-header.modal-card-shown .edit-button-container {
+	position: absolute;
+	z-index: 1000;
+	right: 50%;
+	margin: 0;
+	top: calc(var(--climberdb-header-menu-height) + 10px);
+}
+#main-content-modal-card-screen {
+	top: var(--climberdb-header-menu-height);
+	right: 0;
+	left: 0;
+	width: 100%;
+	height: var(--fuzzy-search-bar-height);
+	background: var(--modal-bg-color);
+	position: absolute;
+	z-index: 999;
+	display: none;
+}
+.main-content-header.modal-card-shown #main-content-modal-card-screen {
+	display: block;
+}
+
+/* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
 
 /*----- expedition search bar dropdowns ------*/
 .fuzzy-search-bar-drawer {
@@ -257,6 +290,7 @@
 .edit-button-container {
 	display: flex;
 	margin-right: 20px;
+	transition: 0.3s all;
 }
 .edit-button-container > .expedition-edit-button {
 	margin: 0 7px;
@@ -272,20 +306,20 @@
 	row-gap: 20px;
 	column-gap: 20px;
 }
-/*.expedition-data-wrapper {
-	height: 500px;
-	max-height: calc(100vh - 60px - 100px);
-}*/
+.expedition-data-wrapper {
+	transition-property: padding;
+	transition-duration: 0.3s;
+}
 .expedition-data-wrapper.expedition-modal {
 	position: absolute;
 	width: 100%;
 	z-index: 1000;
 	left: 0;
-	top: 60px;
+	top: calc( var(--climberdb-header-menu-height) + var(--fuzzy-search-bar-height) );
 	bottom: 0;
 	display: block;
-	padding: 20px 10%;
-	background: #00000080;
+	padding: 0 10% 20px 10%;
+	background: var(--modal-bg-color);
 }
 
 /*show the expedition members taking up the 2 rows*/

@@ -1,5 +1,7 @@
 :root {
   --ui-primary-color: #219EBC;
+  --climberdb-header-menu-height: 60px;
+  --fuzzy-search-bar-height: 60px;
 }
 
 html, body {
@@ -1475,8 +1477,8 @@ td.no-border {
   width: 100%;
 }
 .fuzzy-search-bar {
-  height: 60px;
-  line-height: 60px;
+  height: var(--fuzzy-search-bar-height);
+  line-height: var(--fuzzy-search-bar-height);
   border: none;
   border-bottom: solid 3px #219ebc;
   background-color: rgba(255, 255, 255, 0);

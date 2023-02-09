@@ -110,7 +110,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						</div>
 					</div>
 				</div>
-				<div class="edit-button-container">
+				<div class="edit-button-container has-motion">
 					<button id="save-expedition-button" class="expedition-edit-button icon-button save-edits-button hidden" type="button" aria-label="Save edits" title="Save edits" aria-hidden="true">
 						<i class="fas fa-2x fa-save"></i>
 					</button>
@@ -125,6 +125,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					</button>
 				</div>
 				<button id="add-new-expedition-button" class="generic-button" title="New Expedition">New expedition</button>
+				<!-- this will cover everything in the main content header except edit buttons when a card is shown as a modal -->
+				<div id="main-content-modal-card-screen" aria-hidden="true"></div>
 			</div>
 			<div class="expedition-content uneditable">
 				<!-- expedition info --> 
@@ -229,7 +231,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					</div>
 				</div>
 
-				<div id="expedition-member-data-container" class="expedition-data-wrapper">
+				<div id="expedition-member-data-container" class="expedition-data-wrapper has-motion">
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<div class="d-flex">
@@ -519,7 +521,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					</div>
 
 				</div>
-				<div id="routes-data-container" class="expedition-data-wrapper">
+				<div id="routes-data-container" class="expedition-data-wrapper has-motion">
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
 							<div class="d-flex">
@@ -1499,6 +1501,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		// Toggle modal
 		$wrapper.toggleClass('expedition-modal');
+		$('.main-content-header').toggleClass('modal-card-shown', shouldExpand);//keep hidden from screen readers so don't use .ariaHide()
 
 		// Font awesome classes don't neatly override each other by last-in-wins so toggle each class separately
 		$button.find('.expand-card-icon')
