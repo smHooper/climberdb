@@ -385,7 +385,7 @@ CREATE VIEW expedition_info_view AS
 		expeditions.checked_in_datetime,
 		expeditions.sanitation_problems,
 		expeditions.equipment_loss,
-		COALESCE(gb.expedition_status, 6) AS group_status_code,
+		COALESCE(gb.expedition_status, expeditions.group_status_code, 6) AS group_status_code,
 		expeditions.needs_special_use_permit,
 		expeditions.special_group_type_code,
 		expeditions.last_modified_by,

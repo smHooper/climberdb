@@ -1903,6 +1903,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			expeditionFields.push(el.name);
 		}
 		if (expeditionValues.length) {
+			// If this is a new expedition, make sure group status gets saved
+			if (!expeditionID) $('#input-group_status').addClass('dirty');
+
 			let fieldValues = Object.fromEntries(expeditionFields.map((f, i) => [f, expeditionValues[i]]));
 			let [sql, parameters] = this.valuesToSQL(fieldValues, 'expeditions', now, userName, {updateID: expeditionID || null});
 			sqlStatements.push(sql);
