@@ -529,7 +529,7 @@ CREATE VIEW briefings_expedition_info_view AS
    WHERE EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions.planned_departure_date);
 
 
-CREATE VIEW registered_climbers_view AS 
+CREATE VIEW all_climbs_view AS 
 	SELECT climbers.state_code,
 		climbers.country_code,
 		climbers.dob,
@@ -559,8 +559,12 @@ CREATE VIEW registered_climbers_view AS
 		JOIN climbers ON expedition_members.climber_id = climbers.id
 		JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 		JOIN route_codes ON expedition_member_routes.route_code = route_codes.code
-		JOIN mountain_codes ON route_codes.mountain_code = mountain_codes.code
-	 WHERE (expedition_members.reservation_status_code <> 6) AND (expeditions.group_status_code <> 6);
+		JOIN mountain_codes ON route_codes.mountain_code = mountain_codes.code;
+
+
+CREATE VIEW registered_climbs_view AS
+	SELECT * FROM all_climbs_view
+	WHERE reservation_status_code <> 6 AND group_status_code <> 6;
 
 
 

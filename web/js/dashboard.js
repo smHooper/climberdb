@@ -75,12 +75,12 @@ class ClimberDBDashboard extends ClimberDB {
 												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
 											</button>
 										</th>
-										<!--<th>
-											<button class="text-only-button sort-column-button" data-field-name="route_name">
-												<span>Route</span>
+										<th>
+											<button class="text-only-button sort-column-button" data-field-name="status">
+												<span>Status</span>
 												<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
 											</button>
-										</th>-->
+										</th>
 										<th>
 											<button class="text-only-button sort-column-button sorted" data-field-name="departure">
 												<span>Departure</span>
@@ -98,7 +98,7 @@ class ClimberDBDashboard extends ClimberDB {
 								<tbody>
 									<tr class="cloneable hidden">
 										<td><a href="expeditions.html?id={expedition_id}" target="_blank">{climber_name}</a></td>
-										<!--<td>{route_name}</td>-->
+										<td class=>{status}</td>
 										<td class="centered-text">{departure}</td>
 										<td class="centered-text">{planned_return}</td>
 									</tr>
@@ -313,9 +313,8 @@ class ClimberDBDashboard extends ClimberDB {
 			 	(
 				 	SELECT DISTINCT 
 						climber_id, 
-						planned_departure_date, --remove if counting climbers not climbs
 						mountain_name
-					FROM registered_climbers_view
+					FROM registered_climbs_view
 					WHERE planned_departure_date >= '${year}-1-1'
 				) t
 			GROUP BY mountain_name
@@ -366,9 +365,8 @@ class ClimberDBDashboard extends ClimberDB {
 				(
 					SELECT DISTINCT 
 						climber_id, 
-						planned_departure_date, --remove if counting climbers not climbs
 						mountain_name
-					FROM registered_climbers_view
+					FROM registered_climbs_view
 					WHERE 
 						planned_departure_date >= '${year}-1-1' AND 
 						reservation_status_code = 4 --4 == briefing complete
@@ -398,7 +396,7 @@ class ClimberDBDashboard extends ClimberDB {
 					SELECT DISTINCT 
 						climber_id, 
 						mountain_name
-					FROM registered_climbers_view
+					FROM registered_climbs_view
 					WHERE 
 						planned_departure_date >= '${year}-1-1' AND 
 						reservation_status_code = 5 --5 == returned
@@ -427,10 +425,10 @@ class ClimberDBDashboard extends ClimberDB {
 				(
 					SELECT DISTINCT 
 						climber_id, 
-						planned_departure_date,
+						route_code,
 						mountain_name,
 						reservation_status_code
-					FROM registered_climbers_view
+					FROM registered_climbs_view
 					WHERE 
 						planned_departure_date >= '${year}-1-1' AND 
 						reservation_status_code = 5 AND
@@ -451,8 +449,24 @@ class ClimberDBDashboard extends ClimberDB {
 				};
 			});
 
+		const cancelledSQL = offMountainSQL
+			.replace('reservation_status_code = 5', 'reservation_status_code = 6')
+			.replace('registered_climbs_view', 'all_climbs_view');
+
+		const cancelledDeferred = this.queryDB(cancelledSQL)
+					.done(queryResultString => {
+						processResult(queryResultString, 'cancelled', 'Cancelled climbers');
+					})
+					.fail((xhr, status, error) => {
+						print('Registered climber query failed with error: ' + error);
+						tableData.offMountain = {
+							displayName: 'Cancelled climbers',
+							data: [...nullResult]
+						};
+					});
+
 		function addData(rowData, statDisplayName) {
-			$(`
+			return $(`
 				<tr>
 					<td>${statDisplayName}</td>
 					<td>${rowData[0].value}</td>
@@ -464,7 +478,8 @@ class ClimberDBDashboard extends ClimberDB {
 			registeredDeferred, 
 			onMountainDeferred, 
 			offMountainDeferred, 
-			summitedDeferred
+			summitedDeferred,
+			cancelledDeferred
 		).then(() => {
 			// Add summit percentage
 			tableData.summitPercent = {displayName: 'Summit percentage', data: []};
@@ -485,8 +500,9 @@ class ClimberDBDashboard extends ClimberDB {
 				) + '%'
 			});
 
-			for (const statName of ['registered', 'onMountain', 'offMountain', 'summited', 'summitPercent']) {
-				addData(tableData[statName].data, tableData[statName].displayName);
+			for (const statName of ['registered', 'onMountain', 'offMountain', 'summited', 'summitPercent', 'cancelled']) {
+				const $tr = addData(tableData[statName].data, tableData[statName].displayName);
+				if (statName === 'cancelled') $tr.addClass('cancelled-row')
 			}
 
 		});
@@ -570,11 +586,16 @@ class ClimberDBDashboard extends ClimberDB {
 
 	configureSoloClimbers() {
 
+		const year = new Date().getFullYear();
 		const sql = `
 			SELECT 
 				solo_climbs_view.expedition_id,
 				climbers.last_name || ', ' || climbers.first_name AS climber_name,
 				route_codes.name AS route_name,
+				CASE 
+					WHEN group_status_codes.name = 'Done and off mountain' THEN 'Off mountain' 
+					ELSE group_status_codes.name 
+				END AS status,
 				to_char(
 					coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date),
 					'Mon DD'
@@ -584,9 +605,10 @@ class ClimberDBDashboard extends ClimberDB {
 			JOIN expeditions ON solo_climbs_view.expedition_id = expeditions.id 
 			JOIN climbers ON solo_climbs_view.climber_id = climbers.id
 			JOIN route_codes ON solo_climbs_view.route_code=route_codes.code 
+			JOIN group_status_codes ON group_status_code = group_status_codes.code
 			WHERE 
-				coalesce(expeditions.actual_departure_date, planned_departure_date) >= now()::date AND 
-				group_status_code IN (3, 4)
+				planned_departure_date >= '${year}-1-1' AND 
+				group_status_code IN (3, 4, 5)
 		`;
 		return this.queryDB(sql)
 			.done(queryResultString => {

@@ -133,6 +133,14 @@
 	text-align: center;
 }
 
+/*-------- mountain stats table ---------*/
+.cancelled-row td {
+	color: #888;
+	font-style: italic;
+}
+/*^^^^^^^^ mountain stats table ^^^^^^^^^*/
+
+
 /*-------- flagged groups table ----------*/
 #flagged-groups-card .climberdb-dashboard-table th {
 	/*background-color: #f28100;*/
