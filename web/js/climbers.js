@@ -365,7 +365,7 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<input id="input-first_name_contact" class="input-field card-label-field" name="first_name" data-table-name="emergency_contacts" placeholder="First name" title="First name" type="text" autocomplete="__never" required="">
+														<input id="input-first_name_contact" class="input-field card-label-field" name="first_name" data-table-name="emergency_contacts" placeholder="First name" title="First name" type="text" autocomplete="__never" required="required">
 														<span class="required-indicator">*</span>
 														<label class="field-label" for="input-first_name">First name</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
@@ -379,36 +379,31 @@ class ClimberForm {
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col">
-														<input id="input-address_contact" class="input-field" name="address" data-table-name="emergency_contacts" placeholder="Address" title="Address" type="text" autocomplete="__never" required="">
-														<span class="required-indicator">*</span>
+														<input id="input-address_contact" class="input-field" name="address" data-table-name="emergency_contacts" placeholder="Address" title="Address" type="text" autocomplete="__never">
 														<label class="field-label" for="input-address">Address</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<select id="input-country_contact" class="input-field default zip-lookup-field" name="country_code" data-table-name="emergency_contacts" placeholder="Country" title="Country" type="text" autocomplete="__never" required=""></select>
-														<span class="required-indicator">*</span>
+														<select id="input-country_contact" class="input-field default zip-lookup-field" name="country_code" data-table-name="emergency_contacts" placeholder="Country" title="Country" type="text" autocomplete="__never"></select>
 														<label class="field-label" for="input-country">Country</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 													<div class="field-container col-sm-6">
-														<input id="input-postal_code_contact" class="input-field zip-lookup-field" name="postal_code" data-table-name="emergency_contacts" placeholder="Postal code" title="Postal code" type="text" autocomplete="__never" required="">
-														<span class="required-indicator">*</span>
+														<input id="input-postal_code_contact" class="input-field zip-lookup-field" name="postal_code" data-table-name="emergency_contacts" placeholder="Postal code" title="Postal code" type="text" autocomplete="__never">
 														<label class="field-label" for="input-postal_code">Postal code</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 												</div>
 												<div class="field-container-row">
 													<div class="field-container col-sm-6">
-														<input id="input-city_contact" class="input-field" name="city" data-table-name="emergency_contacts" placeholder="City" title="City" type="text" autocomplete="__never" required="">
-														<span class="required-indicator">*</span>
+														<input id="input-city_contact" class="input-field" name="city" data-table-name="emergency_contacts" placeholder="City" title="City" type="text" autocomplete="__never">
 														<label class="field-label" for="input-city">City</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 													<div class="field-container col-sm-6 collapse">
-														<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State" title="State" type="text" autocomplete="__never" required="" data-dependent-target="#input-country_contact" data-dependent-value=236></select>
-														<span class="required-indicator">*</span>
+														<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State" title="State" type="text" autocomplete="__never" data-dependent-target="#input-country_contact" data-dependent-value=236></select>
 														<label class="field-label" for="input-state">State</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
@@ -597,17 +592,21 @@ class ClimberForm {
 		const countryAbbreviation = this.countryCodes[countryCode]
 
 		$.get(`http://api.zippopotam.us/${countryAbbreviation}/${postalCode}`).done(response => {
-			// .get() response is JSON by default
 			if ('places' in response) {
 				const details = response.places[0];
-				if (('place name' in details)) {
-					const $cityInput = $container.find('.input-field[name=city]');
-					if ($cityInput.val().length === 0) $cityInput.val(details['place name']).change()
+				if ('place name' in details) {
+					// Update city. Look within the container since both climber and emerg. 
+					//	contact info have fields with the same name attr.
+					$container.find('.input-field[name=city]')
+						.val(details['place name'])
+						.change();
 					
-					const $stateInput = $container.find('.input-field[name=state_code]');
-					if ( countryAbbreviation == 'US' && ($stateInput.val() === '') ) {
+					// If the country is the US, update the state
+					if (countryAbbreviation == 'US') {
 						const stateCode = this.stateCodes[details['state abbreviation']] || '';
-						$stateInput.val(stateCode).change();
+						$container.find('.input-field[name=state_code]')
+							.val(stateCode)
+							.change();
 					}
 				}
 			}

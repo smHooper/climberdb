@@ -744,7 +744,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$('#edit-expedition-button').click(e => {
-			this.toggleEditing();
+			this.onEditButtonClick(e);
 		});
 
 		$('#save-expedition-button').click(e => {
@@ -1359,6 +1359,36 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	/*
+	Before toggling edits, check if this is legacy data. If so, warn the user in case they think 
+	they're editing a group of the same name from the current or a future year
+	*/
+	onEditButtonClick(e) {
+		const turnEditingOn = $('.expedition-content.uneditable').length;
+		
+		// If the group is from a previous year, warn the user
+		const plannedDeparture = $('#input-planned_departure_date').val();
+		if (turnEditingOn && plannedDeparture) {
+			const departureDate = new Date(plannedDeparture + ' 00:00')
+			const departureYear = departureDate.getFullYear();
+			const currentYear = new Date().getFullYear();
+			if (departureYear < currentYear) {
+				const formattedDeparture = departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
+				showModal(
+					`This expedition was scheduled to depart on <strong>${formattedDeparture}</strong>.` + 
+					' Make sure this is the group you intended to edit.', 
+					'WARNING: Editing Legacy Data'
+				);
+			}
+		} 
+
+		this.toggleEditing();
+	}
+
+
+	/*
+	Turn editing on or off
+	*/
 	toggleEditing(forceEditingOn=null) {
 		const $content = $('.expedition-content');
 
@@ -1932,6 +1962,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			expeditionFields.push(el.name);
 		}
 		if (expeditionValues.length) {
+			// If this is a new expedition, make sure group status gets saved
+			if (!expeditionID) $('#input-group_status').addClass('dirty');
+
 			let fieldValues = Object.fromEntries(expeditionFields.map((f, i) => [f, expeditionValues[i]]));
 			let [sql, parameters] = this.valuesToSQL(fieldValues, 'expeditions', now, userName, {updateID: expeditionID || null});
 			sqlStatements.push(sql);
