@@ -1,3 +1,7 @@
+:root {
+	--modal-bg-color: #000000aa;
+}
+
 .main-content-header {
 	width: 100%;
 	display: inline-flex;
@@ -48,6 +52,40 @@
 /* 	background: #faaf00bb; */
 	background: #219ebc4d;
 }
+
+
+/* ----- stuff to show the edit buttons when expedition cards are shown as modals ----*/
+.main-content-header.modal-card-shown {
+	position: static;
+}
+.main-content-header.modal-card-shown .edit-button-container {
+	position: absolute;
+	z-index: 1000;
+	right: 0;
+	width: 100%;
+	justify-content: center;
+	margin: 0;
+	top: calc(var(--climberdb-header-menu-height) + 10px);
+}
+.main-content-modal-card-screen .expedition-edit-button {
+	color: #39abc7; /*make buttons a litte more visible against the dark background*/
+}
+#main-content-modal-card-screen {
+	top: var(--climberdb-header-menu-height);
+	right: 0;
+	left: 0;
+	width: 100%;
+	height: var(--fuzzy-search-bar-height);
+	background: var(--modal-bg-color);
+	position: absolute;
+	z-index: 999;
+	display: none;
+}
+.main-content-header.modal-card-shown #main-content-modal-card-screen {
+	display: block;
+}
+
+/* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
 
 /*----- expedition search bar dropdowns ------*/
 .fuzzy-search-bar-drawer {
@@ -257,6 +295,7 @@
 .edit-button-container {
 	display: flex;
 	margin-right: 20px;
+	transition: 0.3s all;
 }
 .edit-button-container > .expedition-edit-button {
 	margin: 0 7px;
@@ -272,10 +311,22 @@
 	row-gap: 20px;
 	column-gap: 20px;
 }
-/*.expedition-data-wrapper {
-	height: 500px;
-	max-height: calc(100vh - 60px - 100px);
-}*/
+.expedition-data-wrapper {
+	transition-property: padding;
+	transition-duration: 0.3s;
+}
+.expedition-data-wrapper.expedition-modal {
+	position: absolute;
+	width: 100%;
+	z-index: 1000;
+	left: 0;
+	top: calc( var(--climberdb-header-menu-height) + var(--fuzzy-search-bar-height) );
+	bottom: 0;
+	display: block;
+	padding: 0 10% 20px 10%;
+	background: var(--modal-bg-color);
+}
+
 /*show the expedition members taking up the 2 rows*/
 #expedition-member-data-container {
 	grid-row: 2 / span 2;
@@ -415,6 +466,9 @@
 /*	max-width: 12.5%;*/
 	flex: 1 1 12.5%;
 }
+.expedition-member-card-header-group-container {
+	max-width: 400px;
+}
 .expedition-member-badge-container {
 	height: 100%;
 }
@@ -510,12 +564,32 @@
 }
 *.data-list-item {
 	display: flex;
-	width: calc(100% - 30px); /*ul element doesn't honor width so set to 100% of parent minus 15px padding*/  
 	padding: 0;
-	justify-content: space-between;
 	column-gap: 10px;
 	margin-top: 15px;
 }
+.transaction-type-column {
+	display: flex;
+}
+.expedition-modal .transaction-type-column,
+.expedition-modal .payment-method-column,
+.expedition-modal .transaction-date-column {
+	max-width: 200px;
+}
+.transaction-entry-metadata-column {
+	width: 100px;
+}
+.route-member-name-column {
+	max-width: 350px;
+}
+.route-summited-column {
+	max-width: 200px;
+}
+.route-summit-date-column,
+.route-highest-elevation-column {
+	max-width: 250px;
+}
+
 *.data-list-col {
 	padding: 0;
 }
@@ -532,21 +606,24 @@
 /*special styling for transaction list*/
 .data-list-item .col.col-13-percent {
 	flex: 0 0 13%;
-	max-width: 13%;
+	max-width: calc(min(13%, 150px));
 }
 .unit-symbol + .input-field[name="transaction_value"] {
 	text-indent: 0;
 }
 .transactions-tab-pane .refund-post-item .input-field,
-.transactions-tab-pane .refund-post-item .unit-symbol {
+.transactions-tab-pane .refund-post-item .unit-symbol,
+.transactions-tab-pane .entry-metadata-field {
 	color: hsl(0, 0%, 40%);
 	font-style: italic;
 }
-.transactions-tab-pane .refund-post-item .input-field {
+.transactions-tab-pane .refund-post-item .input-field,
+.transactions-tab-pane .entry-metadata-field {
 	pointer-events: none;
 	border-bottom: none;
 /*	position: relative; /*allows hiding calendar-date-picker*/
 }
+
 .transactions-tab-pane .refund-post-item .input-field::-webkit-calendar-picker-indicator {
 	color: transparent;
 	background: transparent;
@@ -711,11 +788,22 @@ used to show climber form in "add climber" mode)*/
 }
 
 
+/*
+Default to not showing unless the screen is at least 1500px wides
+*/
+.expedition-modal .modal-only {
+	display: none;
+}
+
 /*adjust grid layout when the screen is less than 992 pixels wide*/
-@media (min-width: 992px) {
+@media (min-width: 1500px) {
 	.expedition-content {
 		grid-template-columns: repeat(2, 1fr);
 		grid-template-rows: repeat(3, 500px);
+	}
+	/* Only show modal only content if the screen is large enough */
+	.expedition-modal .modal-only {
+		display: block;
 	}
 	/*show the expedition members taking up the first 2 rows on the right*/
 	#expedition-member-data-container {

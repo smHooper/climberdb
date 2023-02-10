@@ -110,7 +110,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						</div>
 					</div>
 				</div>
-				<div class="edit-button-container">
+				<div class="edit-button-container has-motion">
 					<button id="save-expedition-button" class="expedition-edit-button icon-button save-edits-button hidden" type="button" aria-label="Save edits" title="Save edits" aria-hidden="true">
 						<i class="fas fa-2x fa-save"></i>
 					</button>
@@ -124,7 +124,9 @@ class ClimberDBExpeditions extends ClimberDB {
 						<i class="fas fa-2x fa-file-export"></i>
 					</button>
 				</div>
-				<button id="add-new-expedition-button" class="generic-button" title="New Expedition">new expedition</button>
+				<button id="add-new-expedition-button" class="generic-button" title="New Expedition">New expedition</button>
+				<!-- this will cover everything in the main content header except edit buttons when a card is shown as a modal -->
+				<div id="main-content-modal-card-screen" aria-hidden="true"></div>
 			</div>
 			<div class="expedition-content uneditable">
 				<!-- expedition info --> 
@@ -229,16 +231,22 @@ class ClimberDBExpeditions extends ClimberDB {
 					</div>
 				</div>
 
-				<div id="expedition-member-data-container" class="expedition-data-wrapper">
+				<div id="expedition-member-data-container" class="expedition-data-wrapper has-motion">
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
-							<h3 id="expedition-data-header" class="expedition-data-header">Expedition members</h3>
+							<div class="d-flex">
+								<button class="expand-card-button icon-button" aria-label="Expand expedition members content" title="Expand expedition members content">
+									<i class="expand-card-icon fa-solid fas fa-2x fa-expand-alt"></i>
+									<label class="icon-button-label">maximize</label>
+								</button>
+								<h3 id="expedition-data-header" class="expedition-data-header">Expedition members</h3>
+							</div>
 							<button id="show-modal-climber-form-button" class="generic-button add-data-button" data-target="#expedition-members-accordion" title="Add expedition member">Add member</button>
 						</div>
 						<div class="expedition-data-content-body">
 							<div id="expedition-members-accordion" class="accordion" data-table-name="expedition_members" data-item-display-name="expedition member">
 								<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
-									<div class="card-header show-children-on-hover" id="cardHeader-expedition-members-cloneable">
+									<div class="card-header show-children-on-hover justify-content-between" id="cardHeader-expedition-members-cloneable">
 										<a class="card-link collapsed col-6 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
 											<div class="card-link-content col-7 pl-0">
 												<h6 class="card-link-label expedition-member-card-link-label col px-0"></h6>
@@ -249,7 +257,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<img class="result-details-header-badge guide-icon transparent" src="imgs/guide_icon_100px.svg" title="Guiding on this expedition" aria-hidden="true">
 											</div>
 										</a>
-										<div class="col d-flex justify-content-between pl-0">
+										<div class="col d-flex justify-content-between pl-0 expedition-member-card-header-group-container">
 											<div class="col pl-0 card-header-content-container card-header-field-container leader-checkbox-container transparent">
 												<label class="checkmark-container">
 													<input id="input-is_trip_leader" class="input-field input-checkbox" type="checkbox" name="is_trip_leader" data-table-name="expedition_members" title="Is trip leader?">
@@ -455,50 +463,59 @@ class ClimberDBExpeditions extends ClimberDB {
 													</div>
 													<div class="transactions-container-body">
 														<div class="data-list-item data-list-item-header">
-															<label class="data-list-col data-list-header-label col-3">Type</label>
-															<label class="data-list-col data-list-header-label col-2">Payment method</label>
-															<label class="data-list-col data-list-header-label col col-13-percent"">Value</label>
-															<label class="data-list-col data-list-header-label col-2">Date</label>
-															<label class="data-list-col data-list-header-label col-4">Transaction notes</label>
+															<label class="data-list-col data-list-header-label col-3 transaction-type-column">Type</label>
+															<label class="data-list-col data-list-header-label col-2 payment-method-column">Payment method</label>
+															<label class="data-list-col data-list-header-label col col-13-percent transaction-value-column">Value</label>
+															<label class="data-list-col data-list-header-label col-2 transaction-date-column">Date</label>
+															<label class="data-list-col data-list-header-label col transaction-notes-column">Transaction notes</label>
+															<label class="data-list-col data-list-header-label modal-only transaction-entry-metadata-column hidden">Last edit by</label>
+															<label class="data-list-col data-list-header-label modal-only transaction-entry-metadata-column hidden">Last edit date</label>
 														</div>
 														<ul id="transactions-list" class="data-list">
 															<li class="data-list-item show-children-on-hover cloneable hidden">
-																<div class="col-3 d-flex">
+																<div class="col-3 d-flex transaction-type-column">
 																	<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
 																	<span class="required-indicator">*</span>
 																</div>
-																<div class="col-2">
+																<div class="col-2 payment-method-column">
 																	<div class="w-100 d-flex collapse">
 																		<select id="input-payment_method" class="input-field keep-default-option default" name="payment_method_code" data-table-name="transactions" placeholder="Payment method" title="Payment method" required=""></select>
 																		<span class="required-indicator">*</span>
 																	</div>
 																</div>
-																<div class="col col-13-percent">
+																<div class="col col-13-percent transaction-value-column">
 																	<span class="unit-symbol">$</span>
 																	<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
 																</div>
-																<div class="col-2 d-flex">
+																<div class="col-2 d-flex transaction-date-column">
 																	<input id="input-transaction_date" class="input-field" type="date" name="transaction_date" data-table-name="transactions"> 
 																</div>
-																<div class="col-4 d-flex">
+																<div class="col d-flex transaction-notes-column">
 																	<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
-																	<div class="col-3 pl-1">
+																	<div class="col pl-1">
 																		<button class="icon-button delete-button delete-transaction-button show-on-parent-hover" title="Delete transaction">
 																			<i class="fas fa-trash fa-lg"></i>
 																		</button>
 																	</div>
 																</div>
+																<div class="transaction-entry-metadata-column modal-only hidden" aria-hidden="true">
+																	<span id="text-last_modified_by" class="input-field entry-metadata-field last-modified-by-field"></span>
+																</div>
+																<div class="transaction-entry-metadata-column modal-only hidden" aria-hidden="true">
+																	<span id="text-last_modified_time" class="input-field entry-metadata-field last-modified-time-field"></span>
+																</div>
 															</li>
 														</ul>
 														<div class="data-list-item data-list-footer">
-															<label class="data-list-col data-list-header-label col-3"></label>
-															<label class="data-list-col data-list-header-label col-2 text-right pr-2">Balance</label>
-															<label class="data-list-col data-list-header-label col col-13-percent total-col">
+															<label class="data-list-col data-list-header-label col-3 transaction-type-column"></label>
+															<label class="data-list-col data-list-header-label col-2 text-right pr-2 payment-method-column">Balance</label>
+															<label class="data-list-col data-list-header-label col col-13-percent total-col transaction-value-column">
 																<span>$</span><span class="total-span"></span>
 															</label>
-															<label class="data-list-col data-list-header-label total-col col-2">
-															</label>
-															<label class="data-list-col data-list-header-label col-4"></label>
+															<label class="data-list-col data-list-header-label col-2 transaction-date-column"></label>
+															<label class="data-list-col data-list-header-label col transaction-notes-column"></label>
+															<label class="data-list-col data-list-header-label transaction-entry-metadata-column modal-only hidden"></label>
+															<label class="data-list-col data-list-header-label transaction-entry-metadata-column modal-only hidden"></label>
 														</div>
 													</div>
 												</div>
@@ -513,10 +530,16 @@ class ClimberDBExpeditions extends ClimberDB {
 					</div>
 
 				</div>
-				<div id="routes-data-container" class="expedition-data-wrapper">
+				<div id="routes-data-container" class="expedition-data-wrapper has-motion">
 					<div class="expedition-data-content">
 						<div class="expedition-data-header-container">
-							<h3 id="expedition-data-header" class="expedition-data-header">Routes</h3>
+							<div class="d-flex">
+								<button class="expand-card-button icon-button" aria-label="Expand expedition members content" title="Expand expedition members content">
+									<i class="expand-card-icon fa-solid fas fa-2x fa-expand-alt"></i>
+									<label class="icon-button-label">maximize</label>
+								</button>
+								<h3 id="expedition-data-header" class="expedition-data-header">Routes</h3>
+							</div>
 							<button class="generic-button add-card-button" data-target="#routes-accordion" title="Add route">Add route</button>
 						</div>
 						<div class="expedition-data-content-body">
@@ -548,10 +571,10 @@ class ClimberDBExpeditions extends ClimberDB {
 									<div id="collapse-routes-cloneable" class="collapse card-collapse show" aria-labelledby="cardHeader-routes-cloneable" data-parent="#routes-accordion">
 										<div class="card-body">
 											<div class="data-list-item data-list-item-header">
-												<label class="data-list-col data-list-header-label col-4"></label>
-												<label class="data-list-col data-list-header-label col-2 text-center">Summited?</label>
-												<label class="data-list-col data-list-header-label col-3 text-center">Summit date</label>
-												<label class="data-list-col data-list-header-label col-2">Highest elevation (ft)</label>
+												<label class="data-list-col data-list-header-label col-4 route-member-name-column"></label>
+												<label class="data-list-col data-list-header-label col-2 text-center route-summited-column">Summited?</label>
+												<label class="data-list-col data-list-header-label col-3 text-center route-summit-date-column">Summit date</label>
+												<label class="data-list-col data-list-header-label col-2 route-highest-elevation-column">Highest elevation (ft)</label>
 												<label class="data-list-col data-list-header-label col-1"></label>
 											</div>
 											<ul id="route-member-list" class="data-list route-member-list">
@@ -559,21 +582,22 @@ class ClimberDBExpeditions extends ClimberDB {
 													<!-- route_code and route_order inputs are hidden because the select in the .card-header controls the value for all of them-->
 													<input id="input-route_code" class="input-field hidden" type="number" name="route_code" data-table-name="expedition_member_routes">
 													<input id="input-route_order" class="input-field hidden" type="number" name="route_order" data-table-name="expedition_member_routes">
-													<div class="col-4">
+													
+													<div class="col-4 route-member-name-column">
 														<label class="data-list-header-label name-label"></label>
 													</div>
-													<div class="col-2 center-checkbox-col">
+													<div class="col-2 center-checkbox-col route-summited-column">
 														<label class="checkmark-container">
 															<input id="input-route_summited" class="input-field input-checkbox route-summited-checkbox" type="checkbox" name="route_was_summited" data-table-name="expedition_member_routes" title="Route summitted?">
 															<span class="checkmark data-input-checkmark"></span>
 														</label>
 													</div>
-													<div class="col-3">
+													<div class="col-3 route-summit-date-column">
 														<div class="field-container collapse">
 															<input id="input-summit_date" class="input-field text-center" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
 														</div>
 													</div>
-													<div class="col-2">
+													<div class="col-2 route-highest-elevation-column">
 														<div class="field-container ">
 															<input id="input-highest_elevation" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest elevation in feet"> 
 														</div>
@@ -586,13 +610,15 @@ class ClimberDBExpeditions extends ClimberDB {
 												</li>
 											</ul>
 											<div class="data-list-item data-list-footer">
-												<div class="data-list-col data-list-header-label col-4">
+												<div class="data-list-col data-list-header-label col-4 route-member-name-column">
 													<button class="text-only-button route-list-footer-button add-expedition-route-member-button w-100 text-left px-0 mx-0 hidden" aria-hidden="True" title="Add expedition member to route">Add member to route</button>
 												</div>
-												<div class="data-list-col data-list-header-label center-checkbox-col col-2">
+												<div class="data-list-col data-list-header-label center-checkbox-col col-2 route-summited-column">
 													<button class="text-only-button route-list-footer-button check-all-summitted-button w-100" title="Mark all climbers as summited">check all</button>
 												</div>
-												<div class="data-list-col data-list-header-label col-6"></div>
+												<label class="data-list-col data-list-header-label col-3 text-center route-summit-date-column"></label>
+												<label class="data-list-col data-list-header-label col-2 route-highest-elevation-column"></label>
+												<label class="data-list-col data-list-header-label col-1"></label>
 											</div>
 										</div>
 									</div>
@@ -826,6 +852,10 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.onDeleteCardButtonClick(e)
 		})
 		
+
+		$('.expand-card-button').click(e => {
+			this.onExpandCardButtonClick(e);
+		})
 
 		// ------------ Query stuff -------------------
 		// Set the default expedition query to only show this year's expeditions
@@ -1499,6 +1529,35 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*
+	Expand a card to take the whole screen as a modal when the expand button is clicked
+	*/
+	onExpandCardButtonClick(e) {
+
+		const $button = $(e.target).closest('button');
+		//const isExpanded = $button.find('.expand-button-icon').is('.fa-compress-alt');
+		const $wrapper = $button.closest('.expedition-data-wrapper');
+		const shouldExpand = !$wrapper.is('.expedition-modal');
+
+		// This probably isn't possible, but just in case, make sure there's only one modal card at once
+		$('.expedition-modal').not($wrapper).removeClass('expedition-modal');
+		
+		// Toggle modal
+		$wrapper.toggleClass('expedition-modal');
+		$('.main-content-header').toggleClass('modal-card-shown', shouldExpand);//keep hidden from screen readers so don't use .ariaHide()
+
+		// Show any elements that only appear in modal view
+		$wrapper.find('.modal-only').ariaHide(!shouldExpand);
+
+		// Font awesome classes don't neatly override each other by last-in-wins so toggle each class separately
+		$button.find('.expand-card-icon')
+			.toggleClass('fa-expand-alt', !shouldExpand)
+			.toggleClass('fa-compress-alt', shouldExpand);
+
+		$button.find('.icon-button-label').text(shouldExpand ? 'minimize' : 'maximize');
+	}
+
+
+	/*
 	Helper method to add an expedition member to a give unordered list
 	*/
 	addRouteMember($list, climberName, climberID, {expeditionMemberID=null}={}) {
@@ -1903,6 +1962,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			expeditionFields.push(el.name);
 		}
 		if (expeditionValues.length) {
+			// If this is a new expedition, make sure group status gets saved
+			if (!expeditionID) $('#input-group_status').addClass('dirty');
+
 			let fieldValues = Object.fromEntries(expeditionFields.map((f, i) => [f, expeditionValues[i]]));
 			let [sql, parameters] = this.valuesToSQL(fieldValues, 'expeditions', now, userName, {updateID: expeditionID || null});
 			sqlStatements.push(sql);
@@ -2469,7 +2531,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $briefingLink = $('#expedition-briefing-link')
 			.text('Set briefing time');
 		$('.field-label[for=expedition-briefing-link]').text('No briefing scheduled');
-		
+
 		if (expeditionData.planned_departure_date) {
 			$briefingLink.attr('href', `briefings.html?date=${expeditionData.planned_departure_date}`);
 		} else {
@@ -3375,9 +3437,13 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 				);
 				const thisTransaction = transactions.data[transactionID];
-				for (const el of $item.find('.input-field')) {
+				for (const el of $item.find('.input-field:not(.entry-metadata-field)')) {
 					this.setInputFieldValue(el, thisTransaction, {dbID: transactionID, triggerChange: true});
 				}
+
+				// Fill metadata field, which is only shown in the modal view
+				$item.find('.last-modified-by-field').text(thisTransaction.transactions_last_modified_by || '');
+				$item.find('.last-modified-time-field').text(thisTransaction.transactions_last_modified_time || '');
 			}
 			this.getTransactionBalance($transactionsList);
 
