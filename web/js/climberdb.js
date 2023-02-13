@@ -1076,6 +1076,50 @@ class ClimberDB {
 		}
 	}
 
+	/*
+	Return an array of objects sorted by a given field
+	*/
+	sortDataArray(data, sortField, {ascending=true}={}) {
+		return data.sort( (a, b) => {
+			// If the values are integers, make them numeric before comparing because string 
+			//	numbers have a different result than actual numbers when comparing values
+			const comparandA = a[sortField].match(/^\d+$/, a[sortField]) ? parseInt(a[sortField]) : a[sortField];
+			const comparandB = b[sortField].match(/^\d+$/, b[sortField]) ? parseInt(b[sortField]) : b[sortField];
+			return ((comparandA > comparandB) - (comparandB > comparandA)) * (ascending ? 1 : -1);
+		})
+	}
+
+	/*
+	Sort an HTML table's rows by a given sort field
+	*/
+	sortDataTable($table, data, {sortField=null, ascending=true, $rowCounter=$('')}={}) {
+		// Clear the table
+		const $tableBody = $table.find('tbody');
+		$tableBody.find('tr:not(.cloneable)').remove();
+
+		if (sortField) {
+			data = this.sortDataArray(data, sortField, {ascending: ascending});
+		}
+
+		const cloneableHTML = $tableBody.find('tr.cloneable').prop('outerHTML');
+		for (const info of data) {
+			let html = cloneableHTML.slice(); // copy string
+			for (const fieldName in info) {
+				html = html.replaceAll(`{${fieldName}}`, info[fieldName] || '');
+			}
+			$(html).appendTo($tableBody).removeClass('hidden cloneable');
+		}
+
+		if (!$rowCounter.length) {
+			$rowCounter = $table.closest('.dashboard-card').find('.dashboard-card-header > .table-row-counter');
+		}
+		if ($rowCounter.length) {
+			$rowCounter.text(data.length);
+		}
+
+		return data;
+	}
+
 
 	verifyPassword(clientPassword) {
 		return $.ajax({

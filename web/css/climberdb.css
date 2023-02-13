@@ -1454,6 +1454,29 @@ td.no-border {
   border-radius: 5px;
   height: 100%;
 }
+
+.climberdb-data-table .sort-column-button {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  color: white;
+}
+.climberdb-data-table .sort-column-button span {
+  flex: 1 0 calc(100% - 20px);
+  font-weight: bold;
+}
+.climberdb-data-table .sort-column-button i {
+  opacity: 0;
+  transition: 0.25s all;
+  width: 15px;
+  float: right;
+  margin-left: 5px;
+}
+.climberdb-data-table .sort-column-button:hover i {
+  opacity: 1;
+}
+
 /*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 --------- styling for standalone data tables ------------ 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/

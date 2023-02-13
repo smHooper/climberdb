@@ -132,6 +132,9 @@
 #season-mountain-stats-card .climberdb-dashboard-table td:not(:first-of-type) {
 	text-align: center;
 }
+.climberdb-data-table .sort-column-button {
+	color: #00679B;
+}
 
 /*-------- mountain stats table ---------*/
 .cancelled-row td {
@@ -144,27 +147,6 @@
 /*-------- flagged groups table ----------*/
 #flagged-groups-card .climberdb-dashboard-table th {
 	/*background-color: #f28100;*/
-}
-.sort-column-button {
-	width: 100%;
-	height: 100%;
-	display: flex;
-	align-items: center;
-	color: #00679B;
-}
-.sort-column-button span {
-	flex: 1 0 calc(100% - 20px);
-	font-weight: bold;
-}
-.sort-column-button i {
-	opacity: 0;
-	transition: 0.25s all;
-	width: 15px;
-	float: right;
-	margin-left: 5px;
-}
-.sort-column-button:hover i {
-	opacity: 1;
 }
 
 

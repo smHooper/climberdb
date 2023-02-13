@@ -553,7 +553,8 @@ CREATE VIEW all_climbs_view AS
 		expedition_member_routes.summit_date,
 		route_codes.mountain_code,
 		route_codes.name AS route_name,
-		mountain_codes.name AS mountain_name
+		mountain_codes.name AS mountain_name,
+		actual_return_date - actual_departure_date AS trip_length_days
 	FROM expeditions
 		JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
 		JOIN climbers ON expedition_members.climber_id = climbers.id
