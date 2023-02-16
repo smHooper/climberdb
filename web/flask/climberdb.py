@@ -112,7 +112,9 @@ def validate_password(username, password):
 			raise ValueError(f'Password query failed because user {username} does not exist')
 		# if the result is None, this is a new user whose password isn't set
 		if not result[0]:
-			return True
+			# return false so the client knows whatever was entered isn't the 
+			#	same as the password in the db
+			return False 
 
 		hashed_password = result[0].encode('utf-8')
 	if not hashed_password:
