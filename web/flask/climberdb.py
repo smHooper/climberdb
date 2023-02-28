@@ -292,8 +292,9 @@ def send_account_request():
 def send_reset_password_request():
 	data = dict(request.form)
 
+	user_id = data['user_id']
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
-	data['button_url'] = f'''{request.url_root.strip('/').replace(':9006', ':9007')}/index.html?reset=true&id={data['user_id']}'''
+	data['button_url'] = f'''{request.url_root.strip('/').replace(':9006', ':9007')}/index.html?reset=true&id={user_id}'''
 	data['button_text'] = 'Reset Password'
 	data['heading_title'] = 'Reset Denali Climbing Permit Portal account password'
 
@@ -308,9 +309,13 @@ def send_reset_password_request():
 	)
 	mailer.send(msg)
 
-	#TODO: set user status to inactive
+	engine = connect_db()
+	try:
+		engine.execute(f'UPDATE users SET user_status_code=1 WHERE id={user_id}')
+	except Exception as e:
+		raise RuntimeError(f'Failed to update user status with error: {e}')
 
-	return 'true';
+	return 'true'
 
 #--------------- Email notifications ---------------------#
 

@@ -446,8 +446,9 @@ class ClimberDBUsers extends ClimberDB {
 				showModal(`A password reset email was sent to ${username}@nps.gov. The user's account will be inactive until they change their password.`, 'Password reset email sent');
 				$(`tr[data-table-id=${userID}]`).addClass('inactive')
 					.find('.input-field[name=user_status_code]')
-						.val(1) // set status to "inactive"
-						.change(); 
+						// set status to "inactive" in the UI but don't worry about saving because it's already doen server-side
+						.val(1) 
+						//.change(); 
 			}
 		}).fail((xhr, status, error) => { 
 			showModal(`Password reset email failed to send with the error: ${error}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')

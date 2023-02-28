@@ -380,7 +380,7 @@ class ClimberDBIndex extends ClimberDB {
 				const userStatus = this.userInfo.user_status_code;
 
 				// If the user's account has been disabled, don't let them do anything else
-				if (userStatus == -1) {
+				if (userStatus == -1 || userStatus == 1) {
 					$formContainer.addClass('activation')
 						.children().not('#activation-error-message-container').remove();
 					this.showActivationErrorMessage('#disabled-user-activation-message');
