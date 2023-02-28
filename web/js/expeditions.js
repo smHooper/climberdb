@@ -45,7 +45,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			<div class="main-content-header">
 				<input id="expedition-id-input" class="hidden" aria-hidden="True">
 				<div class="fuzzy-search-bar-container">
-					<input id="expedition-search-bar" class="fuzzy-search-bar" placeholder="Type to search expeditions" title="Expedition search bar" autocomplete="__never">
+					<input id="expedition-search-bar" class="fuzzy-search-bar expedition-search-bar" placeholder="Type to search expeditions" title="Expedition search bar" autocomplete="__never">
 					<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 					<button class="show-query-options-button icon-button" title="Expedition filter options">
 						<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg">
@@ -896,7 +896,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		})
 		
 		// Handle keyboard and click events for expedition search bar
-		$('#expedition-search-bar').keyup( e => {
+		$('.fuzzy-search-bar.expedition-search-bar').keyup( e => {
 			this.onExpeditionSearchBarKeyup(e);
 		}).click(e => {
 			// Toggle the options drawer when the search bar is clicked
@@ -928,6 +928,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Set the search bar value to the expedition name
 		$(document).on('click', '#modal-expedition-options-drawer .expedition-search-bar-option', e => {
 			this.onModalExpeditionSearchOptionClick(e);
+		})
+
+		$('#modal-expedition-search-bar').keyup(e => {
+			this.onModalSearchBarInputKeyUp(e);
 		})
 
 		$('#confirm-change-expedition-button').click(() => {
@@ -1447,16 +1451,17 @@ class ClimberDBExpeditions extends ClimberDB {
 	*/
 	onExpeditionSearchBarKeyup(e) {
 		const $searchBar = $(e.target);
-		const $searchOptionDrawer = $('#expedition-options-drawer');
+		const $searchOptionDrawer = $searchBar.siblings('.fuzzy-search-bar-drawer');
+		const $searchBarOptions = $searchOptionDrawer.find('.expedition-search-bar-option')
 
 		// If the user pressed the escape key, hide the options drawer
 		if (e.key === 'Escape') {
-			$searchBar.siblings('.fuzzy-search-bar-drawer.collapse').collapse('hide');
+			$searchOptionDrawer.collapse('hide');
 			return;
 		} 
 		else if (e.key === 'ArrowDown') {
-			const scrollIndex = $searchOptionDrawer[0].scrollTop / $('.expedition-search-bar-option')[0].scrollHeight;
-			$('.expedition-search-bar-option').eq(scrollIndex).focus();
+			const scrollIndex = $searchOptionDrawer[0].scrollTop / $searchBarOptions[0].scrollHeight;
+			$searchBarOptions.eq(scrollIndex).focus();
 			return;
 		}
 
@@ -1470,15 +1475,15 @@ class ClimberDBExpeditions extends ClimberDB {
 		// If character length < 5, make sure all expeditions are options, then scroll to the 
 		//	first option whose start matches the search string
 		else {
-			this.fillExpeditionSearchSelect({searchString: '', showExpeditionOptions: true})
+			this.fillExpeditionSearchSelect({$searchBar: $searchBar, searchString: '', showExpeditionOptions: true})
 				.done(() => {
-					const $options = $('.expedition-search-bar-option');
+					const $options = $searchOptionDrawer.find('.expedition-search-bar-option');
 					const expeditionNames = $options.map((_, el) => el.innerHTML).get();
 					for (const i in expeditionNames) {
 						if (expeditionNames[i].toLowerCase().startsWith(searchString.toLowerCase())) {
 							// Scroll the drawer instead of .scrollIntoView(), which will move all ancestor 
 							//	scroll bars
-							const $searchOptionDrawer = $('#expedition-options-drawer').collapse('show');
+							$searchOptionDrawer.collapse('show');
 							const scrollPosition =  $options[0].scrollHeight * i;
 							$searchOptionDrawer[0].scrollTo({top: scrollPosition});
 							break;
@@ -1487,6 +1492,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				});
 
 		}
+
 	}
 
 	/*
@@ -2619,6 +2625,13 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*
+	When the user types anything in the modal search bar, hide the confirm button because it should only be shown when a user clicks an expedition option
+	*/
+	onModalSearchBarInputKeyUp(e) {
+		$('#confirm-change-expedition-button').ariaHide(true);
+	}
+
+	/*
 	*/
 	onModalExpeditionSearchOptionClick(e) {
 		const $option = $(e.target)
@@ -2641,11 +2654,28 @@ class ClimberDBExpeditions extends ClimberDB {
 						
 						// Select the clicked option so that it can be easily located if the user clicks the 
 						//	confirm-change-expedition-button
-						$searchBar.find('.expedition-search-bar-option.selected').removeClass('selected');
+						$searchBar.siblings('.fuzzy-search-bar-drawer')
+							.find('.expedition-search-bar-option.selected').removeClass('selected');
 						$option.addClass('selected');
 
 						// Set the search bar value
 						$searchBar.val(selectedExpeditionName);
+
+						// If this is the modal search bar, show/hide the confirm button
+						$('#confirm-change-expedition-button').ariaHide(false);
+					}
+				}
+			})
+		// Warn the user if this expedition is from a previous year
+		this.queryDB(`SELECT planned_departure_date FROM expeditions WHERE id=${expeditionID}`)
+			.done(queryResultString => {
+				if (!this.queryReturnedError(queryResultString)) {
+					const result = $.parseJSON(queryResultString);
+					if (result.length) {
+						const departureYear = new Date(result[0].planned_departure_date + ' 00:00').getFullYear();
+						if (departureYear < new Date().getFullYear()) {
+							showModal(`You selected the expedition <strong>${selectedExpeditionName}</strong> which has a planned departure from <strong>${departureYear}</strong>. Make sure you selected the right expedition before confirming the expedition change.`, 'Selected Expedition From Previous Year')
+						}
 					}
 				}
 			})
@@ -2672,6 +2702,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					this.loadExpedition(selectedExpeditionID);
 					this.updateURLHistory(selectedExpeditionID, $('#expedition-id-input'));
 					$('#change-expedition-modal').modal('hide');
+					$('#confirm-change-expedition-button').ariaHide(true);
 				}
 			}).fail((xhr, status, error) => {
 				showModal('The expedition member could not be moved to a new expedition. Error: ' + error, 'Database Error');
