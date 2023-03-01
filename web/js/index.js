@@ -379,8 +379,10 @@ class ClimberDBIndex extends ClimberDB {
 				const username = this.userInfo.ad_username;
 				const userStatus = this.userInfo.user_status_code;
 
+				const isActivation = $formContainer.is('.activation');
+
 				// If the user's account has been disabled, don't let them do anything else
-				if (userStatus == -1 || userStatus == 1) {
+				if (userStatus == -1 || (userStatus == 1 && !isActivation)) {
 					$formContainer.addClass('activation')
 						.children().not('#activation-error-message-container').remove();
 					this.showActivationErrorMessage('#disabled-user-activation-message');
@@ -390,7 +392,7 @@ class ClimberDBIndex extends ClimberDB {
 				// If the user is activating a new account or resetting their passowrd, 
 				//	check that the userID in the URL params matches the Windows username 
 				//	retrieved from the server
-				if ($formContainer.is('.activation')) {
+				if (isActivation) {
 					if (parseInt(urlParams.id) !== parseInt(this.userInfo.id)) {
 						this.showActivationErrorMessage('#incorrect-user-activation-message');
 						return;

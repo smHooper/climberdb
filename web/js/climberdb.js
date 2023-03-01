@@ -1349,6 +1349,9 @@ class ClimberDB {
 						showModal('Your session has expired. Click OK to log in again.', 'Session expired', 'alert', footerButtons, {dismissable: false});
 					}
 				}
+				if (window.location.pathname !== '/index.html' && this.userInfo.user_status_code != 2) {
+					window.location = 'index.html'
+				}
 			});
 		return [userDeferred, this.getTableInfo(), this.loadConfigValues()];
 	}
