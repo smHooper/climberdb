@@ -173,14 +173,18 @@ class ClimberDBQuery extends ClimberDB {
 			},
 			count_climbers: {
 				sql: `
-					SELECT count(*), {group_by_fields} {additional_stats} 
-					FROM {select_from} 
-					WHERE {where_clauses}
-					GROUP BY {group_by_fields}
+					SELECT {group_by_field_selects} {additional_stats}, count(*) AS "Count"
+					FROM ({select_from} WHERE {where_clauses}) _ 
+					{joins}
+					GROUP BY {group_by_aliases}
+					ORDER BY {group_by_aliases}
 				`,
 				numericColumns: [
 					'age',
 					'trip_length_days'
+				],
+				columns: [
+					'Count'
 				]
 			},
 			count_climbers_per_route: {},
@@ -201,13 +205,15 @@ class ClimberDBQuery extends ClimberDB {
 					<li class="query-option" role="button" data-query-name="guide_company_client_status">Guided Client Status</li>
 					<li class="query-option" role="button" data-query-name="guided_company_briefings">Guide Company Briefings</li>
 					<li class="query-option" role="button" data-query-name="count_per_guide_company">Expeditions/Climbers Per Guide Company</li>
-					<li class="query-option" role="button" data-query-name="count_climbers">Count Climbers</li>
+					<li class="query-option" role="button" data-query-name="count_climbers">Count Climbers/Climbs</li>
+					<li id="count-route-attempts-query-button" class="query-option" role="button" data-query-name="count_climbers">Route attempts</li>
+					<li id="count-route-summits-query-button" class="query-option" role="button" data-query-name="count_climbers">Route summits</li>
 				</ul>
 			</div>
-			<div class="query-details-container col">
+			<div class="query-details-container col-10">
 				<div class="query-parameters-header">
 					<div class="query-parameters-container hidden" data-query-name="guide_company_client_status">
-						<h5 class="w-100 mb-3">Guided Client Status Query Parameters</h5>
+						<h4 class="w-100 mb-3">Guided Client Status Query Parameters</h4>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3">
 							<select id="guide_company_client_status-guide_company" class="input-field remove-null-guide-option default" name="guide_company_code" title="Guide company" required>
 								<option value="">Guide company</option>
@@ -224,7 +230,7 @@ class ClimberDBQuery extends ClimberDB {
 					</div>
 
 					<div class="query-parameters-container hidden" data-query-name="guided_company_briefings">
-						<h5 class="w-100 mb-3">Guide Company Breifing Query Parameters</h5>
+						<h4 class="w-100 mb-3">Guide Company Breifing Query Parameters</h4>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3">
 							<select id="guided_company_briefings-guide_company" class="input-field remove-null-guide-option default" name="guide_company_code" title="Guide company" required>
 								<option value="">Guide company</option>
@@ -240,7 +246,7 @@ class ClimberDBQuery extends ClimberDB {
 					</div>
 
 					<div class="query-parameters-container hidden" data-query-name="count_per_guide_company">
-						<h5 class="w-100 mb-3">Expeditions/Climbers Per Guide Company Query Parameters</h5>
+						<h4 class="w-100 mb-3">Expeditions/Climbers Per Guide Company Query Parameters</h4>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3">
 							<select id="count_per_guide_company-group_by_field" class="input-field remove-null-guide-option default no-option-fill" name="group_by_field" title="Count expeditions or climbers?" required>
 								<option value="">Count expeditions or climbers?</option>
@@ -270,58 +276,165 @@ class ClimberDBQuery extends ClimberDB {
 					</div>
 
 					<div class="query-parameters-container hidden" data-query-name="count_climbers">
-						<h5 class="w-100 mb-3">Expeditions/Climbers Per Guide Company Query Parameters</h5>
-						<div class="field-container col-sm-6 col-md-4 col-lg-3">
-							<select id="count_climbers-climbers_or_climbs" class="input-field remove-null-guide-option default no-option-fill" name="group_by_field" title="Count expedition members, climbers, or climbs?" required>
-								<option value="">Count expedition members, climbers, or climbs?</option>
-								<option value="expedition_id">Climbers</option>
-								<option value="expedition_member_id">Climbs</option>
+						<h4 class="w-100 mb-3">Count Climbers/Climbers</h4>
+						<div class="w-100"></div>
+						<div class="field-container col-sm col-md-6 col-lg-3">
+							<select id="count_climbers-climbers_or_climbs" class="input-field no-option-fill" name="count_climbers-count_field" title="Count expedition members, climbers, or climbs?" required>
+								<option value="SELECT DISTINCT ON (climber_id) * FROM all_climbs_view" selected>Climbers</option>
+								<option value="SELECT DISTINCT ON (expedition_member_id) * FROM all_climbs_view">Expedition member</option>
+								<option value="SELECT * FROM all_climbs_view">Climbs</option>
 							</select>
-							<label class="field-label" for="count_per_guide_company-guide_company">Count expeditions or climbers?</label>
+							<label class="field-label" for="count_per_guide_company-guide_company">Count exp. members, climbers, or climbs?</label>
 						</div>	
+						<div class="field-container col-sm-6 col-md-4 col-lg-3">
+							<select id="count_climbers-year" class="input-field default no-option-fill year-select-field where-clause-field" name="extract(year FROM planned_departure_date)" title="Year" required>
+								<option value="">Year</option>
+							</select>
+							<label class="field-label" for="count_climbers-year">Year</label>
+						</div>
+						<div class="field-container col-sm col-md-6 col-lg-3">
+							<select id="count_climbers-group_by_fields" class="input-field no-option-fill climberdb-select2 is-empty is-empty" multiple="multiple" name="group_by_fields" placeholder="Group rows by" placeholder="Group rows by">
+								<!--<option value="reservation_status_code">Reservation status</option>--><!--don't include for now because can't map to lookup table-->
+								<option value="group_status_code">Group status</option>
+								<option value="special_group_type_code">Special group type</option>
+								<option value="guide_company_code">Guide company</option>
+								<option value="sex_code">Gender</option>
+								<option value="summited">Summited (yes/no)</option>
+								<option value="summit_date">Summit date</option>
+								<option value="country_code">Country</option>
+								<option value="state_code">State</option>
+								<option value="route_name">Route</option>
+								<option value="mountain_name">Mountain</option>
+								<option value="planned_departure_date">Planned departure</option>
+								<option value="planned_return_date">Planned return</option>
+								<option value="actual_departure_date">Actual departure</option>
+								<option value="actual_return_date">Actual return</option>
+								<option value="to_char(planned_departure_date, 'Month')">Planned departure month</option>
+								<option value="to_char(summit_date, 'Month')">Summit month</option>
+								<option value="extract(year FROM planned_departure_date)">Year</option>
+							</select>
+							<label class="field-label" for="count_climbers-group_by_fields">Group rows by</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3">
+							<select id="count_climbers-pivot_field" class="input-field default no-option-fill keep-default-option" name="pivot_field" title="Split columns by">
+								<option value="">Split columns by</option>
+								<option value="group_status_code">Group status</option>
+								<option value="special_group_type_code">Special group type</option>
+								<option value="guide_company_code">Guide company</option>
+								<option value="sex_code">Gender</option>
+								<option value="summited">Summited (yes/no)</option>
+								<option value="summit_date">Summit date</option>
+								<option value="country_code">Country</option>
+								<option value="state_code">State</option>
+								<option value="route_code">Route</option>
+								<option value="mountain_code">Mountain</option>
+								<option value="planned_departure_date">Planned departure</option>
+								<option value="planned_return_date">Planned return</option>
+								<option value="actual_departure_date">Actual departure</option>
+								<option value="actual_return_date">Actual return</option>
+								<option value="extract(month FROM planned_departure_date)">Month</option>
+								<option value="extract(year FROM planned_departure_date)">Year</option>
+							</select>
+							<label class="field-label" for="count_climbers-pivot_field">Split columns by</label>
+						</div>
+						<h5 class="w-100 mt-3">Query Parameters</h5>
+						<div class="query-parameter-option-container" role="list">
+							<div class="show-query-parameter-button" role="button" data-field-name="group_status_code">Group status</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="special_group_type_code">Special group type</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="guide_company_code">Guide company</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="mountain_code">Mountain</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="route_code">Route</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="sex_code">Gender</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="summited">Summited (yes/no)</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="summit_date">Summit date</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="country_code">Country</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="state_code">State</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="planned_departure_date">Planned departure</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="planned_return_date">Planned return</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="actual_departure_date">Actual departure</div>
+							<div class="show-query-parameter-button" role="button" data-field-name="actual_return_date">Actual return</div>
+						</div>
 						<!--
-						WHERES:
-						-reservation_status_code
-						-group_status_code
-						-special_group_type_code
-						-guide_company
-						-sex_code
-						-summited
-						-summit_date
-						-country_code
-						-state_code
-						-planned_departure_date
-						-planned_return_date
-						-actual_departure_date
-						-actual_return_date
-
-						additional GROUP BYs:
-						- month
-						- year
-
 						additional stats for numeric fields:
 						- avg
 						- stddev_pop 
 						- min
 						- max
 						-->
-						<div class="field-container col-sm-6 col-md-4 col-lg-3">
-							<select id="count_per_guide_company-year" class="input-field default no-option-fill year-select-field" name="year" title="Year" required>
-								<option value="">Year</option>
-							</select>
-							<label class="field-label" for="count_per_guide_company-year">Year</label>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-reservation_status" class="input-field default climberdb-select2 is-empty where-clause-field" multiple="multiple" name="reservation_status" title="Expedition member status" placeholder="Expedition member status" data-lookup-table="group_status_codes" required></select>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-reservation_status_code">Expedition member status</label>
 						</div>
-						<div class="field-container col-sm-6 col-md-4 col-lg-3">
-							<select id="count_per_guide_company-mountain_code" class="input-field mountain-code-parameter-input no-option-fill" name="mountain_code">
-								<option value="%">All mountains</option>
-							</select>
-							<label class="field-label" for="count_per_guide_company-mountain_code">Mountain</label>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-group_status" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field" multiple="multiple" name="group_status_code" title="Group status" placeholder="Group status" required></select>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-group_status">Group status</label>
+
 						</div>
-						<div class="field-container col-sm-6 col-md-4 col-lg-3 collapse">
-							<select id="count_per_guide_company-route_code" class="input-field route-code-parameter-input no-option-fill" name="route_code" data-dependent-target="#count_per_guide_company-mountain_code" data-dependent-value="!%">
-								<option value="%">All routes</option>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-special_group_type" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field" multiple="multiple" name="special_group_type_code" placeholder="Special group type filter" required></select>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-special_group_type">Special group type</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-guide_company" class="input-field default climberdb-select2 is-empty where-clause-field" name="guide_company_code" multiple="multiple" placeholder="Guide company filter" title="Guide company" required></select>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-guide_company">Guide company</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-mountain" class="input-field default climberdb-select2 is-empty where-clause-field" name="mountain_code" multiple="multiple" placeholder="Mountain" title="Mountain filter" required></select>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-mountain">Mountain</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-route" class="input-field default climberdb-select2 is-empty where-clause-field" name="route_code" multiple="multiple" placeholder="Route" title="Route filter" required></select>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-route">Route</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-sex_code" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field" multiple="multiple" name="sex_code" placeholder="Gender" required></select>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-sex_code">Gender</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-summited" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field" name="summited" required>
+								<option value="">Summited?</option>
+								<option value="'Yes'">Yes</option>
+								<option value="'No'">No</option>
 							</select>
-							<label class="field-label" for="count_per_guide_company-route_code">Route</label>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-sex_code">Summited?</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-country" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field" multiple="multiple" name="country_code" placeholder="Country" required></select>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-country_code">Country</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<select id="count_climbers-state" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field" multiple="multiple" name="state_code" placeholder="State/province" required></select>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-state_code">State/province</label>
 						</div>
 					</div>
 
@@ -350,8 +463,18 @@ class ClimberDBQuery extends ClimberDB {
 			this.onRunQueryButtonClick();
 		});
 
+		$('.climberdb-select2').change(e => {this.onSelect2Change(e)});
+
 		$('.mountain-code-parameter-input').change(e => {
 			this.onMountainCodeInputChange(e)
+		});
+
+		$('.show-query-parameter-button').click(e => {
+			this.onShowQueryParameterButtonClick(e)
+		});
+
+		$('.hide-query-parameter-button').click(e => {
+			this.onHideQueryParameterButtonClick(e)
 		});
 
 		$('#open-reports-modal-button').click(() => {
@@ -362,17 +485,45 @@ class ClimberDBQuery extends ClimberDB {
 			this.onExportDataButtonClick();
 		});
 
-		// Make the values of any input fields with the same name attribute consistent
 		$('.input-field').change(e => {
-			const $target = $(e.target);
-			const name = $target.attr('name');
-			$(`.input-field[name=${name}]`).not($target)
-				.val($target.val())	
+			this.onInputChange(e);
 		});
 
 		$(document).on('click', '.sort-column-button', e => {
 			this.onSortDataButtonClick(e);
 		});
+
+		$('#count-route-attempts-query-button').click(e => {
+			this.onCountRouteAttemptsButtonClick()
+		});
+		//$(window).resize(e => {onWindowResize(e)})
+	}
+
+	/*
+	Make the values of any input fields with the same name attribute consistent
+	*/
+	onInputChange(e) {
+		const $target = $(e.target);
+		const name = $target.attr('name');
+		// Some fields have name attributes that make invalid jQuery expressions and throw and error
+		try {
+			$(`.input-field[name=${name}]`).not($target)
+				.val($target.val())	
+		} catch {
+			return
+		}
+	}
+
+	/*Set CSS style based on select value*/
+	onSelect2Change(e) {
+		const $target = $(e.target);
+		const $select2 = $target.siblings('.select2-container');
+		const valueLength = $target.val().length;
+		$select2.toggleClass('is-empty', !valueLength);
+
+		// Show/hide the .field-label of select2s by manually toggling the .default class 
+		//	based on the select's value
+		$target.toggleClass('default', !valueLength);
 	}
 
 
@@ -406,7 +557,9 @@ class ClimberDBQuery extends ClimberDB {
 		
 		// Select clicked option and show assoicated inputs
 		const $option = $(e.target).addClass('selected');
-		$(`[data-query-name="${$option.data('query-name')}"]`).ariaHide(false);
+		const $container = $(`.query-parameters-container[data-query-name="${$option.data('query-name')}"]`).ariaHide(false);
+		// set inline CSS height because some queries need to to make scrolling work properly
+		//$container.height($container.height());
 
 		// Make sure 
 		$('#run-query-button').ariaHide(false); 		// the run button is visible
@@ -414,8 +567,45 @@ class ClimberDBQuery extends ClimberDB {
 		$('.query-result-container').empty();			// any previous result is deleted
 	}
 
+	onCountRouteAttemptsButtonClick() {
+		const $container = $('.query-parameters-container[data-query-name="count_climbers"]');
+		
+		$('#count_climbers-climbers_or_climbs').val()
+		$container.find('.show-query-parameter-button').ariaHide(false);
 
-	showResult(result, queryName, {dataOnly=false}={}) {
+	}
+
+	/*
+	When the window is resized, set inline CSS height because some queries need to to make scrolling work properly
+	*/
+	onWindowResize(e) {
+		const queryName = $('.query-option.selected').data('query-name');
+		const $container = $(`.query-parameters-container[data-query-name="${queryName}"]`);
+		$container.height($container.height()); //.height() is syntactic sugar for element.scrollHeight
+	}
+
+
+	onShowQueryParameterButtonClick(e) {
+		const $button = $(e.target).ariaHide(true);
+		const fieldName = $button.data('field-name');
+
+		const $container = $button.closest('.query-parameters-container');
+
+		// Show the field
+		$container.find(`.input-field[name=${fieldName}]`).closest('.field-container.collapse').collapse('show');
+	}
+
+	onHideQueryParameterButtonClick(e) {
+		const $fieldContainer = $(e.target).closest('.field-container').collapse('hide');
+		const fieldName = $fieldContainer.find('.input-field').attr('name');
+
+		$fieldContainer.closest('.query-parameters-container')
+			.find(`.show-query-parameter-button[data-field-name=${fieldName}]`)
+			.ariaHide(false);
+	}
+
+
+	showResult(result, {queryName= $('.query-option.selected').data('query-name'), dataOnly=false}={}) {
 
 		const queryInfo = this.queries[queryName];
 		const hrefs = queryInfo.hrefs || {};
@@ -479,12 +669,10 @@ class ClimberDBQuery extends ClimberDB {
 
 	}
 
-	/*
 
-	*/
-	runQuery(queryName, {showResult=true}={}) {
-		
-		if ( !this.validateFields($(`.query-details-container [data-query-name=${queryName}]`)) ) {
+	validateFields(queryName) {
+		const isValid = super.validateFields($(`.query-details-container [data-query-name=${queryName}]`));
+		if (!isValid) {
 			const $errors = $('.error');
 			const $firstErrorField = $errors.first();
 			const firstErrorFieldName = $firstErrorField.siblings('.field-label').text();
@@ -493,15 +681,17 @@ class ClimberDBQuery extends ClimberDB {
 			const eventHandler = () => {$('#alert-modal .confirm-button').click(() => {$firstErrorField.focus()})}
 			showModal(message, 'Missing Parameter', 'alert', '', {eventHandlerCallable: eventHandler})
 			$errors.removeClass('error');
-			return;
 		}
 
-		const queryInfo = this.queries[queryName];
-		var sql = queryInfo.sql;
-		for (const el of $(`.query-parameters-container[data-query-name=${queryName}] .input-field`)) {
-			sql = sql.replaceAll(`{${el.name}}`, this.getInputFieldValue($(el)));
-		}
+		return isValid;
+	}
 
+
+	/*
+	Helper function to submit SQL and optionally show result. This needs to be separated from runQuery() so that custom 
+	query processing functions can still use the same code
+	*/
+	submitQuery(sql, {queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
 		return this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
@@ -511,6 +701,7 @@ class ClimberDBQuery extends ClimberDB {
 					this.result = $.parseJSON(queryResultString);
 					this.ancillaryResult = [];
 					
+					const queryInfo = this.queries[queryName];
 					// If this query has a custom result handler, call that. Otherwise, fallback to the default handler
 					if (queryInfo.customResultHandler) {
 						queryInfo.customResultHandler(this.result);
@@ -519,6 +710,23 @@ class ClimberDBQuery extends ClimberDB {
 					}
 				}
 			})
+	}
+
+
+	/*
+	Execut a simple query. Anything surrounded by {} is assumed to be a field name that should be replaced with the value of the field whose name attribute is field
+	*/
+	runQuery(queryName, {showResult=true}={}) {
+
+		if (!this.validateFields(queryName)) return;
+
+		const queryInfo = this.queries[queryName];
+		var sql = queryInfo.sql;
+		for (const el of $(`.query-parameters-container[data-query-name=${queryName}] .input-field`)) {
+			sql = sql.replaceAll(`{${el.name}}`, this.getInputFieldValue($(el)));
+		}
+
+		return this.submitQuery(sql, {queryName: queryName, showResult: showResult});
 	}
 
 
@@ -542,8 +750,8 @@ class ClimberDBQuery extends ClimberDB {
 		const queryName = $('.query-option.selected').data('query-name');
 		this.showResult(this.result, queryName, {dataOnly: true});
 
-		$('.sort-column-button').removeClass('sorted');
-		$button.addClass('sorted')
+		//$('.sort-column-button').removeClass('sorted');
+		$(`.sort-column-button[data-field-name="${fieldName}"]`).addClass('sorted')
 			.toggleClass('descending', !sortAscending);
 	}
 
@@ -569,10 +777,152 @@ class ClimberDBQuery extends ClimberDB {
 	}
 
 
+	queryCountClimbers() {
+
+		if (!this.validateFields('count_climbers')) return;
+
+		// Collect the group by fields in an object with key/value pairs as field_name: alias 
+		const groupByFields = Object.fromEntries(
+			$('#count_climbers-group_by_fields').val()
+				.map(field => [field, $(`#count_climbers-group_by_fields option[value="${field}"]`).text()])
+		);
+
+		const additionalStats = '';
+		const selectFrom = this.countClimbersBySelectMap[$('#count_climbers-climbers_or_climbs').val()];
+		if (!selectFrom) {
+			print
+		}
+		const $whereFields = $(
+				'.query-parameters-container[data-query-name="count_climbers"] .where-clause-field:not(.hidden):not(.collapse)'
+			)
+			.filter((_, el) => !$(el).closest('.collapse:not(.show)').length)
+		const whereClauses = $whereFields.map(
+				(_, el) => el.multiple ? `${el.name} IN (${$(el).val().join(',')})` : `${el.name} = ${el.value}`
+			).get()
+			.join(' AND ');
+		
+		const $pivotFieldSelect = $('#count_climbers-pivot_field');
+		const pivotField = $pivotFieldSelect.val();
+		const pivotAlias = pivotField ? $pivotFieldSelect.find(`option[value=${pivotField}]`).text() : '';
+		const pivotSelect = pivotField.endsWith('_code') ? 
+			`${pivotField}s.name AS "${pivotAlias}"` :
+			`${pivotField} AS "${pivotAlias}"`
+			;
+
+		let joins = '';
+		for (const field in groupByFields) {
+			if (field.endsWith('_code')) {
+				joins += `RIGHT JOIN ${field}s ON ${field}=${field}s.code `
+			}
+		}
+		if (pivotField && pivotField.endsWith('_code')) joins += `RIGHT JOIN ${pivotField}s ON ${pivotField}=${pivotField}s.code `
+
+		// get string of the fields to select with aliases (e.g., SELECT field AS alias, ...). For lookup fields, show the display name from the *_codes table rather than the numeric code
+		const groupBySelectFields = Object.entries(groupByFields)
+			.map((
+				[field, alias]) => field.endsWith('_code') ? `${field}s.name AS "${alias}"` : `${field} AS "${alias}"`
+			).join(', ');
+		const groupByAliases = Object.values(groupByFields);
+		const groupByAliasString = `"${groupByAliases.join('", "')}"`
+		let sql = this.queries.count_climbers.sql
+			.replaceAll('{group_by_field_selects}', pivotField ? `${pivotSelect}, ${groupBySelectFields}` : groupBySelectFields)
+			.replaceAll('{group_by_aliases}',  pivotField ? `"${pivotAlias}", ${groupByAliasString}` : groupByAliasString)
+			.replace('{additional_stats}', additionalStats)
+			.replace('{select_from}', selectFrom)
+			.replaceAll('{joins}', joins)
+			.replace('{where_clauses}', whereClauses);
+		
+		// if (pivotField) {
+		// 	sql = `SELECT * FROM crosstab(
+		// 		'${sql.replaceAll(`'`, `''`)}',
+		// 		'SELECT DISTINCT ${pivotField} FROM (${selectFrom} WHERE ${whereClauses}) _ '
+		// 	) _`
+		// }
+
+		// The columns of the result will change with each query, so set it here
+		this.queries.count_climbers.columns = groupByAliases.concat(['Count']);
+
+		this.submitQuery(
+			sql, 
+			{
+				queryName: 'count_climbers', 
+				showResult: !pivotField //only show the result with the default display function if the result shouldn't be pivoted
+			}
+		).done(queryResultString => {
+			if (pivotField && !this.queryReturnedError(queryResultString)) {
+				const result = $.parseJSON(queryResultString);
+				let groupValues = {};
+				let pivotValues = [];
+				for (const row of result) {
+
+					const groupByValues = Object.fromEntries(groupByAliases.map(alias => [alias, row[alias]]));
+					const groupByValueString = Object.values(groupByValues).toString();
+					const pivotValue_ = row[pivotAlias];
+					const count = Object.fromEntries([[pivotValue_, row.Count]]);
+					groupByValues.idString = groupByValueString;
+					groupValues[groupByValueString] = {...groupValues[groupByValueString] || groupByValues, ...count}
+					pivotValues.push(pivotValue_)
+				}
+
+				let pivotedResult = []
+				pivotValues = [...new Set(pivotValues)].sort();
+				// Fill nulls with 0 for each row
+				for (const pivotedRow of Object.values(groupValues)) {
+					for (const pivotValue_ of pivotValues) {
+						if (!pivotedRow[pivotValue_]) pivotedRow[pivotValue_] = 0;
+					}
+					pivotedResult.push(pivotedRow);
+				}
+
+
+
+				// find unique groups of the actual GROUP BY fields. Do so by getting a Set of group by values. 
+				//	Compare string representations rather than arrays because arrays will always be unique
+				// let pivotValues = [];
+				// let pivotedResult = [];
+				// const groupByValues = [ ...new Set( result.map( row => groupByAliases.map( f => row[f]).toString() ) ) ]
+				// const pivotedColumns = groupByAliases.concat([...new Set( result.map(row => row[pivotAlias]))])
+				// let pivotValues = [];
+				// let pivotedResult = [];
+
+				// for (let group of groupByValues) {
+				// 	const groupRows = result.filter(row => groupByAliases.map( f => row[f]).toString() === group);
+				// 	let pivotRow = {}
+					
+				// 	// Get values for pivot columns
+				// 	for (const row of groupRows) {
+				// 		// rows should be ordered by the pivot field so getting th
+				// 		const pivotValue_ = row[pivotAlias];
+				// 		pivotRow[pivotValue_] = row.Count
+
+				// 		if (!pivotValues.includes(pivotValue_)) pivotValues.push(pivotValue_);
+				// 	}
+
+				// 	// Get values for GROUP BY columns
+				// 	group = group.split(',')
+				// 	for (const i in groupByAliases) {
+				// 		pivotRow[groupByAliases[i]] = group[i]
+				// 	}
+
+				// 	//pivotRow = {...pivotRow, ...}
+				// 	pivotedResult.push(pivotRow);
+				// }
+
+				this.queries.count_climbers.columns = groupByAliases.concat(pivotValues);
+				this.result = this.sortDataArray(pivotedResult, 'idString');
+
+				this.showResult(this.result, 'count_climbers');
+			}
+		});
+	}
+
+
 	onRunQueryButtonClick() {
 		const queryName = $('.query-option.selected').data('query-name');
 		if (queryName === 'guide_company_client_status') {
 			this.queryGuidedClientStatus();
+		} else if (queryName === 'count_climbers') {
+			this.queryCountClimbers();
 		} else {
 			this.runQuery(queryName);
 		}
@@ -745,6 +1095,17 @@ class ClimberDBQuery extends ClimberDB {
 				]
 			})
 			.then(() => {
+				// Initialize select2s individually because the width needs to be set depending on the type of select
+				for (const el of $('.climberdb-select2')) {
+					const $select = $(el);
+					$select.select2({
+						width: $select.siblings('.hide-query-parameter-button').length ? 'calc(100% - 28px)' : '100%',
+						placeholder: $select.attr('placeholder')
+					});
+					// .select2 removes the .default class for some reason
+					$select.addClass('default');
+				}
+
 				// Remove the "None" option for guide company accounting queries
 				setTimeout(() => {$('.remove-null-guide-option option[value=-1]').remove()}, 500);
 				$('#query-option-list .query-option').first().click();

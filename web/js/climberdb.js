@@ -908,7 +908,7 @@ class ClimberDB {
 			.each((_, el) => {
 				const $el = $(el);
 				const $hiddenParent = $el.parents('.collapse:not(.show, .card-collapse), .card.cloneable, .field-container.disabled, .hidden');
-				$el.toggleClass('error', !$el.val() && $hiddenParent.length === 0)
+				$el.toggleClass('error', !($el.is('.climberdb-select2') ? $el.val().length : $el.val()) && $hiddenParent.length === 0)
 			})
 			.filter('.error');
 
@@ -1083,8 +1083,8 @@ class ClimberDB {
 		return data.sort( (a, b) => {
 			// If the values are integers, make them numeric before comparing because string 
 			//	numbers have a different result than actual numbers when comparing values
-			const comparandA = a[sortField].match(/^\d+$/, a[sortField]) ? parseInt(a[sortField]) : a[sortField];
-			const comparandB = b[sortField].match(/^\d+$/, b[sortField]) ? parseInt(b[sortField]) : b[sortField];
+			const comparandA = a[sortField].toString().match(/^\d+$/, a[sortField]) ? parseInt(a[sortField]) : a[sortField];
+			const comparandB = b[sortField].toString().match(/^\d+$/, b[sortField]) ? parseInt(b[sortField]) : b[sortField];
 			return ((comparandA > comparandB) - (comparandB > comparandA)) * (ascending ? 1 : -1);
 		})
 	}
