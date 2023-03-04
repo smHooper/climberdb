@@ -569,7 +569,16 @@ class ClimberDBQuery extends ClimberDB {
 			this.onSummitsPerDayClick()
 		});
 		//$(window).resize(e => {onWindowResize(e)})
-
+		
+		// Record current value for .revertable inputs so the value can be reverted after a certain event
+		$('.input-field.revertable', e => {
+			const $target = $(e.target);
+			$target.data('current-value', $target.val());
+		});
+		// Make sure the group by and pivot fields don't contain the same value or the SQL will break
+		$('#count_climbers-group_by_fields, #count_climbers-pivot_field').change(e => {
+			this.onGroupByPivotFieldChange(e);
+		})
 	}
 
 	/*
@@ -856,6 +865,33 @@ class ClimberDBQuery extends ClimberDB {
 		$fieldContainer.closest('.query-parameters-container')
 			.find(`.show-query-parameter-button[data-field-name=${fieldName}]`)
 			.ariaHide(false);
+	}
+
+
+	/*
+	When a user changes the gorup by or pivot field, make sure that 
+	the values of each field DO NOT overlap
+	*/
+	onGroupByPivotFieldChange(e) {
+		const $target = $(e.target);
+		const targetIsGroupBy = $target.attr('name') === 'group_by_fields';
+
+		const targetValue = $target.val();
+		const targetValueText = targetIsGroupBy ? 
+			$target.find('option:selected').map((_, el) => [el.innerHTML]).get() :
+			$target.find(`option[value="${targetValue}"]`).text();
+		const targetLabelText = $target.siblings('.field-label').text();
+
+		let $otherField = targetIsGroupBy ? $('#count_climbers-pivot_field') : $('#count_climbers-group_by_fields');
+		const otherValueText = $otherField.find(`option[value="${$otherField.val()}"]`).text();
+		const otherLabelText = $otherField.siblings('.field-label').text();
+		
+		if (targetIsGroupBy ? targetValueText.includes(otherValueText) : otherValueText.includes(targetValueText)) {
+			$target.val($target.data('current-value'));
+			const message = `The "${otherLabelText}" field ${targetIsGroupBy ? 'is already set to' : 'already includes'} "${otherValueText}". Either` + 
+				` choose a different "${targetLabelText}" value or change the "${otherLabelText}" value.`;
+			showModal(message, `Invalid ${targetLabelText} value`);
+		}
 	}
 
 
