@@ -541,7 +541,7 @@ class ClimberDB {
 			const id = el.id;
 			if (lookupTableName != 'undefineds') {//if neither data-lookup-table or name is defined, lookupTableName === 'undefineds' 
 				if (placeholder) $('#' + id).append(`<option class="" value="">${placeholder}</option>`);
-				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${lookupTableName} WHERE sort_order IS NOT NULL ORDER BY sort_order`);
+				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${lookupTableName} ${$el.is('.include-disabled-options') ? '' : 'WHERE sort_order IS NOT NULL'} ORDER BY sort_order`);
 				
 			}
 		});
