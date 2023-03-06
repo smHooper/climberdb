@@ -330,6 +330,19 @@ class ClimberDBUsers extends ClimberDB {
 			} else  {
 				const result = $.parseJSON(queryResultString)[0];
 
+				$inputs.removeClass('dirty');
+
+				// update in-memory data
+				const userInfo = this.users[userID] || {};
+				for (const i in values) {
+					userInfo[fields[i]] = values[i];
+				}
+				// If this was an update, actually set the in-memory data
+				if (!(userID in this.users)) {
+					this.users[userID] = {...userInfo};
+				}
+
+				// Send activation email for a new user
 				if (isInsert) {
 					userID = result.id;
 					$tr.attr('data-table-id', userID)
@@ -359,17 +372,6 @@ class ClimberDBUsers extends ClimberDB {
 					}).fail((xhr, status, error) => { 
 						showModal(`Account activation email failed to send with the error: ${error}. You can send the activation link directly to the user whose account you just created: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
 					})
-				}
-				$inputs.removeClass('dirty');
-
-				// update in-memory data
-				const userInfo = this.users[userID] || {};
-				for (const i in values) {
-					userInfo[fields[i]] = values[i];
-				}
-				// If this was an update, actually set the in-memory data
-				if (!(userID in this.users)) {
-					this.users[userID] = {...userInfo};
 				}
 			}
 		}).fail((xhr, status, error) => {
@@ -446,8 +448,9 @@ class ClimberDBUsers extends ClimberDB {
 				showModal(`A password reset email was sent to ${username}@nps.gov. The user's account will be inactive until they change their password.`, 'Password reset email sent');
 				$(`tr[data-table-id=${userID}]`).addClass('inactive')
 					.find('.input-field[name=user_status_code]')
-						.val(1) // set status to "inactive"
-						.change(); 
+						// set status to "inactive" in the UI but don't worry about saving because it's already doen server-side
+						.val(1) 
+						//.change(); 
 			}
 		}).fail((xhr, status, error) => { 
 			showModal(`Password reset email failed to send with the error: ${error}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')
@@ -508,7 +511,7 @@ class ClimberDBUsers extends ClimberDB {
 				user_status_code 
 			FROM users 
 			ORDER BY 
-				user_status_code,
+				user_status_code DESC,
 				first_name, 
 				last_name
 		`;

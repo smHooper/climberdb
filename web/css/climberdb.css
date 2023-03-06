@@ -1,10 +1,15 @@
 :root {
   --ui-primary-color: #219EBC;
+<<<<<<< HEAD
   --ui-primary-text-color: #00679b;
   --ui-bg-dark-blue: #023047;
   --ui-desaturated-color: #4d819b;
   --ui-primary-highlight-color: #f28100;
   --ui-secondary-highlight-color: #faaf00;
+=======
+  --climberdb-header-menu-height: 60px;
+  --fuzzy-search-bar-height: 60px;
+>>>>>>> main
 }
 
 html, body {
@@ -87,6 +92,17 @@ body a {
 .icon-button:hover {
   opacity: 1;
 }
+/*minimally sized label mostly for screen readers*/
+.icon-button-label {
+  font-size: 12px;
+  width: 100%;
+  margin: 0;
+  margin-top: -5px;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+
 
 .modal-header-container .icon-button {
   height: 100%;
@@ -1484,8 +1500,8 @@ td.no-border {
   width: 100%;
 }
 .fuzzy-search-bar {
-  height: 60px;
-  line-height: 60px;
+  height: var(--fuzzy-search-bar-height);
+  line-height: var(--fuzzy-search-bar-height);
   border: none;
   border-bottom: solid 3px #219ebc;
   background-color: rgba(255, 255, 255, 0);

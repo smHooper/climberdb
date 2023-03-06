@@ -1146,46 +1146,22 @@ class ClimberDB {
 						columns: {}
 					};
 				}
-				if (info.column_name == 'climber_id') {
-					const a=1;
-				}
 				if (info.foreign_table_name) {
 					this.tableInfo.tables[tableName].foreignColumns.push({
 						foreignTable: info.foreign_table_name,
 						column: info.column_name
 					});
-
-					/*// Place this table in the insert order
-					var thisIndex = insertOrder.indexOf(tableName);
-					const foreignTableIndex = insertOrder.indexOf(info.foreign_table_name);
-					if (thisIndex < foreignTableIndex) thisIndex = foreignTableIndex + 1;
-					// If it's already in the inser order, remove it
-					if (insertOrder.includes(tableName)) insertOrder.splice(thisIndex, 1); 
-					// inset it in the next position to the right of the last foreign table it references
-					insertOrder.splice(thisIndex, 0, tableName); 
-
-				} else if (!insertOrder.includes(tableName)) {
-					// This table either doesn't participate in any foreign key relationships or it's all the way to the left. 
-					//	Either way, add table to the beginning of the insert order
-					insertOrder.unshift(tableName); */
 				}
+
 				this.tableInfo.tables[tableName].columns[info.column_name] = {...info};
+
+				// If this is an entry metadata field, also save it with the table name prepended to make it distinguishable
+				if (this.entryMetaFields.includes(info.column_name)) {
+					let metaInfo = deepCopy(info);
+					metaInfo.column_name = `${info.table_name}_${info.column_name}`;
+					this.tableInfo.tables[tableName].columns[metaInfo.column_name] = {...metaInfo};
+				}
 			}
-			
-			/*for (tableName in this.tableInfo) {
-			    const foreignColumns = climberDB.tableInfo[tableName].foreignColumns;
-			    if (!foreignColumns.length && !insertOrder.includes(tableName)) {
-			        insertOrder.unshift(tableName); 
-			    } else {
-			        var thisIndex = insertOrder.indexOf(tableName);
-			        for (const {foreignTable} of foreignColumns) {
-			            const foreignTableIndex = insertOrder.indexOf(foreignTable);
-			            if (thisIndex < foreignTableIndex) thisIndex = foreignTableIndex + 1;
-			            if (insertOrder.includes(tableName)) insertOrder.splice(thisIndex, 1); // remove it
-			            insertOrder.splice(thisIndex, 0, tableName); // inset it in the next position to the right
-			        }
-			    }
-			}*/
 		})
 	}
 
@@ -1416,6 +1392,9 @@ class ClimberDB {
 						const footerButtons = `<button class="generic-button modal-button close-modal" data-dismiss="modal" onclick="window.location.href='index.html?referer=${encodeURI(window.location.href)}'">OK</button>`;
 						showModal('Your session has expired. Click OK to log in again.', 'Session expired', 'alert', footerButtons, {dismissable: false});
 					}
+				}
+				if (window.location.pathname !== '/index.html' && this.userInfo.user_status_code != 2) {
+					window.location = 'index.html'
 				}
 			});
 		return [userDeferred, this.getTableInfo(), this.loadConfigValues()];
