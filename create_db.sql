@@ -530,11 +530,14 @@ CREATE VIEW briefings_expedition_info_view AS
 
 
 CREATE VIEW all_climbs_view AS 
-	SELECT climbers.state_code,
+	SELECT 
+		climbers.first_name || ' ' || climbers.last_name AS climber_name,
+		climbers.state_code,
 		climbers.country_code,
 		climbers.dob,
 		climbers.age,
 		climbers.sex_code,
+		expeditions.expedition_name,
 		expeditions.planned_departure_date,
 		expeditions.actual_departure_date,
 		expeditions.actual_return_date,

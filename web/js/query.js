@@ -7,7 +7,7 @@ class ClimberDBQuery extends ClimberDB {
 		this.guideCompanies = {};
 		this.result = [];
 		this.ancillaryResult = []; // for things like briefings that go along with 
-		this.countClimbersBySelectMap = { // mapping #count_climbers-climbers_or_climbs values to SELECT statements for readability
+		this.countClimbersBySelectMap = { // mapping #count_climbers-count_field values to SELECT statements for readability
 			climbers: 'SELECT DISTINCT ON (climber_id) * FROM all_climbs_view',
 			members:  'SELECT DISTINCT ON (expedition_member_id) * FROM all_climbs_view',
 			climbs:   'SELECT * FROM all_climbs_view',
@@ -178,11 +178,10 @@ class ClimberDBQuery extends ClimberDB {
 			},
 			count_climbers: {
 				sql: `
-					SELECT {group_by_field_selects} {additional_stats}, count(*) AS "Count"
-					FROM ({select_from} WHERE {where_clauses}) _ 
+					SELECT {outer_select}
+					FROM ({inner_select} WHERE {where_clauses}) _ 
 					{joins}
-					GROUP BY {group_by_aliases}
-					ORDER BY {group_by_aliases}
+					{group_by}
 				`,
 				numericColumns: [
 					'age',
@@ -208,7 +207,7 @@ class ClimberDBQuery extends ClimberDB {
 					<li class="query-option" role="button" data-query-name="guide_company_client_status">Guided Client Status</li>
 					<li class="query-option" role="button" data-query-name="guided_company_briefings">Guide Company Briefings</li>
 					<li class="query-option" role="button" data-query-name="count_per_guide_company">Expeditions/Climbers Per Guide Company</li>
-					<li class="query-option" role="button" data-query-name="count_climbers">Count Climbers/Climbs</li>
+					<li class="query-option" role="button" data-query-name="count_climbers">Query Climbers/Climbs</li>
 					<li id="climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">Total climbers per mountain</li>
 					<li id="guided-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">Guided climbers per mountain</li>
 					<li id="independent-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">Independent climbers per mountain</li>
@@ -292,18 +291,26 @@ class ClimberDBQuery extends ClimberDB {
 					</div>
 
 					<div class="query-parameters-container hidden" data-query-name="count_climbers">
-						<h4 class="w-100 mb-3">Count Climbers/Climbers</h4>
+						<h4 class="w-100 mb-3">Query Climbers/Climbs</h4>
 						<div class="w-100"></div>
-						<div class="field-container col-sm col-md-6 col-lg-4">
-							<select id="count_climbers-climbers_or_climbs" class="input-field no-option-fill" name="count_climbers-count_field" title="Count expedition members, climbers, or climbs?" required>
+						<div class="field-container col-sm col-md-4 col-lg-3">
+							<select id="count_climbers-summary_or_records" class="input-field no-option-fill" name="count_climbers-summary_or_records" title="What would you like to query?" required>
+								<option value="summary" selected>Count of climbers/climbs</option>
+								<option value="climbers">Climbers</option>
+								<option value="climbs">Expeditions</option>
+							</select>
+							<label class="field-label" for="count_per_guide_company-summary_or_records">What would you like to query?</label>
+						</div>
+						<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
+							<select id="count_climbers-count_field" class="input-field no-option-fill" name="count_climbers-count_field" title="Count expedition members, climbers, or climbs?" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
 								<option value="climbers" selected>Climbers</option>
 								<option value="members">Expedition member</option>
 								<option value="climbs">Climbs</option>
 							</select>
-							<label class="field-label" for="count_per_guide_company-guide_company">Count exp. members, climbers, or climbs?</label>
+							<label class="field-label" for="count_per_guide_company-count_field">Count climbers, exp. members, or climbs?</label>
 						</div>
-						<div class="field-container col-sm col-md-6 col-lg-4">
-							<select id="count_climbers-group_by_fields" class="input-field no-option-fill climberdb-select2 is-empty is-empty" multiple="multiple" name="group_by_fields" placeholder="Group rows by" placeholder="Group rows by">
+						<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
+							<select id="count_climbers-group_by_fields" class="input-field no-option-fill climberdb-select2 is-empty is-empty" multiple="multiple" name="group_by_fields" placeholder="Group rows by" placeholder="Group rows by" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
 								<!--<option value="reservation_status_code">Reservation status</option>--><!--don't include for now because can't map to lookup table-->
 								<option value="group_status_code">Group status</option>
 								<option value="special_group_type_code">Special group type</option>
@@ -325,8 +332,8 @@ class ClimberDBQuery extends ClimberDB {
 							</select>
 							<label class="field-label" for="count_climbers-group_by_fields">Group rows by</label>
 						</div>
-						<div class="field-container col-sm col-md-6 col-lg-4">
-							<select id="count_climbers-pivot_field" class="input-field default no-option-fill keep-default-option" name="pivot_field" title="Split columns by">
+						<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
+							<select id="count_climbers-pivot_field" class="input-field default no-option-fill keep-default-option" name="pivot_field" title="Split columns by" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary">
 								<option value="">Split columns by</option>
 								<option value="group_status_code">Group status</option>
 								<option value="special_group_type_code">Special group type</option>
@@ -654,8 +661,9 @@ class ClimberDBQuery extends ClimberDB {
 	Helper function to set default options for canned count_climbers derative queries
 	*/
 	setCountClimbersOrClimbsParameters({countBy='climbers', year=new Date().getFullYear(), groupByFields=[], pivotField=''}={}) {
-		// Make sure we're counting climbs
-		$('#count_climbers-climbers_or_climbs').val(countBy).change();
+		// Set basic SQL parameter fields
+		$('#count_climbers-summary_or_records').val('summary').change();
+		$('#count_climbers-count_field').val(countBy).change();
 		$('#count_climbers-group_by_fields').val(groupByFields).change();
 		$('#count_climbers-pivot_field').val(pivotField).change();
 
@@ -1067,22 +1075,14 @@ class ClimberDBQuery extends ClimberDB {
 	}
 
 
+	fieldToSelectAlias([field, alias]) {
+		return field.endsWith('_code') ? `${field}s.name AS "${alias}"` : `${field} AS "${alias}"`;
+	}
+
+
 	queryCountClimbers() {
 
 		if (!this.validateFields('count_climbers')) return;
-
-		// Collect the group by fields in an object with key/value pairs as field_name: alias 
-		const groupByFields = Object.fromEntries(
-			$('#count_climbers-group_by_fields').val()
-				.map(field => [field, $(`#count_climbers-group_by_fields option[value="${field}"]`).text()])
-		);
-
-		const additionalStats = '';
-		const selectFrom = this.countClimbersBySelectMap[$('#count_climbers-climbers_or_climbs').val()];
-		if (!selectFrom) {
-			console.error('Invalid selectFrom option: ' + $('#count_climbers-climbers_or_climbs').val());
-			return;
-		}
 
 		const $whereFields = $(
 				'.query-parameters-container[data-query-name="count_climbers"] .where-clause-field:not(.hidden):not(.collapse)'
@@ -1092,53 +1092,100 @@ class ClimberDBQuery extends ClimberDB {
 				(_, el) => el.multiple ? `${el.name} IN (${$(el).val().join(',')})` : `${el.name} = ${el.value}`
 			).get()
 			.join(' AND ');
-		
-		const $pivotFieldSelect = $('#count_climbers-pivot_field');
-		const pivotField = $pivotFieldSelect.val();
-		const pivotAlias = pivotField ? $pivotFieldSelect.find(`option[value=${pivotField}]`).text() : '';
-		const pivotSelect = pivotField.endsWith('_code') ? 
-			`${pivotField}s.name AS "${pivotAlias}"` :
-			`${pivotField} AS "${pivotAlias}"`
-			;
+		const whereFields = Object.fromEntries($whereFields.map((_, el) => [[el.name, $(el).siblings('.field-label').text()]]).get());
 
-		let joins = '';
-		for (const field in groupByFields) {
-			if (field.endsWith('_code')) {
-				joins += `LEFT JOIN ${field}s ON ${field}=${field}s.code `
+		let pivotField = '',
+			pivotAlias = '',
+			groupBySelectFields = [],
+			groupByAliases = [],
+			additionalStats = '',
+			outerSelectClause = '',
+			innerSelectStatement = '',
+			joins = '',
+			groupByClause = '';
+		
+		const returnData = $('#count_climbers-summary_or_records').val()
+		if (returnData === 'summary') {
+			// Collect the group by fields in an object with key/value pairs as field_name: alias 
+			const groupByFields = Object.fromEntries(
+				$('#count_climbers-group_by_fields').val()
+					.map(field => [field, $(`#count_climbers-group_by_fields option[value="${field}"]`).text()])
+			);
+
+			innerSelectStatement = this.countClimbersBySelectMap[$('#count_climbers-count_field').val()];
+			if (!innerSelectStatement) {
+				console.error('Invalid selectFrom option: ' + $('#count_climbers-count_field').val());
+				return;
+			}
+
+			// Get pivot field
+			const $pivotFieldSelect = $('#count_climbers-pivot_field');
+			pivotField = $pivotFieldSelect.val();
+			const pivotAlias = pivotField ? $pivotFieldSelect.find(`option[value=${pivotField}]`).text() : '';
+			const pivotSelect = pivotField.endsWith('_code') ? 
+				`${pivotField}s.name AS "${pivotAlias}"` :
+				`${pivotField} AS "${pivotAlias}"`
+				;
+
+			for (const field in groupByFields) {
+				if (field.endsWith('_code')) {
+					joins += `LEFT JOIN ${field}s ON ${field}=${field}s.code `
+				}
+			}
+			if (pivotField && pivotField.endsWith('_code')) joins += `LEFT JOIN ${pivotField}s ON ${pivotField}=${pivotField}s.code `;
+
+			// get string of the fields to select with aliases (e.g., SELECT field AS alias, ...). For lookup fields, show the display name from the *_codes table rather than the numeric code
+			groupBySelectFields = Object.entries(groupByFields).map(this.fieldToSelectAlias).join(', ');
+			const groupByFieldSelects = pivotField ? `${pivotSelect}, ${groupBySelectFields}` : groupBySelectFields;
+			outerSelectClause = `${groupByFieldSelects} ${additionalStats}, count(*) AS "Count"`;
+			groupByAliases = Object.values(groupByFields);
+			let groupByAliasString = pivotField ? 
+				`"${pivotAlias}", "${groupByAliases.join('", "')}"` : 
+				`"${groupByAliases.join('", "')}"`;
+			groupByClause = `GROUP BY ${groupByAliasString} ORDER BY ${groupByAliasString}`;
+
+			// The columns of the result will change with each query, so set it here
+			this.queries.count_climbers.columns = groupByAliases.concat(['Count']);
+			this.queries.count_climbers.hrefs = {} // reset in case a raw-data query was run before
+		} else { // otherwise this is a raw-data query
+
+			// Add joins for lookup tables so the "WHERE"-criteria fields 
+			//	can show human-readable values, not numeric codes
+			for (const field of Object.keys(whereFields)) {
+				if (field.endsWith('_code')) {
+					joins += `LEFT JOIN ${field}s ON ${field}=${field}s.code `
+				}
+			}
+			// Get aliases to add to query info .columns property
+			const whereFieldAliases = Object.values(whereFields);
+			// Get WHERE-criteria field part of SELECT clause because this will be the same 
+			//	regardless of which raw-data query is run
+			const whereFieldSelectString = Object.entries(whereFields).map(this.fieldToSelectAlias).join(', '); 
+			if (returnData === 'climbers') {
+				this.queries.count_climbers.columns = ['Climber name', ...whereFieldAliases];
+				outerSelectClause = 'climber_name AS "Climber name", climber_id, ' + whereFieldSelectString;
+				innerSelectStatement = 'SELECT DISTINCT ON (climber_id) * FROM all_climbs_view';
+				this.queries.count_climbers.hrefs = {'Climber name': 'climbers.html?id={climber_id}'}
+			} else if (returnData === 'expeditions') {
+				this.queries.count_climbers.columns = ['Expedition name', ...whereFieldAliases];
+				outerSelectClause = 'expedition_name AS "Expedition name", expedition_id, ' +  whereFieldSelectString;
+				innerSelectStatement = 'SELECT DISTINCT ON (expedition_id) * FROM all_climbs_view';
+				this.queries.count_climbers.hrefs = {'Expedition name': 'expeditions.html?id={expedition_id}'};
 			}
 		}
-		if (pivotField && pivotField.endsWith('_code')) joins += `LEFT JOIN ${pivotField}s ON ${pivotField}=${pivotField}s.code `
 
-		// get string of the fields to select with aliases (e.g., SELECT field AS alias, ...). For lookup fields, show the display name from the *_codes table rather than the numeric code
-		const groupBySelectFields = Object.entries(groupByFields)
-			.map((
-				[field, alias]) => field.endsWith('_code') ? `${field}s.name AS "${alias}"` : `${field} AS "${alias}"`
-			).join(', ');
-		const groupByAliases = Object.values(groupByFields);
-		const groupByAliasString = `"${groupByAliases.join('", "')}"`
 		let sql = this.queries.count_climbers.sql
-			.replaceAll('{group_by_field_selects}', pivotField ? `${pivotSelect}, ${groupBySelectFields}` : groupBySelectFields)
-			.replaceAll('{group_by_aliases}',  pivotField ? `"${pivotAlias}", ${groupByAliasString}` : groupByAliasString)
-			.replace('{additional_stats}', additionalStats)
-			.replace('{select_from}', selectFrom)
-			.replaceAll('{joins}', joins)
-			.replace('{where_clauses}', whereClauses);
-		
-		// if (pivotField) {
-		// 	sql = `SELECT * FROM crosstab(
-		// 		'${sql.replaceAll(`'`, `''`)}',
-		// 		'SELECT DISTINCT ${pivotField} FROM (${selectFrom} WHERE ${whereClauses}) _ '
-		// 	) _`
-		// }
-
-		// The columns of the result will change with each query, so set it here
-		this.queries.count_climbers.columns = groupByAliases.concat(['Count']);
+			.replace('{outer_select}', outerSelectClause)
+			.replace('{inner_select}', innerSelectStatement)
+			.replace('{where_clauses}', whereClauses)
+			.replace('{joins}', joins)
+			.replace('{group_by}', groupByClause);
 
 		this.submitQuery(
 			sql, 
 			{
 				queryName: 'count_climbers', 
-				showResult: !pivotField //only show the result with the default display function if the result shouldn't be pivoted
+				showResult: !groupBySelectFields.length || !pivotField //only show the result with the default display function if the result shouldn't be pivoted (raw data or simple group-by)
 			}
 		).done(queryResultString => {
 			if (pivotField && !this.queryReturnedError(queryResultString)) {
@@ -1165,40 +1212,6 @@ class ClimberDBQuery extends ClimberDB {
 					}
 					pivotedResult.push(pivotedRow);
 				}
-
-
-
-				// find unique groups of the actual GROUP BY fields. Do so by getting a Set of group by values. 
-				//	Compare string representations rather than arrays because arrays will always be unique
-				// let pivotValues = [];
-				// let pivotedResult = [];
-				// const groupByValues = [ ...new Set( result.map( row => groupByAliases.map( f => row[f]).toString() ) ) ]
-				// const pivotedColumns = groupByAliases.concat([...new Set( result.map(row => row[pivotAlias]))])
-				// let pivotValues = [];
-				// let pivotedResult = [];
-
-				// for (let group of groupByValues) {
-				// 	const groupRows = result.filter(row => groupByAliases.map( f => row[f]).toString() === group);
-				// 	let pivotRow = {}
-					
-				// 	// Get values for pivot columns
-				// 	for (const row of groupRows) {
-				// 		// rows should be ordered by the pivot field so getting th
-				// 		const pivotValue_ = row[pivotAlias];
-				// 		pivotRow[pivotValue_] = row.Count
-
-				// 		if (!pivotValues.includes(pivotValue_)) pivotValues.push(pivotValue_);
-				// 	}
-
-				// 	// Get values for GROUP BY columns
-				// 	group = group.split(',')
-				// 	for (const i in groupByAliases) {
-				// 		pivotRow[groupByAliases[i]] = group[i]
-				// 	}
-
-				// 	//pivotRow = {...pivotRow, ...}
-				// 	pivotedResult.push(pivotRow);
-				// }
 
 				this.queries.count_climbers.columns = groupByAliases.concat(pivotValues);
 				this.result = this.sortDataArray(pivotedResult, 'idString');
