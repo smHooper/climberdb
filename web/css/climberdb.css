@@ -1,5 +1,10 @@
 :root {
   --ui-primary-color: #219EBC;
+  --ui-primary-text-color: #00679b;
+  --ui-bg-dark-blue: #023047;
+  --ui-desaturated-color: #4d819b;
+  --ui-primary-highlight-color: #f28100;
+  --ui-secondary-highlight-color: #faaf00;
   --climberdb-header-menu-height: 60px;
   --fuzzy-search-bar-height: 60px;
 }
@@ -8,7 +13,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   font-family: 'Lato', sans-serif;
-  color: #00679b;
+  color: var(--ui-primary-text-color);
 }
 body a {
   color: #219ebc;
@@ -294,8 +299,9 @@ input:checked:focus + .slider:before {
   .select2-selection__choice,
 .climberdb-main .select2-container--default .select2-selection--single 
   .select2-selection__choice {/*the selected item pill*/
-  background: none;
-  border: solid rgb(40, 40, 40) 1.5px;
+  background: transparent;
+  color: var(--ui-bg-dark-blue);
+  border: solid transparent 1.5px;
   border-radius: 2rem;
   transition: all .2s;
 }
@@ -303,7 +309,7 @@ input:checked:focus + .slider:before {
   .select2-selection__choice:hover,
 .climberdb-main .select2-container--default .select2-selection--single 
   .select2-selection__choice:hover {
-  /*border: solid white 1.5px;*/
+  border: solid var(--ui-bg-dark-blue) 1.5px;
 
 }
 .climberdb-main .select2-container--default .select2-selection--multiple 
@@ -311,7 +317,8 @@ input:checked:focus + .slider:before {
 .climberdb-main .select2-container--default .select2-selection--single 
   .select2-selection__choice__remove {
   border: none;
-  color: white;
+  color: var(--ui-bg-dark-blue);
+  background-color: transparent;
   border-radius: 1.1em;
   top: 0.25em;
   width: 1.1rem;
@@ -319,12 +326,12 @@ input:checked:focus + .slider:before {
   transition: background 0.2s;
   
 }
-.climberdb-main .select2-container--default .select2-selection--multiple 
+/*.climberdb-main .select2-container--default .select2-selection--multiple 
   .select2-selection__choice__remove:hover,
 .climberdb-main .select2-container--default .select2-selection--single 
   .select2-selection__choice__remove:hover {
   background: rgba(0, 0, 0, 0.2);
-}
+}*/
 .climberdb-main .select2-container--default .select2-selection--multiple 
   .select2-selection__choice__remove span,
 .climberdb-main .select2-container--default .select2-selection--single 
@@ -334,28 +341,18 @@ input:checked:focus + .slider:before {
   top: -.65rem;
   left: -.05rem;
 }
-.query-option-operator,
-.query-option-input-field:not(.switch-container) {
-  min-height: 32px;
-}
-.query-option-operator,
-.query-option-input-field:not(.switch-container),
-.climberdb-main .select2-container--default .select2-search--inline 
-  .select2-search__field {
-  color: white;
-}
 .select2-container--open {
   z-index: 5000;
 }
-.select2-container > .select2-dropdown {
-  background: rgb(0,0,0);
+body .select2-container > .select2-dropdown {
+  background: var(--ui-bg-dark-blue);
   color: white;
 }
-.select2-container--default .bhims-query-select2-dropdown-container .select2-results__option--selected {
-  background: rgba(100,100,100,0.4);
+body .select2-container--default .select2-results__option--selected {
+  background: var(--ui-primary-highlight-color);
 }
-.select2-container--default .bhims-query-select2-dropdown-container .select2-results__option--highlighted.select2-results__option--selectable {
-  background: hsl(211 68% 52%);
+body .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+  background-color: var(--ui-secondary-highlight-color);
 }
 /*--------------*/
 
@@ -1467,6 +1464,29 @@ td.no-border {
   border-radius: 5px;
   height: 100%;
 }
+
+.climberdb-data-table .sort-column-button {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  color: white;
+}
+.climberdb-data-table .sort-column-button span {
+  flex: 1 0 calc(100% - 20px);
+  font-weight: bold;
+}
+.climberdb-data-table .sort-column-button i {
+  opacity: 0;
+  transition: 0.25s all;
+  width: 15px;
+  float: right;
+  margin-left: 5px;
+}
+.climberdb-data-table .sort-column-button:hover i {
+  opacity: 1;
+}
+
 /*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 --------- styling for standalone data tables ------------ 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/

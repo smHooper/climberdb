@@ -17,7 +17,7 @@ class ClimberDBDashboard extends ClimberDB {
 					<div id="season-mountain-stats-card" class="card dashboard-card">
 						<h4 class="dashboard-card-header">Mountain Stats This Season</h4>
 						<div class="dashboard-card-body">
-							<table class="climberdb-dashboard-table">
+							<table class="climberdb-dashboard-table climberdb-data-table">
 								<thead>
 									<tr>
 										<th></th>
@@ -35,7 +35,7 @@ class ClimberDBDashboard extends ClimberDB {
 					<div id="flagged-groups-card" class="card dashboard-card half-height-card">
 						<h4 class="dashboard-card-header">Flagged Expeditions <span class="table-row-counter"></span></h4>
 						<div class="dashboard-card-body mt-0">
-							<table class="climberdb-dashboard-table tight-layout">
+							<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
 								<thead>
 									<tr>
 										<th>
@@ -66,7 +66,7 @@ class ClimberDBDashboard extends ClimberDB {
 					<div id="solo-climbers-card" class="card dashboard-card half-height-card">
 						<h4 class="dashboard-card-header">Confirmed Solo Climbers <span class="table-row-counter"></span></h4>
 						<div class="dashboard-card-body mt-0">
-							<table class="climberdb-dashboard-table tight-layout">
+							<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
 								<thead>
 									<tr>
 										<th>
@@ -224,7 +224,7 @@ class ClimberDBDashboard extends ClimberDB {
 					<div id="missing-sup-fee-groups-card" class="card dashboard-card">
 						<h4 class="dashboard-card-header">Missing SUP or Climber Fee <span class="table-row-counter"></span></h4>
 						<div class="dashboard-card-body">
-							<table class="climberdb-dashboard-table tight-layout">
+							<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
 								<thead>
 									<tr>
 										<th class="col-4">
@@ -273,31 +273,38 @@ class ClimberDBDashboard extends ClimberDB {
 		});
 
 		$('.sort-column-button').click(e => {
-			const $button = $(e.target).closest('.sort-column-button');
-			// if the column was already sorted and descending, then make it ascending. 
-			//	Otherwise, the column will be sorted ascending
-			let sortAscending;
-			const isSorted = $button.is('.sorted');
-			if (isSorted) {
-				sortAscending = $button.is('.descending')
-			} else {
-				sortAscending = true;
-			}
-
-			const fieldName = $button.data('field-name');
-			
-			const $card = $button.closest('.dashboard-card');
-			let data = $card.is('#flagged-groups-card') ? this.flaggedExpeditionInfo :
-				$card.is('#solo-climbers-card') ? this.soloClimberInfo :
-				this.missingPaymentOrSUPInfo;
-
-			data = this.sortDataTable($button.closest('table'), data, {sortField: fieldName, ascending: sortAscending});
-
-			$('.sort-column-button').removeClass('sorted');
-			$button.addClass('sorted')
-				.toggleClass('descending', !sortAscending);
+			this.onSortDataButtonClick(e)
 		});
 	}
+
+
+	onSortDataButtonClick(e) {
+		const $button = $(e.target).closest('.sort-column-button');
+
+		const $card = $button.closest('.dashboard-card');
+		let data = $card.is('#flagged-groups-card') ? this.flaggedExpeditionInfo :
+			$card.is('#solo-climbers-card') ? this.soloClimberInfo :
+			this.missingPaymentOrSUPInfo;
+
+		// if the column was already sorted and descending, then make it ascending. 
+		//	Otherwise, the column will be sorted ascending
+		let sortAscending;
+		const isSorted = $button.is('.sorted');
+		if (isSorted) {
+			sortAscending = $button.is('.descending')
+		} else {
+			sortAscending = true;
+		}
+
+		const fieldName = $button.data('field-name');
+		
+		data = this.sortDataTable($button.closest('table'), data, {sortField: fieldName, ascending: sortAscending});
+
+		$('.sort-column-button').removeClass('sorted');
+		$button.addClass('sorted')
+			.toggleClass('descending', !sortAscending);
+	}
+	
 
 	configureDailyMountainStats() {
 		const year = (new Date()).getFullYear()
@@ -506,50 +513,6 @@ class ClimberDBDashboard extends ClimberDB {
 			}
 
 		});
-	}
-
-
-	
-
-
-	/*
-	Return an array of objects sorted by a given field
-	*/
-	sortDataArray(data, sortField, {ascending=true}={}) {
-		return data.sort( (a, b) => {
-			// If the values are integers, make them numeric before comparing because string 
-			//	numbers have a different result than actual numbers when comparing values
-			const comparandA = a[sortField].match(/^\d+$/, a[sortField]) ? parseInt(a[sortField]) : a[sortField];
-			const comparandB = b[sortField].match(/^\d+$/, b[sortField]) ? parseInt(b[sortField]) : b[sortField];
-			return ((comparandA > comparandB) - (comparandB > comparandA)) * (ascending ? 1 : -1);
-		})
-	}
-
-
-	sortDataTable($table, data, {sortField=null, ascending=true}={}) {
-		// Clear the table
-		const $tableBody = $table.find('tbody');
-		$tableBody.find('tr:not(.cloneable)').remove();
-
-		if (sortField) {
-			data = this.sortDataArray(data, sortField, {ascending: ascending});
-		}
-
-		const cloneableHTML = $tableBody.find('tr.cloneable').prop('outerHTML');
-		for (const info of data) {
-			let html = cloneableHTML.slice(); // copy string
-			for (const fieldName in info) {
-				html = html.replaceAll(`{${fieldName}}`, info[fieldName] || '');
-			}
-			$(html).appendTo($tableBody).removeClass('hidden cloneable');
-		}
-
-		const $rowCounter = $table.closest('.dashboard-card').find('.dashboard-card-header > .table-row-counter');
-		if ($rowCounter.length) {
-			$rowCounter.text(data.length);
-		}
-
-		return data;
 	}
 
 

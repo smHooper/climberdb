@@ -19,6 +19,8 @@
 	width: 100%;
 	display: flex;
 	flex-wrap: wrap;
+	max-height: 300px;/*height: 300px seems to be the only thing that makes overflow of ul work*/
+	overflow-y: auto;
 }
 #query-option-list {
 	list-style: none;
@@ -28,7 +30,7 @@
 .query-option {
 	padding: 0 15px;
 	position: relative;
-	height: 60px;
+	height: 60px; 	
 	line-height: 60px;
 	width:  100%;
 	margin-bottom: 2px;
@@ -75,6 +77,11 @@
 	border-radius: 10px;
 	overflow-y: auto;
 }
+.table-row-counter-wrapper {
+	margin-right: 20px;
+	line-height: 40px;
+	font-weight: bold;
+}
 .climberdb-data-table {
 	max-height: 100%;
 	min-width: 100%;
@@ -101,4 +108,82 @@
 }
 .climberdb-data-table tbody tr:hover td > span.cell-content {
   background-color: #ffffff30;
+}
+
+/*select2*/
+.select2-container {
+	max-width: calc(100% - 20px);
+}
+.input-field,
+.select2-container,
+.select2-container .selection {
+	min-height: 38px;
+}
+/*for some stupid reason, the select2 field as it appears when empty doesn't extend the full 
+height of the container, so make sure it aligns with the bottom of the rest of the fields*/
+.climberdb-select2.is-empty ~ .select2-container > .selection {
+	position: relative;
+	bottom: -5px; 
+}
+
+.query-parameter-field-container {
+	display: flex;
+	flex-wrap: wrap;
+	width: 100%;
+	height: 100%;
+}
+/*.query-parameter-option-list-container {
+	display: flex;
+	flex-wrap: wrap;
+	width: 100%;
+	height: 100%;
+	padding: 0 15px;
+}*/
+.query-parameter-option-container {
+	display: flex;
+	flex-wrap: wrap;
+	padding: 0;
+	overflow-y: auto;
+	width: 100%;
+}
+.query-parameter-option-container .show-query-parameter-button {
+	height: 40px;
+	border-radius: 40px;
+	margin-right: 15px;
+	padding: 5px 10px;
+	border: solid transparent 1.5px;
+	transition: all 0.3s;
+}
+.query-parameter-option-container .show-query-parameter-button:hover, 
+.query-parameter-option-container .show-query-parameter-button:focus {
+	border-color: var(--ui-primary-text-color);
+	cursor: pointer;
+}
+.show-query-parameter-button::after {
+	content: " +";
+	font-weight: bold;
+	opacity: 0;
+	transition: 0.3s opacity
+}
+.show-query-parameter-button:hover::after,
+.show-query-parameter-button:focus::after {
+	opacity: 1;
+}
+
+.field-container {
+	max-height: 66px;
+}
+.icon-button.hide-query-parameter-button {
+	opacity: 0;
+	background: none;
+	color: var(--ui-primary-text-color);
+	height: 1.75rem;
+	width: 1.75rem;
+	border-radius: 1.75rem;
+	transition: all 0.3s;
+}
+.field-container:hover .icon-button.hide-query-parameter-button, 
+.input-field:focus ~ .icon-button.hide-query-parameter-button {
+	opacity: 1;
+	background: rgba(255, 255, 255, 0.3);
 }

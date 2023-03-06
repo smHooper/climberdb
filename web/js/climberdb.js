@@ -541,7 +541,7 @@ class ClimberDB {
 			const id = el.id;
 			if (lookupTableName != 'undefineds') {//if neither data-lookup-table or name is defined, lookupTableName === 'undefineds' 
 				if (placeholder) $('#' + id).append(`<option class="" value="">${placeholder}</option>`);
-				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${lookupTableName} WHERE sort_order IS NOT NULL ORDER BY sort_order`);
+				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${lookupTableName} ${$el.is('.include-disabled-options') ? '' : 'WHERE sort_order IS NOT NULL'} ORDER BY sort_order`);
 				
 			}
 		});
@@ -908,7 +908,7 @@ class ClimberDB {
 			.each((_, el) => {
 				const $el = $(el);
 				const $hiddenParent = $el.parents('.collapse:not(.show, .card-collapse), .card.cloneable, .field-container.disabled, .hidden');
-				$el.toggleClass('error', !$el.val() && $hiddenParent.length === 0)
+				$el.toggleClass('error', !($el.is('.climberdb-select2') ? $el.val().length : $el.val()) && $hiddenParent.length === 0)
 			})
 			.filter('.error');
 
@@ -1074,6 +1074,50 @@ class ClimberDB {
 		for (const el of $('.count-up')) {
 			this.animateCountUp(el, nFrames, frameDuration);
 		}
+	}
+
+	/*
+	Return an array of objects sorted by a given field
+	*/
+	sortDataArray(data, sortField, {ascending=true}={}) {
+		return data.sort( (a, b) => {
+			// If the values are integers, make them numeric before comparing because string 
+			//	numbers have a different result than actual numbers when comparing values
+			const comparandA = a[sortField].toString().match(/^\d+$/, a[sortField]) ? parseInt(a[sortField]) : a[sortField];
+			const comparandB = b[sortField].toString().match(/^\d+$/, b[sortField]) ? parseInt(b[sortField]) : b[sortField];
+			return ((comparandA > comparandB) - (comparandB > comparandA)) * (ascending ? 1 : -1);
+		})
+	}
+
+	/*
+	Sort an HTML table's rows by a given sort field
+	*/
+	sortDataTable($table, data, {sortField=null, ascending=true, $rowCounter=$('')}={}) {
+		// Clear the table
+		const $tableBody = $table.find('tbody');
+		$tableBody.find('tr:not(.cloneable)').remove();
+
+		if (sortField) {
+			data = this.sortDataArray(data, sortField, {ascending: ascending});
+		}
+
+		const cloneableHTML = $tableBody.find('tr.cloneable').prop('outerHTML');
+		for (const info of data) {
+			let html = cloneableHTML.slice(); // copy string
+			for (const fieldName in info) {
+				html = html.replaceAll(`{${fieldName}}`, info[fieldName] || '');
+			}
+			$(html).appendTo($tableBody).removeClass('hidden cloneable');
+		}
+
+		if (!$rowCounter.length) {
+			$rowCounter = $table.closest('.dashboard-card').find('.dashboard-card-header > .table-row-counter');
+		}
+		if ($rowCounter.length) {
+			$rowCounter.text(data.length);
+		}
+
+		return data;
 	}
 
 

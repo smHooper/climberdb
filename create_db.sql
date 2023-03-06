@@ -532,11 +532,14 @@ CREATE VIEW briefings_expedition_info_view AS
 
 
 CREATE VIEW all_climbs_view AS 
-	SELECT climbers.state_code,
+	SELECT 
+		climbers.first_name || ' ' || climbers.last_name AS climber_name,
+		climbers.state_code,
 		climbers.country_code,
 		climbers.dob,
 		climbers.age,
 		climbers.sex_code,
+		expeditions.expedition_name,
 		expeditions.planned_departure_date,
 		expeditions.actual_departure_date,
 		expeditions.actual_return_date,
@@ -555,7 +558,12 @@ CREATE VIEW all_climbs_view AS
 		expedition_member_routes.summit_date,
 		route_codes.mountain_code,
 		route_codes.name AS route_name,
-		mountain_codes.name AS mountain_name
+		mountain_codes.name AS mountain_name,
+		is_guiding,
+		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
+		actual_return_date - actual_departure_date AS trip_length_days,
+		extract(year FROM planned_departure_date) AS year,
+		to_char(planned_departure_date, 'Month') AS month
 	FROM expeditions
 		JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
 		JOIN climbers ON expedition_members.climber_id = climbers.id
