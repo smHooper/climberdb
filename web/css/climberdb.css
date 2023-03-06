@@ -1,15 +1,12 @@
 :root {
   --ui-primary-color: #219EBC;
-<<<<<<< HEAD
   --ui-primary-text-color: #00679b;
   --ui-bg-dark-blue: #023047;
   --ui-desaturated-color: #4d819b;
   --ui-primary-highlight-color: #f28100;
   --ui-secondary-highlight-color: #faaf00;
-=======
   --climberdb-header-menu-height: 60px;
   --fuzzy-search-bar-height: 60px;
->>>>>>> main
 }
 
 html, body {
