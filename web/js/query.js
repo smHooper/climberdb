@@ -14,7 +14,6 @@ class ClimberDBQuery extends ClimberDB {
 		}
 		this.queries = {
 			guide_company_client_status: {
-				tags: ['guide', 'guiding', 'accounting'],
 				sql: 
 					`
 					SELECT DISTINCT
@@ -92,7 +91,6 @@ class ClimberDBQuery extends ClimberDB {
 				}
 			},
 			guided_company_briefings: {
-				tags: ['guide', 'guiding', 'briefing'],
 				sql: 
 					`
 						SELECT
@@ -124,7 +122,6 @@ class ClimberDBQuery extends ClimberDB {
 				}
 			},
 			count_per_guide_company: {
-				tags: [],
 				sql: 
 					`	
 						SELECT 
@@ -202,28 +199,29 @@ class ClimberDBQuery extends ClimberDB {
 	configureMainContent() {
 		$('.main-content-wrapper').append(`
 			<div class="query-options-sidebar col-3">
-				<input id="query-option-search-input" class="fuzzy-search-bar" placeholder="Type to search for queries" title="Search for queries">
+				<input id="query-option-search-input" class="fuzzy-search-bar w-100" placeholder="Type to search for queries" title="Search for queries">
 				<ul id="query-option-list">
-					<li class="query-option" role="button" data-query-name="guide_company_client_status">Guided Client Status</li>
-					<li class="query-option" role="button" data-query-name="guided_company_briefings">Guide Company Briefings</li>
-					<li class="query-option" role="button" data-query-name="count_per_guide_company">Expeditions/Climbers Per Guide Company</li>
-					<li class="query-option" role="button" data-query-name="count_climbers">Query Climbers/Climbs</li>
-					<li id="climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">Total climbers per mountain</li>
-					<li id="guided-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">Guided climbers per mountain</li>
-					<li id="independent-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">Independent climbers per mountain</li>
-					<li id="nps-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">NPS climbers per mountain</li>
-					<li id="female-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">Female climbers per mountain</li>
-					<li id="total-summits-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">Total summits per mountain</li>
-					<li id="female-summits-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers">Female summits per mountain</li>
-					<li id="count-route-attempts-query-button" class="query-option" role="button" data-query-name="count_climbers">Count attempts per route</li>
-					<li id="count-route-summits-query-button" class="query-option" role="button" data-query-name="count_climbers">Count summits per route</li>
-					<li id="count-climbers-per-country-query-button" class="query-option" role="button" data-query-name="count_climbers">Count climbers per country</li>
-					<li id="count-climbers-per-state-query-button" class="query-option" role="button" data-query-name="count_climbers">Count climbers per state</li>
-					<li id="count-guides-by-gender-query-button" class="query-option" role="button" data-query-name="count_climbers">Count guides by gender</li>
-					<li id="count-nps-by-gender-query-button" class="query-option" role="button" data-query-name="count_climbers">Count NPS patrollers by gender</li>
-					<li id="count-summits-per-month-query-button" class="query-option" role="button" data-query-name="count_climbers">Count summits per month</li>
-					<li id="count-summits-per-day-query-button" class="query-option" role="button" data-query-name="count_climbers">Count summits per day</li>
+					<li class="query-option" role="button" data-query-name="guide_company_client_status" data-tags="guide, guiding, accounting, status">Guided Client Status</li>
+					<li class="query-option" role="button" data-query-name="guided_company_briefings" data-tags="guide, guiding, briefing, status">Guide Company Briefings</li>
+					<li class="query-option" role="button" data-query-name="count_per_guide_company" data-tags="guide, guiding, expeditions, climbers">Expeditions/Climbers Per Guide Company</li>
+					<li class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, route">Query Climbers/Climbs</li>
+					<li id="climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="total, climber, mountain">Total climbers per mountain</li>
+					<li id="guided-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="guide, climber, mountain">Guided climbers per mountain</li>
+					<li id="independent-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="independent, climber, mountain">Independent climbers per mountain</li>
+					<li id="nps-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="nps, climber, mountain">NPS climbers per mountain</li>
+					<li id="female-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="female, women, climber, mountain">Female climbers per mountain</li>
+					<li id="total-summits-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="total, summit, mountain">Total summits per mountain</li>
+					<li id="female-summits-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="female, women, summit, mountain">Female summits per mountain</li>
+					<li id="count-route-attempts-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="climbs, attempts, route">Count attempts per route</li>
+					<li id="count-route-summits-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, route">Count summits per route</li>
+					<li id="count-climbers-per-country-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, country">Count climbers per country</li>
+					<li id="count-climbers-per-state-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, state">Count climbers per state</li>
+					<li id="count-guides-by-gender-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="gender, guide, guiding. female, women">Count guides by gender</li>
+					<li id="count-nps-by-gender-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="nps, gender, female, women">Count NPS patrollers by gender</li>
+					<li id="count-summits-per-month-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, month">Count summits per month</li>
+					<li id="count-summits-per-day-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, day">Count summits per day</li>
 				</ul>
+				<h4 id="no-query-match-message" class="hidden" aria-hidden="true">No queries match your search</h4>
 			</div>
 			<div class="query-details-container col-9">
 				<div class="query-parameters-header">
@@ -526,6 +524,10 @@ class ClimberDBQuery extends ClimberDB {
 			this.onInputChange(e);
 		});
 
+		$('#query-option-search-input').keyup(e => {
+			this.onSearchBarKeyUp(e);
+		})
+
 		$(document).on('click', '.sort-column-button', e => {
 			this.onSortDataButtonClick(e);
 		});
@@ -601,6 +603,52 @@ class ClimberDBQuery extends ClimberDB {
 		} catch {
 			return
 		}
+	}
+
+
+	filterQueryOptions({searchString=''}={}) {
+		let $queryOptions = $('.query-option');
+		const $noMatchMessage = $('#no-query-match-message').ariaHide(true);
+		const $queryList = $('#query-option-list').ariaHide(false);
+
+		// make sure matches aren't case-sensitive
+		searchString = searchString.toLowerCase();
+		
+		// If the search string is blank, show all queries
+		if (!searchString.length) {
+			$queryOptions.ariaHide(false);
+		} else {
+			// first try to find all queries that include the search string
+			let $matches = $queryOptions.filter(
+				(_, el) => el.innerHTML.toLowerCase().includes(searchString)
+			);
+
+			// next find all query options that have a tag that matches the search string
+			$matches = $matches.add($queryOptions.filter(
+				(_, el) => {
+					const tags = $(el).data('tags').split(',').map(tag => tag.trim().toLowerCase());
+					return tags.includes(searchString);
+				}
+			))
+			.ariaHide(false); // show all matches
+
+			if ($matches.length) {
+				// hide all that aren't matches
+				$queryOptions.not($matches).ariaHide(true);
+			} else {
+				// if there aren't any matches show the null match message
+				$noMatchMessage.ariaHide(false);
+				$queryList.ariaHide(true);
+			}
+			
+		}
+	}
+
+
+	onSearchBarKeyUp(e) {
+		const $searchBar = $(e.target);
+		const searchString = $searchBar.val();
+		this.filterQueryOptions({searchString: searchString});
 	}
 
 	/*Set CSS style based on select value*/
@@ -1121,7 +1169,7 @@ class ClimberDBQuery extends ClimberDB {
 			// Get pivot field
 			const $pivotFieldSelect = $('#count_climbers-pivot_field');
 			pivotField = $pivotFieldSelect.val();
-			const pivotAlias = pivotField ? $pivotFieldSelect.find(`option[value=${pivotField}]`).text() : '';
+			pivotAlias = pivotField ? $pivotFieldSelect.find(`option[value=${pivotField}]`).text() : '';
 			const pivotSelect = pivotField.endsWith('_code') ? 
 				`${pivotField}s.name AS "${pivotAlias}"` :
 				`${pivotField} AS "${pivotAlias}"`

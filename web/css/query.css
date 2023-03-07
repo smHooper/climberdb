@@ -1,3 +1,6 @@
+:root {
+	--search-bar-padding: 20px;
+}
 .main-content-wrapper {
 	display: flex;
 	flex-wrap: nowrap;
@@ -5,6 +8,7 @@
 }
 .fuzzy-search-bar {
 	text-indent: 0;
+	margin-bottom: var(--search-bar-padding);
 }
 .query-options-sidebar {
 	height: 100%;
@@ -24,8 +28,11 @@
 }
 #query-option-list {
 	list-style: none;
-	padding: 30px 0px 10px 0px;
-	width: 100%;;
+	padding: 0;
+	width: 100%;
+	overflow: auto;
+	height: calc(100% - var(--fuzzy-search-bar-height) - var(--search-bar-padding));
+	margin: 0;
 }
 .query-option {
 	padding: 0 15px;

@@ -902,7 +902,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		// Handle keyboard and click events for expedition search bar
 		$('.fuzzy-search-bar.expedition-search-bar').keyup( e => {
-			this.onExpeditionSearchBarKeyup(e);
+			this.onExpeditionSearchBarKeyUp(e);
 		}).click(e => {
 			// Toggle the options drawer when the search bar is clicked
 			const $optionsDrawer = $(e.target).siblings('.expedition-options-container.collapse');
@@ -1480,7 +1480,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Keyboard event handler while expedition search bar has focus.
 	*/
-	onExpeditionSearchBarKeyup(e) {
+	onExpeditionSearchBarKeyUp(e) {
 		const $searchBar = $(e.target);
 		const $searchOptionDrawer = $searchBar.siblings('.fuzzy-search-bar-drawer');
 		const $searchBarOptions = $searchOptionDrawer.find('.expedition-search-bar-option')
