@@ -576,6 +576,43 @@ CREATE VIEW registered_climbs_view AS
 	SELECT * FROM all_climbs_view
 	WHERE reservation_status_code <> 6 AND group_status_code <> 6;
 
+CREATE VIEW solo_climbs_view AS 
+	SELECT 
+		t.expedition_id,
+		expedition_members.id AS expedition_member_id,
+		t.route_code,
+		expedition_members.climber_id,
+		expeditions.actual_departure_date,
+		climbers.last_name || ', ' || climbers.first_name AS climber_name,
+		route_codes.name AS route_name,
+		group_status_code,
+		CASE 
+			WHEN group_status_codes.name = 'Done and off mountain' THEN 'Off mountain' 
+			ELSE group_status_codes.name 
+		END AS status,
+		to_char(
+			coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date),
+			'Mon DD'
+		) AS departure,
+		coalesce(actual_departure_date, planned_departure_date) AS departure_date,
+		to_char(expeditions.planned_return_date, 'Mon DD') AS planned_return,
+		planned_return_date
+	FROM expeditions
+	JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
+	JOIN climbers ON expedition_members.climber_id = climbers.id
+	JOIN group_status_codes ON group_status_code = group_status_codes.code
+	JOIN ( 
+			SELECT
+				expedition_members_1.expedition_id,
+				expedition_member_routes.route_code,
+				count(*) AS count
+			FROM expedition_members expedition_members_1
+			JOIN expedition_member_routes ON expedition_members_1.id = expedition_member_routes.expedition_member_id
+			GROUP BY expedition_members_1.expedition_id, expedition_member_routes.route_code
+		) t ON expeditions.id = t.expedition_id
+	JOIN route_codes ON t.route_code=route_codes.code 
+	WHERE t.count = 1 AND (expeditions.actual_departure_date IS NOT NULL OR expeditions.group_status_code = 3)
+
 
 
 CREATE MATERIALIZED VIEW table_info_matview AS 

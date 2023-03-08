@@ -551,27 +551,11 @@ class ClimberDBDashboard extends ClimberDB {
 
 		const year = new Date().getFullYear();
 		const sql = `
-			SELECT 
-				solo_climbs_view.expedition_id,
-				climbers.last_name || ', ' || climbers.first_name AS climber_name,
-				route_codes.name AS route_name,
-				CASE 
-					WHEN group_status_codes.name = 'Done and off mountain' THEN 'Off mountain' 
-					ELSE group_status_codes.name 
-				END AS status,
-				to_char(
-					coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date),
-					'Mon DD'
-				) AS departure,
-				to_char(expeditions.planned_return_date, 'Mon DD') AS planned_return
+			SELECT DISTINCT ON (climber_id) *
 			FROM solo_climbs_view 
-			JOIN expeditions ON solo_climbs_view.expedition_id = expeditions.id 
-			JOIN climbers ON solo_climbs_view.climber_id = climbers.id
-			JOIN route_codes ON solo_climbs_view.route_code=route_codes.code 
-			JOIN group_status_codes ON group_status_code = group_status_codes.code
 			WHERE 
-				planned_departure_date >= '${year}-1-1' AND 
-				group_status_code IN (3, 4, 5)
+				departure_date >= '2023-1-1' AND 
+				group_status_code IN (3, 4);
 		`;
 		return this.queryDB(sql)
 			.done(queryResultString => {
