@@ -275,10 +275,8 @@ input:checked:focus + .slider:before {
 
 
 /*-------select2 styling--------*/
-.climberdb-main .select2-container--default 
-  .select2-selection--multiple,
-.climberdb-main .select2-container--default 
-  .select2-selection--single,
+.climberdb-main .select2-container--default .select2-selection--multiple,
+.climberdb-main .select2-container--default .select2-selection--single,
 .query-option-operator,
 .query-option-input-field  {
   background-color: rgba(0, 0, 0, 0);
@@ -287,36 +285,28 @@ input:checked:focus + .slider:before {
   border-radius: 0px;
   transition: all 0.2s;
 }
-.climberdb-main .select2-container--default.select2-container--focus 
-  .select2-selection--multiple,
-.climberdb-main .select2-container--default.select2-container--focus 
-  .select2-selection--single,
+.climberdb-main .select2-container--default.select2-container--focus .select2-selection--multiple,
+.climberdb-main .select2-container--default.select2-container--focus .select2-selection--single,
 .query-option-operator:focus,
 .query-option-input-field:focus  { /*the select box*/
   border: none;
   border-bottom: solid rgba(0, 0, 0, 0.6) 2px;
 }
-.climberdb-main .select2-container--default .select2-selection--multiple 
-  .select2-selection__choice,
-.climberdb-main .select2-container--default .select2-selection--single 
-  .select2-selection__choice {/*the selected item pill*/
+.climberdb-main .select2-container--default .select2-selection--multiple .select2-selection__choice,
+.climberdb-main .select2-container--default .select2-selection--single .select2-selection__choice {/*the selected item pill*/
   background: transparent;
   color: var(--ui-bg-dark-blue);
   border: solid transparent 1.5px;
   border-radius: 2rem;
   transition: all .2s;
 }
-.climberdb-main .select2-container--default .select2-selection--multiple 
-  .select2-selection__choice:hover,
-.climberdb-main .select2-container--default .select2-selection--single 
-  .select2-selection__choice:hover {
+.climberdb-main .select2-container--default .select2-selection--multiple .select2-selection__choice:hover,
+.climberdb-main .select2-container--default .select2-selection--single .select2-selection__choice:hover {
   border: solid var(--ui-bg-dark-blue) 1.5px;
 
 }
-.climberdb-main .select2-container--default .select2-selection--multiple 
-  .select2-selection__choice__remove,
-.climberdb-main .select2-container--default .select2-selection--single 
-  .select2-selection__choice__remove {
+.climberdb-main .select2-container--default .select2-selection--multiple .select2-selection__choice__remove,
+.climberdb-main .select2-container--default .select2-selection--single .select2-selection__choice__remove {
   border: none;
   color: var(--ui-bg-dark-blue);
   background-color: transparent;
@@ -333,10 +323,8 @@ input:checked:focus + .slider:before {
   .select2-selection__choice__remove:hover {
   background: rgba(0, 0, 0, 0.2);
 }*/
-.climberdb-main .select2-container--default .select2-selection--multiple 
-  .select2-selection__choice__remove span,
-.climberdb-main .select2-container--default .select2-selection--single 
-  .select2-selection__choice__remove span { /*the x*/
+.climberdb-main .select2-container--default .select2-selection--multiple .select2-selection__choice__remove span,
+.climberdb-main .select2-container--default .select2-selection--single .select2-selection__choice__remove span { /*the x*/
   font-size: 1.5rem;
   position: relative;
   top: -.65rem;
