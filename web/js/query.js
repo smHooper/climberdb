@@ -12,6 +12,7 @@ class ClimberDBQuery extends ClimberDB {
 			members:  'SELECT DISTINCT ON (expedition_member_id) * FROM all_climbs_view',
 			climbs:   'SELECT * FROM all_climbs_view',
 		}
+		this.minDragbarPageY = 190; // min height to prevent user from covering query title when resizing param container
 		this.queries = {
 			guide_company_client_status: {
 				sql: 
@@ -201,9 +202,9 @@ class ClimberDBQuery extends ClimberDB {
 			<div class="query-options-sidebar col-3">
 				<input id="query-option-search-input" class="fuzzy-search-bar w-100" placeholder="Type to search for queries" title="Search for queries">
 				<ul id="query-option-list">
-					<li class="query-option" role="button" data-query-name="guide_company_client_status" data-tags="guide, guiding, accounting, status">Guided Client Status</li>
-					<li class="query-option" role="button" data-query-name="guided_company_briefings" data-tags="guide, guiding, briefing, status">Guide Company Briefings</li>
-					<li class="query-option" role="button" data-query-name="count_per_guide_company" data-tags="guide, guiding, expeditions, climbers">Expeditions/Climbers Per Guide Company</li>
+					<li class="query-option not-expandable" role="button" data-query-name="guide_company_client_status" data-tags="guide, guiding, accounting, status">Guided Client Status</li>
+					<li class="query-option not-expandable" role="button" data-query-name="guided_company_briefings" data-tags="guide, guiding, briefing, status">Guide Company Briefings</li>
+					<li class="query-option not-expandable" role="button" data-query-name="count_per_guide_company" data-tags="guide, guiding, expeditions, climbers">Expeditions/Climbers Per Guide Company</li>
 					<li class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, route">Query Climbers/Climbs</li>
 					<li id="climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="total, climber, mountain">Total climbers per mountain</li>
 					<li id="guided-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="guide, climber, mountain">Guided climbers per mountain</li>
@@ -478,6 +479,10 @@ class ClimberDBQuery extends ClimberDB {
 					<button id="run-query-button" class="generic-button hidden" title="Run query">Run query</button>
 				</div>
 
+				<div id="query-parameter-dragbar" class="dragbar resize-query-parameter-contianer vertical-resize">
+					<div class="visible-dragbar"></div> <!--to make the clickable area larger but reduce visual weight-->
+				</div>
+
 				<div class="w-100 d-flex justify-content-end">
 					<div class="table-row-counter-wrapper hidden" aria-hidden="true">
 						Number of results: <span class="table-row-counter"></span>
@@ -490,6 +495,11 @@ class ClimberDBQuery extends ClimberDB {
 				</div>
 			</div>
 		`);
+		
+		// filter query options when the user searches
+		$('#query-option-search-input').keyup(e => {
+			this.onSearchBarKeyUp(e);
+		});
 
 		// Show query parameters (if there are any) when a query option is clicked
 		$('.query-option').click(e => {this.onQueryOptionClick(e)});
@@ -524,9 +534,16 @@ class ClimberDBQuery extends ClimberDB {
 			this.onInputChange(e);
 		});
 
-		$('#query-option-search-input').keyup(e => {
-			this.onSearchBarKeyUp(e);
+		$('#query-parameter-dragbar').mousedown(e => {
+			this.onDragbarMouseDown(e);
 		})
+		// mouseup and mousedown events only fire if the mouse gesture occurs while 
+		//	the cursor is over the element the event listener is attached to. So it 
+		//	needs to be attached to the body, not that dragbar since the event 
+		//	fires before the dragbar moves
+		$('body').mouseup(e => {
+			this.onDragbarMouseUp(e);
+		});
 
 		$(document).on('click', '.sort-column-button', e => {
 			this.onSortDataButtonClick(e);
@@ -681,10 +698,9 @@ class ClimberDBQuery extends ClimberDB {
 		}
 	}
 
-	/*count by options should automatically adjust depedning on the group by selection or user should receive warning*/
-
-
-
+	/*
+	Show the query parameters for the clicked query
+	*/
 	onQueryOptionClick(e) {
 		// Deselect previous selection
 		const $previousOption = $('.query-option.selected').removeClass('selected');
@@ -695,13 +711,17 @@ class ClimberDBQuery extends ClimberDB {
 		// Select clicked option and show assoicated inputs
 		const $option = $(e.target).addClass('selected');
 		const $container = $(`.query-parameters-container[data-query-name="${$option.data('query-name')}"]`).ariaHide(false);
-		// set inline CSS height because some queries need to to make scrolling work properly
-		//$container.height($container.height());
 
-		// Make sure 
+		// Make sure:
 		$('#run-query-button').ariaHide(false); 		// the run button is visible
 		$('#open-reports-modal-button, .table-row-counter-wrapper').ariaHide(true); // export button is hidden
 		$('.query-result-container').empty();			// any previous result is deleted
+		$('.query-parameters-container')                // parameter container height is reset
+			.css('max-height', 'var(--query-parameter-container-height)'); 
+
+		// The dragbar should only be visible if the query allows it
+		$('#query-parameter-dragbar').ariaHide($option.is('.not-expandable'))
+			.data('last-dragged-y', window.screen.height);
 	}
 
 
@@ -948,6 +968,61 @@ class ClimberDBQuery extends ClimberDB {
 				` choose a different "${targetLabelText}" value or change the "${otherLabelText}" value.`;
 			showModal(message, `Invalid ${targetLabelText} value`);
 		}
+	}
+
+
+	resizeQueryParameterContainer(e) {
+		const mouseYCoordinate = e.pageY;
+		const $container = $('.query-parameters-container:not(.hidden)');
+		const $dragbar = $('#query-parameter-dragbar');
+		const lastDraggedYCoordinate = $dragbar.data('last-dragged-y') || window.screen.height;
+
+		// if the container no longer needs to scroll, don't let the user keep expanding it
+		if (	
+				// user is trying to expand the div
+				lastDraggedYCoordinate < mouseYCoordinate && 
+				// the container is as tall as its contents
+				$container[0].scrollHeight <= $container[0].offsetHeight
+			) {
+			return;
+		}
+
+		// Also make sure the result table will show at least 1 row
+		const maxMouseYCoordinate = $('.main-content-wrapper')[0].offsetHeight 
+			- $('.query-details-container').css('padding').replace('px', '') // make sure padding is accommodated for
+			- ($(':root').css('--climberdb-data-table-row-height').replace('px', '') * 2); // make sure header and 1 row of table is visible
+		if (mouseYCoordinate > maxMouseYCoordinate) {
+			return;
+		}
+		
+		const currentHeight = parseInt($container.css('height').replace('px', ''));
+		const offset = this.minDragbarPageY - $('#run-query-button')[0].offsetHeight;
+		const newHeight = (mouseYCoordinate - offset) + 'px';
+		$container
+			.css('height', newHeight)
+			.css('max-height', newHeight);
+
+		$dragbar.data('last-dragged-y', mouseYCoordinate);
+	}
+
+
+	/*
+	When a user clicks the dragbar, 
+	*/
+	onDragbarMouseDown(e) {
+		e.preventDefault();
+		const $dragbar = $('#query-parameter-dragbar').addClass('resizing');
+		$('body').mousemove(e => {
+			this.resizeQueryParameterContainer(e)
+		});
+	}
+
+	/*
+	When the user releases the dragbar, remove the mousemove event and the .resizing class
+	*/
+	onDragbarMouseUp(e) {
+		$('#query-parameter-dragbar').removeClass('resizing');
+		$('body').off('mousemove');
 	}
 
 
