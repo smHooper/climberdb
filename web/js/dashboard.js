@@ -551,11 +551,13 @@ class ClimberDBDashboard extends ClimberDB {
 
 		const year = new Date().getFullYear();
 		const sql = `
-			SELECT DISTINCT ON (climber_id) *
-			FROM solo_climbs_view 
-			WHERE 
+			SELECT * FROM (
+				SELECT DISTINCT ON (climber_id) *
+				FROM solo_climbs_view 
+				WHERE 
 				departure_date >= '2023-1-1' AND 
-				group_status_code IN (3, 4);
+				group_status_code IN (3, 4)
+			) _ ORDER BY departure_date
 		`;
 		return this.queryDB(sql)
 			.done(queryResultString => {
