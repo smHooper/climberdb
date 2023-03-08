@@ -1482,7 +1482,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	*/
 	onExpeditionSearchBarKeyUp(e) {
 		const $searchBar = $(e.target);
-		const $searchOptionDrawer = $searchBar.siblings('.fuzzy-search-bar-drawer');
+		const $searchOptionDrawer = $searchBar.siblings('.expedition-options-container');
 		const $searchBarOptions = $searchOptionDrawer.find('.expedition-search-bar-option')
 
 		// If the user pressed the escape key, hide the options drawer
