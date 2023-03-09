@@ -222,3 +222,38 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 .dragbar.resizing > .visible-dragbar {
 	opacity: 1;
 }
+
+.query-option-double-value-container {
+	height: 100%;
+}
+/*for datetime fields, if the operator is BETWEEN and therefore 
+2 fields are showing, make the field-container extra-wide*/
+@media (min-width: 768px) {
+	.field-container.is-between {
+		flex: 0 0 100%;
+		max-width: 100%;
+	}
+	.field-container.is-between .datetime-query-operator {
+		align-self: center;
+	}
+	.field-container.is-between .query-option-double-value-container,
+	.field-container.is-between .double-value-field {
+		display: flex;
+		flex: 1 1 auto;
+		max-width: 100%;
+	}
+	.field-container.is-between .query-option-double-value-container span {
+		margin-right: 10px;
+		margin-left: 10px;
+		align-self: center;
+	}
+}
+@media (min-width: 992px) {
+	.field-container.is-between {
+		flex: 0 0 50%;
+		max-width: 50%;
+	}
+	.field-container.is-between .datetime-query-operator {
+		align-self: flex-end;
+	}
+}

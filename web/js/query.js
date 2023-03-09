@@ -434,6 +434,26 @@ class ClimberDBQuery extends ClimberDB {
 							<label class="field-label" for="count_climbers-summited">Summited?</label>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<div class="where-clause-date-field-container col d-flex">
+								<select id="count_climbers-summit_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+									<option value="=" selected>equals</option>
+									<option value="<=">is before</option>
+									<option value=">=">is after</option>
+									<option value="BETWEEN">is between</option>
+								</select>
+								<input id="count_climbers-summit_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="summit_date" name="summit_date" data-validation-field-name="Summit date">
+								<div class="query-option-double-value-container hidden">
+									<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="summit_date" data-validation-field-name="Summit date" aria-hidden="true" required>
+									<span>and</span>
+									<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="summit_date" data-validation-field-name="Summit date" aria-hidden="true" required>
+								</div>
+							</div>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-summit_date_operator">Summit date</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-is_guiding" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field" name="is_guiding" required>
 								<option value="">Is guiding (yes/no)</option>
 								<option value="true">Yes</option>
@@ -471,6 +491,86 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-year">Year</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<div class="where-clause-date-field-container col d-flex">
+								<select id="count_climbers-planned_departure_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+									<option value="=" selected>equals</option>
+									<option value="<=">is before</option>
+									<option value=">=">is after</option>
+									<option value="BETWEEN">is between</option>
+								</select>
+								<input id="count_climbers-planned_departure_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="planned_departure_date" name="planned_departure_date" data-validation-field-name="Planned departure">
+								<div class="query-option-double-value-container hidden">
+									<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" data-validation-field-name="Planned departure" aria-hidden="true" required>
+									<span>and</span>
+									<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" data-validation-field-name="Planned departure" aria-hidden="true" required>
+								</div>
+							</div>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-planned_departure_date_operator">Planned departure</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<div class="where-clause-date-field-container col d-flex">
+								<select id="count_climbers-planned_return_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+									<option value="=" selected>equals</option>
+									<option value="<=">is before</option>
+									<option value=">=">is after</option>
+									<option value="BETWEEN">is between</option>
+								</select>
+								<input id="count_climbers-planned_return_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="planned_return_date" name="planned_return_date" data-validation-field-name="Planned return">
+								<div class="query-option-double-value-container hidden">
+									<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="planned_return_date" data-validation-field-name="Planned return" aria-hidden="true" required>
+									<span>and</span>
+									<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="planned_return_date" data-validation-field-name="Planned return" aria-hidden="true" required>
+								</div>
+							</div>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-planned_return_date_operator">Planned return</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<div class="where-clause-date-field-container col d-flex">
+								<select id="count_climbers-actual_departure_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+									<option value="=" selected>equals</option>
+									<option value="<=">is before</option>
+									<option value=">=">is after</option>
+									<option value="BETWEEN">is between</option>
+								</select>
+								<input id="count_climbers-actual_departure_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="actual_departure_date" name="actual_departure_date" data-validation-field-name="Actual departure">
+								<div class="query-option-double-value-container hidden">
+									<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="actual_departure_date" data-validation-field-name="Actual departure" aria-hidden="true" required>
+									<span>and</span>
+									<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="actual_departure_date" data-validation-field-name="Actual departure" aria-hidden="true" required>
+								</div>
+							</div>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-actual_departure_date_operator">Actual departure</label>
+						</div>
+						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+							<div class="where-clause-date-field-container col d-flex">
+								<select id="count_climbers-actual_return_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+									<option value="=" selected>equals</option>
+									<option value="<=">is before</option>
+									<option value=">=">is after</option>
+									<option value="BETWEEN">is between</option>
+								</select>
+								<input id="count_climbers-actual_return_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="actual_return_date" name="actual_return_date" data-validation-field-name="Actual return">
+								<div class="query-option-double-value-container hidden">
+									<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="actual_return_date" data-validation-field-name="Actual return" aria-hidden="true" required>
+									<span>and</span>
+									<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="actual_return_date" data-validation-field-name="Actual return" aria-hidden="true" required>
+								</div>
+							</div>
+							<button class="icon-button hide-query-parameter-button">
+								<i class="fas fa-lg fa-times"></i>
+							</button>
+							<label class="field-label" for="count_climbers-actual_return_date_operator">Actual return</label>
 						</div>
 					</div>
 
@@ -543,6 +643,10 @@ class ClimberDBQuery extends ClimberDB {
 		//	fires before the dragbar moves
 		$('body').mouseup(e => {
 			this.onDragbarMouseUp(e);
+		});
+
+		$('.datetime-query-operator').change(e => {
+			this.onDatetimeQueryOperatorChange(e)
 		});
 
 		$(document).on('click', '.sort-column-button', e => {
@@ -936,7 +1040,12 @@ class ClimberDBQuery extends ClimberDB {
 	*/
 	onHideQueryParameterButtonClick(e) {
 		const $fieldContainer = $(e.target).closest('.field-container').collapse('hide');
-		const fieldName = $fieldContainer.find('.input-field').attr('name');
+		
+		// since datetime fields have multuple input-fields, but only one has the name attribute,
+		//	filter for .input-fields that have a truthy name
+		const fieldName = $fieldContainer.find('.input-field')
+			.filter((_, el) => el.name) 
+			.attr('name');
 
 		$fieldContainer.closest('.query-parameters-container')
 			.find(`.show-query-parameter-button[data-field-name=${fieldName}]`)
@@ -968,6 +1077,18 @@ class ClimberDBQuery extends ClimberDB {
 				` choose a different "${targetLabelText}" value or change the "${otherLabelText}" value.`;
 			showModal(message, `Invalid ${targetLabelText} value`);
 		}
+	}
+
+
+	/*
+	Toggle between showing the single and double value field if the operator is "BETWEEN"
+	*/
+	onDatetimeQueryOperatorChange(e) {
+		const $target = $(e.target);
+		const isBetween = $target.val() === 'BETWEEN';
+		$target.siblings('.single-value-field').ariaHide(isBetween);
+		$target.siblings('.query-option-double-value-container').ariaHide(!isBetween);
+		$target.closest('.field-container').toggleClass('is-between', isBetween);
 	}
 
 
@@ -1096,7 +1217,7 @@ class ClimberDBQuery extends ClimberDB {
 		if (!isValid) {
 			const $errors = $('.error');
 			const $firstErrorField = $errors.first();
-			const firstErrorFieldName = $firstErrorField.siblings('.field-label').text();
+			const firstErrorFieldName = $firstErrorField.data('validation-field-name') || $firstErrorField.siblings('.field-label').text();
 			const message = `The field <strong>${firstErrorFieldName}</strong> must be filled` +
 				' in before you can run this query.';
 			const eventHandler = () => {$('#alert-modal .confirm-button').click(() => {$firstErrorField.focus()})}
@@ -1207,15 +1328,34 @@ class ClimberDBQuery extends ClimberDB {
 
 		if (!this.validateFields('count_climbers')) return;
 
-		const $whereFields = $(
-				'.query-parameters-container[data-query-name="count_climbers"] .where-clause-field:not(.hidden):not(.collapse)'
-			)
+		const $container = $('.query-parameters-container[data-query-name="count_climbers"]');
+		const $whereFields = $container.find(`
+				.field-container.collapse.show .where-clause-field:not(.hidden), 
+				.field-container.collapse.show .where-clause-field.datetime-query-option
+			`)
 			.filter((_, el) => !$(el).closest('.collapse:not(.show)').length)
-		const whereClauses = $whereFields.map(
-				(_, el) => el.multiple ? `${el.name} IN (${$(el).val().join(',')})` : `${el.name} = ${el.value}`
-			).get()
+		const whereClauses = $whereFields.map((_, el) => {
+				const $el = $(el);
+				// If this is a datetime query option, need to combine it with the operator value
+				if ($el.is('.datetime-query-option')) {
+					const operator = $el.siblings('.query-option-operator').val();
+					const $betweenFields = $el.siblings('.query-option-double-value-container').find('.double-value-field');
+					const whereValue = operator === 'BETWEEN' ? 
+						$betweenFields.map((_, f) => `'${f.value}'`).get().join(' AND ') :
+						`'${$el.val()}'`;
+					return `${el.name} ${operator} ${whereValue}`;
+				} 
+				// Otherwise, it's a normal field. In this case, multiple select values need to be gathered in an array, whereas normal fields just need 'fieldname = value'
+				else {
+					return el.multiple ? 
+						`${el.name} IN (${$(el).val().join(',')})` : 
+						`${el.name} = ${el.value}`;
+				}
+			}).get()
 			.join(' AND ');
-		const whereFields = Object.fromEntries($whereFields.map((_, el) => [[el.name, $(el).siblings('.field-label').text()]]).get());
+		const whereFields = Object.fromEntries(
+			$whereFields.map((_, el) => [[el.name, $(el).data('validation-field-name') || $(el).siblings('.field-label').text()]]).get()
+		);
 
 		let pivotField = '',
 			pivotAlias = '',

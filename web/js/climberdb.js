@@ -907,7 +907,7 @@ class ClimberDB {
 			.not('.hidden')
 			.each((_, el) => {
 				const $el = $(el);
-				const $hiddenParent = $el.parents('.collapse:not(.show, .card-collapse), .card.cloneable, .field-container.disabled, .hidden');
+				const $hiddenParent = $el.parents('.collapse:not(.show, .card-collapse), .card.cloneable, .hidden');
 				$el.toggleClass('error', !($el.is('.climberdb-select2') ? $el.val().length : $el.val()) && $hiddenParent.length === 0)
 			})
 			.filter('.error');
