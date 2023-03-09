@@ -1,0 +1,92 @@
+<!doctype html>
+<head>
+	<title>Confirmation Letter - {{expedition_name}}</title>
+	<link rel=stylesheet href="{{ url_for('static', filename='confirmation_letter.css') }}" />
+
+<body>
+	<section class="letterhead">
+	    <div class="img-container-left">
+	    	<img class="letterhead-logo" src="{{ url_for('static', filename='doi_letterhead_logo.png') }}">
+	    </div>
+	    <div class="img-container-right">
+	    	<img class="letterhead-logo" src="{{ url_for('static', filename='nps_letterhead_logo.png') }}">
+	    </div>
+	    <div class="letterhead-text">
+			<p class="letterhead-address">
+				<span class="large-text">United States Department of the Interior</span><br>
+				<span class="uppercase">National Park Service</span><br>
+				<span>Denali National Park &amp; Preserve</span><br>
+				<span>Walter Harper Talkeetna Ranger Station</span><br>
+				<span>22241 S. B Street</span><br>
+				<span>Talkeetna, AK  99676</span><br>
+			</p>
+	    </div>
+	</section>
+	<section class="greeting">
+		<p>
+			{{current_date}}<br>
+			{{expedition_name}}<br>
+			<br>
+			Dear {{leader_full_name}},<br>
+		</p>
+	</section>
+	<section class="letter-body">
+		<p>
+			This letter confirms that the National Park Service has received registrations for your entire expedition and that 
+			you have completed all required steps for your trip departing on {{planned_departure_date}}.
+		</p>
+		<p>
+			Your payment of ${{ total_payment }} for {{ total_climbers }} climber{{'s' if climbers|length > 1 else ''}} in your expedition has been processed. The
+			 climbers registered for your expedition are: 
+			 <ul class="climber-list">
+			     {% for climber in climbers %}
+			         <li>{{ climber.full_name }}</li>
+			     {% endfor %}
+			 </ul>
+		</p>
+
+		<p>
+			Climbers are requested to pay the National Park entrance fee of $15 per person prior to arrival at the Walter Harper
+			 Talkeetna Ranger Station in Talkeetna, AK. Valid interagency passes are accepted in lieu of the entrance fee payment
+			 when presented at check-in. Climbing permits will not be issued more than 24 hours before your departure date.
+		</p>
+		<p>
+			If you cancel your climb on or before February 15, all but ${{cancellation_fee}} of the registration fee will be refunded.
+			 Cancellations after February 15 will not be refunded. Climbers should consider purchasing trip insurance in the event
+			 an expedition is cancelled due to unforeseeable circumstances.
+		</p>
+		<p>
+			Expeditions will be allowed to add one (1) new member to their team. This new member must register at Pay.Gov thirty (30)
+			 days before the scheduled departure date of the expedition.
+		</p>
+		<p>
+			Expeditions must adhere to all permit requirements, policies and regulations related to the issuance of the mountaineering
+			 special use permit. Any expedition or individual expedition member who is found to be in violation of any requirement,
+			 policy or regulation may be subject to immediate revocation of their permit. If your permit is cancelled due to
+			 suspected illegal guiding, all fees will be forfeited.
+		</p>
+		<p>
+			Expedition members will be required to show personal identification (which includes a photograph) upon check in at the
+			 Ranger Station. Driver’s license, Passport, or other official identification will be accepted.
+		</p>
+		<p>
+			The Walter Harper Talkeetna Ranger Station is staffed year round. Please contact us via telephone: 
+			(907) 733-2231, fax: (907) 733-1465, or email: <a href="mailto:dena_talkeetna_office@nps.gov">dena_talkeetna_office@nps.gov</a>
+		</p>
+	</section>
+	<section class="letter-footer">
+		<br>
+		<p>Sincerely,</p>
+		<br>
+		<br>
+		<p>
+			Tucker Chenoweth<br>
+			South District Ranger<br>
+			Talkeetna Ranger Station<br>
+			P.O. Box 588<br>
+			Talkeetna, AK  99676
+		</p>
+	</section>
+</body>
+
+</html>

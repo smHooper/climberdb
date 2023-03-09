@@ -92,7 +92,7 @@ COLUMN_MAP = {
             'GroupID':      'expedition_id',
             'ClimberID':    'climber_id',
             'DateRes':      'datetime_reserved',
-            'DateCancelled':  'datetime_canceled',
+            'DateCancelled':  'datetime_cancelled',
             'DateReturnedEarly': 'early_return_date',
             'CheckedIn':    'is_checked_in',
             'Status':       'reservation_status_code',

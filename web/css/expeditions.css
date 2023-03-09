@@ -1,0 +1,778 @@
+:root {
+	--modal-bg-color: #000000aa;
+}
+
+.main-content-header {
+	width: 100%;
+	display: inline-flex;
+	justify-content: space-between;
+	align-items: center;
+	/*Make sure the header shows when the user scrolls*/
+	position: sticky;
+	top: -10px;
+	background: linear-gradient(180deg, #cccccc 70%, transparent);
+	z-index: 1000;
+}
+.main-content-wrapper {
+	scroll-behavior: smooth; /*for CMC jump link*/
+}
+.fuzzy-search-bar-container {
+	margin-right: 20px;
+	flex-wrap: wrap;
+	position: relative;
+}
+.fuzzy-search-bar {
+	width: unset;
+	flex: 1 1 auto;
+	max-width: 100%;
+	/*width: 100%;*/
+}
+.fuzzy-search-bar.default,
+.fuzzy-search-bar::placeholder {
+	color: #5d7785;
+}
+.fuzzy-search-bar > option {
+	font-size: 16px;
+}
+.fuzzy-search-bar-container > button.show-query-options-button {
+	order: unset;
+	z-index: 2; /* always show in front*/
+	cursor: pointer;
+	position: absolute;
+	right: 20px;
+	/*top: 10px;*/
+	transition: 0.25s all;
+	border-radius: 7px;
+	height: 60px;
+	width: 60px;
+	padding: 5px;
+}
+.show-query-options-button:hover, 
+.show-query-options-button:focus {
+/* 	background: #faaf00bb; */
+	background: #219ebc4d;
+}
+
+
+/* ----- stuff to show the edit buttons when expedition cards are shown as modals ----*/
+.main-content-header.modal-card-shown {
+	position: static;
+}
+.main-content-header.modal-card-shown .edit-button-container {
+	position: absolute;
+	z-index: 1000;
+	right: 0;
+	width: 100%;
+	justify-content: center;
+	margin: 0;
+	top: calc(var(--climberdb-header-menu-height) + 10px);
+}
+.main-content-modal-card-screen .expedition-edit-button {
+	color: #39abc7; /*make buttons a litte more visible against the dark background*/
+}
+#main-content-modal-card-screen {
+	top: var(--climberdb-header-menu-height);
+	right: 0;
+	left: 0;
+	width: 100%;
+	height: var(--fuzzy-search-bar-height);
+	background: var(--modal-bg-color);
+	position: absolute;
+	z-index: 999;
+	display: none;
+}
+.main-content-header.modal-card-shown #main-content-modal-card-screen {
+	display: block;
+}
+
+/* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
+
+/*----- expedition search bar dropdowns ------*/
+.fuzzy-search-bar-drawer {
+	width: 100%;
+	height: 0;
+	position: relative;
+	z-index: 10;
+	transition: 0.3s all;
+}
+.fuzzy-search-bar-drawer,
+.fuzzy-search-bar-drawer-content {
+	background-color: #023047;
+	border-radius: 0 0 15px 15px;
+	color: white;
+}
+.expedition-search-bar-option {
+	width: 100%;
+	height: 40px;
+	line-height: 40px;
+	padding-left: 30px;
+	font-size: 20px;
+	background-color: #ffffff00;
+	cursor: pointer;
+}
+.expedition-search-bar-option:hover {
+	background-color: #ffffff33;
+}
+.expedition-search-bar-option:focus {
+	background-color: #ffffff55;
+}
+.fuzzy-search-bar-drawer-content {
+	/*width: 80px;*/
+	height: 100%;
+	transition: height 0.3s, width 0.3s;
+	padding: 0;
+	/*column-gap: 20px;*/
+	flex-wrap: wrap;
+}
+#search-options-drawer.show {
+	height: 220px;
+}
+.fuzzy-search-bar-drawer.expedition-options-container {
+	max-height: 400px;
+	padding-top: 10px;
+}
+.fuzzy-search-bar-drawer.expedition-options-container:not(.collapsing) {/*don't override collapsing style so drawer slides closed*/
+	height: auto;
+	overflow: auto;
+}
+.fuzzy-search-bar-drawer.show .fuzzy-search-bar-drawer-content,
+.fuzzy-search-bar-drawer.collapsing .fuzzy-search-bar-drawer-content {
+	width: 100%;
+	display: flex;
+	padding: 20px;
+}
+
+/*^^^^^ expedition search bar dropdowns ^^^^^*/
+
+
+/*select2 styling*/
+/*.fuzzy-search-bar-drawer .select2-container--default 
+	.select2-selection--multiple,
+.query-option-operator,
+.query-option-input-field  {
+	background-color: rgba(0, 0, 0, 0);
+	border: none;
+	border-bottom: solid rgba(255, 255, 255, 0.3) 2px;
+	border-radius: 0px;
+	transition: all 0.2s;
+}
+.fuzzy-search-bar-drawer .select2-container--default.select2-container--focus 
+	.select2-selection--multiple,
+.query-option-operator:focus,
+.query-option-input-field:focus  { 
+	width: 100%;
+	border: none;
+	border-bottom: solid rgba(255, 255, 255, 0.6) 2px;
+}*/
+.fuzzy-search-bar-drawer .select2-container--default .select2-selection--multiple 
+	.select2-selection__choice:hover {
+	border: solid white 1.5px;
+}
+.fuzzy-search-bar-drawer .select2-container--default .select2-selection--multiple 
+	.select2-selection__choice__remove {
+	color: white;
+}
+/*.fuzzy-search-bar-drawer .select2-container--default .select2-selection--multiple 
+.select2-selection__choice__remove:hover {
+	background: rgba(255, 255, 255, 0.3);
+}*/
+.query-option-operator,
+.query-option-input-field:not(.switch-container) {
+	min-height: 32px;
+}
+.query-option-operator,
+.query-option-input-field:not(.switch-container),
+.fuzzy-search-bar-drawer .select2-container--default .select2-search--inline 
+	.select2-search__field {
+	color: white;
+}
+
+.query-option-operator option {
+	/*color: black*/;
+	background: rgb(25, 25, 25);
+}
+
+.query-option-group-container {
+	height: 100%;
+	overflow: hidden;
+	margin-left: 5px;
+}
+.query-option-group-container:hover {
+	overflow-y: auto;
+}
+.query-option-container-title {
+	font-size: 16px;
+	font-weight: 500;
+}
+.query-option-group-container-body {
+	padding: 0 5px 0 5px;
+}
+.query-option-container {
+	padding-top: 20px;
+}
+.query-option-condition-header {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+}
+.icon-button.remove-query-option-button {
+	opacity: 0;
+	background: none;
+	color: white;
+	height: 1.75rem;
+	width: 1.75rem;
+	border-radius: 1.75rem;
+	transition: all 0.3s;
+}
+.query-option-container:hover .icon-button.remove-query-option-button {
+	opacity: 1;
+	background: rgba(255, 255, 255, 0.3);
+}
+.query-option-label {
+	font-size: 1rem;
+	max-width: 80%;
+	opacity: 0.7;
+}
+.query-option-condition-container {
+	width: 100%;
+	display: flex;
+}
+.query-option-condition-container > select.query-option-input-field.select2-no-tag {
+	width: 100%;
+}
+.query-option-condition-container.checkbox-option-group {
+
+}
+.query-option-operator + .query-option-input-field {
+	text-indent: 5px;
+	margin-left: 5px;
+	flex: 1 1 100%;
+	max-width: calc(100% - 95px);
+}
+.query-option-input-field.datetime-query-option {
+	text-align: center;
+}
+.datetime-query-option::-webkit-calendar-picker-indicator {
+    filter: invert(1);/*set calendar/time picker icon white*/
+}
+
+
+.edit-button-container {
+	display: flex;
+	margin-right: 20px;
+	transition: 0.3s all;
+}
+.edit-button-container > .expedition-edit-button {
+	margin: 0 7px;
+	transition: display 0s; /*toggle visibility immediately*/
+}
+
+.expedition-content {
+	width: 100%;
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-template-rows: repeat(5, 500px);
+	grid-auto-columns: 1fr;
+	row-gap: 20px;
+	column-gap: 20px;
+}
+.expedition-data-wrapper {
+	transition-property: padding;
+	transition-duration: 0.3s;
+}
+.expedition-data-wrapper.expedition-modal {
+	position: absolute;
+	width: 100%;
+	z-index: 1000;
+	left: 0;
+	top: calc( var(--climberdb-header-menu-height) + var(--fuzzy-search-bar-height) );
+	bottom: 0;
+	display: block;
+	padding: 0 10% 20px 10%;
+	background: var(--modal-bg-color);
+}
+
+/*show the expedition members taking up the 2 rows*/
+#expedition-member-data-container {
+	grid-row: 2 / span 2;
+}
+.expedition-data-content {
+	height: 100%;
+	display: flex;
+	flex-wrap: wrap;
+	background: rgb(230, 230, 230);
+	border-radius: 20px;
+	padding: 20px;
+}
+.expedition-data-header-container {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	color: #00679b;
+	height: 45px;
+}
+#expedition-data-container .expedition-data-header-container {
+	height: 105px;
+}
+.input-field.expedition-data-header {
+	font-size: 1.75rem;
+	height: 100%;
+	width: 100%;
+	line-height: 1.2;
+	font-weight: 500;
+	border: none;
+	background-color: rgba(255,255,255,0);
+	transition: 0.2s all;
+	color: #00679b;
+}
+.input-field.expedition-data-header::placeholder {
+	color: #00679b;
+}
+.input-field.expedition-data-header:focus::placeholder {
+	color: #969696;
+}
+.input-field.expedition-data-header:focus {
+	background-color: rgba(255,255,255, 0.4);
+}
+.input-field.expedition-data-header:hover,
+.input-field.expedition-data-header:focus {
+	border-bottom: none !important;
+	color: #00679b;
+}
+.expedition-data-header-content select.input-field {
+	font-weight: 600;
+	color: #00679b;
+	/*text-align: center;
+	border-bottom: none;
+	-moz-appearance: none;
+	-webkit-appearance: none;
+	appearance: none;
+	pointer-events: none;*/
+}
+.expedition-data-header-content select.input-field option {
+	color: #023047;
+}
+.expedition-data-header-content {
+	display: flex;
+	width: 100%;
+	font-size: 14px;
+    /*margin-bottom: 15px;*/
+    /*padding: 0 10px;*/
+    height: 45px;
+}
+.expedition-data-content-body {
+	width: 100%;
+	height: calc(100% - 60px - 45px);
+	padding: 0 10px;
+	overflow: auto;
+	scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion) {
+	.expedition-data-content-body {scroll-behavior: initial;}
+}
+.result-details-summary-item {
+	padding-right: 10px;
+	padding-left: 10px;
+}
+.result-details-summary-item > * {
+	padding-right: 0px;
+	padding-left: 0px;
+}
+/*add up/down arrows to bottom/top jump links*/
+/*need to use buttons instead of jump links to avoid affecting window.history */
+.text-only-button.jump-link {
+	line-height: 20px;
+	color: #219ebc;
+	font-weight: bold;
+}
+.text-only-button.jump-link:hover {
+	color: #00679b; 
+	text-decoration: underline;
+}
+.page-bottom-jump-link::after {
+	font-size: 20px;
+	content: "\25BC";
+}
+.page-top-jump-link::after {
+	font-size: 20px;
+	content: "\25B2";
+}
+
+#climber-data-container .card.expedition-card {
+	border: 1px solid #a193804d;
+}
+.card.expedition-card,
+.card.expedition-card .card-header {
+	border-radius: 10px;
+}
+.card.expedition-card .card-header {
+	padding: 0 15px;
+	background-color: #f28100;
+	/*border-radius: 10px;*/
+	color: white;
+	align-items: center;
+}
+.card.expedition-card.cancelled .card-header {
+	background-color: #cccccc;
+}
+.card.cancelled .expedition-member-card-link-label {
+	text-decoration: line-through;
+}
+.card.expedition-card .card-link-label,
+.card.expedition-card .card-link-content,
+.card.expedition-card .card-header-content-container {
+	color:  white;
+	font-size: 20px;
+	margin-bottom: 0;
+}
+.card.expedition-card .card-header-content-container {
+	font-size: 14px;
+/*	max-width: 12.5%;*/
+	flex: 1 1 12.5%;
+}
+.expedition-member-card-header-group-container {
+	max-width: 400px;
+}
+.expedition-member-badge-container {
+	height: 100%;
+}
+.result-details-header-badge {
+	padding:  12px 5px;
+	transition: 0.3s opacity;
+}
+.expedition-card .card-header .leader-checkbox-container {
+	transition: 0.3s all;
+}
+/*.expedition-card .card-header .leader-checkbox-container.transparent {
+	pointer-events: auto;
+}*/
+.expedition-card .card-header .leader-checkbox-container.transparent .input-field {
+	cursor: default;
+}
+.expedition-card .card-header:hover .leader-checkbox-container.transparent {
+	opacity: 1;
+	pointer-events: all;
+}
+.uneditable .expedition-card .card-header:hover .leader-checkbox-container.transparent {
+	opacity: 0;
+	pointer-events: none;
+}
+.card.expedition-card .card-header .checkbox-label {
+	color: white;
+	font-size: 14px;
+	line-height: 20px;
+}
+.member-card-header-chevron-container {
+	display: flex;
+	justify-content: flex-end;
+	flex: 1 1 auto;
+	max-width: 10%;
+	justify-content: flex-end;
+	line-height: 100%;
+	align-items: center;
+}
+.change-expedition-button {
+	min-width: 40px;
+	width: 40px;
+}
+.member-card-header-chevron-container > 
+.uneditable .input-field.card-link-label.route-code-header-input {
+	border:none;
+}
+.input-field.card-link-label.route-code-header-input {
+	border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+	/* border-radius: 7px; */
+}
+.uneditable .input-field.card-link-label.route-code-header-input {
+	border-bottom: none;
+}
+.input-field.card-link-label.route-code-header-input:focus {
+	background-color: rgba(255, 255, 255, 0.25);
+	border-bottom: none !important;
+	border-radius: 7px;
+}
+.input-field.card-link-label.route-code-header-input > option {
+	color: black;
+}
+
+#climber-data-container .card.expedition-card,
+#climber-data-container .card-body {
+	/*background-color: #e5d7c7;*/
+}
+#climber-data-container .tab-content {
+	/*box-shadow: 0 5px 8px 2px #5c52444d;
+	background-color: #efe5d9;*/
+}
+
+.expedition-data-sub-header,
+.data-list-item-header {
+	color: #00679b;
+}
+.data-list-item-header {
+	width: 100%;
+	margin-top: 25px;
+}
+.transactions-container-body,
+.transactions-header-container {
+	width: 100%;
+}
+.transactions-header-container {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+.data-list {
+	width: 100%;
+	list-style: none;
+	padding: 0;
+}
+*.data-list-item {
+	display: flex;
+	padding: 0;
+	column-gap: 10px;
+	margin-top: 15px;
+}
+.transaction-type-column {
+	display: flex;
+}
+.expedition-modal .transaction-type-column,
+.expedition-modal .payment-method-column,
+.expedition-modal .transaction-date-column {
+	max-width: 200px;
+}
+.transaction-entry-metadata-column {
+	width: 100px;
+}
+.route-member-name-column {
+	max-width: 350px;
+}
+.route-summited-column {
+	max-width: 200px;
+}
+.route-summit-date-column,
+.route-highest-elevation-column {
+	max-width: 250px;
+}
+
+*.data-list-col {
+	padding: 0;
+}
+.data-list-item > * {
+	padding: 0;
+}
+.data-list-col.total-col .total-span {
+	margin-left: 12px;
+}
+.data-list .input-field:not(.field-with-units) {
+	width: 100%;
+	max-width: 100%;
+}
+/*special styling for transaction list*/
+.data-list-item .col.col-13-percent {
+	flex: 0 0 13%;
+	max-width: calc(min(13%, 150px));
+}
+.unit-symbol + .input-field[name="transaction_value"] {
+	text-indent: 0;
+}
+.transactions-tab-pane .refund-post-item .input-field,
+.transactions-tab-pane .refund-post-item .unit-symbol,
+.transactions-tab-pane .entry-metadata-field {
+	color: hsl(0, 0%, 40%);
+	font-style: italic;
+}
+.transactions-tab-pane .refund-post-item .input-field,
+.transactions-tab-pane .entry-metadata-field {
+	pointer-events: none;
+	border-bottom: none;
+/*	position: relative; /*allows hiding calendar-date-picker*/
+}
+
+.transactions-tab-pane .refund-post-item .input-field::-webkit-calendar-picker-indicator {
+	color: transparent;
+	background: transparent;
+}
+.transactions-tab-pane .refund-post-item select.input-field {
+	-webkit-appearance: none;
+}
+.transactions-tab-pane .refund-post-item .delete-transaction-button {
+	display: none;
+}
+
+/*chevron is small for some reason*/
+.card-link ~ * > .fa-chevron-dow {
+	font-size: 20px;
+}
+/*only show the delete button when the user hovers over the card header*/
+.show-on-parent-hover {
+	opacity: 0;
+	transition: 0.3s opacity;
+}
+.show-children-on-hover:hover .show-on-parent-hover {
+	opacity: 1;
+}
+/*hide the button when not in editing mode*/
+.uneditable .delete-button,
+.uneditable .delete-card-button,
+.uneditable .change-expedition-button,
+.uneditable .delete-cmc-button, 
+.uneditable .delete-comms-button, 
+.uneditable .delete-route-member-button,
+.uneditable .route-list-footer-button {
+	display: none;
+}
+.delete-card-button > .fa-trash {
+	font-size: 25px;
+}
+
+.cmc-col {
+	display: flex;
+}
+
+.expedition-briefing-link-label {
+	width: unset;
+/*	margin-right: 10px;*/
+}
+
+/*########################################################################################*/
+/*-----------------------------modal climber form ----------------------------------------*/
+/*########################################################################################*/
+
+/*override hidden climber history (hidden in climbers.css because modal is
+used to show climber form in "add climber" mode)*/
+.climber-form-modal-container > .climber-form.climberdb-modal #climber-history-list-item {
+    display: flex;
+}
+.expedition-modal-climber-form-header,
+.expedition-modal-search-container {
+	display: flex;
+	flex-wrap: wrap;
+	/*column-gap: 20px;*/
+}
+.expedition-modal-search-container,
+.expedition-modal-climber-form-navigation-container {
+	width: 100%;
+}
+.modal-climber-select-container.collapse.show {
+	flex: 1 1 auto;
+	display: flex;
+}
+#refresh-modal-climber-select {
+	margin-left: 10px;
+}
+.climber-form .fuzzy-search-bar {
+	font-size: 16px;
+	height: 40px;
+	width: 100%;
+	flex: 1 1 auto;
+	margin-top: 20px;
+	text-indent: 40px;
+	margin-left: -40px;
+}
+.climber-form .fuzzy-search-bar-container > .search-bar-icon {
+	height: 40px;
+	width: 40px;
+	top: 20px;
+	padding: 5px;
+}
+.climber-form select.fuzzy-search-bar {
+	text-indent: 5px;
+}
+.result-details-summary-container.collapse {
+	display: none;
+}
+
+.route-member-list .center-checkbox-col {
+	display: flex;
+	justify-content: center;
+}
+.route-member-list .center-checkbox-col .checkmark-container {
+	width: 25px; /*give it a width so it gets properly centered*/ 
+}
+.uneditable .route-member-list .input-field {
+	text-indent: 5px;
+}
+.uneditable .input-field.text-center {
+	text-align: center !important;
+}
+.always-editable .checkmark-container {
+	margin-bottom: 0.5rem;
+	pointer-events: all;
+	cursor: pointer;
+}
+.climberdb-modal .always-editable .checkmark {
+	border: 3px solid #219EBC;
+}
+.climberdb-modal .always-editable .checkmark-container input:checked ~ .checkmark {
+    background-color: #219EBC;
+}
+
+/*move expedition member modal*/
+#change-expedition-modal .modal-content {
+	min-width: 500px;
+}
+#change-expedition-modal .search-bar-icon {
+	z-index: unset;
+}
+
+/*climber option loading indicator dot animation*/
+.loading-indicator-dot-container {
+  width: 100%;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+ .loading-indicator-dot {
+  background: #00679b;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin: 10px;
+}
+.loading-indicator-dot.dot1 {
+  animation: loading-indicator-dot-blink 1.6s -0.32s linear infinite;
+}
+.loading-indicator-dot.dot2 {
+    animation: loading-indicator-dot-blink 1.6s -0.16s linear infinite;
+}
+.loading-indicator-dot.dot3 {
+    animation: loading-indicator-dot-blink 1.6s linear infinite;
+}
+@keyframes loading-indicator-dot-blink {
+  0%, 80%, 100% { 
+    -webkit-transform: scale(0);
+    transform: scale(0);
+    opacity: 0.2;
+  } 40% { 
+    -webkit-transform: scale(2.0);
+    transform: scale(2.0);
+    opacity: 1;
+  }
+}
+
+
+/*
+Default to not showing unless the screen is at least 1500px wides
+*/
+.expedition-modal .modal-only {
+	display: none;
+}
+
+/*adjust grid layout when the screen is less than 992 pixels wide*/
+@media (min-width: 1500px) {
+	.expedition-content {
+		grid-template-columns: repeat(2, 1fr);
+		grid-template-rows: repeat(3, 500px);
+	}
+	/* Only show modal only content if the screen is large enough */
+	.expedition-modal .modal-only {
+		display: block;
+	}
+	/*show the expedition members taking up the first 2 rows on the right*/
+	#expedition-member-data-container {
+		grid-row: 1 / span 2;
+		grid-column: 2 / span 1;
+	}
+}

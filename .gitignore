@@ -1,4 +1,6 @@
 web/packages/*
+web/exports/*
+scratch.sql
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

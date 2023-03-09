@@ -1,0 +1,71 @@
+/*user gradient background*/
+.main-content-wrapper {
+	background: linear-gradient(2deg, #44a9ba, #ffe7aad1);
+}
+.sidebar-nav-group .nav-item.selected > a::after {
+	border-right: 15px solid #adcbb4;
+}
+
+.climberdb-data-table-wrapper {
+	display: flex;
+	justify-content: center;
+	position: relative;
+	padding-top: 30px;
+}
+
+
+.climberdb-data-table tbody > tr:not(.uneditable) td:not(.no-border) {
+  background-color: rgba(255, 182, 0, 0.65);
+}
+.climberdb-data-table tbody > tr:not(.uneditable) td:not(.no-border) > span{
+  background-color: transparent;
+}
+.climberdb-data-table-wrapper table { 
+border-collapse: separate;
+border-radius: 10px;
+border-spacing: 0px;
+transform: translateX(105px); /*offset for the usually hidden edit buttons*/
+}
+
+/*----- input field -------*/
+.input-field:focus, /*override default styling*/
+.input-field:hover {
+	border-bottom: none;
+}
+.uneditable td > span > .input-field,
+td.uneditable > span > .input-field {
+	pointer-events: none !important;
+	background-color: transparent;
+	appearance: none !important; /*hide select's caret*/
+}
+.uneditable .icon-button {
+	opacity: 0;
+	pointer-events: none;
+	transition: 0.3s all;
+	margin-right: 20px;
+}
+tr:not(.uneditable) td:not(.uneditable) .input-field {
+	background-color: #ffffff2c;
+}
+select.input-field {
+	min-width: 150px;
+}
+tr.inactive .input-field {
+	color: #023047b0;
+}
+/*^^^^^^^ input filed ^^^^^^^^^*/
+
+.climberdb-data-table tr:hover .edit-button,
+.edit-button:focus {/* add focus for tabbing*/
+	opacity: 1;
+	pointer-events: all;
+}
+.climberdb-data-table tbody tr td:not(.no-border) > span {
+	background-color: #219ebc1c; 
+	padding: 10px 0;
+}
+.climberdb-data-table tbody tr:hover td:not(.no-border) > span {
+  background-color: #219ebc40;
+}
+
+

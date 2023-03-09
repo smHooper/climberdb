@@ -1,0 +1,14 @@
+{% extends "email_notification.html" %}
+
+{% block message %}
+	A new Denali Climbing Permit Portal account has been created for you 
+	using your Windows Active Directory username: <strong>{{ username }}</strong>. 
+	Click the button below to create a passowrd and activate your account. 
+	<strong>Note: the activation link will only work if you are connected 
+	to the NPS network.</strong> You can connect to the network directly 
+	or use a VPN.
+{% endblock %}
+{% block link_block %}
+	<h3 style="width:100%; margin-bottom:20px">Username: {{ username }}</h3>
+	{{ super() }}
+{% endblock %}

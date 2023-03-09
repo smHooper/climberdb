@@ -1,0 +1,44 @@
+body { 
+    font: 11pt Times, serif;
+}
+
+@page { 
+    size: letter; 
+    margin: 0.5in .75in; 
+}
+
+.letterhead {
+    width: 100%;
+    position: relative;
+}
+.letterhead-logo {
+    height: 80pt;
+    width: 80pt;
+}
+.img-container-left{
+    float:left;
+}
+.img-container-right{
+    float:right;
+}
+.letterhead-text {
+    text-align: center;
+    font-size: 12pt;
+    margin: 0 15pt;
+    width: calc(100% - 210pt);
+}
+.letterhead-text .large-text {
+    font-size: 16pt;
+}
+.letterhead-address {
+    margin-block-start: 0;
+}
+.uppercase {
+    text-transform: uppercase;
+}
+.climber-list {
+    max-height: 60px;
+    list-style: none; 
+    column-fill: balance;
+    column-width: 120px;
+}

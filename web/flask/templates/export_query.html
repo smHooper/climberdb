@@ -1,0 +1,39 @@
+<!doctype html>
+<head>
+	<title>{{title_text}}</title>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+	<link rel=stylesheet href="{{ url_for('static', filename='export_query.css') }}" />
+	<style>
+	</style>
+</head>
+
+<body>
+
+	<h3 class="title-text">{{ title_text }}</h3>
+	<section>
+		<table class="export-query-table striped">
+			<thead>
+				<tr>
+					{% for column_ in columns %}
+						<th>{{ column_ }}</th>
+					{% endfor %}
+				</tr>
+			</thead>
+			<tbody>
+				{% for row in query_data %}
+					<tr>
+						{% for column_ in columns %}
+							<td>{{ row[column_] }}</td>
+						{% endfor %}
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</section>
+</body>
+
+</html>

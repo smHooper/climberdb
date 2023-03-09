@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8'>
+	<meta name="viewport" content="width=device-width,height=device-height, user-scalable=no" />
+	<title>Climbers - DENA Climbing Permits</title>
+	<link rel="icon" type="image/x-icon" href="/imgs/favicon.ico">
+	<!--jquery -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+	<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+	
+	<!-- bootstrap -->
+	<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css"/>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js" integrity="sha384-+YQ4JLhjyBLPDQt//I+STsc9iw4uQqACwlvpslubQzn4u2UU2UFM80nGisd026JF" crossorigin="anonymous"></script>
+
+	<!--fonts -->
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+
+	<!-- font awesome --> 
+	<link href="packages/fontawesome/css/all.min.css" rel="stylesheet">
+
+	<!-- fuse for fuzzy search -->
+	<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.5.3"></script>
+
+	<link rel="stylesheet" href="css/climberdb.css">
+	<link rel="stylesheet" href="css/climbers.css">
+
+</head>
+
+<body>
+	 <!-- loading indicator should be hidden and will only be shown when loading data -->
+	<div id="loading-indicator-background" class="modal-background modal-background-light hidden" ></div>
+	<div id="loading-indicator" class="hidden"></div>
+
+	<!--alert/message modal -->
+	<div class="modal fade" id="alert-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
+	
+<!-- 	<script type="text/javascript">
+		$('.modal.fade').after(`<script src="js/climbers.js?t=${(new Date).getTime()}"><\/script>`);
+		$('.modal.fade').after(`<script src="js/climberdb.js?t=${(new Date).getTime()}"><\/script>`);
+	</script> -->
+	<script src="js/climberdb.js"></script>
+	<script src="js/climbers.js"></script>
+	
+	<script>
+		var climberDB;
+		$(document).ready(function(){
+
+			climberDB = new ClimberDBClimbers();
+			climberDB.init(); 
+
+
+		});
+	</script>
+
+</body>
+
+</html>

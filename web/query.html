@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8'>
+	<meta name="viewport" content="width=device-width,height=device-height, user-scalable=no" />
+	<title>Query - DENA Climbing Permits</title>
+	<link rel="icon" type="image/x-icon" href="/imgs/favicon.ico">
+	<!--jquery -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+	<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.2/themes/smoothness/jquery-ui.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+	
+	<!-- bootstrap -->
+	<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css"/>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js" integrity="sha384-+YQ4JLhjyBLPDQt//I+STsc9iw4uQqACwlvpslubQzn4u2UU2UFM80nGisd026JF" crossorigin="anonymous"></script>
+
+	<!--fonts -->
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+
+	<!-- font awesome --> 
+	<link href="packages/fontawesome/css/all.min.css" rel="stylesheet">
+
+	<!-- select2 -->
+	<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+	<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+	<link rel="stylesheet" href="css/climberdb.css">
+	<link rel="stylesheet" href="css/query.css">
+
+</head>
+
+<body>
+	 <!-- loading indicator should be hidden and will only be shown when loading data -->
+	<div id="loading-indicator-background" class="modal-background modal-background-light hidden" ></div>
+	<div id="loading-indicator" class="hidden"></div>
+
+	<!--alert/message modal -->
+	<div class="modal fade" id="alert-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
+
+	<div class="modal fade" id="exports-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered" role="document">
+			<div class="modal-content">
+		    	<div class="modal-header">
+			    	<h5 class="modal-title">Export Query Result</h5>
+					<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body d-flex justify-content-between">
+					<div class="field-container col-6">
+						<select class="input-field no-option-fill ignore-changes col-6" id="input-export_type" name="export_format" value="excel">
+							<option value="excel" selected="selected">Excel</option>
+							<option value="pdf">PDF</option>
+						</select>
+						<label class="field-label" for="input-export_type">Export format</label>
+					</div>
+					<button id="export-data-button" class="generic-button d-inline" title="Export Data">Export Data</button>
+					
+				</div>
+				<div class="modal-footer">
+					<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="js/climberdb.js"></script>
+	<script src="js/query.js"></script>
+	
+	<script>
+		var climberDB;
+		$(document).ready(function(){
+
+			climberDB = new ClimberDBQuery();
+			climberDB.init(); 
+
+
+		});
+	</script>
+
+</body>
+
+</html>

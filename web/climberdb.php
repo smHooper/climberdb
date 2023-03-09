@@ -2,9 +2,10 @@
 
 <?php
 
- include '../../config/climberdb-config.php';
+include '../../config/climberdb-config.php';
 // error_reporting(-1);
 // ini_set('display_errors', 'On');
+ini_set('html_errors', false);
 
 function runQuery($ipAddress, $port, $dbName, $username, $password, $queryStr, $parameters=array()) {
 	/*return result of a postgres query as an array*/
@@ -21,13 +22,12 @@ function runQuery($ipAddress, $port, $dbName, $username, $password, $queryStr, $
 	  	return array();
 	}
 
-	$resultArray = pg_fetch_all($result) ? pg_fetch_all($result) : array("query returned an empty result");
+	$resultArray = pg_fetch_all($result) ? pg_fetch_all($result) : [];//array("query returned an empty result");
 	return $resultArray;
 }
 
 
 function runQueryWithinTransaction($conn, $queryStr, $parameters=array()) {
-
 
 	$result = pg_query_params($conn, $queryStr, $parameters);
 	if (!$result) {
@@ -35,7 +35,7 @@ function runQueryWithinTransaction($conn, $queryStr, $parameters=array()) {
 	  	return $err;
 	}
 	$pgFetch = pg_fetch_all($result);
-	return $pgFetch ? $pgFetch : null;
+	return $pgFetch ? $pgFetch : [null];
 }
 
 
@@ -188,13 +188,13 @@ if (isset($_POST['action'])) {
 			echo "ERROR: no auth_user";
 			exit();
 		}
-		$sql = "SELECT ad_username, user_role_code, user_status_code, first_name, last_name FROM users WHERE ad_username='$user'";
+		$sql = "SELECT id, ad_username, user_role_code, user_status_code, first_name, last_name FROM users WHERE ad_username='$user'";
 		$userRole = runQuery($dbhost, $dbport, $dbname, $username, $password, $sql);
 		
 		// Check if the query result is valid. If not, the user probably doesn't exist in the table yet
 		$resultValid = false;
 		if (is_array($userRole)) {
-			$resultValid = isset($userRole[0]['username']);
+			$resultValid = isset($userRole[0]['ad_username']);
 		}
 		if (!$resultValid) {
 			// Add the user
@@ -207,8 +207,35 @@ if (isset($_POST['action'])) {
 	if ($_POST['action'] == 'query') {
 
 		if (isset($_POST['queryString'])) {
-			$result = runQuery($dbhost, $dbport, $dbname, $username, $password, $_POST['queryString']);
-			echo json_encode($result);
+			if (gettype($_POST['queryString']) == 'array') {
+				$conn = pg_connect("hostaddr=$dbhost port=$dbport dbname=$dbname user=$username password=$password");
+				if (!$conn) {
+					echo "ERROR: Could not connect DB";
+					exit();
+				}
+
+				// Begin transaction
+				pg_query($conn, 'BEGIN');
+
+				$resultArray = array();
+				for ($i = 0; $i < count($_POST['queryString']); $i++) {
+					$result = runQueryWithinTransaction($conn, $_POST['queryString'][$i]);
+					if (strpos(json_encode($result), 'ERROR') !== false) {
+						// roll back the previous queries
+						pg_query($conn, 'ROLLBACK');
+						echo $result, " from the query $i ", $_POST['queryString'][$i];
+						exit();
+					}
+
+					$resultArray[$i] = count($result) == 1 ? $result[0] : $result;
+				}
+				pg_query($conn, 'COMMIT');
+				echo json_encode($resultArray);
+			} else {
+				$result = runQuery($dbhost, $dbport, $dbname, $username, $password, $_POST['queryString']);
+				$returnResult = isset($_POST['queryTime']) ? array('data' => $result, 'queryTime' => $_POST['queryTime']) : $result;
+				echo json_encode($returnResult);
+			}
 		} else {
 			echo "ERROR: no query given";//false;
 		}
@@ -247,7 +274,7 @@ if (isset($_POST['action'])) {
 						exit();
 					}
 
-					$resultArray[$i] = $result;
+					$resultArray[$i] = $result[0];
 				}
 
 				// COMMIT the transaction
@@ -270,45 +297,7 @@ if (isset($_POST['action'])) {
 				}
 			}
 		} else {
-			echo "either sqlStatements and/or sqlParameters not given";//false;
-		}
-	}
-
-	if ($_POST['action'] == 'deleteEncounter') {
-		if (isset($_POST['encounterID'])) {//$dbhost, $dbport, $dbname
-			$conn = pg_connect("hostaddr=$dbhost port=$dbport dbname=$dbname user=$username password=$password");
-			if (!$conn) {
-				echo "ERROR: Could not connect DB";
-				exit();
-			}
-			$result = pg_delete($conn, 'encounters', array('id' => $_POST['encounterID']));
-			if (!$result) {
-				echo "ERROR: could not delete encounter";
-			} else {
-				echo $result;
-			}
-		}
-	}
-
-	if ($_POST['action'] == 'readTextFile') {
-		if (isset($_POST['textPath'])) {
-			echo file_get_contents($_POST['textPath']);
-		}
-	}
-
-	if ($_POST['action'] == 'readAttachment') {
-		if (isset($_POST['filePath'])) {
-			echo readfile($_POST['filePath']);
-		}
-	}
-
-	if ($_POST['action'] == 'deleteFile') {
-		if (isset($_POST['filePath'])) {
-			$fileName = basename($_POST['filePath']);
-			$attachmentDirPath = getAttachmentDir();
-			echo deleteFile("$attachmentDirPath.$fileName") ? 'true' : 'false';
-		} else {
-			echo 'false';
+			echo "ERROR: either sqlStatements and/or sqlParameters not given";//false;
 		}
 	}
 

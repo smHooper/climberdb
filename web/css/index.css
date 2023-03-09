@@ -1,0 +1,224 @@
+
+
+body { 
+  background-image: url('../imgs/signin_page_bg.jpg');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center; 
+  background-size: cover;
+  position: absolute;
+  bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
+.modal {
+  color: #023047;
+}
+
+#sign-in-form-container {
+  height: 350px;
+  width: 450px;
+  padding: 25px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  background-color: #023047d4;
+  border-radius: 10px;
+}
+#sign-in-form-container.activation {
+  height: unset;
+}
+@media (prefers-reduced-transparency) {
+  /* Give it a bg color if the user doesn't want transparency*/
+  #sign-in-form-container {
+    background-color: #023047 !important;
+  }
+}
+
+#nps-logo {
+  height: 100%;
+  padding-right: 1.25rem;
+  max-height: 200px;
+  animation: 0.75s ease-out 0s fadeIn;
+}
+
+.index-button {
+  max-width: calc(50% - 10px);
+  /*animation: 0.5s ease-out 0.4s slideInFromBottom;*/
+  border-radius: 12px;
+  -moz-box-shadow:    6px 7px 20px 3px rgba(0, 0, 0, 0.3);
+  -webkit-box-shadow: 6px 7px 20px 3px rgba(0, 0, 0, 0.3);
+  box-shadow:         6px 7px 20px 3px rgba(0, 0, 0, 0.3);
+  background-color: #219EBC;
+}
+.embedded-input-end-button {
+  position: absolute;
+  right: 0;
+  display: none;
+}
+.field-container:hover > .password-input + .embedded-input-end-button,
+.password-input:focus + .embedded-input-end-button,
+.embedded-input-end-button:hover,
+.embedded-input-end-button:focus {
+  display: block;
+}
+/*#sign-in-form .toggle-password-visibility-button:focus {
+  outline: unset !important;
+}*/
+
+.forgot-password-button-container {
+  width: 100%;
+  text-align: right;
+  transform: translateY(-25px);
+}
+.input-field.invalid ~ .forgot-password-button-container > #forgot-password-button {
+  display: none;
+}
+
+#index-button-row {
+  top: 85%;
+  position: absolute;
+  height: 60px;
+  width: calc(100% - 50px);
+  margin-left: 25px;
+  display: flex;
+  justify-content: center;
+}
+
+#index-button-container {
+  width: 650px;
+  min-width: 460px;
+  display: flex;
+  justify-content: space-around;
+}
+
+#sign-in-form-footer {
+  display: flex;
+  justify-content: space-between;
+}
+#sign-in-form-footer .default-container {
+  justify-content: space-between;
+  align-items: center;
+}
+#sign-in-form-footer .request-access-container, 
+#sign-in-form-footer .reset-password-footer-container, 
+#sign-in-form-footer .field-container.activation-element {
+  justify-content: center;
+}
+.request-access-container .generic-button:last-of-type,
+.reset-password-footer-container .generic-button:last-of-type {
+  margin-left: 30px;
+}
+
+#request-access-toggle-button-container {
+  margin-top: 1rem;
+}
+#request-access-toggle-button-container > .text-only-button{
+  /*color: #FB8500;*/
+  padding: 0;
+}
+
+.input-field {
+  border-bottom: 2px solid rgba(255,255,255);
+  color: white;
+  margin: 0;
+  transition: 0.25s all;
+  max-width: 100%;
+  font-size: 20px;
+}
+.input-field::placeholder {
+  color: rgb(145, 145, 145);
+}
+.field-group-container {
+  width: 100%;
+}
+.field-group-container .field-container {
+   margin-bottom: 15px;
+}
+#sign-in-form-container .input-field:hover,
+#sign-in-form-container .input-field:not(textarea):focus{
+  border-bottom: 2px solid #FB8500 !important;
+}
+#sign-in-form-container .input-field:focus {
+  color: white;
+}
+#sign-in-form-container .input-field[name=username],
+#sign-in-form-container .input-field[name=username]:hover,
+#sign-in-form-container .input-field[name=username]:focus {
+  pointer-events: none;
+  border: none;
+}
+
+#sign-in-form-container .field-label:not(.checkbox-label) {
+  color: #FB8500;
+}
+.input-field::placeholder,
+.field-label:not(.checkbox-label),
+.invalid-input-message {
+  text-transform: uppercase;
+}
+.field-label.checkbox-label {
+  color: white;
+}
+.input-field:placeholder-shown ~ .field-label {
+  /*label is invisible but transition from smaller to larger 
+  looks better with font-size matching the input*/
+  font-size: 20px; 
+}
+
+.input-field.invalid {
+  background: #faaf00;
+  border: none;
+  border-radius: 5px;
+}
+.invalid-input-message-container {
+  width: 100%;
+}
+.invalid-input-message {
+  color: #faaf00;
+  transform: translateY(-30px);
+}
+
+#account-request-success-message {
+  background-color: rgba(2, 48, 71, 0.8);/*#023047*/
+  width: 450px;
+  padding: 100px 50px;
+  color: white;
+  font-size: 20px;
+}
+
+/* ---------account activation password validation---------- */
+.activation-text {
+  /*font-size: 20px;*/
+}
+#password-criteria-list.validated {
+  list-style: none;
+}
+#password-criteria-list.validated li {
+  padding-left: 1rem;
+  text-indent: -1rem;
+}
+/*invalid and default styling*/
+#password-criteria-list.validated li,
+#password-criteria-list.validated li::before {
+  color: #faaf00;
+}
+#password-criteria-list.validated li::before {
+  content: 'X';
+  font-size: 20px;
+  margin-right: 10px;
+}
+/*valid styl*/
+#password-criteria-list.validated li.valid,
+#password-criteria-list.validated li.valid::before {
+  color: #219ebc;
+}
+#password-criteria-list.validated li.valid::before {
+  content: '\2713';
+}

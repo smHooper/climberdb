@@ -1,29 +1,46 @@
 :root {
   --ui-primary-color: #219EBC;
+  --ui-primary-text-color: #00679b;
+  --ui-bg-dark-blue: #023047;
+  --ui-desaturated-color: #4d819b;
+  --ui-primary-highlight-color: #f28100;
+  --ui-secondary-highlight-color: #faaf00;
+  --climberdb-header-menu-height: 60px;
+  --fuzzy-search-bar-height: 60px;
+  --climberdb-data-table-row-height: 60px;
 }
 
 html, body {
   height: 100%;
   overflow: hidden;
   font-family: 'Lato', sans-serif;
+  color: var(--ui-primary-text-color);
+}
+body a {
+  color: #219ebc;
+  font-weight: bold;
 }
 
-.generic-button  {
+.generic-button {
+  display: block; /*makes <a> tag buttons respect height/width*/
   min-width: 150px;
   height: 40px;
   line-height: 40px;
   text-align: center;
   border: none;
-  background-color: #219EBC; 
+  background-color: #219EBC;/*#f28100;*/ 
   color: white;
   border-radius: 12px;
-  -moz-box-shadow:    5px 5px 20px 3px rgba(0, 0, 0, 0.15);
-  -webkit-box-shadow: 5px 5px 20px 3px rgba(0, 0, 0, 0.15);
-  box-shadow:         5px 5px 20px 3px rgba(0, 0, 0, 0.15);
+  -moz-box-shadow:    0px 4px 6px 1px rgb(0 0 0 / 15%);
+  -webkit-box-shadow: 0px 4px 6px 1px rgb(0 0 0 / 15%);
+  box-shadow:         0px 4px 6px 1px rgb(0 0 0 / 15%);
   cursor: pointer;
   transition: font-weight 0.2s ease; 
 }
-.generic-button:hover {
+.generic-button.collapse:not(.show) {
+  display: none;
+}
+.generic-button:not(.account-button):hover {
   text-decoration: none !important; /*keep <a> tags from looking like links */
   color: white !important;
 }
@@ -49,14 +66,20 @@ html, body {
   background-color: hsl(231deg 3% 50%);
 }
 
+.modal {
+  color: #023047;
+}
+
 .modal-button {
   min-width: 75px;
   border-radius: 0.5rem;
   margin-bottom: 0px;
 }
 
-.icon-button, .text-only-button {
+.icon-button, 
+.text-only-button {
   background-color: rgba(0,0,0,0);
+  color: #219EBC;
   border: none;
   -moz-box-shadow:    none;
   -webkit-box-shadow: none;
@@ -67,13 +90,24 @@ html, body {
 .icon-button:hover {
   opacity: 1;
 }
+/*minimally sized label mostly for screen readers*/
+.icon-button-label {
+  font-size: 12px;
+  width: 100%;
+  margin: 0;
+  margin-top: -5px;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+
 
 .modal-header-container .icon-button {
   height: 100%;
 }
 
 /* remove default boostrap styling */
-button.generic-button:focus, 
+/*button.generic-button:focus, 
 button.icon-button:focus, 
 button.text-only-button:focus,
 img.modal-img:focus,
@@ -81,16 +115,24 @@ video.modal-img:focus,
 audio.modal-img:focus,
 input.query-option-operator:focus,
 input.query-option-input-field:focus,
-input.slider-value:focus {
+input.slider-value:focus,
+input.fuzzy-search-bar:focus,
+.query-result-list-item:focus,
+button.close {*/
+button, 
+input.fuzzy-search-bar:focus,
+#climberdb-main-content .query-option-input-field:focus,
+#climberdb-main-content .query-option-operator:focus,
+.query-result-list-item:focus {
   -webkit-box-shadow: none;
-  outline: -webkit-focus-ring-color auto 0px;
+  outline: -webkit-focus-ring-color auto 0px !important;
 }
-
 button > img {
   height: 100%;
   max-width: 100%;
 }
-/* Custom checkbox*/
+
+/*------Custom checkbox--------*/
 /* The container */
 .checkmark-container {
   display: inline-flex;
@@ -107,7 +149,6 @@ button > img {
   background-color: rgba(0,0,0,0);
   transition: 0.2s all;
 }
-
 /* Hide the browser's default checkbox */
 .checkmark-container input {
   position: absolute;
@@ -116,7 +157,6 @@ button > img {
   height: 0;
   width: 0;
 }
-
 /* Create a custom checkbox */
 .checkmark {
   position: absolute;
@@ -130,13 +170,11 @@ button > img {
   horizontal-align: center;
   transition: 0.2s all;
 }
-
 /*When the checkbox is checked, fill in background*/ 
 .checkmark-container input:checked ~ .checkmark {
   background-color: #219EBC;
   border: none;
 }
-
 /* Create the checkmark/indicator (hidden when not checked) */
 .checkmark:after {
   content: "";
@@ -145,13 +183,11 @@ button > img {
   opacity: 0;
   transition: 0.2s all;
 }
-
 /* Show the checkmark when checked */
 .checkmark-container input:checked ~ .checkmark:after {
   /*display: block;*/
   opacity: 1;
 }
-
 /* Style the checkmark/indicator */
 .checkmark-container .checkmark:after {
   left: 8.5px;
@@ -165,44 +201,281 @@ button > img {
   transform: rotate(45deg);
   vertical-align: center;
 }
-
 .checkmark-container input[type="checkbox"]:focus + span::before {
   outline: rgb(0, 0, 0) auto 5px;
   box-shadow: 0 0 0 5px #ffbf47;
 }
-
 .checkbox-label {
   margin-left: 30px;
+  margin-bottom: 0;
   font-size: 1rem;
 }
+/*---------------------------------*/
+
+/* -----Toggle switch ------------- */
+.switch-container {
+  white-space: nowrap;
+  display: flex;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+  margin-bottom: 0;
+  }
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 34px;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px !important;
+  border-radius: 50%;
+  background-color: white;
+  -webkit-transition: .25s;
+  transition: .25s;
+}
+input:checked + .slider {
+  background-color: #219ebc;
+}
+.switch > input:focus + .slider {
+  border: 2px solid black;
+}
+input:focus:checked + .slider {
+  box-shadow: 0 0 1px hsl(195, 84%, 45%);
+}
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+input:focus + .slider:before {
+  transform: translateY(2px);
+}
+input:checked:focus + .slider:before {
+  transform: translate(24px, 2px);
+}
+/*--------------------------------*/
+
+
+/*-------select2 styling--------*/
+.climberdb-main .select2-container--default 
+  .select2-selection--multiple,
+.climberdb-main .select2-container--default 
+  .select2-selection--single,
+.query-option-operator,
+.query-option-input-field  {
+  background-color: rgba(0, 0, 0, 0);
+  border: none;
+  border-bottom: solid rgba(0, 0, 0, 0.2) 2px;
+  border-radius: 0px;
+  transition: all 0.2s;
+}
+.climberdb-main .select2-container--default.select2-container--focus 
+  .select2-selection--multiple,
+.climberdb-main .select2-container--default.select2-container--focus 
+  .select2-selection--single,
+.query-option-operator:focus,
+.query-option-input-field:focus  { /*the select box*/
+  border: none;
+  border-bottom: solid rgba(0, 0, 0, 0.6) 2px;
+}
+.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice {/*the selected item pill*/
+  background: transparent;
+  color: var(--ui-bg-dark-blue);
+  border: solid transparent 1.5px;
+  border-radius: 2rem;
+  transition: all .2s;
+}
+.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice:hover,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice:hover {
+  border: solid var(--ui-bg-dark-blue) 1.5px;
+
+}
+.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice__remove,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice__remove {
+  border: none;
+  color: var(--ui-bg-dark-blue);
+  background-color: transparent;
+  border-radius: 1.1em;
+  top: 0.25em;
+  width: 1.1rem;
+  height: 1.1rem;
+  transition: background 0.2s;
+  
+}
+/*.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice__remove:hover,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice__remove:hover {
+  background: rgba(0, 0, 0, 0.2);
+}*/
+.climberdb-main .select2-container--default .select2-selection--multiple 
+  .select2-selection__choice__remove span,
+.climberdb-main .select2-container--default .select2-selection--single 
+  .select2-selection__choice__remove span { /*the x*/
+  font-size: 1.5rem;
+  position: relative;
+  top: -.65rem;
+  left: -.05rem;
+}
+.select2-container--open {
+  z-index: 5000;
+}
+body .select2-container > .select2-dropdown {
+  background: var(--ui-bg-dark-blue);
+  color: white;
+}
+body .select2-container--default .select2-results__option--selected {
+  background: var(--ui-primary-highlight-color);
+}
+body .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+  background-color: var(--ui-secondary-highlight-color);
+}
+/*--------------*/
+
+/**** tabs *********/
+ul.tabs { 
+  width: 100%;
+  float: none;
+  list-style: none;
+  position: relative;
+  text-align: left;
+  display: inline-block;
+  padding: 0;
+  margin-bottom: 0;
+}
+.nav.nav-tabs {
+  position: relative;
+  z-index: 1;
+}
+.tab-content {
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 5px 8px 2px rgb(0 0 0 / 30%);
+  background-color: rgb(230, 230, 230);
+  padding: 15px;
+}
+ul.tabs > li {
+  float: left;
+  display: flex;
+}
+ul.tabs input[type="radio"].tab-button {
+  position: absolute;
+  top: 0;
+  left: -9999px;
+}
+
+ul.tabs .tab-label,
+.nav.nav-tabs .nav-link {
+  display: block;
+  padding: 14px 21px;
+  border-radius: 2px 2px 0 0;
+  border: none;
+  font-size: 18px;
+  font-weight: normal;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease-in-out;
+  margin-bottom: 0;
+  height: 60px;
+  border-radius: 10px 10px 0 0;
+  box-shadow: 0 4px 4px 4px rgb(0 0 0 / 15%);
+  background: #219ebc;
+  color: white;
+} 
+ul.tabs .tab-label:hover,
+.nav.nav-tabs .nav-link:hover {
+  background: #0e84af;
+}
+
+ul.tabs .tab-content {
+  z-index: 3;
+  display: none; 
+  overflow: auto;
+  position: absolute;
+  left: 0;
+  top: 60px;
+  width: 100%;
+  padding: 20px;
+  /*column-width: 300px;*/
+}
+/*192deg 70% 43%*/
+/*196deg 85% 37%*/
+ul.tabs input[type="radio"]:checked + .tab-label,
+.nav.nav-tabs .nav-link.active {
+  background-color: #00679b;
+  z-index: 2;
+}
+ul.tabs input[type="radio"]:checked ~ .tab-content {
+  display: flex;
+  column-gap: 60px;
+  row-gap: 15px;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  background-color: rgb(230,230,230);
+  box-shadow: 0 5px 8px 2px rgb(0 0 0 / 30%);
+}
+/* --- tabs --- */
 
 
 /*---Utility classes--- */
 
-.shadow-on-hover {
+.shadow-on-hover,
+.shadow-on-focus {
   -webkit-transition: all 0.2s ease 0.15s;
           transition: all 0.2s ease 0.15s;
 }
-.shadow-on-hover:hover {
+.shadow-on-hover:hover,
+.shadow-on-focus:focus {
   -moz-box-shadow:    8px 8px 20px 6px rgba(0, 0, 0, 0.4);
   -webkit-box-shadow: 8px 8px 20px 6px rgba(0, 0, 0, 0.4);
   box-shadow:         8px 8px 20px 6px rgba(0, 0, 0, 0.4);
   transform: scale(1.025, 1.005);
 }
+.slide-up-on-hover,
+.slide-up-on-focus {
+  -webkit-transition: all 0.2s ease 0.15s;
+          transition: all 0.2s ease 0.15s;
+}
+.slide-up-on-hover:hover,
+.slide-up-on-focus:focus {
+  transform: translate(0px, -7px);
+  position: relative;
+}
 @media (prefers-reduced-motion) {
   .shadow-on-hover:hover {
     transform: none;
   }
-}
-
-.slide-up-on-hover {
-  -webkit-transition: all 0.2s ease 0.15s;
-          transition: all 0.2s ease 0.15s;
-}
-
-.slide-up-on-hover:hover {
-  transform: translate(0px, -7px);
-  position: relative;
+  .has-motion {
+    transition: height 0s, width 0s, transform 0s !important;
+  }
+  * {
+    scroll-behavior: unset;
+  }
 }
 
 .vertical-scroll {
@@ -210,7 +483,7 @@ button > img {
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
 .transparent {
   opacity: 0;
@@ -246,20 +519,50 @@ button > img {
 }
 
 
+/*------- accordion cards -------*/
+.accordion {
+  width: 100%;
+}
+.accordion > .card {
+  background: rgba(255, 255, 255, 0.4);
+}
+.accordion > .card > .card-header {
+  box-shadow: 1px 4px 8px rgb(0 0 0 / 15%);
+  height: 60px;
+  display: flex;
+  align-items: center;
+}
+.card-link .fa-chevron-down, 
+.card-link ~ * > .fa-chevron-down {
+  transition: 0.3s transform;
+}
+.accordion .card-link.collapsed .fa-chevron-down, 
+.accordion .card-link.collapsed ~ * > .fa-chevron-down {
+  /* rotate chevron when collapsed*/
+  transform: rotate(90deg);
+}
+.accordion > .card > .card-collapse {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+
 /*------- input stuff -------*/
 .input-field {
-    margin-right: 20px;
-    max-width: 100%;
-    flex: 1 1 auto;
-    height: 30px;
-    background-color: rgba(0,0,0,0);
-    outline: -webkit-focus-ring-color auto 0px;
-    -webkit-box-shadow: none;
-    border-color: rgba(0,0,0,0);
-    font-size: 16px;
-    transition: all 0.3s ease-out;
-    border-bottom: 2px solid rgba(0,0,0,0.2);
-    text-indent: 5px;
+  /*margin-right: 20px;*/
+  /*margin-right doesn't work when parent container is too small
+    but calc() should work every time*/
+  max-width: calc(100% - 20px);
+  flex: 1 1 auto;
+  height: 30px;
+  color: #023047;
+  background-color: rgba(0,0,0,0);
+  outline: -webkit-focus-ring-color auto 0px;
+  -webkit-box-shadow: none;
+  border-color: rgba(0,0,0,0);
+  border-bottom: 2px solid rgba(0,0,0,0.2);
+  font-size: 16px;
+  transition: all 0.3s ease-out;
+  text-indent: 5px;
 }
 
 .input-field.large-field {
@@ -268,8 +571,15 @@ button > img {
 .input-field.small-field {
   max-width: 50%;
 }
-
-.input-field:not(textarea):hover {
+textarea.input-field {
+  min-height: 100px;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+textarea.input-field::placeholder {
+  color: rgb(170, 170, 170);
+}
+.input-field:hover {
   /*background-color: hsla(1, 0%, 100%, 0.3);*/
   border-bottom: 2px solid rgba(0,0,0,0.5);
   /*color: rgba(0,0,0,0.6);*/
@@ -279,12 +589,16 @@ button > img {
   color: rgba(0,0,0,0.5);
 }*/
 
-.input-field:not(textarea):focus {
+.input-field:focus {
   /*background-color: hsla(1, 0%, 100%, 0.7);
   box-shadow: inset 0px 1px 6px 0px hsla(1, 0%, 100%, 0.3);*/
   border-bottom: 2px solid rgba(0,0,0,0.7) !important;
   color: black;
   /*font-size: 15px;*/
+}
+textarea.input-field:hover,
+textarea.input-field:focus {
+  border-bottom: 1px solid rgba(0, 0, 0, 0) !important;
 }
 /*input.input-field:focus {
   font-size: 15px;
@@ -301,7 +615,8 @@ select.input-field:focus::placeholder {
 .input-field.disabled,
 .field-container.disabled,
 .field-container.hidden,
-.field-container.collapse.show.disabled {
+.field-container.collapse.show.disabled,
+.d-flex.collapse:not(.show) { /*Bootstrap's .d-flex will override a closed .collpase*/
   /*utility class to turn off fields that aren't relevant*/
   display: none !important;
 }
@@ -317,6 +632,11 @@ select.input-field:focus::placeholder {
   width: 100%;
   flex-wrap: wrap;
   position: relative;
+  padding: 0;
+}
+
+.field-container-row {
+  margin-bottom: 20px;
 }
 
 .field-container.small-field {
@@ -366,10 +686,12 @@ select.input-field:focus::placeholder {
 }
 
 /*set display property for fields that are shown/hidden based on input from another field*/
-.field-container.collapse {
+.field-container.collapse,
+.field-container-row.collapse {
   display: none;
 }
-.field-container.collapse.show {
+.field-container.collapse.show,
+.field-container-row.collapse.show {
   display: inline-flex;
 }
 
@@ -384,10 +706,13 @@ select.input-field:focus::placeholder {
   font-size: 16px;
   visibility: visible;
   padding-left: 4px;
+  color: #00679b;/*#219ebc;*/
 }
 
 .field-label.checkbox-label {
   width: calc(100% - 30px);
+  line-height: 25px;
+  height: 25px;
 }
 .field-container.checkbox-field-container {
   align-items: center;
@@ -401,12 +726,13 @@ select.input-field:focus::placeholder {
 
 .input-field:placeholder-shown ~ .field-sub-label, 
 .input-field:placeholder-shown ~ .field-label,
+.input-field.invalid ~ .field-label,
 select.input-field.default ~ .field-label {
   visibility: hidden;
-  transform: translateY(-10px);
+  transform: translateY(-28px);
+  padding-left: 10px;
   color: hsl(1, 0%, 50%);
 }
-
 select.input-field.default,
 .input-field::placeholder,
 textarea.narrative-field::placeholder {
@@ -432,7 +758,152 @@ select.input-field:not(.default) + .required-indicator,
 textarea.input-field:valid + .required-indicator {
   opacity: 0;
 }
+
+.add-card-container {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+.uneditable .add-card-button,
+.uneditable .add-data-button {
+  display: none;
+}
+
+/*Only show error styling if in edit mode*/
+*:not(.uneditable) .input-field.error {
+  border: 2px solid rgba(255, 0, 0, 0.3);
+  box-shadow: 0px 0px 7px 2px hsl(0deg 62% 43% / 50%);
+}
 /* -------------------------------------------*/
+
+/*#########################################################################
+  --------------- Style inputs for toggling editablity ------------------- 
+  #########################################################################*/
+.query-result-pane.result-details-pane .input-field,
+.query-result-pane.result-details-pane .field-label {
+  transition: .3s all;
+}
+.uneditable .field-container-row {
+  /*too much space between rows so get rid of the margin*/
+  margin-bottom: 0;
+}
+.uneditable .checkbox-field-container {
+  /*checkboxes and their labels are on a single row, so add a margin*/
+  margin-bottom: 20px;
+}
+.uneditable .checkmark {
+  border: solid 3px rgb(125, 125, 125);
+}
+.uneditable .checkmark-container input:checked ~ .checkmark {
+  /*checkboxes and their labels are on a single row, so add a margin*/
+  border: none;
+  background-color: rgb(125, 125, 125);
+}
+
+.uneditable .input-field,
+.uneditable .null-input-indicator,
+.uneditable .checkmark-container,
+.query-result-pane.result-details-pane .uneditable-units-text,
+.input-field.admin-only-edit {
+  border-bottom: solid 2px rgba(0, 0, 0, 0);
+  text-indent: 0;
+  margin-bottom: .75rem;
+  appearance: none;
+  pointer-events: none;
+  cursor: default;
+  text-align: left !important;/*necessary to override bootstrap .text-right*/
+}
+
+/*make sure $ does not overlap input for money fields*/
+.query-result-pane.result-details-pane .input-field.money-field.uneditable .unit-symbol-left{
+  margin-left: 5px;
+  width: calc(100% - 35px);
+}
+.uneditable .field-container {
+  margin-left: 0;
+}
+/*make sure narrative field extends 100% of width*/
+.uneditable textarea.input-field {
+  width: 100%;
+  background-color: rgba(0,0,0,0);
+}
+/*override disabled color styling for selects*/
+.uneditable select.input-field:disabled {
+  color: black;
+}
+/*place field labels above fields and set them to bold*/
+.uneditable .input-field ~ .field-label:not(.checkbox-label),
+.uneditable .field-container .field-label:not(.checkbox-label) {
+  order: -2;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-bottom: 0;
+  padding-left: 0;
+  transform: unset;
+}
+.uneditable .input-field ~ .field-label,
+.uneditable .field-container .field-label {
+/*  font-weight: 600;*/
+/*  font-size: 17px;*/
+  font-size: 20px;
+  height: 26px;
+}
+
+/* hide all required indicators*/
+.uneditable .required-indicator {
+  display: none;
+}
+/*hide any fields that are blank and show as <null>*/
+.uneditable .input-field:placeholder-shown,
+.uneditable select.input-field.default,
+.uneditable .input-field:placeholder-shown ~ .unit-symbol,
+.uneditable .flex-field-container ~ .units-field-container {
+  display: none;
+}
+/* styling for any elements that are shown only when editing is disabled*/
+.null-input-indicator,
+.uneditable-units-text {
+  display: none;
+  font-style: italic;
+  font-size: 14px;
+  line-height: 30px;
+}
+.uneditable .flex-field-container {
+  max-width: 100%;
+}
+.uneditable .input-field:placeholder-shown ~ .null-input-indicator,
+.uneditable select.input-field.default ~ .null-input-indicator,
+.uneditable .uneditable-units-text {
+  display: block;
+}
+.uneditable .input-field:placeholder-shown ~ .field-label:not(.checkbox-label),
+.uneditable select.input-field.default ~ .field-label:not(.checkbox-label)  {
+  /*padding-left: .5rem;*/
+  visibility: visible;
+  color: #00679b;
+  /*padding-top: .75rem;*/
+}
+/* handle units fields that should be right-justified*/
+.uneditable .input-with-unit-symbol.text-right,
+.uneditable .input-field.text-right-when-valid {
+  margin-right: 0;
+  flex: 0 1 auto;
+}
+.uneditable .unit-symbol,
+.uneditable .uneditable-units-text {
+  max-width: 100%;
+  flex: 1 1 auto;
+}
+.uneditable .input-field::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  --------------- Style inputs for toggling editablity ------------------- 
+  #########################################################################*/
+
 
 /*--- modal stuff ---*/
 .modal-background {
@@ -459,7 +930,7 @@ textarea.input-field:valid + .required-indicator {
   animation-duration: 0.4s;
 }
 
-.bhims-modal {
+.climberdb-modal {
   position: fixed;
   z-index: 8999;
   top: 50%;
@@ -515,34 +986,6 @@ textarea.input-field:valid + .required-indicator {
   margin-top: -3rem; /*adjust for header height*/
 }
 
-.modal-img-body {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.modal-img-header {
-  padding: 0;
-}
-
-.modal-img-header .close,
-.modal-img-body-header .close {
-  color: white;
-}
-.modal-img-body-header .close img {
-  filter: invert(100%);/*makes black SVG imgs white*/
-}
-.modal-img-body {
-  height: 100%;
-  width: 100%;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
 .modal-header-container {
   width: 100%;
   height: 3rem;
@@ -550,34 +993,18 @@ textarea.input-field:valid + .required-indicator {
   justify-content: center;
 }
 
-.modal-img-body-header {
-  width: 100%;
-  margin-bottom: 1rem;
+
+.modal.centered-modal.show {
+  display: flex !important;
+  justify-content: center;
+}
+.modal.centered-modal > .modal-dialog {
+  margin-top: 0;
+  margin-bottom: 0;
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  justify-content: center;
 }
-
-.modal-img-body-header > .close {
-  color: white;
-  font-size: 2rem;
-}
-
-.modal-img {
-  width: 100%;
-  height: calc(100% - 20px - 1rem);
-  object-fit: contain;
-}
-
-video.modal-img,
-audio.modal-img {
-  
-}
-
-audio.modal-img {
-  height: 40px;
-  max-width: 500px;
-}
-
 /*------- -------*/
 
 
@@ -687,13 +1114,13 @@ audio.modal-img {
 }
 
 /*---Side and top nav bar template stuff---*/
-.bhims-header-menu {
+.climberdb-header-menu {
   position: sticky;
   top: 0;
   left: 0;
   right: 0;
   height: 60px;
-  background-color: black;
+  background-color: #023047;
   color: white;
   display: flex;
   justify-content: space-between;
@@ -718,35 +1145,80 @@ audio.modal-img {
   width: 45px;
 }
 .page-title {
-  color: hsl(0deg 0% 69%);;
+  color: hsl(0deg 0% 80%);
+  margin-bottom: 0;
 }
 .flex-float-right {
   align-self: flex-end;
 }
-#username-container > span, #username-container > img {
-    padding-right: 10px;
-    height: 25px;
-    font-weight: 500;
-    line-height: 60px;
 
-}
+/*------ user account button----------*/
 #username-container {
+  position: relative;
+}
+#show-user-options-button {
+  width: 100%;
+  height: 100%;
+}
+#show-user-options-button:focus {
+  opacity: 1;
+}
+#show-user-options-button > * {
+  padding-right: 10px;
+  height: 35px;
+  font-weight: 500;
+  line-height: 60px;
+  transition: 0.3s opacity;
   opacity: 0.6;
+  color: white;
+  cursor: pointer;
+}
+#show-user-options-button:focus > *{
+  opacity: 1;
+}
+.user-account-dropdown {
+  position: absolute;
+  z-index: 100;
+  background-color: white;
+  width: 200px;
+  height: 0;
+  transition: 0.3s height;
+  top: 60px;
+  right: 0;
+}
+.user-account-dropdown.show {
+  height: 100px;
+}
+.user-account-dropdown .account-button {
+  opacity: 0;
+  pointer-events: none;
+  font-size: 20px;
+  text-decoration: none !important;/*for <a></a>*/
+}
+.user-account-dropdown .account-button:hover {
+  color: #219ebc;/*prevent default hover color on <a></a>*/
+}
+.user-account-dropdown.show .account-button {
+  display: block;
+  opacity: 1;
+  pointer-events: all;
+  font-weight: normal;
 }
 
-main.dashboard-main {
+/*^^^^^^user account button ^^^^^^^^*/
+
+main.climberdb-main {
   position: fixed;
   top: 0;
   height: 100vh;
   width: 100vw;
 
-  background-image: url(../imgs/bhims_dashboard_background.jpg);
+  background-image: url(../imgs/climberdb_dashboard_background.jpg);
   background-repeat: no-repeat;
   background-attachment: fixed;
   background-position: center;
   background-size: cover;
-
-  background: rgba(0, 0, 0, 0.2);
+  background: #cccccc;
 }
 
 .main-container-with-sidebar {
@@ -762,7 +1234,7 @@ main.dashboard-main {
   width: calc(100vw - 250px);*/
   flex: auto;
   max-width: 100%;
-  padding: 10px 15px;
+  padding: 10px 15px 0 15px;
   height: calc(100vh - 60px);
   overflow-y: auto;
   float: right;
@@ -777,7 +1249,6 @@ nav.sidebar {
   width: 250px;
   flex:  0 0 auto; /*sidebar will shrink slightly flex-shrink is not set to 0*/
   padding: 0;
-  background-color: rgba(0, 0, 0, 0.75);
   transition: 0.4s ease-in-out all;
 }
 nav.sidebar.collapsed {
@@ -802,7 +1273,7 @@ nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
   width: 100%;
   overflow-x: hidden;
   overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-  background-color:  #292929;/*#364a36;*/
+ background-color: #023047;
 }
 .sidebar-background {
   position: absolute;
@@ -810,9 +1281,10 @@ nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
   left: 0;
   height: 100%;
   width: 100%;
-  background-image: url(../imgs/bhims_index_bg_1200.jpg);
+  background-image: url(../imgs/sidebar_bg.jpg);
   background-size: cover;
-  opacity: 0.2;
+  background-position: center;
+  opacity: 0.15;
 }
 .sidebar-nav-group {
   display: flex;
@@ -821,43 +1293,52 @@ nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
   list-style: none;
   padding-left: 0px;
 }
-.nav-item {
+nav.sidebar .nav-item {
     padding: 15px;
     position: relative;
 }
-.nav-item.selected {
-  /*box-shadow: inset -1px -7px 20px 1px rgb(0 0 0 / 70%);*/
-  box-shadow: inset -1px -7px 20px 1px rgba(0,0,0,0.3)/*hsl(120deg 17% 18% / 80%)*/;
+nav.sidebar .nav-item.selected {
+  /*box-shadow: inset -1px -7px 20px 1px rgba(0,0,0,0.3);*/
+  box-shadow: inset -1px -7px 20px 1px #023047;
 }
-.nav-item a {
+nav.sidebar .nav-item a {
   display: block;
   white-space: nowrap;
   color: white;
   transition: 0.3s all;
   width: 100%;
+  font-weight: normal;
 }
-.nav-item a > span {
+nav.sidebar .nav-item a > span {
   padding-left: 20px;
   padding-right: 20px;
 }
-.sidebar .nav-item img {
+nav.sidebar .nav-item img {
   height: 30px;
   width: 30px;
   margin-left: 20px;
 }
-.nav-item:hover {
-  background-image: radial-gradient(circle at bottom 50% right 70%, rgba(0,0,0,0.15), rgba(0,0,0,0.6));
+nav.sidebar .nav-item:hover {
+  background-image: radial-gradient(circle at bottom 50% right 70%, #02304701, #023047);
   /*background-image: radial-gradient(circle at bottom 50% right 70%, hsl(120deg 17% 18% / 15%), hsl(120deg 17% 18% / 90%));*/
 }
-.nav-item a:hover, .nav-item.selected a {
+nav.sidebar .nav-item a:hover, 
+nav.sidebar .nav-item.selected a {
   text-decoration: none;
-  color: hsl(198deg 84% 46%);
-  color: hsl(198deg 100% 50%);
-  color:  hsl(188deg 100% 50%);
 }
-.nav-item a:hover > img, .nav-item.selected img {
-  filter: drop-shadow(0px 0px 5px hsl(188deg 84% 60%));
+nav.sidebar .nav-item.selected a {
+  color: hsl(188deg 84% 60%);
 }
+nav.sidebar .nav-item.selected img {
+  filter: drop-shadow(0px 0px 5px hsl(188deg 84% 60%));/*hsl(188deg 84% 60%));*/
+}
+nav.sidebar .nav-item a:hover {
+  color: #ffb600;
+}
+nav.sidebar .nav-item a:hover > img {
+  filter: drop-shadow(0px 0px 5px #ffb600);
+}
+
 /*show a caret pointing to the selected item*/
 .sidebar-nav-group .nav-item.selected > a::after {
   border-right: 15px solid rgb(204, 204, 204);
@@ -874,7 +1355,7 @@ nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
   box-shadow: inset -1px -7px 20px 1px rgba(0,0,0,0.3)
  }
 .sidebar.collapsed .nav-item.selected > a::after {
-  transform: translate(-160px, 7px);
+  transform: translate(-177px, 7px);
 }
 .sidebar-collapse-button {
   height: 100%;
@@ -907,6 +1388,156 @@ when the user clicks the button*/
   width: 100%;
   border-radius: 3px;
 }
+
+
+/*########################################################
+--------- styling for standalone data tables ------------ 
+#########################################################*/
+.climberdb-data-table-wrapper table,
+.climberdb-data-table-wrapper .input-field {
+  font-size: 20px;
+}
+.climberdb-data-table-wrapper table { 
+border-collapse: separate;
+border-radius: 10px;
+border-spacing: 0px;
+}
+.climberdb-data-table td,
+.climberdb-data-table th {
+  /*border:  1px solid #f28100;*/
+  padding: 4px;
+}
+.climberdb-data-table th {
+  background-color: #6bb6b9;
+  color:  white;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  padding: 10px;
+}
+/*Make corners round for header*/
+.climberdb-data-table th:first-of-type {
+  border-top-left-radius: 10px;
+}
+.climberdb-data-table th:last-of-type {
+  border-top-right-radius: 10px;
+}
+/*Make corners round for bottom two rows*/
+.climberdb-data-table tr:last-of-type td:first-of-type, /*when editing*/
+.climberdb-data-table tr:last-of-type td:first-of-type > span {
+  border-bottom-left-radius: 10px;
+}
+.climberdb-data-table tr:last-of-type td:nth-of-type(5),
+.climberdb-data-table tr:last-of-type td:nth-of-type(5) > span {
+  border-bottom-right-radius: 10px;
+}
+.climberdb-data-table tbody tr td:not(.no-border) {
+  padding: 2px;
+}
+.climberdb-data-table tbody tr td:first-of-type {
+  padding-left: 0;
+}
+.climberdb-data-table tbody tr td:nth-of-type(5) {
+  padding-right: 0;
+}
+
+td.no-border {
+  border: none !important;
+}
+
+.climberdb-data-table tr {
+  /*text-align: center;*/
+  height: var(--climberdb-data-table-row-height);
+}
+.climberdb-data-table tbody tr {
+  /*height: 50px;*/
+  transition: 0.25s all;
+}
+.climberdb-data-table tbody tr td:not(.no-border) > span {
+  height: var(--climberdb-data-table-row-height);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: 0.25s all;
+}
+.climberdb-data-table .input-field {
+  border-bottom: none;
+  border-radius: 5px;
+  height: 100%;
+}
+
+.climberdb-data-table .sort-column-button {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  color: white;
+}
+.climberdb-data-table .sort-column-button span {
+  flex: 1 0 calc(100% - 20px);
+  font-weight: bold;
+}
+.climberdb-data-table .sort-column-button i {
+  opacity: 0;
+  transition: 0.25s all;
+  width: 15px;
+  float: right;
+  margin-left: 5px;
+}
+.climberdb-data-table .sort-column-button:hover i {
+  opacity: 1;
+}
+
+/*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------- styling for standalone data tables ------------ 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
+
+.fuzzy-search-bar-container {
+  display: flex;
+  height: 80px;
+  width: 100%;
+}
+.fuzzy-search-bar {
+  height: var(--fuzzy-search-bar-height);
+  line-height: var(--fuzzy-search-bar-height);
+  border: none;
+  border-bottom: solid 3px #219ebc;
+  background-color: rgba(255, 255, 255, 0);
+  transition: 0.3s ease;
+  cursor: pointer;
+  text-indent: 60px;
+  font-size: 20px;
+  color: #023047;
+}
+.fuzzy-search-bar:focus {
+  cursor: unset;
+  background-color: rgba(255, 255, 255, 0.4);
+  outline: none;
+}
+.fuzzy-search-bar:focus,
+input.fuzzy-search-bar:not(:placeholder-shown) {
+  width: unset;
+  flex: 1 1 auto;
+  border-radius: 5px;
+}
+.fuzzy-search-bar.default,
+.fuzzy-search-bar::placeholder {
+  color: #5d7785;
+}
+.fuzzy-search-bar-container > img.search-bar-icon,
+.fuzzy-search-bar-container > button {
+  position: relative;
+  height: 60px;
+  width: 60px;
+  padding: 15px;
+  z-index: -1; /* place behind input so the whole input is clickable*/
+  order: -1; /*has to be placed after search bar to use the sibling combinator*/
+}
+.fuzzy-search-bar:focus ~ img.search-bar-icon, 
+.fuzzy-search-bar:focus ~ button {
+  z-index: 1; /* place in front when background of input is transulcent */
+}
+
 /*@keyframes collapse-sidebar-button {
   0% {
     height: 3px;
@@ -932,6 +1563,7 @@ when the user clicks the button*/
   }
 }*/
 
+
 /*--- */
 .blink {
     -webkit-animation: blink 2s ease-in-out infinite;
@@ -951,7 +1583,7 @@ when the user clicks the button*/
   margin: -75px 0 0 -75px;
   border: 16px solid #f3f3f3;
   border-radius: 50%;
-  border-top: 16px solid hsl(89 20% 58%);/*hsl(211deg 68% 52%);*/
+  border-top: 16px solid #f28100;/*hsl(211deg 68% 52%);*/
   width: 120px;
   height: 120px;
   -webkit-animation: spin 2s linear infinite;
@@ -1044,4 +1676,39 @@ input[type=number] {
 
 .leaflet-popup .leaflet-popup-content-wrapper {
   font-family: 'Barlow', sans-serif;
+}
+
+
+/*Extend the Bootstrap grid to an xxl class*/
+.col-xxl, 
+.col-xxl-1,
+.col-xxl-2,
+.col-xxl-3,
+.col-xxl-3,
+.col-xxl-4,
+.col-xxl-5,
+.col-xxl-6,
+.col-xxl-7,
+.col-xxl-8,
+.col-xxl-9,
+.col-xxl-10,
+.col-xxl-11,
+.col-xxl-12 {
+  width: 100%;
+  min-height: 1px;
+  position: relative;
+}
+@media (min-width: 1400px) {
+  .col-xxl-1 {flex: 0 0 8.333333%;  max-width: 8.333333%;}
+  .col-xxl-2 {flex: 0 0 16.666667%;   max-width: 16.666667%;}
+  .col-xxl-3 {flex: 0 0 25%;      max-width: 25%;}
+  .col-xxl-4 {flex: 0 0 33.333333%; max-width: 33.333333%;}
+  .col-xxl-5 {flex: 0 0 41.666667%;   max-width: 41.666667%;}
+  .col-xxl-6 {flex: 0 0 50;       max-width: 50%;}
+  .col-xxl-7 {flex: 0 0 58.333333%;   max-width: 58.333333%;}
+  .col-xxl-8 {flex: 0 0 67.666667%;   max-width: 67.666667%;}
+  .col-xxl-9 {flex: 0 0 75%;      max-width: 75%;}
+  .col-xxl-10{flex: 0 0 83.333333%; max-width: 83.333333%;}
+  .col-xxl-11{flex: 0 0 91.666667%;   max-width: 91.666667%;}
+  .col-xxl-12{flex: 0 0 100%;     max-width: 100%;}
 }
