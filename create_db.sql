@@ -365,6 +365,8 @@ CREATE VIEW expedition_info_view AS
 		climbers.is_guide,
 		to_char(expeditions.entry_time, 'Mon DD, YYYY'::text) AS expeditions_entry_time,
 		expeditions.entered_by AS expeditions_entered_by,
+		to_char(expeditions.entry_time, 'Mon DD, YYYY'::text) AS expeditions_last_modified_time,
+		expeditions.entered_by AS expeditions_last_modified_by,
 		to_char(expedition_members.entry_time, 'Mon DD, YYYY'::text) AS expedition_members_entry_time,
 		expedition_members.entered_by AS expedition_members_entered_by,
 		to_char(transactions.entry_time, 'Mon DD, YYYY'::text) AS transactions_entry_time,

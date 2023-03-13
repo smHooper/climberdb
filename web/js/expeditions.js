@@ -139,12 +139,12 @@ class ClimberDBExpeditions extends ClimberDB {
 							</div>
 							<div class="expedition-data-header-content">							
 								<div class="result-details-summary-item col-6">
-									<div id="expedition-entered-by-result-summary-item" class="col">
-										<label class="result-details-summary-label">Entered by</label>
+									<div id="expedition-modified-by-result-summary-item" class="col">
+										<label class="result-details-summary-label">Modified by</label>
 										<label class="result-details-summary-value"></label>
 									</div>
-									<div id="expedition-entry-time-result-summary-item" class="col">
-										<label class="result-details-summary-label">Entry date</label>
+									<div id="expedition-modified-time-result-summary-item" class="col">
+										<label class="result-details-summary-label">Modified date</label>
 										<label class="result-details-summary-value"></label>
 									</div>
 								</div>							
@@ -153,7 +153,7 @@ class ClimberDBExpeditions extends ClimberDB {
 										<label class="result-details-summary-label">Current members</label>
 										<label class="result-details-summary-value"></label>
 									</div>
-									<div id="expedition-entry-time-result-summary-item" class="col admin-edit-only">
+									<div id="expedition-confirmed-time-result-summary-item" class="col admin-edit-only">
 										<div class="field-container-row collapse">
 											<label class="result-details-summary-label">Date confirmed</label>
 											<input id="input-date_confirmed" class="input-field result-details-summary-value" type="date" name="date_confirmed" data-dependent-target="#input-group_status" data-dependent-value="3,4,5,6">
@@ -3402,9 +3402,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.clearExpeditionInfo({triggerChange: triggerChange});
 
 		// Set header values
-		$('#expedition-entered-by-result-summary-item .result-details-summary-value')
+		$('#expedition-modified-by-result-summary-item .result-details-summary-value')
 			.text(this.userInfo.ad_username);
-		$('#expedition-entry-time-result-summary-item .result-details-summary-value')
+		$('#expedition-modified-time-result-summary-item .result-details-summary-value')
 			.text((new Date()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}));	
 		$('#expedition-n-members-result-summary-item').collapse('hide');
 
@@ -3596,8 +3596,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		for (const el of $('#expedition-data-container .input-field')) {
 			this.setInputFieldValue(el, expeditionData, {dbID: expeditionData.id, triggerChange: true});
 		}
-		$('#expedition-entered-by-result-summary-item > .result-details-summary-value').text(expeditionData.entered_by);
-		$('#expedition-entry-time-result-summary-item > .result-details-summary-value').text(expeditionData.entry_time);
+		$('#expedition-modified-by-result-summary-item > .result-details-summary-value').text(expeditionData.expeditions_last_modified_by);
+		$('#expedition-modified-time-result-summary-item > .result-details-summary-value').text(expeditionData.expeditions_last_modified_time);
 
 		// add expedition member cards
 		const members = this.expeditionInfo.expedition_members;
