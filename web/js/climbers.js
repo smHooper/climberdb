@@ -1310,7 +1310,7 @@ class ClimberDBClimbers extends ClimberDB {
 	configureMainContent() {
 		$('.main-content-wrapper').append(`
 			<div class="fuzzy-search-bar-container">
-				<input id="climber-search-bar" class="fuzzy-search-bar" placeholder="Search climbers" autocomplete="__never">
+				<textarea id="climber-search-bar" class="fuzzy-search-bar" placeholder="Search climbers" autocomplete="__never"></textarea>
 				<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 				<div class="climber-search-filter-container">	
 					<div class="field-container checkbox-field-container">
