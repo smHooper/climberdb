@@ -1493,13 +1493,15 @@ td.no-border {
   height: var(--fuzzy-search-bar-height);
   line-height: var(--fuzzy-search-bar-height);
   border: none;
-  border-bottom: solid 3px #219ebc;
+  border-bottom: solid 3px var(--ui-primary-color);
   background-color: rgba(255, 255, 255, 0);
   transition: 0.3s ease;
   cursor: pointer;
   text-indent: 60px;
   font-size: 20px;
   color: #023047;
+  overflow: hidden;
+  resize: none;
 }
 .fuzzy-search-bar:focus {
   cursor: unset;

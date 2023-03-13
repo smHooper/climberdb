@@ -45,7 +45,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			<div class="main-content-header">
 				<input id="expedition-id-input" class="hidden" aria-hidden="True">
 				<div class="fuzzy-search-bar-container">
-					<input id="expedition-search-bar" class="fuzzy-search-bar expedition-search-bar" placeholder="Type to search expeditions" title="Expedition search bar" autocomplete="__never">
+					<textarea id="expedition-search-bar" class="fuzzy-search-bar expedition-search-bar" placeholder="Type to search expeditions" title="Expedition search bar" autocomplete="__never"></textarea>
 					<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 					<button class="show-query-options-button icon-button" title="Expedition filter options">
 						<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg">

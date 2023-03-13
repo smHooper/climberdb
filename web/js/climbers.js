@@ -47,7 +47,7 @@ class ClimberForm {
 					<div class="expedition-modal-only expedition-modal-climber-form-header hidden">
 						<div class="expedition-modal-search-container" aria-hidden="true">
 							<div class="fuzzy-search-bar-container col-6">
-								<input id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Type text to filter climbers" autocomplete="__never">
+								<textarea id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Type text to filter climbers" autocomplete="__never"></textarea>
 								<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 							</div>	
 							<div class="modal-climber-select-container collapse">
