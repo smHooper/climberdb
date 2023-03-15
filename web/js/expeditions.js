@@ -965,6 +965,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#input-guide_company').change(e => {
 			this.onGuideCompanyInputChange(e);
 		});
+
+		$('#input-special_group_type').change(e => {
+			this.onSpecialGroupTypeChange(e)
+		})
 		//TODO: when date changes, make sure it's a reasonable value
 
 		// ^^^^^^^^^^^ Expedition ^^^^^^^^^^^^^^^^^^^
@@ -2434,6 +2438,13 @@ class ClimberDBExpeditions extends ClimberDB {
 				.ariaTransparent(guideCompanyCode != -1);
 	}
 
+	/*
+	Change the color of card headers to green for NPS groups
+	*/
+	onSpecialGroupTypeChange(e) {
+		// Toggle the nps-patrol class, depending on whether the special group type is set to NPS
+		$('.expedition-content').toggleClass('nps-patrol', $(e.target).val() == 3)
+	}
 
 	onDateConfirmedChange(e) {
 		const dateConfirmed = e.target.value;
@@ -2461,7 +2472,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						.change(); 
 				})
 			}
-			showModal(message, 'Update Planned Departure?', 'confirm', '', {eventHandlerCallable: eventHandlerCallable});
+			//showModal(message, 'Update Planned Departure?', 'confirm', '', {eventHandlerCallable: eventHandlerCallable});
 		}
 	}
 

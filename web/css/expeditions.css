@@ -1,5 +1,6 @@
 :root {
 	--modal-bg-color: #000000aa;
+	--nps-card-header-bg: #899936;
 }
 
 .main-content-header {
@@ -405,6 +406,9 @@
 }
 .card.expedition-card.cancelled .card-header {
 	background-color: #cccccc;
+}
+.expedition-content.nps-patrol .card.expedition-card:not(.cancelled) .card-header {
+	background-color: var(--nps-card-header-bg);
 }
 .card.cancelled .expedition-member-card-link-label {
 	text-decoration: line-through;
