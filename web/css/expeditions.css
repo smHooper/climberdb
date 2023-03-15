@@ -117,6 +117,10 @@
 .expedition-search-bar-option:focus {
 	background-color: #ffffff55;
 }
+.expedition-search-bar-option.cancelled {
+	text-decoration: line-through;
+	opacity: 0.7;
+}
 .fuzzy-search-bar-drawer-content {
 	/*width: 80px;*/
 	height: 100%;

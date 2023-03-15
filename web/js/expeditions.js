@@ -848,7 +848,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// If the group status changes to "confirmed", make actual departure and actual return dates not required
 		$('#input-group_status').change(e => {
 			const statusCode = parseInt(e.target.value || 0);
-			this.toggleRequiredOnInput($('#input-planned_return_date'), statusCode > 1) //1 === pending
+			this.toggleRequiredOnInput($('#input-planned_return_date'), statusCode > 1 && statusCode != 6) //1 === pending, 6 === cnacleled
 			this.toggleRequiredOnInput($('#input-actual_departure_date'), statusCode !== 3);//3 === confirmed
 			this.toggleRequiredOnInput($('#input-actual_return_date'), statusCode === 5);//5 === off mountain
 		})
@@ -2464,7 +2464,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				+ (minDaysAfterConfirm * this.constants.millisecondsPerDay) // add milliseconds in minDaysAfterConfirm
 				//+ (60000 * now.getTimezoneOffset()) // add timezone offset (.getTimezoneOffset() returns offset in minutes)
 			);
-			const message = `You've marked this expedition as confirmed on ${departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'})} but they're scheduled to depart <strong>${daysToDeparture} days</strong> from now. Would you like to set the departure date to <strong>${newDepartureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'})}</strong>, ${minDaysAfterConfirm} days from now?`
+			const message = `You've marked this expedition as confirmed on ${now.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'})} but they're scheduled to depart <strong>${daysToDeparture} days</strong> from now. Would you like to set the departure date to <strong>${newDepartureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'})}</strong>, ${minDaysAfterConfirm} days from now?`
 			const eventHandlerCallable = () => {
 				$('#alert-modal .confirm-button').click(() => { 
 					$('#input-planned_departure_date')
@@ -2595,6 +2595,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const statusCode = $select.val();
 			const status = $select.find(`option[value=${statusCode}]`).text();
 			const $memberCards = $('#expedition-members-accordion .card:not(.cloneable)');
+			const expeditionInfo =  this.expeditionInfo;
 			
 			if ($memberCards.length === 0) {
 				showModal(`You have not added any expedition members yet, so this expedition's status can't be changed to ${status}.`, 'No Expedition Members');
@@ -2638,9 +2639,14 @@ class ClimberDBExpeditions extends ClimberDB {
 				$dateConfirmedField.val(getFormattedTimestamp()).change();
 			}
 
+			
+			const iscancelled = statusCode == 6;
+			// Show the search bar drawer option as cancelled (or not)
+			$(`.expedition-search-bar-option[data-expedition-id=${expeditionInfo.expedition_id}]`).toggleClass('cancelled', iscancelled);
+
 			// If the expedition is being cancelled, ask if the briefing should also be cancelled
-			const briefingInfo = this.expeditionInfo.briefings;
-			if (statusCode == 6 && briefingInfo.briefing_datetime) {
+			const briefingInfo = expeditionInfo.briefings;
+			if (iscancelled && briefingInfo.briefing_datetime) {
 				const expeditionName = $('#input-expedition_name').val();
 				const message = `Do you also want to cancel the briefing for ${expeditionName} scheduled` + 
 					` for ${briefingInfo.briefing_datetime}? <strong> This action is permanent and` + 
@@ -3345,7 +3351,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		const sql = `
 			SELECT DISTINCT 
 				expedition_id, 
-				expedition_name 
+				expedition_name,
+				group_status_code  
 				${similarity ? `, ${similarity} AS search_score` : ''} 
 			FROM expedition_info_view 
 			${whereClause} 
@@ -3372,7 +3379,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					if (result.length) {
 						//$drawer.append('<option value="">Click to select an expedition</option>')
 						for (const row of result) {
-							$drawer.append(`<div class="expedition-search-bar-option" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
+							const cancelledClass = row.group_status_code == 6 ? 'cancelled' : '';
+							$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
 						}
 					} else {
 						$drawer.append('<div class="expedition-search-bar-option">No expeditions match your search</div>');
