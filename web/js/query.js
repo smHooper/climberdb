@@ -136,7 +136,7 @@ class ClimberDBQuery extends ClimberDB {
 						FROM (
 							SELECT 
 								guide_company,
-								sum(within_peak) AS "Peak Season",
+								sum(within_peak) AS "Peak Season (3/15-7/1)",
 								count(*) - sum(within_peak) AS "Non-Peak",
 								count(*) AS "Total"
 							FROM (
@@ -168,7 +168,7 @@ class ClimberDBQuery extends ClimberDB {
 					`,
 				columns: [
 					'Guide Company',
-					'Peak Season',
+					'Peak Season  (3/15-7/1)',
 					'Non-Peak',
 					'Total'
 				],
