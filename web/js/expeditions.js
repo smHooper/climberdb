@@ -33,7 +33,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 		this.historyBuffer = []; // for keeping track of browser navigation via back and forward buttons
 		this.currentHistoryIndex = 0;
-
 		return this;
 	}
 
@@ -833,6 +832,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					} else {
 						this.loadExpedition(state.id);
 						this.currentHistoryIndex = state.historyIndex;
+						// Check if this expedition is already open
+						this.startListeningForOpenURL();
 					}
 				}
 			} 
@@ -1462,7 +1463,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.queryExpedition(expeditionID);
 		$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
 		this.toggleEditing(false);//make sure editting is turned off
-
+		
 	}
 
 
@@ -1479,6 +1480,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Push the new entry here because loadExpedition() is also called when the user clicks the back or forward button, and adding a history entry then will muck up the history sequence 
 		this.historyBuffer.push(expeditionID);
 		window.history.pushState({id: expeditionID, historyIndex: this.currentHistoryIndex + 1}, '', url);
+
+		// This is a different expedition, so make sure it's not open elsewhere
+		this.startListeningForOpenURL();
 	}
 
 	/*

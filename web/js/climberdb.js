@@ -210,6 +210,7 @@ class ClimberDB {
 			climbingFeeTransactionCodes: [3, 10, 12, 14, 15, 23, 24],
 			entranceFeeTransactionCodes: [11, 12, 14, 15, 25, 8, 26]
 		}
+		this.urlChannels = {}; // for checking if a URL is already open in another tab/window
 	}
 
 	getUserInfo() {
@@ -1352,12 +1353,67 @@ class ClimberDB {
 		}
 	}
 
+	/*
+	Prevent multiple tabs with the same URL from opening by sending message on a channel with 
+	the page URL as the title. The URL includes the search string so the URL has to be the exact same
+	*/
+	startListeningForOpenURL() {
+		const url = window.location.href;
+
+		// If this is a fresh window, assign an ID
+		const tabID = window.name || Math.random().toString(36).substr(2, 10);
+		window.name = tabID;
+
+		const openQuery = `is ${url} open?`,
+			  openResponse = `${url} is open`;
+
+		// Keep a reference to each url channel this tab is listening to. This is to 
+		//	prevent creating multiple channels that each emit and receive responses for 
+		//	the same message
+		let channel = this.urlChannels[url];
+		if (!channel) {
+			channel = new BroadcastChannel(url);
+			this.urlChannels[url] = channel;
+			
+			channel.onmessage = e => {
+				const eventData = e.data;
+				// If another tab is asking if this page is already open, send back a message saying that it is
+				if (eventData.message === openQuery) { 
+					// We already have the page open so tell the other tab that it is
+					channel.postMessage({message: openResponse, url: url, tabID: tabID})
+				} 
+				// If another tab is responding, telling us the page is already open, focus on that tab
+				else if (
+						eventData.message === openResponse && 
+						eventData.url === url && 
+						eventData.tabID !== tabID
+					) {
+					//window.open('', e.data.tabID).focus(); // this doesn't work -- just opens a new blank tab
+					const message = 'You already have this page open in another browser tab/window.' + 
+						' You can have the same page open multiple times simultaneously, but changes' + 
+						' you make will not be automatically synchronized. You must reload a' + 
+						' tab/window to see changes you make in another.';
+					showModal(message, 'Page Already Open');
+				}
+			}
+		}
+
+		// Post a message asking if the page is open elsewhere
+		channel.postMessage({message: openQuery});
+	}
+
+
 	/* Return any Deferreds so anything that has to happen after these are done can wait */
 	init({addMenu=true}={}) {
 
 		this.loginInfo = $.parseJSON(window.localStorage.getItem('login') || '{}');
 
-		if (addMenu) this.configureMenu();
+		if (addMenu) {
+			this.configureMenu();
+
+			// Only check if the page is open if this is NOT the index page
+			this.urlChannel = this.startListeningForOpenURL();
+		}
 
 		// Bind events on dynamically (but not yet extant) elements
 		$(document).on('change', 'select.input-field', e => {
