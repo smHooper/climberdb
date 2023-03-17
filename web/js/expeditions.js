@@ -812,31 +812,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			if (e.isTrigger) $(e.target).removeClass('filled-by-default');
 		})
 
-		// When the user clicks the back or forward browser nav buttons, check to see if there's a state entry with an ID associated. If so, load that expedition
 		window.onpopstate = (e) => {
-			const state = e.state;
-			if (state) {
-				if (state.id) {
-					// ask user to confirm/discard edits if there are any
-					if ($('.input-field.dirty:not(.filled-by-default)').length) {
-						this.confirmSaveEdits({
-							afterActionCallbackStr: `
-								climberDB.loadExpedition(${state.id});
-								climberDB.currentHistoryIndex = ${state.historyIndex};
-							`,
-							afterCancelCallbackStr: `
-								const currentExpeditionID = $('#expedition-id-input').val();
-								const historyIndex = climberDB.historyBuffer.indexOf(currentExpeditionID);
-								window.history.pushState({id: currentExpeditionID, historyIndex: historyIndex}, '', window.location.href)
-							`});
-					} else {
-						this.loadExpedition(state.id);
-						this.currentHistoryIndex = state.historyIndex;
-						// Check if this expedition is already open
-						this.startListeningForOpenURL();
-					}
-				}
-			} 
+			this.onPopState(e)
 		}
 
 		// Use buttons instead of anchor tag for scrolling to top and bottom of page 
@@ -1468,6 +1445,37 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*
+	When the user clicks the back or forward browser nav buttons, check to see if there's a state 
+	entry with an ID associated. If so, load that expedition
+	*/
+	onPopState(e) {
+		const state = e.state;
+		if (state) {
+			if (state.id) {
+				// ask user to confirm/discard edits if there are any
+				if ($('.input-field.dirty:not(.filled-by-default)').length) {
+					this.confirmSaveEdits({
+						afterActionCallbackStr: `
+							climberDB.loadExpedition(${state.id});
+							climberDB.currentHistoryIndex = ${state.historyIndex};
+						`,
+						afterCancelCallbackStr: `
+							const currentExpeditionID = $('#expedition-id-input').val();
+							const historyIndex = climberDB.historyBuffer.indexOf(currentExpeditionID);
+							window.history.pushState({id: currentExpeditionID, historyIndex: historyIndex}, '', window.location.href)
+						`});
+				} else {
+					this.loadExpedition(state.id);
+					this.currentHistoryIndex = state.historyIndex;
+					// Check if this expedition is already open
+					this.startListeningForOpenURL();
+				}
+			}
+		} 
+	}
+
+
+	/*
 	Helper method to add a new history entry for navigating between expeditions
 	*/
 	updateURLHistory(expeditionID, $input) {
@@ -1475,7 +1483,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	and forward buttons will move to and from expeditions
 		const url = new URL(window.location);
 		url.searchParams.set('id', expeditionID);
-		const previouslySelectedID = $input.data('current-value');
 		
 		// Push the new entry here because loadExpedition() is also called when the user clicks the back or forward button, and adding a history entry then will muck up the history sequence 
 		this.historyBuffer.push(expeditionID);
