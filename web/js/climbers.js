@@ -662,30 +662,30 @@ class ClimberForm {
 		// 	Check this by seeing if any inputs have their table-id set. If they do, this is an 
 		//	update and the form can just be collapsed/dismissed. Otherwise, it's an insert and 
 		//	any data entered will be lost
-		const isInsert = $('.climber-form .input-field').get().some(
-			el => {
-				const $el = $(el);
-				return $el.data('table-id') === undefined || $el.data('table-id') === ''
-			});
-		const closeCallbackString = `climberDB.climberForm.closeClimberForm($('#${$button.attr('id')}'));`
+		const isInsert = $('.climber-form .input-field')
+			.get()
+			.every(el => !$(el).data('table-id'));
+
+		const afterCloseCallBack = () => {
+			this.closeClimberForm($button);
+		}
 		if ($('.climber-form .input-field.dirty').length) {
 			// Don't offer a save option, just discard and cancel
 			if (isInsert) {
 				const footerButtons = `
 					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
 					<button 
-						class="generic-button modal-button danger-button close-modal" 
-						data-dismiss="modal" 
-						onclick="${closeCallbackString}"
-					>Discard</button>
+						class="generic-button modal-button danger-button close-modal discard-button" 
+						data-dismiss="modal">Discard</button>
 				`;
 				const message = 
 					`You've made changes to the cliimber form. Are you sure you want to close` + 
 					' the form and discard these edits? To continue editing or save your edits, click cancel.';
-				showModal(message, 'Discard climber edits?', 'confirm', footerButtons)
+				const eventHandler = () => ($('#alert-modal .discard-button').click(() => {afterCloseCallBack.call()}))
+				showModal(message, 'Discard climber edits?', 'confirm', footerButtons, {eventHandlerCallable: eventHandler})
 			} else {
 				// User can save, discard, or cancel
-				this.confirmSaveEdits(closeCallbackString);
+				this.confirmSaveEdits(afterCloseCallBack);
 			}
 		} else {
 			this.closeClimberForm($button);
@@ -1150,17 +1150,28 @@ class ClimberForm {
 	/*
 	Prompt user to confirm or discard edits via modal
 	*/
-	confirmSaveEdits(afterActionCallbackStr='') {
+	confirmSaveEdits(afterActionCallback=()=>{}) {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
 		const onConfirmClick = `
-			showLoadingIndicator();
-			climberDB.climberForm.saveEdits(); 
+
 		`;
+		const eventHandler = () => {
+			// 
+			$('#alert-modal .discard-button').click(() => {
+				this.discardEdits();
+				afterActionCallback.call();
+			});
+			$('#alert-modal .save-button').click(() => {
+				showLoadingIndicator();
+				this.saveEdits(); 
+				afterActionCallback.call();
+			});
+		}
 		
 		const footerButtons = `
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.climberForm.discardEdits();${afterActionCallbackStr}">Discard</button>
-			<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}${afterActionCallbackStr}">Save</button>
+			<button class="generic-button modal-button danger-button close-modal discard-button" data-dismiss="modal">Discard</button>
+			<button class="generic-button modal-button primary-button close-modal save-button" data-dismiss="modal">Save</button>
 		`;
 		// climberDB is a global instance of ClimberDB or its subclasses that should be instantiated in each page
 		// 	this is a little un-kosher because the ClimberForm() instance is probably a property of climberDB, but
@@ -1169,7 +1180,8 @@ class ClimberForm {
 			`You have unsaved edits to this climber. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this climber's info.`,
 			'Save edits?',
 			'alert',
-			footerButtons
+			footerButtons,
+			{eventHandlerCallable: eventHandler}
 		);
 	}
 
@@ -1301,6 +1313,8 @@ class ClimberDBClimbers extends ClimberDB {
 		this.recordsPerSet = 50; /* how many climbers to show at once */
 		this.currentRecordSetIndex = 0;
 		this.climberForm;
+		this.historyBuffer = []; // for keeping track of browser navigation via back and forward buttons
+		this.currentHistoryIndex = 0;
 
 		return this;
 	}
@@ -1382,14 +1396,8 @@ class ClimberDBClimbers extends ClimberDB {
 		});
 
 		// When a user types anything in the search bar, filter the climber results.
-		$('#climber-search-bar').keyup(() => {
-			const $input = $('#climber-search-bar');
-			const searchString = $input.val();
-			
-			if (searchString.length >= 3 || searchString.length === 0) {
-				this.queryClimbers({searchString: searchString});
-				this.currentRecordSetIndex = 1;
-			}
+		$('#climber-search-bar').keyup(e => {
+			this.onClimberSearchKeyup(e)
 		});
 
 		$('.climber-search-filter').change(e => {
@@ -1406,6 +1414,10 @@ class ClimberDBClimbers extends ClimberDB {
 				this.currentRecordSetIndex = 1;
 			}
 		});
+
+		window.onpopstate = e => {
+			this.onPopState(e)
+		}
 
 		// Configure click events for the result nav buttons
 		$('.show-previous-result-set-button, .show-next-result-set-button').click(e => {
@@ -1427,6 +1439,12 @@ class ClimberDBClimbers extends ClimberDB {
 					$('.result-details-pane:not(.collapsed) .input-field').first().focus();
 				}
 			}
+		});
+
+		$(document).on('click', '.query-result-list-item:not(.header-row)', e => {
+			this.onClimberResultItemClick(e)
+		}).on('focus', '.query-result-list-item:not(.header-row)', e => { // user tabbed to another result-item
+			this.onClimberResultItemFocus(e)
 		});
 
 		$('.card-label-field').change(e => {
@@ -1497,6 +1515,21 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	/*
+	Search for climbers
+	*/
+	onClimberSearchKeyup(e) {
+		const $input = $('#climber-search-bar');
+		const searchString = $input.val();
+		
+		// Only query the DB if the search bar is either empty or has at least 3 characters
+		if (searchString.length >= 3 || searchString.length === 0) {
+			this.queryClimbers({searchString: searchString});
+			this.currentRecordSetIndex = 1;
+		}
+	}
+
+
+	/*
 	Handle modal-save-climber-button events here because the things that need to happen 
 	after a successful save will be different depending on where the modal form is shown
 	from.
@@ -1561,7 +1594,8 @@ class ClimberDBClimbers extends ClimberDB {
 
 		const $climberForm = this.climberForm.$el;
 		if ($climberForm.find('.input-field.dirty').length) {
-			this.climberForm.confirmSaveEdits('climberDB.showModalClimberForm()');
+			const callback = () => {this.showModalClimberForm()};
+			this.climberForm.confirmSaveEdits(callback);
 		} else {
 			this.showModalClimberForm($climberForm);
 		}
@@ -1584,10 +1618,81 @@ class ClimberDBClimbers extends ClimberDB {
 	}
 
 
+
+	/*
+	When the user clicks the back or forward browser nav buttons, check to see if there's a state 
+	entry with an ID associated. If so, load that expedition
+	*/
+	onPopState(e) {
+		
+		// Create an anonymous function to be called if the user has to confirm any edits
+		const loadPreviousClimber = () => {
+			const state = e.state || {};
+			const climberID = state.id;
+			this.currentRecordSetIndex = (state.recordSetIndex || 1) - 1;
+			if (!climberID) {
+				// If this is just the base climbers.html url (no custom state with a climber ID)
+				//	just load the default climber result set
+				$('#climber-search-bar').val('');
+				this.getResultSet();
+			} else {
+				// Otherwise, load the specific climber
+				// Set the search string to whatever it was when the URL changed
+				$('#climber-search-bar').val(state.searchString);
+				this.currentHistoryIndex = state.historyIndex;
+				// Make sure getResultSet() doesn't add a new history entry
+				this.getResultSet({selectClimberID: climberID, newHistoryEntry: false});
+
+				// Check if this climber is already open in another Window
+				this.startListeningForOpenURL();
+			}
+		}
+
+		// ask user to confirm/discard edits if there are any
+		if ($('.input-field.dirty:not(.filled-by-default)').length) {
+			this.confirmSaveEdits(loadPreviousClimber);
+		} else {
+			loadPreviousClimber.call();
+		}
+	}
+
+
+	/*
+	Helper method to add a new history entry for navigating between expeditions
+	*/
+	updateURLHistory(climberID) {
+
+		// Don't add the same climber to the history buffer twice in a row
+		const previousClimberID = this.historyBuffer[this.currentHistoryIndex - 1];
+		if (previousClimberID == climberID) return;
+
+		// since we're adding a new history entry, bump the buffer index
+		this.currentHistoryIndex += 1;
+
+		// Update URL with new expedition ID and add a history entry so the back 
+		//	and forward buttons will move to and from expeditions
+		const url = new URL(window.location);
+		url.searchParams.set('id', climberID);
+		
+		// Push the new entry here because loadExpedition() is also called when the user clicks the back or forward button, and adding a history entry then will muck up the history sequence 
+		this.historyBuffer.push(climberID);
+		const state = {
+			id: climberID, 
+			historyIndex: this.currentHistoryIndex, 
+			searchString: $('#climber-search-bar').val(), //get the current search string so it can be reset
+			recordSetIndex: this.currentRecordSetIndex // store the result set index so the same one can be opened
+		}
+		window.history.pushState(state, '', url);
+
+		// This is a different expedition, so make sure it's not open elsewhere
+		this.startListeningForOpenURL();
+	}
+
+
 	/*
 	Select a climber from the list
 	*/
-	selectResultItem($item) {
+	selectResultItem($item, {updateURLHistory=true}={}) {
 
 		// Reset because this will get filled with the selected climber's data by setInputFieldValue()
 		this.climberForm.selectedClimberInfo = {};
@@ -1612,23 +1717,60 @@ class ClimberDBClimbers extends ClimberDB {
 
 		// Make sure required fields are required
 		$('#disable-required-switch-container input[type=checkbox]').prop('checked', false).change();
+
+		if (updateURLHistory) this.updateURLHistory(climberID);
+
+		return $item;
 		
 	}
 
 
+	/*
+	Wrapper for selectResultItem to handle unsaved edits if there are any
+	*/
 	confirmSelectResultItem($item) {
-
 		if ($('.climber-form .input-field.dirty').length) {
-			const afterActionCallbackStr = `climberDB.selectResultItem($('#${$item.attr('id')}'))`;
-			this.climberForm.confirmSaveEdits(afterActionCallbackStr);
+			const afterActionCallback = () => {this.selectResultItem($(`#${$item.attr('id')}`))};
+			this.climberForm.confirmSaveEdits(afterActionCallback);
 		} else {
 			this.selectResultItem($item)
 		}
 	}
 
+
 	/*
+	Event handler for climber result item click
 	*/
-	fillResultList(climberInfo, autoSelectFirst=false) {
+	onClimberResultItemClick(e) {
+		// Only select the item if it isn't already selected
+		const $item = $(e.target).closest('.query-result-list-item');
+		if ($item.is('.selected')) {
+			this.selectResultItem($item);
+		} else {
+			this.confirmSelectResultItem($item);
+		}
+		e.stopImmediatePropagation(); // prevent focus
+	}
+
+	/*
+	Handle when a climber result item gets the focus from tabbing
+	*/
+	onClimberResultItemFocus(e) {
+		// Only select the item if it isn't already selected
+		const $item = $(e.target);
+		if ($item.is('.selected')) return;
+		this.confirmSelectResultItem($(e.target));
+	}
+
+	/*
+	Add climber query results to the UI
+	@param climberInfo: query result object
+	@param autoSelectID [optional]: indicates which climber ID to automatically select from 
+		the query result. Can be boolean indicating, if true, to select the first climber in
+		the result set, or it can be a numeric climber ID. If set to -1, the first climber in
+		the result set will be selected
+	*/
+	fillResultList(climberInfo, {autoSelectID=false}={}) {
 
 		const currentSelectedID = ($('.query-result-list-item.selected').attr('id') || '').replace('item-', '');
 
@@ -1651,7 +1793,7 @@ class ClimberDBClimbers extends ClimberDB {
 			var localeString = `${climber.city ? climber.city + ', ' : ''}${stateOrCountry}`;
 
 			$list.append(`
-				<li id="item-${climber.id}" class="query-result-list-item ${climber.id == currentSelectedID ? 'selected' : ''}" role="row" tabindex=${liTabIndex}>
+				<li id="item-${climber.id}" class="query-result-list-item ${climber.id == currentSelectedID ? 'selected' : ''}" role="row" data-climber-id=${climber.id} tabindex=${liTabIndex}>
 					<label class="result-summary-label col" role="gridcell">${climber.full_name}</label>
 					<label class="result-summary-label col" role="gridcell">${localeString || '<em>no locale entered</em>'}</label>
 					<label class="result-summary-label col" role="gridcell">${climber.expedition_name || '<em>None</em>'}</label>
@@ -1660,30 +1802,25 @@ class ClimberDBClimbers extends ClimberDB {
 			liTabIndex ++;
 		}
 
-		$('.query-result-list-item:not(.header-row)')
-			.click(e => {
-				// Only select the item if it isn't already selected
-				const $item = $(e.target).closest('.query-result-list-item');
-				if ($item.is('.selected')) {
-					this.selectResultItem($item);
-				} else {
-					this.confirmSelectResultItem($item);
-				}
-				e.stopImmediatePropagation(); // prevent focus
-			}).focus(e => { // user tabbed to another result-item
-				// Only select the item if it isn't already selected
-				const $item = $(e.target);
-				if ($item.is('.selected')) return;
-				this.confirmSelectResultItem($(e.target));
-			});
-
 		const $selectedItem = $('.query-result-list-item.selected');
-		// Select first
-		if (autoSelectFirst) {
-			const $first = $('.query-result-list-item:not(.header-row)').first();
-			this.selectResultItem($first);
-			$first[0].scrollIntoView();
-		} else if (!$selectedItem.length) {
+		// See if there's a climber to automatically select
+		if (autoSelectID) {
+			
+			if (autoSelectID === true || autoSelectID == -1) {
+				// Select first
+				const $first = $('.query-result-list-item:not(.header-row)').first();
+				this.selectResultItem($first, {updateURLHistory: false});
+				$first[0].scrollIntoView();
+			} else {
+				// Otherwise, select the specified climber
+				const $item = $(`.query-result-list-item[data-climber-id=${autoSelectID}]`)
+				// Don't update the window.history because this function could be called from onpopstate, which would create a duplicate entry. 
+				this.selectResultItem($item, {updateURLHistory: false})
+				$item[0].scrollIntoView();
+			}
+		} 
+		// Otherwise, don't do anything
+		else if (!$selectedItem.length) {
 			$('.result-details-pane .input-field').val(null);
 			$('.result-details-pane')
 				.addClass('collapsed')
@@ -1695,7 +1832,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	/*Get climber data*/
-	queryClimbers({searchString='', minIndex=1, climberID=undefined} = {}) {
+	queryClimbers({searchString='', minIndex=1, climberID=undefined, selectClimberID=null} = {}) {
 		const withSearchString = searchString.length > 0;
 		var minIndex = minIndex; // not sure why but for some reason this needs to be used here to be defined later
 		
@@ -1737,7 +1874,7 @@ class ClimberDBClimbers extends ClimberDB {
 					}
 					result = result.data;
 					if (!result.length) {
-						$('.query-result-list-item:not(.header-row)').remove()
+						$('.query-result-list-item:not(.header-row)').remove();
 						$('.empty-result-message').ariaHide(false);
 						$('.hidden-on-invalid-result').ariaHide(true);
 						$('.result-details-pane').addClass('collapsed');
@@ -1749,7 +1886,9 @@ class ClimberDBClimbers extends ClimberDB {
 						let id = this.climberInfo[i].id;
 						this.climberIDs[id] = i;
 					}
-					this.fillResultList(this.climberInfo, !withSearchString);
+					// Add climbers to the list. If a climberID was given, it will automatically be selected. 
+					//	If not, only select the first climber if there was no search string provided
+					this.fillResultList(this.climberInfo, {autoSelectID: selectClimberID || !withSearchString});
 
 					// Update index
 					if (isNaN(climberID)) {
@@ -1805,7 +1944,7 @@ class ClimberDBClimbers extends ClimberDB {
 	/*
 	Helper method to get next (or previous) set of results
 	*/
-	getResultSet({isNext=true}={}) {
+	getResultSet({isNext=true, selectClimberID=null, newHistoryEntry=true}={}) {
 
 		this.currentRecordSetIndex += isNext ? 1 : -1
 		const maxIndex = this.currentRecordSetIndex * this.recordsPerSet;
@@ -1815,7 +1954,9 @@ class ClimberDBClimbers extends ClimberDB {
 		const value = $input.val();
 		var searchString = value.length >= 3 || value.length === 0 ? value : '';
 
-		return this.queryClimbers({searchString: searchString, minIndex: minIndex});
+		if (newHistoryEntry && selectClimberID && selectClimberID > 0) this.updateURLHistory(selectClimberID);
+
+		return this.queryClimbers({searchString: searchString, minIndex: minIndex, selectClimberID: selectClimberID});
 	}
 
 
@@ -1930,7 +2071,7 @@ class ClimberDBClimbers extends ClimberDB {
 			var urlParams = this.parseURLQueryString();
 			const queryDeferred = urlParams.id  ?
 				this.queryClimberByID(urlParams.id) :
-				this.getResultSet();
+				this.getResultSet({selectClimberID: -1});// select the first climber
 
 			queryDeferred.always(()=>{
 				$.when(...deferreds)
