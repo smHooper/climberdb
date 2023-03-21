@@ -1388,12 +1388,21 @@ class ClimberDB {
 						eventData.url === url && 
 						eventData.tabID !== tabID
 					) {
+
+					const pathName = window.location.pathname.replace(/\//g, '')
+					const pageObjectName = 
+						!this.parseURLQueryString().id ? 'Page' : 
+						pathName === 'expeditions.html' ? 'Expedition' : 
+						pathName === 'climbers.html' ? 'Climber' :
+						pathName === 'briefings.html' ? 'Briefing' :
+						'Page';
+					const lowerCaseName = pageObjectName.toLowerCase();
 					//window.open('', e.data.tabID).focus(); // this doesn't work -- just opens a new blank tab
-					const message = 'You already have this page open in another browser tab/window.' + 
-						' You can have the same page open multiple times simultaneously, but changes' + 
+					const message = `You already have this ${lowerCaseName} open in another browser tab/window.` + 
+						` You can have the same ${lowerCaseName} open multiple times simultaneously, but changes` + 
 						' you make will not be automatically synchronized. You must reload a' + 
-						' tab/window to see changes you make in another.';
-					showModal(message, 'Page Already Open');
+						' tab/window to see changes you make in another browser tab/window.';
+					showModal(message, `${pageObjectName} Already Open`);
 				}
 			}
 		}
