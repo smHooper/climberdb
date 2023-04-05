@@ -3266,7 +3266,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			`;
 			const eventHandler = () => {
 				$('#alert-modal .confirm-button').click(() => {
-					$memberCard.find('.input-checkbox[name=is_guiding]').prop('checked', true);
+					$memberCard.find('.input-checkbox[name=is_guiding]')
+						.prop('checked', true)
+						.change();
 				})
 			}
 			showModal(message, 'Is This Climber Guiding?', 'confirm', footerButtons, {eventHandlerCallable: eventHandler});
