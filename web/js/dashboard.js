@@ -375,7 +375,7 @@ class ClimberDBDashboard extends ClimberDB {
 						mountain_name
 					FROM registered_climbs_view
 					WHERE 
-						WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
+						planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
 						reservation_status_code = 4 --4 == briefing complete
 				) t
 			GROUP BY mountain_name
@@ -405,7 +405,7 @@ class ClimberDBDashboard extends ClimberDB {
 						mountain_name
 					FROM registered_climbs_view
 					WHERE 
-						WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
+						planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
 						reservation_status_code = 5 --5 == returned
 				) t
 			GROUP BY mountain_name
@@ -437,7 +437,7 @@ class ClimberDBDashboard extends ClimberDB {
 						reservation_status_code
 					FROM registered_climbs_view
 					WHERE 
-						WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
+						planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
 						reservation_status_code = 5 AND
 						route_was_summited
 				) t
