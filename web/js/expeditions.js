@@ -1363,13 +1363,13 @@ class ClimberDBExpeditions extends ClimberDB {
 			if (isoDateString) {
 				// javascript can't handle years between 0-100 AD correctly
 				const [year, month, day] = isoDateString.split('-'); // get year parts
-				const date = new Date(year, month, day); // create a date
+				const date = new Date(year, month - 1, day); // create a date
 				date.setFullYear(year); // set the year directly
 				
 				if (year < new Date().getFullYear()) {
 					const prettyDateString = date.toLocaleDateString('en-US', {year: 'numeric', month: 'long', day: 'numeric'});
 					const message = `You entered the date ${prettyDateString} for the year <strong>${year}</strong>. If entering a date using the keyboard, <strong>you must enter the full 4-digit year</strong>.`;
-					showModal(message, 'WARNING: Date Entered From Previous Year')
+					showModal(message, 'WARNING: Date Entered for Previous Year')
 				}
 			}
 		}
