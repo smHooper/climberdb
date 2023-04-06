@@ -1648,7 +1648,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	getExpeditionInfo(year=(new Date().getFullYear())) {
-		const sql = `SELECT * FROM briefings_expedition_info_view WHERE planned_departure_date > '${year}-1-1' ORDER BY expedition_name`;
+		const sql = `SELECT * FROM briefings_expedition_info_view WHERE planned_departure_date > '${year}-1-1' AND group_status_code <> 6 ORDER BY expedition_name`;
 		return this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {

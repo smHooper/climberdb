@@ -507,8 +507,9 @@ CREATE VIEW briefings_expedition_info_view AS
      gb.n_members,
      expeditions.expedition_name,
      expeditions.planned_departure_date,
+     expeditions.group_status_code,
      briefings.expedition_id IS NULL AS unscheduled,
-     routes
+     gb.routes
     FROM ( 
     		SELECT
     			expedition_id,
