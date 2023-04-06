@@ -503,35 +503,38 @@ CREATE VIEW briefings_view AS
 	  LEFT JOIN users ON users.id = briefings.briefing_ranger_user_id;
 
 CREATE VIEW briefings_expedition_info_view AS 
-  SELECT gb.expedition_id,
-     gb.n_members,
-     expeditions.expedition_name,
-     expeditions.planned_departure_date,
-     expeditions.group_status_code,
-     briefings.expedition_id IS NULL AS unscheduled,
-     gb.routes
-    FROM ( 
-    		SELECT
-    			expedition_id,
-    			routes,
-            	count(*) AS n_members
-	            FROM (
-	            	SELECT
-	            		expedition_members.expedition_id,
-	            		expedition_members.id AS expedition_member_id,
-	            		string_agg(route_codes.name, '; ') AS routes
-		            FROM expeditions expeditions_1
-		             	JOIN expedition_members ON expeditions_1.id = expedition_members.expedition_id
-		             	LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
-		             	LEFT JOIN route_codes ON route_codes.code=expedition_member_routes.route_code
-		            GROUP BY 
-		             	expedition_members.expedition_id, expedition_members.id
-		        ) t
-        	GROUP BY expedition_id, routes
-        ) gb
-      LEFT JOIN briefings ON gb.expedition_id = briefings.expedition_id
-      JOIN expeditions ON expeditions.id = gb.expedition_id
-   WHERE EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions.planned_departure_date);
+	SELECT 
+	 	gb.expedition_id,
+		CASE WHEN no_members THEN 0 ELSE gb.n_members END AS n_members,
+		expeditions.expedition_name,
+		expeditions.planned_departure_date,
+		expeditions.group_status_code,
+		briefings.expedition_id IS NULL AS unscheduled,
+		gb.routes
+	    FROM ( 
+	    	SELECT
+	    		expedition_id,
+	    		routes,
+	    		no_members,
+	    		count(*) AS n_members
+		    FROM (
+				SELECT
+					expeditions_1.id AS expedition_id,
+					expedition_members.id AS expedition_member_id,
+					expedition_members.id IS NULL AS no_members,
+					string_agg(route_codes.name, '; ') AS routes
+				FROM expeditions expeditions_1
+					LEFT JOIN expedition_members ON expeditions_1.id = expedition_members.expedition_id
+					LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
+					LEFT JOIN route_codes ON route_codes.code=expedition_member_routes.route_code
+				WHERE EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions_1.planned_departure_date)
+				GROUP BY 
+					expeditions_1.id, expedition_members.id, no_members
+			) t
+			GROUP BY expedition_id, no_members, routes
+		) gb
+	LEFT JOIN briefings ON gb.expedition_id = briefings.expedition_id
+	JOIN expeditions ON expeditions.id = gb.expedition_id;
 
 
 CREATE VIEW all_climbs_view AS 
