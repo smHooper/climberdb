@@ -189,7 +189,7 @@ class ClimberForm {
 								</div>
 								<div class="field-container-row">
 									<div class="field-container col-sm-4">
-										<input id="input-dob" class="input-field" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" autocomplete="__never">
+										<input id="input-dob" class="input-field record-current-value" name="dob" data-table-name="climbers" placeholder="D.O.B." title="D.O.B." type="date" autocomplete="__never">
 										<label class="field-label" for="input-dob">D.O.B.</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
@@ -486,6 +486,13 @@ class ClimberForm {
 			this.onToggleRequiredChange(e);
 		})
 
+		$('.input-field[name=dob]').blur(e => {
+			this.onDateOfBirthBlur(e);
+		});
+		$('.input-field[name=age]').change(e => {
+			this.onAgeFieldChange(e);
+		})
+
 		// Country/state lookup from postal code
 		$(document).on('change', '.zip-lookup-field', e => {this.onPostalCodeFieldChange(e)});
 		// Get country and state short_name/codes for city/state lookup from postal code
@@ -613,6 +620,67 @@ class ClimberForm {
 		});
 
 	}
+
+	/*
+	Update age field when DOB changes. This happens when the field loses focus so that 
+	when the user types, the age doesn't change with each key stroke
+	*/
+	onDateOfBirthBlur(e) {
+		if (!e.originalEvent) return;
+
+		const $dobField = $(e.target);
+		const dob = $dobField.val();
+		const $ageField = $('.input-field[name="age"]');
+
+		// Don't do anything if the DOB is null or didn't change
+		if (!dob || dob === $dobField.data('current-value')) return;
+
+		const birthdate = new Date(dob + ' 00:00');
+		const calculatedAge = Math.floor((new Date() - birthdate) / climberDB.constants.millisecondsPerDay / 365)
+		const enteredAge = $ageField.val()
+		if (enteredAge && enteredAge != calculatedAge) {
+			const message = `You changed this climber's D.O.B. to a date that conflicts with the currently entered age. Would you like to update the climber's age to ${calculatedAge}?`;
+			const footerButtons = 
+				'<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>' +
+				'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">Yes</button>';
+			const eventHandler = () => {
+				$('#alert-modal .confirm-button').click(() => {
+					$ageField.val(calculatedAge).change();
+				})
+			}
+			showModal(message, 'Update Climber Age?', 'confirm', footerButtons, {eventHandlerCallable: eventHandler})
+		} else {
+			$ageField.val(calculatedAge).change()
+		}
+
+	}
+
+
+	/*
+	Warn the user when the age changes and it differs from the calculated age according to the DOB
+	*/
+	onAgeFieldChange(e) {
+		// To avoid an endless loop, make sure this isn't a manually triggered event	
+		if (!e.originalEvent) return;
+
+		const $ageField = $(e.target);
+		const age = $ageField.val();
+		const $dobField = $('.input-field[name="dob"]');
+		const dob = $dobField.val();
+
+		if (!dob || !age) return;
+
+		const birthdate = new Date(dob + ' 00:00');
+		const calculatedAge = Math.floor((new Date() - birthdate) / climberDB.constants.millisecondsPerDay / 365);
+		const enteredAge = $ageField.val();
+
+		if (calculatedAge != enteredAge) {
+			const message = `You entered this climber's age as ${enteredAge}, but this conflicts with the climber's D.O.B. Make sure the data you've entered in both of these fields is correct.`;
+			showModal(message, 'WARNING: Age Conflicts with D.O.B.');
+		}
+
+	}
+
 
 
 	/*
@@ -1470,6 +1538,11 @@ class ClimberDBClimbers extends ClimberDB {
 
 		$('#modal-save-climber-button').click(e => {this.onSaveModalClimberClick(e)});
 		$('.delete-climber-button').click(e => {this.onDeleteClimberClick(e)})
+
+		$('.record-current-value').focus(e => {
+			const $el = $(e.target);
+			$el.data('current-value', $el.val());
+		});
 	}
 
 
