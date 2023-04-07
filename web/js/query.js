@@ -244,7 +244,7 @@ class ClimberDBQuery extends ClimberDB {
 					</div>
 
 					<div class="query-parameters-container hidden" data-query-name="guided_company_briefings">
-						<h4 class="w-100 mb-3">Guide Company Breifing Query Parameters</h4>
+						<h4 class="w-100 mb-3">Guide Company Briefing Query Parameters</h4>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3">
 							<select id="guided_company_briefings-guide_company" class="input-field remove-null-guide-option default include-dsiabled-options" name="guide_company_code" title="Guide company" required>
 								<option value="">Guide company</option>
@@ -395,14 +395,14 @@ class ClimberDBQuery extends ClimberDB {
 
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
-							<select id="count_climbers-special_group_type" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field" multiple="multiple" name="special_group_type_code" placeholder="Special group type filter" required></select>
+							<select id="count_climbers-special_group_type" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="special_group_type_code" placeholder="Special group type filter" required></select>
 							<button class="icon-button hide-query-parameter-button">
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-special_group_type">Special group type</label>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
-							<select id="count_climbers-guide_company" class="input-field default climberdb-select2 is-empty where-clause-field include-dsiabled-options" name="guide_company_code" multiple="multiple" placeholder="Guide company filter" title="Guide company" required></select>
+							<select id="count_climbers-guide_company" class="input-field default climberdb-select2 is-empty where-clause-field include-dsiabled-options  has-null-option" name="guide_company_code" multiple="multiple" placeholder="Guide company filter" title="Guide company" required></select>
 							<button class="icon-button hide-query-parameter-button">
 								<i class="fas fa-lg fa-times"></i>
 							</button>
@@ -465,21 +465,21 @@ class ClimberDBQuery extends ClimberDB {
 							<label class="field-label" for="count_climbers-is_guiding">Is guiding (yes/no)</label>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
-							<select id="count_climbers-sex_code" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field" multiple="multiple" name="sex_code" placeholder="Gender" required></select>
+							<select id="count_climbers-sex_code" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="sex_code" placeholder="Gender" required></select>
 							<button class="icon-button hide-query-parameter-button">
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-sex_code">Gender</label>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
-							<select id="count_climbers-country" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field" multiple="multiple" name="country_code" placeholder="Country" required></select>
+							<select id="count_climbers-country" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="country_code" placeholder="Country" required></select>
 							<button class="icon-button hide-query-parameter-button">
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-country_code">Country</label>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
-							<select id="count_climbers-state" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field" multiple="multiple" name="state_code" placeholder="State/province" required></select>
+							<select id="count_climbers-state" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="state_code" placeholder="State/province" required></select>
 							<button class="icon-button hide-query-parameter-button">
 								<i class="fas fa-lg fa-times"></i>
 							</button>
@@ -1324,6 +1324,30 @@ class ClimberDBQuery extends ClimberDB {
 	}
 
 
+	whereFieldToClause(el) {
+		const value = $(el).val();
+		const fieldName = el.name;
+		let clause = '';
+		if (el.multiple) { 
+			// If the value includes null and other values, add IS NULL OR statement
+			let isNullClause = '';
+			if (value.includes('null')) isNullClause = `${fieldName} IS NULL`;
+
+			// Make the field IN () clause for all selected options except null
+			let nonNullClause = '';
+			const nonNullValues = value.filter(v => v !== 'null');
+			if (nonNullValues.length) nonNullClause = `${fieldName} IN (${nonNullValues.join(',')})`;
+			clause = 
+				isNullClause && !nonNullClause ? isNullClause : //just IS NULL
+				!isNullClause && nonNullClause ? nonNullClause : // just IN ()
+				`(${isNullClause} OR ${nonNullClause})`; // else both
+		} else {
+			clause = `${fieldName} = ${value}`
+		}
+
+		return clause;
+	}
+
 	queryCountClimbers() {
 
 		if (!this.validateFields('count_climbers')) return;
@@ -1347,9 +1371,7 @@ class ClimberDBQuery extends ClimberDB {
 				} 
 				// Otherwise, it's a normal field. In this case, multiple select values need to be gathered in an array, whereas normal fields just need 'fieldname = value'
 				else {
-					return el.multiple ? 
-						`${el.name} IN (${$(el).val().join(',')})` : 
-						`${el.name} = ${el.value}`;
+					return this.whereFieldToClause(el);
 				}
 			}).get()
 			.join(' AND ');
@@ -1675,7 +1697,11 @@ class ClimberDBQuery extends ClimberDB {
 				}
 
 				// Remove the "None" option for guide company accounting queries
-				setTimeout(() => {$('.remove-null-guide-option option[value=-1]').remove()}, 500);
+				setTimeout(() => {
+					$('.remove-null-guide-option option[value=-1]').remove()
+					$('.has-null-option').append('<option value="null">Null</option>');
+				}, 500);
+				
 				$('#query-option-list .query-option').first().click();
 			})
 			.always(() => {
