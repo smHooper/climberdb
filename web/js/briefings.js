@@ -715,7 +715,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 		$('.appointment-details-drawer').removeClass('show');
 		$('.briefing-appointment-container.selected').removeClass('selected');
-		this.toggleEditing(false);// turn off editing
+		this.toggleEditing({allowEdits: false});// turn off editing
 	}
 
 
@@ -915,7 +915,7 @@ class ClimberDBBriefings extends ClimberDB {
 	/*
 	Enable or disable edits
 	*/
-	toggleEditing(allowEdits=null) {
+	toggleEditing({allowEdits=null}={}) {
 
 		const $detailsContainer = $('.appointment-details-body')
 		const editsAllowed = allowEdits === null ? $detailsContainer.is('.uneditable') : allowEdits;
@@ -934,7 +934,8 @@ class ClimberDBBriefings extends ClimberDB {
 	ask the user what to do. Otherwise, just toggle editing
 	*/
 	onEditButtonClick() {
-		
+		if (!this.showDenyEditPermissionsMessage()) return;
+
 		const $dirtyInputs = $('.input-field.dirty');
 		if ($dirtyInputs.length || $('.briefing-appointment-container.selected.new-briefing').length) {
 			this.confirmSaveEdits({afterActionCallbackStr: 'climberDB.toggleEditing()'});
@@ -1427,6 +1428,9 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	onTimeSlotClick(e) {
+
+		if (!this.showDenyEditPermissionsMessage()) return;
+
 		const [timeIndex, time, nAppointmenTimes] = this.getTimeSlotEventInfo(e);
 		const startIndex = timeIndex + 1;
 		const endIndex = Math.min(timeIndex + (this.config.default_briefing_length_hrs * 2) + 1, nAppointmenTimes);
@@ -1468,7 +1472,7 @@ class ClimberDBBriefings extends ClimberDB {
 		$('.potential-appointment-container').remove();
 
 		// Make editable
-		this.toggleEditing(true);
+		this.toggleEditing({allowEdits: true});
 
 	}
 

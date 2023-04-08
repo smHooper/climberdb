@@ -701,9 +701,10 @@ class ClimberDBExpeditions extends ClimberDB {
 					</div>
 				</div>
 			</div>
-			<div class="w-100 d-flex justify-content-center">
+			<div class="w-100 d-flex justify-content-center hide-when-content-hidden">
 				<button class="text-only-button jump-link page-top-jump-link my-3" role="button" data-target="#page-top-bookmark" title="Scroll back to top">Back To Top</button>
 			</div>
+
 		`);
 
 		// Show/hide the expedition filter options when the toggle button is clicked
@@ -1381,6 +1382,9 @@ class ClimberDBExpeditions extends ClimberDB {
 	they're editing a group of the same name from the current or a future year
 	*/
 	onEditButtonClick(e) {
+
+		if (!this.showDenyEditPermissionsMessage()) return;
+
 		const turnEditingOn = $('.expedition-content.uneditable').length;
 		
 		// If the group is from a previous year, warn the user
@@ -1406,7 +1410,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Turn editing on or off
 	*/
-	toggleEditing(forceEditingOn=null) {
+	toggleEditing({forceEditingOn=null, allowEdits=null}={}) {
 		const $content = $('.expedition-content');
 
 		// if forceEditingOn is specified, don't confirm the choice. Just toggle editing accordingly
@@ -1415,7 +1419,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			$('#delete-expedition-button').ariaHide(!forceEditingOn);
 			if ($('.input-field.dirty').length) this.discardEdits();
 		} else {
-			const allowEdits = $content.is('.uneditable');
+			allowEdits = allowEdits === null ? $content.is('.uneditable') : allowEdits;
 			if (!allowEdits && $('.input-field.dirty:not(.filled-by-default)').length) {
 				const afterActionCallbackStr = `
 					$('.expedition-content').addClass('uneditable');
@@ -1434,12 +1438,13 @@ class ClimberDBExpeditions extends ClimberDB {
 	Helper method to load expedition data. Used when either the searchbar val changes or the user clicks the browser back/forward buttons
 	*/
 	loadExpedition(expeditionID) {
-		// const $select = $('#expedition-search-bar');
-		// $select.removeClass('default');
+		// Show in case this user didn't have edit permitssions just loaded the expedition page without a specific expedition
+		$('.expedition-content, .hide-when-content-hidden').ariaHide(false);
+
 		$('.search-options-drawer').removeClass('show');
 		this.queryExpedition(expeditionID);
 		$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
-		this.toggleEditing(false);//make sure editting is turned off
+		this.toggleEditing({forceEditingOn: false});//make sure editting is turned off
 		
 	}
 
@@ -3428,7 +3433,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Hide all expedition buttons except delete
 		$('.expedition-edit-button').ariaHide(true);
-		this.toggleEditing(true);
+		this.toggleEditing({forceEditingOn: true});
 
 		// Clear fields and data
 		this.clearExpeditionInfo({triggerChange: triggerChange});
@@ -3448,6 +3453,8 @@ class ClimberDBExpeditions extends ClimberDB {
 	Event handler for add-new-expedition-button
 	*/
 	onNewExpeditionButtonClick() {
+		
+		if (!this.showDenyEditPermissionsMessage()) return;
 
 		if ($('.input-field.dirty:not(.filled-by-default)').length) {
 			this.confirmSaveEdits({afterActionCallbackStr: 'climberDB.createNewExpedition();'})
@@ -4489,11 +4496,14 @@ class ClimberDBExpeditions extends ClimberDB {
 					$('#expedition-search-bar').data('current-value', params.id);
 			} 
 			// Otherwise, prepare the page for creating a new expedition
-			else {
+			else if (this.checkEditPermissions()) {
 				this.createNewExpedition({triggerChange: false});
 				// Make sure all things that depend on group status are in their proper state 
 				//	for a new expedition
 				$('#input-group_status').change().removeClass('dirty');
+			} else {
+				// hide the expedition info
+				$('.expedition-content, .hide-when-content-hidden').ariaHide(true);
 			}
 
 			$('.select2-no-tag').select2({

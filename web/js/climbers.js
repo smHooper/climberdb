@@ -473,7 +473,7 @@ class ClimberForm {
 		});
 
 		$('.toggle-editing-button').click(e => {
-			this.toggleEditing($('.result-details-pane').is('.uneditable'));
+			this.onEditButtonClick(e);
 		});
 
 		$('#save-button').click(e => {
@@ -1351,7 +1351,7 @@ class ClimberForm {
 	/* 
 	Helper method to turn editing mode on or off
 	*/
-	toggleEditing(allowEdits, {confirm=true}={}) {
+	toggleEditing({allowEdits=null, confirm=true}={}) {
 		const $detailsPane = this.$el.closest('.result-details-pane');
 		
 		// If editing is being disabled, check for .dirty inputs and make the user decide if they want to discard or save edits
@@ -1363,6 +1363,13 @@ class ClimberForm {
 		}
 		// If edits are being turned off, reset switch
 		if (!allowEdits) $('#disable-required-switch-container input[type=checkbox]').prop('checked', false).change();
+	}
+
+
+	onEditButtonClick(e) {
+		if (!this._parent.showDenyEditPermissionsMessage()) return;
+
+		this.toggleEditing({allowEdits: $('.result-details-pane').is('.uneditable')});
 	}
 }
 
@@ -1665,6 +1672,8 @@ class ClimberDBClimbers extends ClimberDB {
 
 	onAddNewClimberClick(e) {
 
+		if (!this.showDenyEditPermissionsMessage()) return;
+
 		const $climberForm = this.climberForm.$el;
 		if ($climberForm.find('.input-field.dirty').length) {
 			const callback = () => {this.showModalClimberForm()};
@@ -1773,9 +1782,9 @@ class ClimberDBClimbers extends ClimberDB {
 		//hide badges because they'll be shown later if necessary
 		$('.result-details-header-badge').ariaHide(true); 
 
-		// If currently editing (and this item is not currently selected, turn editing it off
+		// If currently editing (and this item is not currently selected, turn editing off
 		if ($('.result-details-pane').is('*:not(.uneditable)') && $item.is('*:not(.selected)')) {
-			this.climberForm.toggleEditing(false); //turn editing off
+			this.climberForm.toggleEditing({allowEdits: false}); //turn editing off
 		}
 		// Deselect currently selected record
 		$('.query-result-list-item.selected').removeClass('selected');
@@ -2150,8 +2159,8 @@ class ClimberDBClimbers extends ClimberDB {
 				$.when(...deferreds)
 					.done(() => {
 						if (urlParams.id) {
-							if (urlParams.edit) {
-								this.climberForm.toggleEditing(true);
+							if (urlParams.edit && this.checkEditPermissions()) {
+								this.climberForm.toggleEditing({allowEdits: true});
 							}
 						} else if (urlParams.addClimber) {
 							this.showModalClimberForm(this.climberForm.$el);

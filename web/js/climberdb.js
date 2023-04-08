@@ -211,6 +211,7 @@ class ClimberDB {
 			entranceFeeTransactionCodes: [11, 12, 14, 15, 25, 8, 26]
 		}
 		this.urlChannels = {}; // for checking if a URL is already open in another tab/window
+		this.nonEditingUserRoles = [2]; // for checking if user has edit privs
 	}
 
 	getUserInfo() {
@@ -464,6 +465,43 @@ class ClimberDB {
 		// override in subclasses
 	}
 	
+	/*
+	Dummy function so showDenyEditPermissionsMessage() can safely call toggleEditing
+	*/
+	toggleEditing({allowEdits=null}={}) {
+		//override in subclasses
+	}
+
+
+	/*
+	Helper method to check user role and prevent editing if role is not either data entry or admin
+	*/
+	checkEditPermissions() {
+		return !this.nonEditingUserRoles.includes(this.userInfo.user_role_code)
+	}
+
+
+	/*
+	If the user doesn't have an editing role, let them know
+	*/
+	showDenyEditPermissionsMessage() {
+		const allowEditing = this.checkEditPermissions();
+		if (!allowEditing) {
+			const eventHandler = () => {
+				$('#alert-modal button.close-modal').click(() => {
+					this.toggleEditing({allowEdits: false})
+				})
+			}
+			const program_admin = this.config.program_admin_email;
+			const message = 
+				`Your account does not have editing privileges. If you need edit privileges, contact` + 
+				` the program adminstrator at <a href="mailto:${program_admin}">${program_admin}</a>`
+			showModal(message, 'Editing Not Authorized', 'alert', '', {dismissable: false, eventHandlerCallable: eventHandler});
+		}
+
+		return allowEditing;
+	}
+
 	/*
 	Ask user if they really want to log out and warn them that they'll lose unsaved data.
 	If they confirm, set the expiration of their login session to now and go to the sign-in page
