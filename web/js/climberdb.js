@@ -1289,11 +1289,13 @@ class ClimberDB {
 	*/
 	getCoreClimberSQL({searchString='', queryFields='*', whereClause=''} = {}) {
 		if (queryFields !== '*') {
+			if (!queryFields.includes('id')) queryFields = queryFields + ', id';
 			if (!queryFields.includes('first_name')) queryFields = queryFields + ', first_name';
 			if (!queryFields.includes('first_name')) queryFields = queryFields + ', middle_name';
 			if (!queryFields.includes('last_name')) queryFields = queryFields + ', last_name';
 			if (!queryFields.includes('full_name')) queryFields = queryFields + ', full_name';
 		}
+		searchString = searchString.replace(/\W/g, '')
 		return  searchString.length > 0 ? 
 			`	
 				SELECT
@@ -1305,39 +1307,56 @@ class ClimberDB {
 							min(sort_order) AS first_sort_order
 						FROM 
 							(
-								SELECT ${queryFields}, 1 AS sort_order FROM climber_info_view WHERE 
-									first_name ILIKE '${searchString}%' 
+								WITH climber_names AS (
+									SELECT 
+										regexp_replace(first_name, '\\W', '', 'g') AS re_first_name, 
+										regexp_replace(middle_name, '\\W', '', 'g') AS re_middle_name, 
+										regexp_replace(last_name, '\\W', '', 'g') AS re_last_name,
+										regexp_replace(full_name, '\\W', '', 'g') AS re_full_name,
+										${queryFields}
+									FROM climber_info_view
+								)
+								SELECT ${queryFields}, 1 AS sort_order FROM climber_names WHERE 
+									re_first_name ILIKE '${searchString}%' 
 								UNION ALL 
-								SELECT ${queryFields}, 2 AS sort_order FROM climber_info_view WHERE 
-									first_name || ' ' || middle_name ILIKE '${searchString}%' AND
-									first_name NOT ILIKE '${searchString}%'
+								SELECT ${queryFields}, 2 AS sort_order FROM climber_names WHERE 
+									re_first_name || re_middle_name ILIKE '${searchString}%' AND
+									re_first_name NOT ILIKE '${searchString}%'
 								UNION ALL 
-								SELECT ${queryFields}, 3 AS sort_order FROM climber_info_view WHERE 
-									first_name || ' ' || last_name ILIKE '${searchString}%' AND
-									(first_name || ' ' || middle_name NOT ILIKE '${searchString}%' OR
-									first_name NOT ILIKE '${searchString}%')
+								SELECT ${queryFields}, 3 AS sort_order FROM climber_names WHERE 
+									re_first_name || re_last_name ILIKE '${searchString}%' AND
+									(
+										re_first_name NOT ILIKE '${searchString}%' OR
+										re_first_name || re_middle_name NOT ILIKE '${searchString}%'
+									)
 								UNION ALL
-								SELECT ${queryFields}, 4 AS sort_order FROM climber_info_view WHERE 
-									last_name ILIKE '${searchString}%' AND
-									(first_name || ' ' || last_name NOT ILIKE '${searchString}%' OR
-									first_name || ' ' || middle_name NOT ILIKE '${searchString}%' OR
-									first_name NOT ILIKE '${searchString}%')
+								SELECT ${queryFields}, 4 AS sort_order FROM climber_names WHERE 
+									re_last_name ILIKE '${searchString}%' AND
+									(
+										re_first_name NOT ILIKE '${searchString}%' OR
+										re_first_name || re_middle_name NOT ILIKE '${searchString}%' OR
+										re_first_name || re_last_name NOT ILIKE '${searchString}%'
+									)
 								UNION ALL 
-								SELECT ${queryFields}, 5 AS sort_order FROM climber_info_view WHERE 
-									middle_name || ' ' || last_name ILIKE '${searchString}%' AND 
-									middle_name IS NOT NULL AND 
-									(last_name NOT ILIKE '${searchString}%' OR
-									first_name || ' ' || last_name NOT ILIKE '${searchString}%' OR
-									first_name || ' ' || middle_name NOT ILIKE '${searchString}%' OR
-									first_name NOT ILIKE '${searchString}%')
+								SELECT ${queryFields}, 5 AS sort_order FROM climber_names WHERE 
+									re_middle_name || re_last_name ILIKE '${searchString}%' AND 
+									re_middle_name IS NOT NULL AND 
+									(
+										re_first_name NOT ILIKE '${searchString}%' OR
+										re_first_name || re_middle_name NOT ILIKE '${searchString}%' OR
+										re_first_name || re_last_name NOT ILIKE '${searchString}%' OR 
+										re_last_name NOT ILIKE '${searchString}%'
+									)
 								UNION ALL
-								SELECT ${queryFields}, 6 AS sort_order FROM climber_info_view WHERE 
-									full_name ILIKE '%${searchString}%' AND 
-									(middle_name || ' ' || last_name NOT ILIKE '${searchString}%' OR
-									last_name NOT ILIKE '${searchString}%' OR
-									first_name || ' ' || last_name NOT ILIKE '${searchString}%' OR
-									first_name || ' ' || middle_name NOT ILIKE '${searchString}%' OR
-									first_name NOT ILIKE '${searchString}%')
+								SELECT ${queryFields}, 6 AS sort_order FROM climber_names WHERE 
+									re_full_name ILIKE '${searchString}%' AND 
+									(
+										re_first_name NOT ILIKE '${searchString}%' OR
+										re_first_name || re_middle_name NOT ILIKE '${searchString}%' OR
+										re_first_name || re_last_name NOT ILIKE '${searchString}%' OR 
+										re_last_name NOT ILIKE '${searchString}%' OR
+										re_middle_name || re_last_name NOT ILIKE '${searchString}%'
+									)
 							) t 
 						GROUP BY full_name, id
 					) gb 
