@@ -89,6 +89,11 @@ class ClimberDBQuery extends ClimberDB {
 				],
 				hrefs: {
 					'Group Name': 'expeditions.html?id={expedition_id}'
+				},
+				cssColumnClasses: {
+					'Group Name': 'justify-content-start',
+					'First Name': 'justify-content-start',
+					'Last Name': 'justify-content-start'
 				}
 			},
 			guided_company_briefings: {
@@ -120,6 +125,9 @@ class ClimberDBQuery extends ClimberDB {
 				hrefs: {
 					'Group Name': 'expeditions.html?id={expedition_id}',
 					'Briefing Date': 'briefings.html?date={briefing_date}&id={briefing_id}'
+				},
+				cssColumnClasses: {
+					'Group Name': 'justify-content-start'
 				}
 			},
 			count_per_guide_company: {
@@ -127,12 +135,14 @@ class ClimberDBQuery extends ClimberDB {
 					`	
 						SELECT 
 							coalesce(guide_company, 'All Expeditions') AS "Guide Company",
+							"Peak Season (3/15-7/1)",
+							"Non-Peak",
+							"Total",
 							CASE 
 								WHEN guide_company IS NULL THEN 0
 								WHEN guide_company = 'Independent' THEN 1
 								ELSE 2
-							END AS result_order,
-							*
+							END AS result_order
 						FROM (
 							SELECT 
 								guide_company,
@@ -168,10 +178,13 @@ class ClimberDBQuery extends ClimberDB {
 					`,
 				columns: [
 					'Guide Company',
-					'Peak Season  (3/15-7/1)',
+					'Peak Season (3/15-7/1)',
 					'Non-Peak',
 					'Total'
 				],
+				cssColumnClasses: {
+					'Guide Company': 'justify-content-start'
+				},
 				displayFunction: this.showcount_per_guide_company
 			},
 			count_climbers: {
@@ -209,14 +222,20 @@ class ClimberDBQuery extends ClimberDB {
 						"Climber Name"
 				`,
 				columns: [
-						'Group Name',
-						'Climber Name',
-						'Flagged By',
-						'Flagged Reason'
-					],
+					'Group Name',
+					'Climber Name',
+					'Flagged By',
+					'Flagged Reason'
+				],
 				hrefs: {
 					'Group Name': 'expeditions.html?id={expedition_id}',
 					'Climber Name': 'climbers.html?id={climber_id}'
+				},
+				cssColumnClasses: {
+					'Group Name': 'justify-content-start',
+					'Climber Name': 'justify-content-start',
+					'Flagged By': 'justify-content-start',
+					'Flagged Reason': 'justify-content-start',
 				}
 			},
 			average_trip_length: {},
@@ -320,7 +339,7 @@ class ClimberDBQuery extends ClimberDB {
 					</div>
 
 					<div class="query-parameters-container hidden" data-query-name="flagged_climbers">
-						<h4 class="w-100 mb-3">Falgged Expedition Members Query Parameters</h4>	
+						<h4 class="w-100 mb-3">Flagged Expedition Members Query Parameters</h4>	
 						<div class="field-container col-sm-6 col-md-4 col-lg-3">
 							<select id="flagged_climbers-year" class="input-field default no-option-fill year-select-field" name="year" title="Year" required>
 								<option value="">Year</option>
@@ -1202,6 +1221,8 @@ class ClimberDBQuery extends ClimberDB {
 			`).join('');
 		var rowsHTML = '';
 		
+		const cssClasses = queryInfo.cssColumnClasses || {};
+
 		// Iterate through results and build row HTML
 		for (const row of result) {
 			let cells = '';
@@ -1220,7 +1241,7 @@ class ClimberDBQuery extends ClimberDB {
 					}
 					cellContent = `<a href="${urlString}" target="_blank">${row[c]}</a>`
 				} 
-				cells += `<td><span class="cell-content">${cellContent}</span></td>`
+				cells += `<td><span class="cell-content ${cssClasses[c] || ''}">${cellContent}</span></td>`
 			}
 			
 			rowsHTML += `<tr>${cells}</tr>`;
