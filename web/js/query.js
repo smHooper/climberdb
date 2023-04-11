@@ -189,6 +189,36 @@ class ClimberDBQuery extends ClimberDB {
 					'Count'
 				]
 			},
+			flagged_climbers: {
+				sql: `
+					SELECT 
+						expedition_name AS "Group Name",
+						first_name || ' ' || last_name AS "Climber Name",
+						flagged_reason AS "Flagged Reason",
+						flagged_by AS "Flagged By",
+						expedition_id,
+						climber_id
+					FROM expeditions
+						JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
+						JOIN climbers ON climbers.id = expedition_members.climber_id
+					WHERE
+						flagged AND 
+						extract(year FROM planned_departure_date) = {year}
+					ORDER BY
+						"Group Name",
+						"Climber Name"
+				`,
+				columns: [
+						'Group Name',
+						'Climber Name',
+						'Flagged By',
+						'Flagged Reason'
+					],
+				hrefs: {
+					'Group Name': 'expeditions.html?id={expedition_id}',
+					'Climber Name': 'climbers.html?id={climber_id}'
+				}
+			},
 			average_trip_length: {},
 			all_female_expeditions: {},
 			medical_issues: {},
@@ -205,6 +235,7 @@ class ClimberDBQuery extends ClimberDB {
 					<li class="query-option not-expandable" role="button" data-query-name="guide_company_client_status" data-tags="guide, guiding, accounting, status">Guided Client Status</li>
 					<li class="query-option not-expandable" role="button" data-query-name="guided_company_briefings" data-tags="guide, guiding, briefing, status">Guide Company Briefings</li>
 					<li class="query-option not-expandable" role="button" data-query-name="count_per_guide_company" data-tags="guide, guiding, expeditions, climbers">Expeditions/Climbers Per Guide Company</li>
+					<li class="query-option" role="button" data-query-name="flagged_climbers" data-tags="climber, route">Flagged Expedition Members</li>
 					<li class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, route">Query Climbers/Climbs</li>
 					<li id="climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="total, climber, mountain">Total climbers per mountain</li>
 					<li id="guided-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="guide, climber, mountain">Guided climbers per mountain</li>
@@ -240,7 +271,6 @@ class ClimberDBQuery extends ClimberDB {
 							</select>
 							<label class="field-label" for="guide_company_client_status-year">Year</label>
 						</div>	
-
 					</div>
 
 					<div class="query-parameters-container hidden" data-query-name="guided_company_briefings">
@@ -287,6 +317,16 @@ class ClimberDBQuery extends ClimberDB {
 							</select>
 							<label class="field-label" for="count_per_guide_company-route_code">Route</label>
 						</div>
+					</div>
+
+					<div class="query-parameters-container hidden" data-query-name="flagged_climbers">
+						<h4 class="w-100 mb-3">Falgged Expedition Members Query Parameters</h4>	
+						<div class="field-container col-sm-6 col-md-4 col-lg-3">
+							<select id="flagged_climbers-year" class="input-field default no-option-fill year-select-field" name="year" title="Year" required>
+								<option value="">Year</option>
+							</select>
+							<label class="field-label" for="flagged_climbers-year">Year</label>
+						</div>	
 					</div>
 
 					<div class="query-parameters-container hidden" data-query-name="count_climbers">
