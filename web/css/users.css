@@ -1,9 +1,10 @@
-/*user gradient background*/
+@import './climberdb.css';
+
 .main-content-wrapper {
-	background: linear-gradient(2deg, #44a9ba, #ffe7aad1);
+	background-image: linear-gradient(0deg, var(--sunrise-linear-gradient-colors));
 }
 .sidebar-nav-group .nav-item.selected > a::after {
-	border-right: 15px solid #adcbb4;
+	border-right: 15px solid #8bc0b3;
 }
 
 .climberdb-data-table-wrapper {
@@ -61,7 +62,7 @@ tr.inactive .input-field {
 	pointer-events: all;
 }
 .climberdb-data-table tbody tr td:not(.no-border) > span {
-	background-color: #219ebc1c; 
+	background-color: #ffffff20; 
 	padding: 10px 0;
 }
 .climberdb-data-table tbody tr:hover td:not(.no-border) > span {

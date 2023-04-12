@@ -1,8 +1,10 @@
+@import './climberdb.css';
+
 .main-content-wrapper {
-	background: linear-gradient(2deg, #44a9ba, #ffe7aad1);
+	background-image: linear-gradient(0deg, var(--sunrise-linear-gradient-colors));
 }
 .sidebar-nav-group .nav-item.selected > a::after {
-	border-right: 15px solid #adcbb4;
+	border-right: 15px solid #a4d0be;
 }
 
 .climberdb-data-table-wrapper {
@@ -20,6 +22,10 @@
 .config-value-cell {
 	min-width: 300px;
 }
+.climberdb-data-table tbody tr td:not(.no-border).config-value-cell,
+.climberdb-data-table tbody tr td:not(.no-border).config-value-cell > span {
+	padding: 0;
+}
 .money-field-container {
 	position: relative;
 }
@@ -28,6 +34,7 @@
 	content: "$";
 	left: 15px;
 	padding-top: 1px; /*for some reason inputs have 1px padding on top so set the same to match*/
+	color: var(--ui-bg-dark-blue);
 }
 .money-field-container > .input-field {
 	text-indent: 15px;

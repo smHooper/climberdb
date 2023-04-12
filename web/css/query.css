@@ -2,6 +2,8 @@
 	--search-bar-padding: 20px;
 	--query-parameter-container-height: 300px;
 }
+@import './climberdb.css';
+
 .main-content-wrapper {
 	display: flex;
 	flex-wrap: nowrap;
@@ -76,7 +78,7 @@
 	display: flex;
 	flex-direction: column;
 	max-height: 100%;
-	background: linear-gradient(2deg, #44a9ba, #ffe7aad1);
+	background: linear-gradient(2deg, var(--sunrise-linear-gradient-colors))/*#44a9ba, #ffe7aad1);*/
 }
 
 .query-result-container {

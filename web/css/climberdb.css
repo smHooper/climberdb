@@ -8,6 +8,7 @@
   --climberdb-header-menu-height: 60px;
   --fuzzy-search-bar-height: 60px;
   --climberdb-data-table-row-height: 60px;
+  --sunrise-linear-gradient-colors: #ffe7aa, #5abccd;/*linear-gradient(2deg, #44a9ba, #ffe7aad1);*/;
 }
 
 html, body {
@@ -67,7 +68,7 @@ body a {
 }
 
 .modal {
-  color: #023047;
+  color:var(--ui-bg-dark-blue);
 }
 
 .modal-button {
@@ -546,7 +547,7 @@ ul.tabs input[type="radio"]:checked ~ .tab-content {
   max-width: calc(100% - 20px);
   flex: 1 1 auto;
   height: 30px;
-  color: #023047;
+  color:var(--ui-bg-dark-blue);
   background-color: rgba(0,0,0,0);
   outline: -webkit-focus-ring-color auto 0px;
   -webkit-box-shadow: none;
@@ -1112,7 +1113,7 @@ textarea.input-field:valid + .required-indicator {
   left: 0;
   right: 0;
   height: 60px;
-  background-color: #023047;
+  background-color:var(--ui-bg-dark-blue);
   color: white;
   display: flex;
   justify-content: space-between;
@@ -1265,7 +1266,7 @@ nav.sidebar.collapsed .nav-item .sidebar-nav-item-label {
   width: 100%;
   overflow-x: hidden;
   overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
- background-color: #023047;
+ background-color:var(--ui-bg-dark-blue);
 }
 .sidebar-background {
   position: absolute;
@@ -1291,7 +1292,7 @@ nav.sidebar .nav-item {
 }
 nav.sidebar .nav-item.selected {
   /*box-shadow: inset -1px -7px 20px 1px rgba(0,0,0,0.3);*/
-  box-shadow: inset -1px -7px 20px 1px #023047;
+  box-shadow: inset -1px -7px 20px 1pxvar(--ui-bg-dark-blue);
 }
 nav.sidebar .nav-item a {
   display: block;
@@ -1311,7 +1312,7 @@ nav.sidebar .nav-item img {
   margin-left: 20px;
 }
 nav.sidebar .nav-item:hover {
-  background-image: radial-gradient(circle at bottom 50% right 70%, #02304701, #023047);
+  background-image: radial-gradient(circle at bottom 50% right 70%, #02304701,var(--ui-bg-dark-blue));
   /*background-image: radial-gradient(circle at bottom 50% right 70%, hsl(120deg 17% 18% / 15%), hsl(120deg 17% 18% / 90%));*/
 }
 nav.sidebar .nav-item a:hover, 
@@ -1400,7 +1401,7 @@ border-spacing: 0px;
   padding: 4px;
 }
 .climberdb-data-table th {
-  background-color: #6bb6b9;
+  background-color: #0a4664;/*#6bb6b9;*/
   color:  white;
   text-align: center;
   position: sticky;
@@ -1446,12 +1447,18 @@ td.no-border {
   transition: 0.25s all;
 }
 .climberdb-data-table tbody tr td:not(.no-border) > span {
+  background: #ffffff20;
+  padding-left: 10px;
+  padding-right: 10px;
   height: var(--climberdb-data-table-row-height);
   display: flex;
   justify-content: center;
   align-items: center;
   transition: 0.25s all;
 }
+/*.climberdb-data-table tbody td span.cell-content {
+
+}*/
 .climberdb-data-table .input-field {
   border-bottom: none;
   border-radius: 5px;
@@ -1499,7 +1506,7 @@ td.no-border {
   cursor: pointer;
   text-indent: 60px;
   font-size: 20px;
-  color: #023047;
+  color:var(--ui-bg-dark-blue);
   overflow: hidden;
   resize: none;
 }
