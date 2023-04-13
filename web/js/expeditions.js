@@ -122,6 +122,9 @@ class ClimberDBExpeditions extends ClimberDB {
 					<button id="open-reports-modal-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Open exports menu" title="Open exports menu">
 						<i class="fas fa-2x fa-file-export"></i>
 					</button>
+					<button id="print-cache-tag-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Print cache tag" title="Print cache tag">
+						<i class="fas fa-2x fa-flag fa-flag-alt"></i>
+					</button>
 				</div>
 				<button id="add-new-expedition-button" class="generic-button" title="New Expedition">New expedition</button>
 				<!-- this will cover everything in the main content header except edit buttons when a card is shown as a modal -->
@@ -769,6 +772,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#create-pdf-button').click(e => {
 			this.onCreatePDFButtonClick();
 		})
+
+		$('#print-cache-tag-button').click(() => {
+			this.onPrintCacheTagButtonClick();
+		});
 
 		$(document).on('change', '.input-field:not(.route-code-header-input)', e => {
 			if ($(e.target).closest('.cloneable').length) return;
@@ -2194,9 +2201,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				// Hide the save button again since there aren't any edits
 				$('#save-expedition-button').ariaHide(true);
 				// but open the reports modal button since there's something to show
-				$('#open-reports-modal-button').ariaHide(false);
-				// show other edit buttons
-				$('#edit-expedition-button, #delete-expedition-button').ariaHide(false);
+				$('#open-reports-modal-button, #print-cache-tag-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
+
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
@@ -2277,7 +2283,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Ask the user to confirm/discard edits
 	*/
-	confirmSaveEdits({afterActionCallbackStr='', afterCancelCallbackStr=''}={}) {
+	confirmSaveEdits({afterActionCallbackStr='', afterCancelCallbackStr='', afterActionCallback=()=>{}}={}) {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
 
 		const onConfirmClick = `
@@ -2285,17 +2291,38 @@ class ClimberDBExpeditions extends ClimberDB {
 			climberDB.saveEdits(); 
 		`;
 		
+		// will have to update each confirmSaveEdsits call
+		// const onConfirmEventHandler = () => { 
+		// 		$('#alert-modal .confirm-button').click(
+		// 			() => {
+		// 				showLoadingIndicator('saveEdits');
+		// 				this.saveEdits()
+		// 					.done(() => {
+		// 						afterActionCallback();
+		// 					})
+		// 			}
+		// 		)
+		// 		$('#alert-modal .discard-button').click(
+		// 			() => {
+		// 				// happens synchronously so no need to wait to call afterActionCallback
+		// 				this.discardEdits();
+		// 				afterActionCallback()
+		// 			}
+		// 		)
+		// 	}
+
 		const footerButtons = `
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal" onclick="${afterCancelCallbackStr}">Cancel</button>
 			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.discardEdits();${afterActionCallbackStr}">Discard</button>
-			<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}${afterActionCallbackStr}">Save</button>
+			<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}${afterActionCallbackStr}">Save</button>
 		`;
 
 		showModal(
 			`You have unsaved edits to this expedition. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this expedition.`,
 			'Save edits?',
 			'alert',
-			footerButtons
+			footerButtons,
+			{eventHandlerCallable: afterActionCallback}
 		);
 	}
 
@@ -2917,6 +2944,67 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	}
 
+	/*
+	Update the source Excel file for Label Matrix server-side
+	*/
+	writeToLabelMatrix() {
+		let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader)
+		if (!tripLeaderInfo.length) {
+			showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
+			return;
+		} else {
+			tripLeaderInfo = tripLeaderInfo[0];
+		}
+
+		const airTaxiCode = this.expeditionInfo.expeditions.air_taxi_code;
+		const airTaxiName = $('#input-air_taxi option').filter((_, el) => el.value == airTaxiCode).text();
+		const labelData = {
+			expedition_name: this.expeditionInfo.expeditions.expedition_name,
+			leader_name: tripLeaderInfo.first_name + ' ' + tripLeaderInfo.last_name,
+			air_taxi_name: airTaxiName,
+			planned_return_date: this.expeditionInfo.expeditions.planned_return_date,
+			expedition_id: this.expeditionInfo.expeditions.id
+		}
+
+		$.post({
+			url: 'flask/cache_tags/write_label_matrix',
+			data: labelData,
+			cache: false
+		}).done((response) => {
+			if (this.pythonReturnedError(response)) {
+				showModal('This expedition\'s data could not be transferred to Label Matrix because of an unexpected error: ' + response, 'Unexpected Error')
+			} else {
+				showModal('Expedition data was successfully transferred to Label Matrix. Open the Label Matrix program and print your labels from there.', 'Data Transferred to Label Matrix')
+			}
+		}).fail((xhr, status, error) => {
+			showModal('This expedition\'s data could not be transferred to Label Matrix because of an unexpected error: ' + error, 'Unexpected Error')
+		})
+	}
+
+
+	/*
+	onclick event handler for print-cache-tag-button. Right now, it just updates an Excel file that the Label Matrix software points to
+	*/
+	onPrintCacheTagButtonClick() {
+		// Only allow printing cache tags if the group is either confirmed, on mountain, or off mountain
+		const groupStatusCode = parseInt($('#input-group_status').val());
+		if (![3, 4, 5].includes(groupStatusCode)) {
+			showModal(`The group status for this expedition is not 'Confirmed', 'On Mountain', or 'Off Mountain', so cache tags can't be printed.`, 'Invalid Group Status');
+			return;
+		}
+
+		// If there are unsaved edits, prompt the user to either save or discard them
+		if ($('.dirty').length) {
+			//this.confirmSaveEdits({afterActionCallback: () => {this.writeToLabelMatrix()} })
+			showModal(`You have unsaved edits. Either click the <strong>Save</strong> button to keep your edits or click the <strong>Edit</strong> button and choose <strong>Discard</strong> to undo your edits. Then you can print cache tags.`, 'Unsaved Edits')
+			return;
+		} 
+		// Or if not, just print
+		else {
+			this.writeToLabelMatrix();
+		}
+	}
+
 
 	/*Show modal climber form to allow the user to select a climber to add to the expedition*/
 	showModalAddMemberForm({limitToPreviousClimbers=false}={}) {
@@ -3432,7 +3520,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		setTimeout( ()=>{ $('#input-expedition_name').focus() }, 100);
 
 		// Hide all expedition buttons except delete
-		$('.expedition-edit-button').ariaHide(true);
+		$('.expedition-edit-button:not(#print-cache-tag-button)').ariaHide(true);
 		this.toggleEditing({forceEditingOn: true});
 
 		// Clear fields and data
@@ -3737,7 +3825,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		// Show edit toggle button
-		$('#edit-expedition-button, #open-reports-modal-button').ariaHide(false);
+		$('#edit-expedition-button, #open-reports-modal-button, #print-cache-tag-button').ariaHide(false);
 
 		// .change() events trigger onInputChange() so undo that stuff
 		$('.input-field.dirty').removeClass('dirty');
@@ -3798,7 +3886,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#input-group_status').val(1);//=pending
 
 		// Hide edit/export buttons
-		$('.expedition-edit-button').ariaHide(hideEditButtons);
+		$('.expedition-edit-button:not(#print-cache-tag-button)').ariaHide(hideEditButtons);
 
 		// Not sure why, but a few selects in the climber form get .change triggered so turn the .dirty class off
 		$('#add-climber-form-modal-container .input-field.dirty').removeClass('dirty');

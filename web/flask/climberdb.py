@@ -82,6 +82,7 @@ def get_random_string(length=8):
 	return ''.join(secrets.choice(alphabet) for i in range(length))
 
 
+
 # disable caching (this doesn't seem to work for some reason)
 #app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 @app.after_request
@@ -148,7 +149,7 @@ def add_header(response):
 @app.route('/flask/test', methods=['GET', 'POST'])
 def test():
 	
-	return json.dumps([os.path.abspath(__file__)])
+	return os.getlogin()
 
 
 # -------------- User Management ---------------- #
@@ -496,6 +497,23 @@ def export_query():
 		return 'exports/' + pdf_filename
 
 #--------------- Reports ---------------------#
+
+
+#-------------- cache tags -------------------#
+# Write data to Label Matrix source Excel file
+@app.route('/flask/cache_tags/write_label_matrix', methods=['POST'])
+def write_to_label_matrix():
+	
+	data = pd.DataFrame([dict(request.form)])
+	label_matrix_source = app.config['LABEL_MATRIX_SOURCE']
+
+	#data.to_excel('delete.xlsx', index=False)
+	excel_path = os.path.join(os.path.dirname(__file__), label_matrix_source)
+	data.to_excel(excel_path, sheet_name='label_matrix_source', index=False)
+
+	return 'true'
+
+#-------------- cache tags -------------------#
 
 
 if __name__ == '__main__':

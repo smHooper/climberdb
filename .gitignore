@@ -1,6 +1,7 @@
 web/packages/*
 web/exports/*
 scratch.sql
+web/flask/assets/label_matrix_source.xlsx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
