@@ -64,6 +64,9 @@ class ClimberDBUsers extends ClimberDB {
 			this.onaddUserRowButtonClick()
 		});
 
+		$(document).on('click', '.delete-button', e => {
+			this.onDeleteButtonClick(e);
+		})
 	}
 
 	/*
@@ -426,6 +429,15 @@ class ClimberDBUsers extends ClimberDB {
 			'alert',
 			footerButtons
 		);
+	}
+
+
+	onDeleteButtonClick(e) {
+		const $userRow = $(e.target).closest('tr');
+		$userRow.find('.input-field[name=user_status_code]')
+			.val(-1)
+			.change();
+		this.saveEdits();
 	}
 
 
