@@ -2863,52 +2863,97 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		// Get human-readable values from selects
 		for (const property of Object.keys(climberDB.expeditionInfo.expeditions).filter(k => k.endsWith('_code'))) {
-			pdfData[property.replace('_code', '')] = $(`select.input-field[name="${property}"]`)
-				.find(`option[value="${pdfData[property]}"]`).text();
+			pdfData[property.replace('_code', '')] = this.selectValueToText(property, pdfData[property]);
 		}
 
 		pdfData.cancellation_fee = pdfData.cancellation_fee || '100.00';
 
-		// Get climber and leader info
-		const climbers = Object.values(this.expeditionInfo.expedition_members.data).flatMap(info => {
-			// Skip cancelled climbers
-			if (info.reservation_status_code == 6) return []; // flatmap will remove this
-
-			// destructure the climber's info and get just first_name and last_name
-			const climberInfo = (({ first_name, last_name }) => ({ first_name, last_name }))(info);
-			
-			// Get full name for ease of use
-			const fullName = info.first_name + ' ' + info.last_name;
-			climberInfo.full_name = fullName;
-
-			// Get leader info since we're looping through values anyway
-			climberInfo.is_trip_leader = info.is_trip_leader === 't' || info.is_trip_leader === true;
-			if (climberInfo.is_trip_leader) pdfData.leader_full_name = fullName;
-			
-
-            return climberInfo;
-
-		}).sort((a, b) => {
-			return a.last_name < b.last_name ? -1 : //last name 1 is before last name 2
-				a.last_name > b.last_name ? 1 : 	//last name 1 is after last name 2
-				a.first_name < b.first_name ? -1 : 	// last names the same so compare first name
-				a.first_name > b.first_name ? 1 : 	// last names the same so compare first name
-				0 									// names are the same
-		});
-		pdfData.climbers = JSON.stringify(climbers);
-		pdfData.total_climbers = climbers.length;
-
-		// Get total payment
-		var totalPayment = 0;
-		for (const transactions of Object.values(climberDB.expeditionInfo.transactions)) {
-			for (const info of Object.values(transactions.data)) {
-				// only add negative-value tranactions because the rest are charges
-				if ( (info.transaction_value < 0) && (info.transaction_type_code == 24) ) 
-					totalPayment -= parseFloat(info.transaction_value); // -= because payments are negative
+		if (exportType === 'transaction_history') {
+			// Format data into array of objects like 
+			/*
+			[
+				{
+					climber_prop_1: ...,
+					transactions: {
+						transaction_prop_1: ...
+					}
+				}
+			]
+			*/
+			let transactionHistory = []
+			const members = this.expeditionInfo.expedition_members;
+			for (const memberID of members.order) {
+			    const memberInfo = members.data[memberID];
+			    const transactionInfo = this.expeditionInfo.transactions[memberID];
+			    const transactions = [];
+			    for (const id of transactionInfo.order) {
+			    	const transactionData = transactionInfo.data[id];
+			    	// convert codes to human-readable text
+			    	for (const property of Object.keys(transactionData).filter(k => k.endsWith('_code'))) {
+			    		transactionData[property.replace('_code', '')] = this.selectValueToText(property, transactionData[property]);
+			    	}
+			    	// Format transaction date as text
+			    	transactionData.transaction_date = new Date(transactionData.transaction_date + ' 00:00')
+			    		.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+			    	
+			    	transactions.push(transactionData);
+			    }
+			    const balance = transactions.map(t => !t.transaction_value ? 0 : parseFloat(t.transaction_value))
+					.reduce((runningTotal, value) => runningTotal + value)
+					.toFixed(2)
+			    const memberData = {
+			        climber_name: memberInfo.first_name + ' ' + memberInfo.last_name,
+			        status: $(`#input-group_status option[value=${memberInfo.reservation_status_code}]`).text(),
+			        transactions: transactions,
+			        balance: balance
+			    }
+			    transactionHistory.push(memberData);
 			}
+			pdfData.transaction_history = JSON.stringify(transactionHistory);
+		} 
+		// Reg. card and confirm. letter
+		else {
+			// Get climber and leader info
+			const climbers = Object.values(this.expeditionInfo.expedition_members.data).flatMap(info => {
+				// Skip cancelled climbers
+				if (info.reservation_status_code == 6) return []; // flatmap will remove this
+
+				// destructure the climber's info and get just first_name and last_name
+				const climberInfo = (({ first_name, last_name }) => ({ first_name, last_name }))(info);
+				
+				// Get full name for ease of use
+				const fullName = info.first_name + ' ' + info.last_name;
+				climberInfo.full_name = fullName;
+
+				// Get leader info since we're looping through values anyway
+				climberInfo.is_trip_leader = info.is_trip_leader === 't' || info.is_trip_leader === true;
+				if (climberInfo.is_trip_leader) pdfData.leader_full_name = fullName;
+				
+
+	            return climberInfo;
+
+			}).sort((a, b) => {
+				return a.last_name < b.last_name ? -1 : //last name 1 is before last name 2
+					a.last_name > b.last_name ? 1 : 	//last name 1 is after last name 2
+					a.first_name < b.first_name ? -1 : 	// last names the same so compare first name
+					a.first_name > b.first_name ? 1 : 	// last names the same so compare first name
+					0 									// names are the same
+			});
+			pdfData.climbers = JSON.stringify(climbers);
+			pdfData.total_climbers = climbers.length;
+
+			// Get total payment
+			var totalPayment = 0;
+			for (const transactions of Object.values(climberDB.expeditionInfo.transactions)) {
+				for (const info of Object.values(transactions.data)) {
+					// only add negative-value tranactions because the rest are charges
+					if ( (info.transaction_value < 0) && (info.transaction_type_code == 24) ) 
+						totalPayment -= parseFloat(info.transaction_value); // -= because payments are negative
+				}
+			}
+			// Format string as float
+			pdfData.total_payment = totalPayment.toFixed(2);
 		}
-		// Format string as float
-		pdfData.total_payment = totalPayment.toFixed(2);
 
 		if (exportType == 'registration_card') {
 			// Get route data: for each card, get the mountain name
@@ -2919,30 +2964,27 @@ class ClimberDBExpeditions extends ClimberDB {
 				const mountainName = $card.find(`.route-code-header-input[name="mountain_code"] option[value="${route.mountain_code}"]`).text();
 				pdfData.routes.push({mountain: mountainName, route: route.name});
 			} 	
+			pdfData.routes = JSON.stringify(pdfData.routes);
 		}
-		pdfData.routes = JSON.stringify(pdfData.routes);
 
 		this.showLoadingIndicator('makePDF');
 
 		return $.post({
 			url: `flask/reports/${exportType}/${this.expeditionInfo.expeditions.id}.pdf`,
 			data: pdfData,
-			//xhrFields: {responseType: 'blob'}, 
 			cache: false
 		}).done(responseData => {
-			// var fileURL = URL.createObjectURL(responseData);
-			// window.open(fileURL, this.expeditionInfo.expedition_name);
 			if (this.pythonReturnedError(responseData)) {
 				showModal('Your PDF could not be exported because of an unexpected error: ' + responseData, 'Unexpected Error');
 				return;
 			}
-			window.open(responseData, '_blank')//></a>`).appendTo('body').click();
-			//setTimeout(()=>{a.remove()}, 500);
+			window.open(responseData, '_blank')
         }).always(() => {
         	this.hideLoadingIndicator()
         });
 
 	}
+
 
 	/*
 	Update the source Excel file for Label Matrix server-side

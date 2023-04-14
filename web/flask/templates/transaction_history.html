@@ -1,0 +1,127 @@
+<!doctype html>
+<head>
+	<title>Transaction History - {{expedition_name}}</title>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+	<link rel=stylesheet href="{{ url_for('static', filename='transaction_history.css') }}" />
+	<style>
+		body { 
+		    font-family: 'Lato', sans-serif;
+		}
+
+		@page { 
+		    size: letter landscape; 
+		    margin: 0.25in; 
+		}
+
+		section {
+			margin-bottom: 20pt;
+		}
+
+		.title-text {
+			width: 100%;
+			text-align: center;
+		}
+		.title-text.main-title {
+			margin-bottom: 0;
+		}
+		.sub-section-title {
+			margin-top: 20pt;
+			margin-bottom: 10pt;
+		}
+
+		.climber-name-header {
+			margin-bottom: 10pt;
+		}
+		.section-table {
+			width: 100%;
+			font-size: 10pt;
+			margin-bottom: 30pt;
+		}
+
+		.transaction-list {
+			border-collapse: collapse;
+		}
+		.transaction-list tr {
+			height: 25pt;
+		}
+
+		.transaction-type-col		{width: 15%;} 
+		.transaction-method-col 	{width: 15%;}
+		.transaction-value-col 		{width: 10%;}
+		.transaction-date-col 		{width: 15%;}
+		.last-modified-date-col 	{width: 10%;}
+		.last-modified-by-col	 	{width: 10%;}
+		.notes-col					{width: 25%;}
+
+		tfoot tr .transaction-method-col {
+			padding-right: 15pt;
+		}
+		/*tfoot tr .transaction-value-col {
+			border-top: solid 1px black;
+		}*/
+		tfoot tr .transaction-value-col div {
+			width: 75%;
+			height: 100%;
+			border-top: solid 1px black;
+		}
+
+		.text-align-right {
+			text-align: right;
+		}
+	</style>
+</head>
+
+<body>
+
+	<h2 class="title-text main-title">Transaction History <br>{{expedition_name}}</h2>
+	<section>
+
+		{% for climber in transaction_history %}
+			<h4 class="climber-name-header">{{ climber.climber_name }}, {{ climber.status}}</h4>
+			<table class="section-table transaction-list">
+				<thead>
+					<tr>
+						<th class="transaction-type-col">Transaction Type</th>
+						<th class="transaction-method-col">Payment Method</th>
+						<th class="transaction-value-col">Amount</th>
+						<th class="transaction-date-col">Transaction Date</th>
+						<th class="last-modified-date-col">Last Edit Date</th>
+						<th class="last-modified-by-col">Last Edit By</th>
+						<th class="notes-col">Transaction Notes</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for transaction in climber.transactions %}
+						<tr>
+							<td class="transaction-type-col">{{transaction.transaction_type}}</td>
+							<td class="transaction-method-col">{{transaction.payment_method}}</td>
+							<td class="transaction-value-col">$ {{transaction.transaction_value}}</td>
+							<td class="transaction-date-col">{{transaction.transaction_date}}</td>
+							<td class="last-modified-date-col">{{transaction.last_modified_time}}</td>
+							<td class="last-modified-by-col">{{transaction.last_modified_by}}</td>
+							<td class="notes-col">{{transaction.transaction_notes}}</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+				<tfoot>
+					<tr class="total-row">
+						<th class="transaction-type-col"></th>
+						<th class="transaction-method-col text-align-right">Balance</th>
+						<th class="transaction-value-col "><div>$ {{climber.balance}}</div></th>
+						<th class="transaction-date-col"></th>
+						<th class="last-modified-date-col"></th>
+						<th class="last-modified-by-col"></th>
+						<th class="notes-col"></th>
+					</tr>
+				</tfoot>
+			</table>
+		{% endfor %}
+
+		</section>
+</body>
+
+</html>

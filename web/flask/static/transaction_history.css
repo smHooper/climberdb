@@ -1,0 +1,71 @@
+body { 
+	font-family: 'Lato', sans-serif;
+}
+
+@page { 
+	size: letter landscape; 
+	margin: 0.5in; 
+	counter-increment: page;
+	@bottom-center {
+		content: "page " counter(page) " of " counter(pages);
+	}
+}
+
+section {
+	margin-bottom: 20pt;
+}
+
+.title-text {
+	width: 100%;
+	text-align: center;
+}
+.title-text.main-title {
+	margin-bottom: 0;
+}
+.sub-section-title {
+	margin-top: 20pt;
+	margin-bottom: 10pt;
+}
+
+.climber-name-header {
+	margin-bottom: 10pt;
+}
+.section-table {
+	width: 100%;
+	font-size: 10pt;
+	margin-bottom: 30pt;
+}
+
+.transaction-list {
+	border-collapse: collapse;
+	break-inside: avoid-page;
+}
+.transaction-list tr {
+	height: 25pt;
+}
+
+.transaction-type-col       {width: 15%;} 
+.transaction-method-col     {width: 15%;}
+.transaction-value-col      {width: 10%;}
+.transaction-date-col       {width: 15%;}
+.last-modified-date-col     {width: 10%;}
+.last-modified-by-col       {width: 10%;}
+.notes-col                  {width: 25%;}
+
+tfoot tr .transaction-method-col {
+	padding-right: 15pt;
+}
+/*tfoot tr .transaction-value-col {
+	border-top: solid 1px black;
+}*/
+tfoot tr .transaction-value-col div {
+	width: 75%;
+	height: 100%;
+	border-top: solid 1px black;
+	margin-top: -5pt; /*move line closer to last transaction*/
+	padding-top: 5pt; /*but keep text in the same place*/
+}
+
+.text-align-right {
+	text-align: right;
+}

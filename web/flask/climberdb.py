@@ -388,6 +388,40 @@ def get_registration_card(expedition_id):
 	return 'exports/' + pdf_filename #pdf_data
 
 
+@app.route('/flask/reports/transaction_history/<expedition_id>.pdf', methods=['POST'])
+def get_transaction_history(expedition_id):
+	data = dict(request.form)
+
+	data['transaction_history'] = json.loads(data['transaction_history']);
+
+	# Get HTML string
+	html = render_template('transaction_history.html', **data)
+
+	cleaned_expedition_name = re.sub(r'\W', '_', data['expedition_name'])
+	pdf_filename = f'transaction_history_{cleaned_expedition_name}.pdf'
+
+	# render html
+	wait_for_weasyprint()
+	html = weasyprint.HTML(string=html)
+	
+	# write to disk as PDF
+	pdf_path = os.path.join(get_exports_dir(), pdf_filename)
+	html.write_pdf(pdf_path)
+
+	return 'exports/' + pdf_filename #pdf_data
+
+
+@app.route('/flask/reports/transaction_history/<expedition_id>', methods=['POST'])
+def get_transaction_history_html(expedition_id):
+	data = dict(request.form)
+
+	data['transaction_history'] = json.loads(data['transaction_history']);
+
+	# Get HTML string
+	return render_template('transaction_history.html', **data)
+
+
+
 # Default 
 def write_query_to_excel(query_data, query_name, excel_path, excel_start_row=0, write_columns=True):
 
@@ -506,10 +540,8 @@ def write_to_label_matrix():
 	
 	data = pd.DataFrame([dict(request.form)])
 	label_matrix_source = app.config['LABEL_MATRIX_SOURCE']
-
-	#data.to_excel('delete.xlsx', index=False)
-	excel_path = os.path.join(os.path.dirname(__file__), label_matrix_source)
-	data.to_excel(excel_path, sheet_name='label_matrix_source', index=False)
+	source_path = os.path.join(os.path.dirname(__file__), 'assets', label_matrix_source)
+	data.to_csv(source_path, index=False)
 
 	return 'true'
 

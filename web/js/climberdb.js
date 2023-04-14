@@ -602,6 +602,14 @@ class ClimberDB {
 	}
 
 
+	/*
+	Helper function to get human-readable database values from selects
+	*/
+	selectValueToText(name, value) {
+		return value ? $(`select.input-field[name="${name}"] option[value="${value}"]`).first().text() : '';
+	}
+
+
 	addNewListItem($ul, {dbID=null, parentDBID=null, newItemClass=''}={}) {
 
 		const $cloneable = $ul.find('li.cloneable');
