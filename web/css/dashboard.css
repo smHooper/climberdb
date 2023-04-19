@@ -127,7 +127,7 @@
 	overflow-y: auto;
 }
 .climberdb-dashboard-table tbody tr {
-	height: 60px;
+	height: 55px;
 }
 #season-mountain-stats-card .climberdb-dashboard-table td:not(:first-of-type) {
 	text-align: center;
@@ -137,6 +137,9 @@
 }
 
 /*-------- mountain stats table ---------*/
+.total-registered-climbers-count {
+	font-weight: 600;
+}
 .cancelled-row td {
 	color: #888;
 	font-style: italic;

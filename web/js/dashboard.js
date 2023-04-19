@@ -16,6 +16,7 @@ class ClimberDBDashboard extends ClimberDB {
 				<div class="col-md col-lg-4 card-container">
 					<div id="season-mountain-stats-card" class="card dashboard-card">
 						<h4 class="dashboard-card-header">Mountain Stats This Season</h4>
+						<h5 class="w-100 text-center">Total registered climbers: <span class="total-registered-climbers-count"></span></h5>
 						<div class="dashboard-card-body">
 							<table class="climberdb-dashboard-table climberdb-data-table">
 								<thead>
@@ -311,6 +312,36 @@ class ClimberDBDashboard extends ClimberDB {
 		// Collect data, then add to table since order matters and the queries won't necessarily return results in order
 		const tableData = {};
 		
+		// Show total number of climbers separately from per mountain total climbers
+		const totalClimbersSQL = `
+			SELECT 
+				count(*) AS total_climbers
+			FROM 
+			 	(
+				 	SELECT DISTINCT 
+						climber_id
+					FROM registered_climbs_view
+					WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31'
+				) t
+			;
+		`;
+		
+		const totalClimbersDeferred = this.queryDB(totalClimbersSQL)
+			.done(queryResultString => {
+				const $totalClimbersSpan = $('.total-registered-climbers-count');
+				if (this.queryReturnedError(queryResultString)) {
+					print(`Total climbers query failed with result: ${queryResultString}`);
+					$totalClimbersSpan.text('ERROR');
+				} else {
+					const result = $.parseJSON(queryResultString);
+					$totalClimbersSpan.text(result[0].total_climbers)
+				}
+			})
+			.fail((xhr, status, error) => {
+				print('Registered climber query failed with error: ' + error);
+				$totalClimbersSpan.text('ERROR');
+			})
+
 		// registered climbers
 		const registeredSQL = `
 			SELECT 
@@ -482,6 +513,7 @@ class ClimberDBDashboard extends ClimberDB {
 			`).appendTo($('#season-mountain-stats-card .climberdb-dashboard-table tbody'))
 		}
 		return $.when(
+			totalClimbersDeferred,
 			registeredDeferred, 
 			onMountainDeferred, 
 			offMountainDeferred, 
