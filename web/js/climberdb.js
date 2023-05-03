@@ -208,7 +208,15 @@ class ClimberDB {
 		this.constants = { // values that aren't configurable but need to be accessible across multiple pages
 			millisecondsPerDay: 1000 * 60 * 60 * 24,
 			climbingFeeTransactionCodes: [3, 10, 12, 14, 15, 23, 24],
-			entranceFeeTransactionCodes: [11, 12, 14, 15, 25, 8, 26]
+			entranceFeeTransactionCodes: [11, 12, 14, 15, 25, 8, 26],
+			groupStatusCodes: {
+				pending: 1,
+				readyForReview: 2,
+				confirmed: 3,
+				onMountain: 4,
+				offMountain: 5,
+				cancelled: 6
+			}
 		}
 		this.urlChannels = {}; // for checking if a URL is already open in another tab/window
 		this.nonEditingUserRoles = [2]; // for checking if user has edit privs

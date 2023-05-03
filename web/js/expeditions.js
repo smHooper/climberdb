@@ -201,7 +201,8 @@ class ClimberDBExpeditions extends ClimberDB {
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
 								<div class="field-container col-sm-6">
-									<select id="input-air_taxi" class="input-field default filled-by-default needs-filled-by-default" name="air_taxi_code" data-table-name="expeditions" data-default-value="-1" placeholder="Air taxi" title="Air taxi" type="text" autocomplete="__never"></select>
+									<select id="input-air_taxi" class="input-field default filled-by-default needs-filled-by-default" name="air_taxi_code" data-table-name="expeditions" placeholder="Air taxi" title="Air taxi" type="text"></select>
+									<span class="required-indicator">*</span>
 									<label class="field-label" for="input-air_taxi">Air taxi</label>
 									<span class="null-input-indicator">&lt; null &gt;</span>
 								</div>	
@@ -832,12 +833,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		})
 
 		// If the group status changes to "confirmed", make actual departure and actual return dates not required
-		$('#input-group_status').change(e => {
-			const statusCode = parseInt(e.target.value || 0);
-			this.toggleRequiredOnInput($('#input-planned_return_date'), statusCode > 1 && statusCode != 6) //1 === pending, 6 === cnacleled
-			this.toggleRequiredOnInput($('#input-actual_departure_date'), statusCode !== 3);//3 === confirmed
-			this.toggleRequiredOnInput($('#input-actual_return_date'), statusCode === 5);//5 === off mountain
-		})
+		// $('#input-group_status').change(e => {
+		// })
 
 		$(document).on('click', '.delete-card-button', (e) => {
 			this.onDeleteCardButtonClick(e)
@@ -2565,20 +2562,21 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $select = $(e.target);
 		const $card = $select.closest('.card');
 		const value = parseInt($select.val());
-		const iscancelled = value === 6;
+		const isCancelled = value === this.constants.groupStatusCodes.cancelled;
+		const isConfirmed = value === this.constants.groupStatusCodes.confirmed;
 
 		// Set the datetime_cancelled field
 		const now = getFormattedTimestamp();
 		const cardID = $select.attr('id').match(/-\d+$/).toString();
-		$(`#input-datetime_cancelled${cardID}`).val(iscancelled ? now : null).change();
+		$(`#input-datetime_cancelled${cardID}`).val(isCancelled ? now : null).change();
 
 		// Show as cancelled and move to bottom
-		$card.toggleClass('cancelled', iscancelled);
-		if (iscancelled) {
+		$card.toggleClass('cancelled', isCancelled);
+		if (isCancelled) {
 			$card.appendTo($card.closest('.accordion'));
 		}
 		// If the user is confirming this expedition member, check that they've paid and turned everything in 
-		else if (value === 3) { //confirmed
+		else if (isConfirmed) {
 			const $card = $select.closest('.card');
 			if (!this.climberCanBeConfirmed($card, $select)) return;
 		}
@@ -2588,7 +2586,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const expeditionMemberID = $card.data('table-id');
 			if (expeditionMemberID) {
 				$(`.route-member-list .data-list-item[data-expedition-member-id=${expeditionMemberID}]`)
-					.ariaHide(iscancelled);
+					.ariaHide(isCancelled);
 			}
 
 			// Change the group's status if all equal the same value
@@ -2604,7 +2602,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 				// If the date_confirmed field isn't blank, fill it 
 				const $dateConfirmedField = $('#input-date_confirmed'); 
-				if (value == 3 && !$dateConfirmedField.val()) {
+				if (isConfirmed && !$dateConfirmedField.val()) {
 					$dateConfirmedField.val(getFormattedTimestamp()).change();
 				}
 			}
@@ -2632,10 +2630,30 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	onGroupStatusFieldChange(e) {
+		const statusCode = parseInt(e.target.value || 0);
+		
+		// Toggle required fields
+		this.toggleRequiredOnInput(
+			$('#input-planned_return_date'), 
+			statusCode > this.constants.groupStatusCodes.pending && statusCode !== this.constants.groupStatusCodes.cancelled
+		);
+		this.toggleRequiredOnInput(
+			$('#input-actual_departure_date'), 
+			statusCode !== this.constants.groupStatusCodes.confirmed
+		);
+		this.toggleRequiredOnInput(
+			$('#input-air_taxi'), 
+			statusCode === this.constants.groupStatusCodes.onMountain || statusCode === this.constants.groupStatusCodes.offMountain
+		);
+		this.toggleRequiredOnInput(
+			$('#input-actual_return_date'), 
+			statusCode === this.constants.groupStatusCodes.offMountain
+		);
+
 		// Only do stuff if the event was triggered by the user, not with .change()
 		if (e.originalEvent) {
 			const $select = $(e.target);
-			const statusCode = $select.val();
+			//const statusCode = $select.val();
 			const status = $select.find(`option[value=${statusCode}]`).text();
 			const $memberCards = $('#expedition-members-accordion .card:not(.cloneable)');
 			const expeditionInfo =  this.expeditionInfo;
@@ -2678,18 +2696,18 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			// If the date_confirmed field isn't blank, fill it 
 			const $dateConfirmedField = $('#input-date_confirmed'); 
-			if (statusCode == 3 && !$dateConfirmedField.val()) {
+			if (statusCode == this.constants.groupStatusCodes.confirmed && !$dateConfirmedField.val()) {
 				$dateConfirmedField.val(getFormattedTimestamp()).change();
 			}
 
 			
-			const iscancelled = statusCode == 6;
+			const isCancelled = statusCode == 6;
 			// Show the search bar drawer option as cancelled (or not)
-			$(`.expedition-search-bar-option[data-expedition-id=${expeditionInfo.expedition_id}]`).toggleClass('cancelled', iscancelled);
+			$(`.expedition-search-bar-option[data-expedition-id=${expeditionInfo.expedition_id}]`).toggleClass('cancelled', isCancelled);
 
 			// If the expedition is being cancelled, ask if the briefing should also be cancelled
 			const briefingInfo = expeditionInfo.briefings;
-			if (iscancelled && briefingInfo.briefing_datetime) {
+			if (isCancelled && briefingInfo.briefing_datetime) {
 				const expeditionName = $('#input-expedition_name').val();
 				const message = `Do you also want to cancel the briefing for ${expeditionName} scheduled` + 
 					` for ${briefingInfo.briefing_datetime}? <strong> This action is permanent and` + 
@@ -3123,14 +3141,17 @@ class ClimberDBExpeditions extends ClimberDB {
 			)
 		}
 
-		// If this is within seven days, automatically limit results to just climbers who have 
-		//	already been on Denali or Foraker this year
+		// If this is within seven days (and not an NPS expedition, automatically limit results to just 
+		//	climbers who have already been on Denali or Foraker this year
 		const daysToDeparture = (departureDate - now) / this.constants.millisecondsPerDay;
 		const previousClimberAdditionDays = this.config.days_before_previous_climber_addition_restriction;
+		const specialGroupType = $('#input-special_group_type').val();
 		const limitToPreviousClimbers = 
+			specialGroupType != 3 && // 3 === NPS and not subject to 7-day rule
 			previousClimberAdditionDays && 
 			daysToDeparture > 0 && 
 			daysToDeparture <= previousClimberAdditionDays;
+		
 		if (limitToPreviousClimbers)	{
 			showModal('This expedition is scheduled to depart in ' + previousClimberAdditionDays + ' days or less. Only climbers who have previously climbed Denali or Foraker can be added to this expedition. When you search for climbers, the results will automatically be limited to only climbers who meet this criteria.', 
 				'WARNING: 7-Day Rule in Effect',
@@ -3708,6 +3729,18 @@ class ClimberDBExpeditions extends ClimberDB {
 			$entranceFee.find('.input-field[name=transaction_date]')
 				.val(today)
 				.change();
+
+			// Add default waivers for NPS exp. memebrs
+			const specialGroupType = $('#input-special_group_type').val();
+			if (specialGroupType == 3) {
+				const $npsWaiver = this.addNewListItem($transactionsList);
+				$npsWaiver.find('.input-field[name=transaction_type_code]')
+					.val(15)
+					.change();
+				$npsWaiver.find('.input-field[name=transaction_date]')
+					.val(today)
+					.change();
+			}
 
 			// If the climber is a minor, flag the expedition member
 			const climberAge = climberInfo.age;
