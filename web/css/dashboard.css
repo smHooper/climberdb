@@ -81,7 +81,7 @@
 }
 
 #season-mountain-stats-card .climberdb-dashboard-table {
-	font-size: 20px;
+	font-size: 16px;
 }
 
 .climberdb-dashboard-table {
@@ -90,6 +90,7 @@
 	/*margin-top: 30px;*/
 	max-height: 100%;
 }
+
 .climberdb-dashboard-table,
 .climberdb-dashboard-table th,
 .climberdb-dashboard-table td {
@@ -132,6 +133,7 @@
 #season-mountain-stats-card .climberdb-dashboard-table td:not(:first-of-type) {
 	text-align: center;
 }
+
 .climberdb-data-table .sort-column-button {
 	color: #00679B;
 }
