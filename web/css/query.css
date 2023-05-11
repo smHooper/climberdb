@@ -123,6 +123,12 @@
   background-color: #ffffff30;
 }
 
+select.input-field.default, 
+.input-field::placeholder, 
+textarea.narrative-field::placeholder {
+    color: hsla(1, 0%, 10%, 0.5); /*make placeholder darker for darker background*/
+}
+
 /*select2*/
 .select2-container {
 	max-width: calc(100% - 20px);
@@ -185,6 +191,20 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 
 .field-container {
 	max-height: 66px;
+}
+.text-only-button.add-remove-all-multiselect-options-button {
+	font-size: 12px;
+	color: var(--ui-primary-text-color);
+	position: absolute;
+	top: 0;
+	right: 45px;
+	opacity: 0;
+	pointer-events: none;
+	transition: 0.3s opacity .15s ease;
+}
+.field-container:hover .add-remove-all-multiselect-options-button {
+	opacity: 1;
+	pointer-events: all;
 }
 .icon-button.hide-query-parameter-button {
 	opacity: 0;

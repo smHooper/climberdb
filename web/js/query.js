@@ -355,7 +355,7 @@ class ClimberDBQuery extends ClimberDB {
 							<select id="count_climbers-summary_or_records" class="input-field no-option-fill" name="count_climbers-summary_or_records" title="What would you like to query?" required>
 								<option value="summary" selected>Count of climbers/climbs</option>
 								<option value="climbers">Climbers</option>
-								<option value="climbs">Expeditions</option>
+								<option value="expeditions">Expeditions</option>
 							</select>
 							<label class="field-label" for="count_per_guide_company-summary_or_records">What would you like to query?</label>
 						</div>
@@ -444,6 +444,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-reservation_status_code">Expedition member status</label>
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-group_status" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field include-dsiabled-options" multiple="multiple" name="group_status_code" title="Group status" placeholder="Group status" required></select>
@@ -451,7 +452,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-group_status">Group status</label>
-
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-special_group_type" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="special_group_type_code" placeholder="Special group type filter" required></select>
@@ -459,6 +460,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-special_group_type">Special group type</label>
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-guide_company" class="input-field default climberdb-select2 is-empty where-clause-field include-dsiabled-options  has-null-option" name="guide_company_code" multiple="multiple" placeholder="Guide company filter" title="Guide company" required></select>
@@ -466,6 +468,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-guide_company">Guide company</label>
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-mountain" class="input-field default climberdb-select2 is-empty where-clause-field" name="mountain_code" multiple="multiple" placeholder="Mountain" title="Mountain filter" required></select>
@@ -473,6 +476,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-mountain">Mountain</label>
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-route" class="input-field default climberdb-select2 is-empty where-clause-field" name="route_code" multiple="multiple" placeholder="Route" title="Route filter" required></select>
@@ -480,6 +484,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-route">Route</label>
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-summited" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field" name="summited" required>
@@ -529,6 +534,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-sex_code">Gender</label>
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-country" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="country_code" placeholder="Country" required></select>
@@ -536,6 +542,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-country_code">Country</label>
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-state" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="state_code" placeholder="State/province" required></select>
@@ -543,6 +550,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-state_code">State/province</label>
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<select id="count_climbers-year" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field no-option-fill year-select-field" multiple="multiple" name="year" placeholder="Year" required></select>
@@ -550,6 +558,7 @@ class ClimberDBQuery extends ClimberDB {
 								<i class="fas fa-lg fa-times"></i>
 							</button>
 							<label class="field-label" for="count_climbers-year">Year</label>
+							<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 						</div>
 						<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 							<div class="where-clause-date-field-container col d-flex">
@@ -708,6 +717,10 @@ class ClimberDBQuery extends ClimberDB {
 			this.onDatetimeQueryOperatorChange(e)
 		});
 
+		$('.add-remove-all-multiselect-options-button').click(e => {
+			this.onAddAllMultiselectOptionsClick(e);
+		})
+
 		$(document).on('click', '.sort-column-button', e => {
 			this.onSortDataButtonClick(e);
 		});
@@ -841,6 +854,14 @@ class ClimberDBQuery extends ClimberDB {
 		// Show/hide the .field-label of select2s by manually toggling the .default class 
 		//	based on the select's value
 		$target.toggleClass('default', !valueLength);
+
+		// Set the add/remove all button text, depedning on whether all options are selected or not
+		const $addRemoveButton = $target.siblings('.add-remove-all-multiselect-options-button')
+		$addRemoveButton.text(
+			$target.val().length === this.getAllSelectOptions($target).length ?
+				'remove all' :
+				'add all'
+		);
 	}
 
 
@@ -1150,6 +1171,27 @@ class ClimberDBQuery extends ClimberDB {
 		$target.closest('.field-container').toggleClass('is-between', isBetween);
 	}
 
+
+	/*
+	Helper function to get all selects options of a multi-select
+	*/
+	getAllSelectOptions($select) {
+		return $select.find('option').map((_, el) => el.value).get().filter(v => v !== '');
+	}
+
+
+	onAddAllMultiselectOptionsClick(e) {
+		const $button = $(e.target).closest('button');
+		const $select = $button.siblings('select');
+		const allOptionsAdded = $button.text() === 'remove all';
+		if (allOptionsAdded) {
+			$select.val([]).change();
+			$button.text('add all');
+		} else {
+			$select.val(this.getAllSelectOptions($select)).change();
+			$button.text('remove all');
+		}
+	}
 
 	resizeQueryParameterContainer(e) {
 		const mouseYCoordinate = e.pageY;
