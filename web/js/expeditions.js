@@ -3008,7 +3008,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	Update the source Excel file for Label Matrix server-side
 	*/
 	writeToLabelMatrix() {
-		let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader)
+		let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === 't')
 		if (!tripLeaderInfo.length) {
 			showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
 			return;
