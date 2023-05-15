@@ -974,7 +974,19 @@ class ClimberDB {
 				.find('.card-link')
 					.click();
 
-			if (focusOnField) $invalidFields.first().focus();
+			if (focusOnField) {	
+				const $firstError = $invalidFields.first().focus();
+
+				const parentTabID = $invalidFields.closest('.tab-pane').attr('id');
+				// If the field is contained within a tab, open that tab
+				if (parentTabID) {
+					$(`.nav-tabs .nav-link[href="#${parentTabID}"]`).click();
+				}
+				// If it's in a card, open it
+				$firstError.closest('.card').collapse('show');
+
+				
+			}
 			return false;
 		} else {
 			return true;

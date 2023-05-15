@@ -360,7 +360,8 @@
 	width: 100%;
 	height: calc(100% - 60px - 45px);
 	padding: 0 10px;
-	overflow: auto;
+	overflow-y: auto;
+	overflow-x: hidden;
 	scroll-behavior: smooth;
 }
 @media (prefers-reduced-motion) {

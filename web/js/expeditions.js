@@ -578,7 +578,7 @@ class ClimberDBExpeditions extends ClimberDB {
 												<label class="data-list-col data-list-header-label col-2 text-center route-summited-column">Summited?</label>
 												<label class="data-list-col data-list-header-label col-3 text-center route-summit-date-column">Summit date</label>
 												<label class="data-list-col data-list-header-label col-2 route-highest-elevation-column">Highest elevation (ft)</label>
-												<label class="data-list-col data-list-header-label col-1"></label>
+												<label class="data-list-col data-list-header-label col"></label>
 											</div>
 											<ul id="route-member-list" class="data-list route-member-list">
 												<li class="data-list-item cloneable show-children-on-hover hidden">
@@ -605,7 +605,7 @@ class ClimberDBExpeditions extends ClimberDB {
 															<input id="input-highest_elevation" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest elevation in feet"> 
 														</div>
 													</div>
-													<div class="col-1">
+													<div class="col">
 														<button class="icon-button delete-button delete-route-member-button show-on-parent-hover" title="Delete expedition member route">
 															<i class="fas fa-trash fa-lg"></i>
 														</button>
@@ -1993,7 +1993,22 @@ class ClimberDBExpeditions extends ClimberDB {
 			`)
 			.has('.input-field.dirty, .input-field:required:invalid');
 		if (!this.validateFields($editParents)) {
-			showModal('One or more required fields are not filled. All required fields must be filled before you can save your edits.', 'Required field is empty');
+			const errorFieldList = $('.input-field.error').map((_, el) => {
+				const $el = $(el);
+				let fieldName = '';
+				if ($el.is('select')) {
+					fieldName = $el.find('option[value=""]').text();
+				} else {
+					fieldName = $el.attr('placeholder');
+				}
+				return `<li>${fieldName}</li>`
+			}).get()
+			.join('');
+			
+			setTimeout(
+				() => {showModal(`The following fields are not filled. All required fields must be filled before you can save your edits:<ul>${errorFieldList}</ul>`, 'Required field is empty')},
+				500
+			);
 			hideLoadingIndicator();
 			return;
 		};
