@@ -2085,7 +2085,7 @@ class ClimberDBClimbers extends ClimberDB {
 		const climberInfo = this.climberInfo[currentIndex];
 
 		// If this isn't an admin, check if the climber belongs to any expeditions
-		if (this.userInfo.user_role_code < 3) {
+		if (!this.userInfo.isAdmin) {
 			if (climberInfo.expedition_name) { // will be null if climber isn't/wasn't on any expeditions
 				showModal(`You can't delete ${climberInfo.first_name} ${climberInfo.last_name}'s climber profile because they are a member of at least one expedition. You must remove them from all expeditions they're a member of before their profile can be deleted.`, 'Invalid Operation')
 				return;

@@ -2004,7 +2004,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				return `<li>${fieldName}</li>`
 			}).get()
 			.join('');
-			
+
 			setTimeout(
 				() => {showModal(`The following fields are not filled. All required fields must be filled before you can save your edits:<ul>${errorFieldList}</ul>`, 'Required field is empty')},
 				500
@@ -2387,7 +2387,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// If expeditions.id is in memory, this expedition has already been saved to the database 
 		if (this.expeditionInfo.expeditions.id && hasData) {
 			// if the user is an administar, let them know they'll be deleting all related records
-			if (this.userInfo.user_role_code >= 3) { 
+			if (this.userInfo.isAdmin) { 
 				message = 'Are you sure you want to delete this expedition? All expedition member, transaction,' + 
 					' and route information for this expedition will also be deleted. <strong>This action'  + 
 					' is permanent and cannot be undone.</strong>';
@@ -3061,6 +3061,9 @@ class ClimberDBExpeditions extends ClimberDB {
 	onclick event handler for print-cache-tag-button. Right now, it just updates an Excel file that the Label Matrix software points to
 	*/
 	onPrintCacheTagButtonClick() {
+
+		if (!this.showDenyEditPermissionsMessage()) return;
+
 		// Only allow printing cache tags if the group is either confirmed, on mountain, or off mountain
 		const groupStatusCode = parseInt($('#input-group_status').val());
 		if (![3, 4, 5].includes(groupStatusCode)) {

@@ -216,10 +216,17 @@ class ClimberDB {
 				onMountain: 4,
 				offMountain: 5,
 				cancelled: 6
+			},
+			userRoleCodes: {
+				dataEntry: 1,
+				ranger: 2,
+				admin: 3,
+				superUser: 4,
+				readOnly: 5
 			}
 		}
 		this.urlChannels = {}; // for checking if a URL is already open in another tab/window
-		this.nonEditingUserRoles = [2]; // for checking if user has edit privs
+		this.nonEditingUserRoles = [2, 5]; // for checking if user has edit privs
 	}
 
 	getUserInfo() {
@@ -255,7 +262,10 @@ class ClimberDB {
 						`${window.location.origin}/index.html?reset=true&id=${this.userInfo.id}&referer=${window.location.href}`
 					);
 				
-				if (this.userInfo.user_role_code >= 3) {
+				this.userInfo.isAdmin = 
+					this.userInfo.user_role_code == this.constants.userRoleCodes.admin || 
+					this.userInfo.user_role_code == this.constants.userRoleCodes.superUser;
+				if (this.userInfo.isAdmin) {
 					// Make fields only editable by admins editable
 					$('.admin-only-edit').removeClass('admin-only-edit');
 					$('.admin-only-nav-item').removeClass('hidden');
@@ -274,7 +284,7 @@ class ClimberDB {
 	*/
 	checkUserRole() {
 		const deferred = $.Deferred();
-		if (this.userInfo.user_role_code < 3) {
+		if (!this.userInfo.isAdmin) {
 			const adminEmail = this.config.program_admin_email;
 			const footerButtons = '<a href="dashboard.html" class="generic-button modal-button close-modal confirm-button">OK</a>'
 			showModal(`You do not have sufficient permissions to view this page. If you think this is an error, contact the program adminstrator at <a href="mailto:${adminEmail}">${adminEmail}</a>.`, 'Permission Error', 'alert', footerButtons, {dismissable: false})
