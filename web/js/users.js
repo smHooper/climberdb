@@ -9,25 +9,6 @@ class ClimberDBUsers extends ClimberDB {
 	}
 
 	configureMainContent() {
-		$('.main-content-wrapper').append(`
-			<div id="main-table-wrapper" class="climberdb-data-table-wrapper">
-				<table id="main-data-table" class="climberdb-data-table">
-					<thead>
-						<tr>
-							<th>Windows Username</th>
-							<th>First Name</th>
-							<th>Last Name</th>
-							<th>Role</th>
-							<th>Status</th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-			</div>
-			<div class="d-flex justify-content-center pt-2">
-				<button class="generic-button add-user-button" title="Add new user">Add new user</button>
-			</div>
-		`);
 
 		// Add delegated event handlers to handle events on newly created elements
 		// Toggle edits when a user either clicks the edit button for a row or double-clicks it

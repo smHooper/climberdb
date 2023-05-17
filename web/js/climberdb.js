@@ -338,77 +338,68 @@ class ClimberDB {
 					</div>
 				</div>
 			</nav>
+		`);
 
-			<main id="climberdb-main-content" class="climberdb-main">
+		$('.main-container-with-sidebar').prepend(`
+			<!-- nav sidebar -->
+			<nav class="sidebar" role="navigation" role="navigation">
+				<div class="sidebar-sticky">
+					<div class="sidebar-background"></div>
+					<ul class="sidebar-nav-group">
 
-				<!-- nav sidebar -->
-				<div class="main-container-with-sidebar">
-					<nav class="sidebar" role="navigation" role="navigation">
-						<div class="sidebar-sticky">
-							<div class="sidebar-background"></div>
-							<ul class="sidebar-nav-group">
+						<li class="nav-item selected">
+							<a href="dashboard.html">
+								<img class="sidebar-nav-item-icon" src="imgs/home_icon_50px.svg">
+								<span class="sidebar-nav-item-label">home</span>
+							</a>
+						</li>
 
-								<li class="nav-item selected">
-									<a href="dashboard.html">
-										<img class="sidebar-nav-item-icon" src="imgs/home_icon_50px.svg">
-										<span class="sidebar-nav-item-label">home</span>
-									</a>
-								</li>
+						<li class="nav-item">
+							<a href="climbers.html">
+								<img class="sidebar-nav-item-icon" src="imgs/climber_icon_50px.svg">
+								<span class="sidebar-nav-item-label">climbers</span>
+							</a>
+						</li>
 
-								<li class="nav-item">
-									<a href="climbers.html">
-										<img class="sidebar-nav-item-icon" src="imgs/climber_icon_50px.svg">
-										<span class="sidebar-nav-item-label">climbers</span>
-									</a>
-								</li>
+						<li class="nav-item">
+							<a href="expeditions.html">
+								<img class="sidebar-nav-item-icon" src="imgs/groups_icon_50px.svg">
+								<span class="sidebar-nav-item-label">expeditions</span>
+							</a>
+						</li>
 
-								<li class="nav-item">
-									<a href="expeditions.html">
-										<img class="sidebar-nav-item-icon" src="imgs/groups_icon_50px.svg">
-										<span class="sidebar-nav-item-label">expeditions</span>
-									</a>
-								</li>
+						<li class="nav-item">
+							<a href="query.html">
+								<img class="sidebar-nav-item-icon" src="imgs/query_icon_50px.svg">
+								<span class="sidebar-nav-item-label">query data</span>
+							</a>
+						</li>
 
-								<li class="nav-item">
-									<a href="query.html">
-										<img class="sidebar-nav-item-icon" src="imgs/query_icon_50px.svg">
-										<span class="sidebar-nav-item-label">query data</span>
-									</a>
-								</li>
+						<li class="nav-item">
+							<a href="briefings.html">
+								<img class="sidebar-nav-item-icon" src="imgs/calendar_icon_50px.svg">
+								<span class="sidebar-nav-item-label">briefing calendar</span>
+							</a>
+						</li>
 
-								<li class="nav-item">
-									<a href="briefings.html">
-										<img class="sidebar-nav-item-icon" src="imgs/calendar_icon_50px.svg">
-										<span class="sidebar-nav-item-label">briefing calendar</span>
-									</a>
-								</li>
+						<li class="nav-item admin-only-nav-item hidden">
+							<a href="users.html">
+								<img class="sidebar-nav-item-icon" src="imgs/user_icon_50px.svg">
+								<span class="sidebar-nav-item-label">manage users</span>
+							</a>
+						</li>
 
-								<li class="nav-item admin-only-nav-item hidden">
-									<a href="users.html">
-										<img class="sidebar-nav-item-icon" src="imgs/user_icon_50px.svg">
-										<span class="sidebar-nav-item-label">manage users</span>
-									</a>
-								</li>
+						<li class="nav-item admin-only-nav-item hidden">
+							<a href="config.html">
+								<img class="sidebar-nav-item-icon" src="imgs/settings_icon_50px.svg">
+								<span class="sidebar-nav-item-label">configure app</span>
+							</a>
+						</li>
 
-								<li class="nav-item admin-only-nav-item hidden">
-									<a href="config.html">
-										<img class="sidebar-nav-item-icon" src="imgs/settings_icon_50px.svg">
-										<span class="sidebar-nav-item-label">configure app</span>
-									</a>
-								</li>
+					</ul>
 
-							</ul>
-
-						</div>
-					</nav>
-
-					<!--main content -->
-					<div class="main-content-wrapper">
-
-					</div> <!--main-content-wrapper-->
-
-				</div> <!--wrapper-->
-			</main>
+				</div>
+			</nav>
 		`);
 
 		$('.sidebar-collapse-button').click((e) => {

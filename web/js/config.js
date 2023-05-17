@@ -13,26 +13,6 @@ class ClimberDBConfig extends ClimberDB {
 	}
 
 	configureMainContent() {
-		$('.main-content-wrapper').append(`
-			</div>
-			<div id="main-table-wrapper" class="climberdb-data-table-wrapper">
-				<div class="col d-flex justify-content-end">
-					<button id="save-button" class="expedition-edit-button icon-button save-edits-button transparent" type="button" aria-label="Save edits" title="Save edits" aria-hidden="true">
-						<i class="fas fa-2x fa-save"></i>
-					</button>
-				</div>
-				<div class="page-break w-100"></div>
-				<table id="main-data-table" class="climberdb-data-table col">
-					<thead>
-						<tr>
-							<th>Configuration Option</th>
-							<th class="config-value-cell">Value</th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-			</div>
-		`);
 
 		$(document).on('change', '.input-field', e => {this.onInputChange(e)});
 
