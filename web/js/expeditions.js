@@ -2960,6 +2960,9 @@ class ClimberDBExpeditions extends ClimberDB {
 
 				// Get leader info since we're looping through values anyway
 				climberInfo.is_trip_leader = info.is_trip_leader === 't' || info.is_trip_leader === true;
+				climberInfo.is_guiding = 
+					info.is_guiding === 't' || info.is_guiding === true
+					info.is_interpreter === 't' || info.is_interpreter === true;		
 				if (climberInfo.is_trip_leader) pdfData.leader_full_name = fullName;
 				
 

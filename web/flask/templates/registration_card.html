@@ -66,6 +66,8 @@
 						<tr>
 							{% if climber_info.is_trip_leader %}
 								<td class="leader-col unicode-character">{{"%s" % checkmark_character }}</td>
+							{% elif climber_info.is_guiding%}
+								<td class="leader-col">(G)</td>
 							{% else %}
 								<td class="leader-col"></td>
 							{% endif %}

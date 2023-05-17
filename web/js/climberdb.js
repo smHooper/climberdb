@@ -1477,7 +1477,7 @@ class ClimberDB {
 					// We already have the page open so tell the other tab that it is
 					channel.postMessage({message: openResponse, url: url, tabID: tabID})
 				} 
-				// If another tab is responding, telling us the page is already open, focus on that tab
+				// If another tab is responding, telling us the page is already open, warn the user
 				else if (
 						eventData.message === openResponse && 
 						eventData.url === url && 
