@@ -30,6 +30,70 @@
 </head>
 
 <body>
+	<main id="climberdb-main-content" class="climberdb-main">
+		<div class="main-container-with-sidebar">
+			<!--main content -->
+			<div class="main-content-wrapper">
+				<div class="fuzzy-search-bar-container">
+					<textarea id="climber-search-bar" class="fuzzy-search-bar" placeholder="Search climbers" autocomplete="__never"></textarea>
+					<img class="search-bar-icon" src="imgs/search_icon_50px.svg" alt="Search bar icon">
+					<div class="climber-search-filter-container">	
+						<div class="field-container checkbox-field-container">
+							<label class="checkmark-container">
+								<input id="guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="guide_only">
+								<span class="checkmark data-input-checkmark"></span>
+							</label>
+							<label class="field-label checkbox-label text-nowrap" for="guide-only-filter">Commercial guide</label>
+						</div>	
+						<div class="field-container checkbox-field-container ml-4">
+							<label class="checkmark-container">
+								<input id="7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="7_day_only">
+								<span class="checkmark data-input-checkmark"></span>
+							</label>
+							<label class="field-label checkbox-label" for="7-day-only-filter">7-day only</label>
+						</div>
+					</div>
+				</div>
+				<div class="query-result-container">
+					<!-- order is switched between result and details pane so I can use .collapsed ~ -->
+					<div class="query-result-pane result-details-pane collapsed uneditable" aria-hidden="true">
+						<div class="query-result-edit-button-container">
+							<button id="add-new-climber-button" class="generic-button" title="Create new climber">Add new climber</button>
+						</div>
+
+					</div>
+					<div class="query-result-pane result-summary-pane">
+						<div id="result-navigation-header" class="hidden-on-invalid-result">
+							<div class="result-navigation-container">
+								<button class="icon-button show-previous-result-set-button disabled" role="button" title="Show previous page">
+									<i class="fa fa-chevron-left"></i>
+								</button>
+								<label class="result-index-label hidden" aria-live="polite" aria-hidden="true">
+									<span id="min-record-index-span"></span>-<span id="max-record-index-span"></span> of <span id="total-records-span"></span>
+								</label>
+								<button class="icon-button show-next-result-set-button" role="button" title="Show next page">
+									<i class="fa fa-chevron-right"></i>
+								</button>
+							</div>
+						</div>
+
+						<div class="query-result-list-container hidden-on-invalid-result">
+							<div id="result-summary-header-row" class="query-result-list-item header-row hidden-on-invalid-result" role="row">
+								<label class="result-summary-label col" role="gridcell">Full Name</label>
+								<label class="result-summary-label col" role="gridcell">Locale</label>
+								<label class="result-summary-label col" role="gridcell">Last Group Name</label>
+							</div>
+							<ul class="query-result-list" role="grid" aria-live="polite">
+							</ul>
+						</div>
+						<div class="empty-result-message hidden" aria-hidden="true">Oops! No climbers match your search.</div>
+					</div>
+				</div>
+			</div>
+			<!--main-content-->
+		</div>
+	</main>
+
 	 <!-- loading indicator should be hidden and will only be shown when loading data -->
 	<div id="loading-indicator-background" class="modal-background modal-background-light hidden" ></div>
 	<div id="loading-indicator" class="hidden"></div>

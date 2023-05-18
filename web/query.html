@@ -31,6 +31,428 @@
 </head>
 
 <body>
+	<main id="climberdb-main-content" class="climberdb-main">
+		<div class="main-container-with-sidebar">
+			<!--main content -->
+			<div class="main-content-wrapper">
+				<div class="query-options-sidebar col-3">
+					<input id="query-option-search-input" class="fuzzy-search-bar w-100" placeholder="Type to search for queries" title="Search for queries">
+					<ul id="query-option-list">
+						<li class="query-option not-expandable" role="button" data-query-name="guide_company_client_status" data-tags="guide, guiding, accounting, status">Guided Client Status</li>
+						<li class="query-option not-expandable" role="button" data-query-name="guided_company_briefings" data-tags="guide, guiding, briefing, status">Guide Company Briefings</li>
+						<li class="query-option not-expandable" role="button" data-query-name="count_per_guide_company" data-tags="guide, guiding, expeditions, climbers">Expeditions/Climbers Per Guide Company</li>
+						<li class="query-option" role="button" data-query-name="flagged_climbers" data-tags="climber, route">Flagged Expedition Members</li>
+						<li class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, route">Query Climbers/Climbs</li>
+						<li id="climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="total, climber, mountain">Total climbers per mountain</li>
+						<li id="guided-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="guide, climber, mountain">Guided climbers per mountain</li>
+						<li id="independent-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="independent, climber, mountain">Independent climbers per mountain</li>
+						<li id="nps-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="nps, climber, mountain">NPS climbers per mountain</li>
+						<li id="female-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="female, women, climber, mountain">Female climbers per mountain</li>
+						<li id="total-summits-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="total, summit, mountain">Total summits per mountain</li>
+						<li id="female-summits-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="female, women, summit, mountain">Female summits per mountain</li>
+						<li id="count-route-attempts-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="climbs, attempts, route">Count attempts per route</li>
+						<li id="count-route-summits-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, route">Count summits per route</li>
+						<li id="count-climbers-per-country-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, country">Count climbers per country</li>
+						<li id="count-climbers-per-state-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, state">Count climbers per state</li>
+						<li id="count-guides-by-gender-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="gender, guide, guiding. female, women">Count guides by gender</li>
+						<li id="count-nps-by-gender-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="nps, gender, female, women">Count NPS patrollers by gender</li>
+						<li id="count-summits-per-month-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, month">Count summits per month</li>
+						<li id="count-summits-per-day-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, day">Count summits per day</li>
+					</ul>
+					<h4 id="no-query-match-message" class="hidden" aria-hidden="true">No queries match your search</h4>
+				</div>
+				<div class="query-details-container col-9">
+					<div class="query-parameters-header">
+						<div class="query-parameters-container hidden" data-query-name="guide_company_client_status">
+							<h4 class="w-100 mb-3">Guided Client Status Query Parameters</h4>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="guide_company_client_status-guide_company" class="input-field remove-null-guide-option default include-dsiabled-options" name="guide_company_code" title="Guide company" required>
+									<option value="">Guide company</option>
+								</select>
+								<label class="field-label" for="guide_company_client_status-guide_company">Guide company</label>
+							</div>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="guide_company_client_status-year" class="input-field default no-option-fill year-select-field" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="guide_company_client_status-year">Year</label>
+							</div>	
+						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="guided_company_briefings">
+							<h4 class="w-100 mb-3">Guide Company Briefing Query Parameters</h4>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="guided_company_briefings-guide_company" class="input-field remove-null-guide-option default include-dsiabled-options" name="guide_company_code" title="Guide company" required>
+									<option value="">Guide company</option>
+								</select>
+								<label class="field-label" for="guided_company_briefings-guide_company">Guide company</label>
+							</div>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="guided_company_briefings-year" class="input-field default no-option-fill year-select-field" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="guided_company_briefings-year">Year</label>
+							</div>	
+						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="count_per_guide_company">
+							<h4 class="w-100 mb-3">Expeditions/Climbers Per Guide Company Query Parameters</h4>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="count_per_guide_company-group_by_field" class="input-field remove-null-guide-option default no-option-fill" name="group_by_field" title="Count expeditions or climbers?" required>
+									<option value="">Count expeditions or climbers?</option>
+									<option value="expedition_id">Expeditions</option>
+									<option value="expedition_member_id">Expedition member</option>
+								</select>
+								<label class="field-label" for="count_per_guide_company-guide_company">Count expeditions or climbers?</label>
+							</div>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="count_per_guide_company-year" class="input-field default no-option-fill year-select-field" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="count_per_guide_company-year">Year</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="count_per_guide_company-mountain_code" class="input-field mountain-code-parameter-input no-option-fill" name="mountain_code">
+									<option value="%">All mountains</option>
+								</select>
+								<label class="field-label" for="count_per_guide_company-mountain_code">Mountain</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 collapse">
+								<select id="count_per_guide_company-route_code" class="input-field route-code-parameter-input no-option-fill" name="route_code" data-dependent-target="#count_per_guide_company-mountain_code" data-dependent-value="!%">
+									<option value="%">All routes</option>
+								</select>
+								<label class="field-label" for="count_per_guide_company-route_code">Route</label>
+							</div>
+						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="flagged_climbers">
+							<h4 class="w-100 mb-3">Flagged Expedition Members Query Parameters</h4>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="flagged_climbers-year" class="input-field default no-option-fill year-select-field" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="flagged_climbers-year">Year</label>
+							</div>	
+						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="count_climbers">
+							<h4 class="w-100 mb-3">Query Climbers/Climbs</h4>
+							<div class="w-100"></div>
+							<div class="field-container col-sm col-md-4 col-lg-3">
+								<select id="count_climbers-summary_or_records" class="input-field no-option-fill" name="count_climbers-summary_or_records" title="What would you like to query?" required>
+									<option value="summary" selected>Count of climbers/climbs</option>
+									<option value="climbers">Climbers</option>
+									<option value="expeditions">Expeditions</option>
+								</select>
+								<label class="field-label" for="count_per_guide_company-summary_or_records">What would you like to query?</label>
+							</div>
+							<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
+								<select id="count_climbers-count_field" class="input-field no-option-fill" name="count_climbers-count_field" title="Count expedition members, climbers, or climbs?" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
+									<option value="climbers" selected>Climbers</option>
+									<option value="members">Expedition member</option>
+									<option value="climbs">Climbs</option>
+								</select>
+								<label class="field-label" for="count_per_guide_company-count_field">Count climbers, exp. members, or climbs?</label>
+							</div>
+							<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
+								<select id="count_climbers-group_by_fields" class="input-field no-option-fill climberdb-select2 is-empty is-empty" multiple="multiple" name="group_by_fields" placeholder="Group rows by" placeholder="Group rows by" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
+									<!--<option value="reservation_status_code">Reservation status</option>--><!--don't include for now because can't map to lookup table-->
+									<option value="group_status_code">Group status</option>
+									<option value="special_group_type_code">Special group type</option>
+									<option value="guide_company_code">Guide company</option>
+									<option value="sex_code">Gender</option>
+									<option value="summited">Summited (yes/no)</option>
+									<option value="summit_date">Summit date</option>
+									<option value="country_code">Country</option>
+									<option value="state_code">State</option>
+									<option value="route_name">Route</option>
+									<option value="mountain_name">Mountain</option>
+									<option value="planned_departure_date">Planned departure</option>
+									<option value="planned_return_date">Planned return</option>
+									<option value="actual_departure_date">Actual departure</option>
+									<option value="actual_return_date">Actual return</option>
+									<option value="month">Planned departure month</option>
+									<option value="to_char(summit_date, 'Month')">Summit month</option>
+									<option value="year">Year</option>
+								</select>
+								<label class="field-label" for="count_climbers-group_by_fields">Group rows by</label>
+							</div>
+							<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
+								<select id="count_climbers-pivot_field" class="input-field default no-option-fill keep-default-option" name="pivot_field" title="Split columns by" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary">
+									<option value="">Split columns by</option>
+									<option value="group_status_code">Group status</option>
+									<option value="special_group_type_code">Special group type</option>
+									<option value="guide_company_code">Guide company</option>
+									<option value="sex_code">Gender</option>
+									<option value="summited">Summited (yes/no)</option>
+									<option value="summit_date">Summit date</option>
+									<option value="country_code">Country</option>
+									<option value="state_code">State</option>
+									<option value="route_code">Route</option>
+									<option value="mountain_code">Mountain</option>
+									<option value="planned_departure_date">Planned departure</option>
+									<option value="planned_return_date">Planned return</option>
+									<option value="actual_departure_date">Actual departure</option>
+									<option value="actual_return_date">Actual return</option>
+									<option value="month">Month</option>
+									<option value="year">Year</option>
+								</select>
+								<label class="field-label" for="count_climbers-pivot_field">Split columns by</label>
+							</div>
+							<h5 class="w-100 mt-3">Query Parameters</h5>
+							<div class="query-parameter-option-container" role="list">
+								<div class="show-query-parameter-button" role="button" data-field-name="group_status_code">Group status</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="special_group_type_code">Special group type</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="guide_company_code">Guide company</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="mountain_code">Mountain</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="route_code">Route</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="summited">Summited (yes/no)</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="summit_date">Summit date</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="sex_code">Gender</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="is_guiding">Is guiding (Yes/No)</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="country_code">Country</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="state_code">State</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="year">Year</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="planned_departure_date">Planned departure</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="planned_return_date">Planned return</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="actual_departure_date">Actual departure</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="actual_return_date">Actual return</div>
+							</div>
+							<!--
+							additional stats for numeric fields:
+							- avg
+							- stddev_pop 
+							- min
+							- max
+							-->
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-reservation_status" class="input-field default climberdb-select2 is-empty where-clause-field" multiple="multiple" name="reservation_status" title="Expedition member status" placeholder="Expedition member status" data-lookup-table="group_status_codes" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-reservation_status_code">Expedition member status</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-group_status" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field include-dsiabled-options" multiple="multiple" name="group_status_code" title="Group status" placeholder="Group status" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-group_status">Group status</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-special_group_type" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="special_group_type_code" placeholder="Special group type filter" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-special_group_type">Special group type</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-guide_company" class="input-field default climberdb-select2 is-empty where-clause-field include-dsiabled-options  has-null-option" name="guide_company_code" multiple="multiple" placeholder="Guide company filter" title="Guide company" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-guide_company">Guide company</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-mountain" class="input-field default climberdb-select2 is-empty where-clause-field" name="mountain_code" multiple="multiple" placeholder="Mountain" title="Mountain filter" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-mountain">Mountain</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-route" class="input-field default climberdb-select2 is-empty where-clause-field" name="route_code" multiple="multiple" placeholder="Route" title="Route filter" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-route">Route</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-summited" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field" name="summited" required>
+									<option value="">Summited?</option>
+									<option value="'Yes'">Yes</option>
+									<option value="'No'">No</option>
+								</select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-summited">Summited?</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<div class="where-clause-date-field-container col d-flex">
+									<select id="count_climbers-summit_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+										<option value="=" selected>equals</option>
+										<option value="<=">is before</option>
+										<option value=">=">is after</option>
+										<option value="BETWEEN">is between</option>
+									</select>
+									<input id="count_climbers-summit_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="summit_date" name="summit_date" data-validation-field-name="Summit date">
+									<div class="query-option-double-value-container hidden">
+										<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="summit_date" data-validation-field-name="Summit date" aria-hidden="true" required>
+										<span>and</span>
+										<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="summit_date" data-validation-field-name="Summit date" aria-hidden="true" required>
+									</div>
+								</div>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-summit_date_operator">Summit date</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-is_guiding" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field" name="is_guiding" required>
+									<option value="">Is guiding (yes/no)</option>
+									<option value="true">Yes</option>
+									<option value="false">No</option>
+								</select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-is_guiding">Is guiding (yes/no)</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-sex_code" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="sex_code" placeholder="Gender" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-sex_code">Gender</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-country" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="country_code" placeholder="Country" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-country_code">Country</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-state" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="state_code" placeholder="State/province" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-state_code">State/province</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-year" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field no-option-fill year-select-field" multiple="multiple" name="year" placeholder="Year" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-year">Year</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<div class="where-clause-date-field-container col d-flex">
+									<select id="count_climbers-planned_departure_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+										<option value="=" selected>equals</option>
+										<option value="<=">is before</option>
+										<option value=">=">is after</option>
+										<option value="BETWEEN">is between</option>
+									</select>
+									<input id="count_climbers-planned_departure_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="planned_departure_date" name="planned_departure_date" data-validation-field-name="Planned departure">
+									<div class="query-option-double-value-container hidden">
+										<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" data-validation-field-name="Planned departure" aria-hidden="true" required>
+										<span>and</span>
+										<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" data-validation-field-name="Planned departure" aria-hidden="true" required>
+									</div>
+								</div>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-planned_departure_date_operator">Planned departure</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<div class="where-clause-date-field-container col d-flex">
+									<select id="count_climbers-planned_return_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+										<option value="=" selected>equals</option>
+										<option value="<=">is before</option>
+										<option value=">=">is after</option>
+										<option value="BETWEEN">is between</option>
+									</select>
+									<input id="count_climbers-planned_return_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="planned_return_date" name="planned_return_date" data-validation-field-name="Planned return">
+									<div class="query-option-double-value-container hidden">
+										<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="planned_return_date" data-validation-field-name="Planned return" aria-hidden="true" required>
+										<span>and</span>
+										<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="planned_return_date" data-validation-field-name="Planned return" aria-hidden="true" required>
+									</div>
+								</div>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-planned_return_date_operator">Planned return</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<div class="where-clause-date-field-container col d-flex">
+									<select id="count_climbers-actual_departure_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+										<option value="=" selected>equals</option>
+										<option value="<=">is before</option>
+										<option value=">=">is after</option>
+										<option value="BETWEEN">is between</option>
+									</select>
+									<input id="count_climbers-actual_departure_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="actual_departure_date" name="actual_departure_date" data-validation-field-name="Actual departure">
+									<div class="query-option-double-value-container hidden">
+										<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="actual_departure_date" data-validation-field-name="Actual departure" aria-hidden="true" required>
+										<span>and</span>
+										<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="actual_departure_date" data-validation-field-name="Actual departure" aria-hidden="true" required>
+									</div>
+								</div>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-actual_departure_date_operator">Actual departure</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<div class="where-clause-date-field-container col d-flex">
+									<select id="count_climbers-actual_return_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+										<option value="=" selected>equals</option>
+										<option value="<=">is before</option>
+										<option value=">=">is after</option>
+										<option value="BETWEEN">is between</option>
+									</select>
+									<input id="count_climbers-actual_return_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="actual_return_date" name="actual_return_date" data-validation-field-name="Actual return">
+									<div class="query-option-double-value-container hidden">
+										<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="actual_return_date" data-validation-field-name="Actual return" aria-hidden="true" required>
+										<span>and</span>
+										<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="actual_return_date" data-validation-field-name="Actual return" aria-hidden="true" required>
+									</div>
+								</div>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-actual_return_date_operator">Actual return</label>
+							</div>
+						</div>
+
+					</div>
+					<div class="w-100 d-flex justify-content-center">
+						<button id="run-query-button" class="generic-button hidden" title="Run query">Run query</button>
+					</div>
+
+					<div id="query-parameter-dragbar" class="dragbar resize-query-parameter-contianer vertical-resize">
+						<div class="visible-dragbar"></div> <!--to make the clickable area larger but reduce visual weight-->
+					</div>
+
+					<div class="w-100 d-flex justify-content-end">
+						<div class="table-row-counter-wrapper hidden" aria-hidden="true">
+							Number of results: <span class="table-row-counter"></span>
+						</div>
+						<button id="open-reports-modal-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Open exports menu" title="Open exports menu" aria-hidden="true">
+							<i class="fas fa-2x fa-file-export"></i>
+						</button>
+					</div>
+					<div class="query-result-container">
+					</div>
+				</div>
+			</div><!--main-content-->
+		</div>
+	</main>
+
 	 <!-- loading indicator should be hidden and will only be shown when loading data -->
 	<div id="loading-indicator-background" class="modal-background modal-background-light hidden" ></div>
 	<div id="loading-indicator" class="hidden"></div>
