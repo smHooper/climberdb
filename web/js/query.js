@@ -190,7 +190,7 @@ class ClimberDBQuery extends ClimberDB {
 			count_climbers: {
 				sql: `
 					SELECT {outer_select}
-					FROM ({inner_select} WHERE {where_clauses}) _ 
+					FROM ({inner_select} {where_clauses}) _ 
 					{joins}
 					{group_by}
 				`,
@@ -1048,7 +1048,7 @@ class ClimberDBQuery extends ClimberDB {
 				.field-container.collapse.show .where-clause-field.datetime-query-option
 			`)
 			.filter((_, el) => !$(el).closest('.collapse:not(.show)').length)
-		const whereClauses = $whereFields.map((_, el) => {
+		let whereClauses = $whereFields.map((_, el) => {
 				const $el = $(el);
 				// If this is a datetime query option, need to combine it with the operator value
 				if ($el.is('.datetime-query-option')) {
@@ -1065,6 +1065,11 @@ class ClimberDBQuery extends ClimberDB {
 				}
 			}).get()
 			.join(' AND ');
+		
+		// If there were any WHERE clauses, add the "WHERE" to the beginning
+		if (whereClauses.length) whereClauses = `WHERE ${whereClauses}`;
+		
+		// Get field/value pairs to be able to get human-readable values
 		const whereFields = Object.fromEntries(
 			$whereFields.map((_, el) => [[el.name, $(el).data('validation-field-name') || $(el).siblings('.field-label').text()]]).get()
 		);
