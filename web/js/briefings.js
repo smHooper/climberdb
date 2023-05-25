@@ -366,45 +366,6 @@ class ClimberDBBriefings extends ClimberDB {
 				placedBriefings.push(id)
 			}
 		}
-		// next get the max briefing column time per briefing. Do so by figuring out the max number of appointments that occur 
-		// Determine if this briefing overlaps with more than one time slot that has more than 1 briefing, for each briefing I need to know if there's more than one time slot with > 1 briefings. For instance:
-		/*
-		|//////////////| |//////////////|
-		|//briefing 1//| |//briefing 2//| 
-		|//////////////| |//////////////| |//////////////|
-		                                  |//briefing 4//|
-		|//////////////|                  |//////////////|
-		|//briefing 3//|                  
-		|//////////////|
-		*/
-		// Add these ones last
-		// const staggeredBriefings = [];
-		// for (const id in rowIndices) {
-		// 	const [startIndex, endIndex] = rowIndices[id];
-		// 	const overlapCounts = briefingCountPerSlot.slice(startIndex, endIndex);
-		// 	if ([...new Set(overlapCounts)].length > 1) {
-		// 		//staggeredBriefings[id] = nColumns - nColumns / Math.max(...overlapCounts);
-		// 		//const overlappingIDs = ;
-		// 		// for (const overlappingID of [...Set(briefingsPerSlot.slice(startIndex, endIndex).flat())]) {
-		// 		// 	if (overlappingID == id || overlappingID in staggeredBriefings.flat()) continue;
-		// 		// 	const [overlappingStart, overlappingEnd] = indices[overlappingID];
-		// 		// 	if 
-		// 		// }
-		// 	}
-		// }
-		// for (const idString of uniqueCombinations) {
-		// 	const ids = idString.split(',');
-		// 	const briefingWidth = nColumns / ids.length;
-		// 	for (const i in ids) {
-		// 		const id = parseInt(ids[i]);
-		// 		if (id in staggeredBriefings) continue;
-		// 		const startColumn = i * briefingWidth + 1; 
-		// 		$(`.briefing-appointment-container[data-briefing-id=${id}]`).css('grid-column', `${startColumn} / ${startColumn + briefingWidth}`);
-		// 	}
-		// }
-		// for (const [id, position] of Object.entries(staggeredBriefings)) {
-		// 	$(`.briefing-appointment-container[data-briefing-id=${id}]`).css('grid-column-start', )
-		// }
 
 	}
 
@@ -1052,6 +1013,8 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	onBriefingTimeChange($target) {
 
+
+
 		const appointmentTimes = this.getAppointmentTimes();
 		
 		const $selectedAppointment = $('.briefing-appointment-container.selected');
@@ -1080,6 +1043,15 @@ class ClimberDBBriefings extends ClimberDB {
 		const newEndIndex = targetIsStartTime ? 
 			newStartIndex + (oldEndIndex - oldStartIndex) : // end time should change with start time
 			appointmentTimes.indexOf(endTime) + 1; // just end time should change
+
+		// Check if the start is before the end time. Only check if the end is being changed 
+		//	because if it's the begining the briefing will just be bumped up or down
+		if (!targetIsStartTime && newStartTime.padStart(5, '0') >= endTime.padStart(5, '0')) {
+			const message = `The briefing start time must be before the end time. The start time is currently set to <strong>${newStartTime}</strong> but the end time you selected is <strong>${endTime}</strong>.`;
+			showModal(message, 'Invalid Briefing End Time');
+			this.revertInputValue($target, {briefingInfo: info});
+			return;
+		}
 
 		const rangerID = $('#input-ranger').val();
 		if (targetIsStartTime) endTime = appointmentTimes[newEndIndex - 1];
