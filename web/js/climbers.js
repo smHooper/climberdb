@@ -47,7 +47,7 @@ class ClimberForm {
 					<div class="expedition-modal-only expedition-modal-climber-form-header hidden">
 						<div class="expedition-modal-search-container" aria-hidden="true">
 							<div class="fuzzy-search-bar-container col-6">
-								<textarea id="modal-climber-search-bar" class="fuzzy-search-bar" placeholder="Type text to filter climbers" title="Type text to filter climbers" autocomplete="__never"></textarea>
+								<textarea id="modal-climber-search-bar" class="fuzzy-search-bar no-click-trigger-on-enter" placeholder="Type text to filter climbers" title="Type text to filter climbers" autocomplete="__never"></textarea>
 								<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 							</div>	
 							<div class="modal-climber-select-container collapse">
@@ -1416,6 +1416,12 @@ class ClimberDBClimbers extends ClimberDB {
 		// When a user types anything in the search bar, filter the climber results.
 		$('#climber-search-bar').keyup(e => {
 			this.onClimberSearchKeyup(e)
+		})
+		// Prevent user from adding carriage return by pressing the enter key
+		.keydown(e => {
+			// If the user hit the enter to key, trying to submit, just ignore it becauae the search 
+			//	will happen regardless and the enter key will add a carriage return
+			if (e.key === 'Enter') return false;
 		});
 
 		$('.climber-search-filter').change(e => {

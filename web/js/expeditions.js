@@ -204,8 +204,12 @@ class ClimberDBExpeditions extends ClimberDB {
 		// The keyup event on .fuzzy-search-bars is only triggered by the escape key if there's an 
 		//	onkeyup event for the whole document
 		$(document).keyup(e => {
+			// If the user hit the enter to key, trying to submit, just ignore it
+			if (e.key === 'Enter') return;
+
 			// And for some reason, Escape keyup events aren't registered for the modal search bar so handle them here 
 			const $modalExpeditionOptions = $('#modal-expedition-options-drawer');
+			
 			if ($modalExpeditionOptions.is('.show') && (e.key === 'Escape')) {
 				$modalExpeditionOptions.collapse('hide');
 			}
@@ -214,6 +218,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Handle keyboard and click events for expedition search bar
 		$('.fuzzy-search-bar.expedition-search-bar').keyup( e => {
 			this.onExpeditionSearchBarKeyUp(e);
+		}).keydown(e => {
+			// If the user hit the enter to key, trying to submit, just ignore it becauae the search 
+			//	will happen regardless and the enter key will add a carriage return
+			if (e.key === 'Enter') return false;
 		}).click(e => {
 			// Toggle the options drawer when the search bar is clicked
 			const $optionsDrawer = $(e.target).siblings('.expedition-options-container.collapse');
@@ -599,6 +607,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		// query climbers to fill select
 		$('#modal-climber-search-bar').keyup(() => {
 			this.onClimberFormSearchKeyup();
+		}).keydown(e => {
+			// If the user hit the enter to key, trying to submit, just ignore it becauae the search 
+			//	will happen regardless and the enter key will add a carriage return
+			if (e.key === 'Enter') return false;
 		});
 		// guide and 7-day filters
 		$('.climber-search-filter').change(() => {
@@ -833,6 +845,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	Keyboard event handler while expedition search bar has focus.
 	*/
 	onExpeditionSearchBarKeyUp(e) {
+
 		const $searchBar = $(e.target);
 		const $searchOptionDrawer = $searchBar.siblings('.expedition-options-container');
 		const $searchBarOptions = $searchOptionDrawer.find('.expedition-search-bar-option')

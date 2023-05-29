@@ -459,8 +459,9 @@ class ClimberDB {
 			let events = $._data(target, 'events')
 
 			if (e.key === 'Enter' && events) {
-				if (events.click) {
-					$(target).click();
+				const $target = $(target);
+				if (events.click && !$target.is('.no-click-trigger-on-enter')) {
+					$target.click();
 				}
 			}
 		})
