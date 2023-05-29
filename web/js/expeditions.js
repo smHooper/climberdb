@@ -3994,7 +3994,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$.when(
 			this.fillAllSelectOptions(), 
-			initDeferreds, 
+			...initDeferreds, 
 			...lookupDeferreds
 		).then(() => {
 			const params = this.parseURLQueryString();
