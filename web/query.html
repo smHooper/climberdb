@@ -42,6 +42,8 @@
 						<li class="query-option not-expandable" role="button" data-query-name="guided_company_briefings" data-tags="guide, guiding, briefing, status">Guide Company Briefings</li>
 						<li class="query-option not-expandable" role="button" data-query-name="count_per_guide_company" data-tags="guide, guiding, expeditions, climbers">Expeditions/Climbers Per Guide Company</li>
 						<li class="query-option" role="button" data-query-name="flagged_climbers" data-tags="climber, route">Flagged Expedition Members</li>
+						<li class="query-option" role="button" data-query-name="user_nights" data-tags="climber, nights, stats, mountain">Users/User nights</li>
+						<li class="query-option" role="button" data-query-name="all_female_expeditions" data-tags="expeditions, women, female">All-Female Expeditions</li>
 						<li class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, route">Query Climbers/Climbs</li>
 						<li id="climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="total, climber, mountain">Total climbers per mountain</li>
 						<li id="guided-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="guide, climber, mountain">Guided climbers per mountain</li>
@@ -133,6 +135,44 @@
 								</select>
 								<label class="field-label" for="flagged_climbers-year">Year</label>
 							</div>	
+						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="user_nights">
+							<h4 class="w-100 mb-3">Users/User Nights Query Parameters</h4>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="user_nights-year" class="input-field default no-option-fill year-select-field" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="user_nights-year">Year</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="user_nights-month" class="input-field default no-option-fill" name="month" title="Month" required>
+									<option value="">Month</option>
+									<option value="1">January</option>
+									<option value="2">February</option>
+									<option value="3">March</option>
+									<option value="4">April</option>
+									<option value="5">May</option>
+									<option value="6">June</option>
+									<option value="7">July</option>
+									<option value="8">August</option>
+									<option value="9">September</option>
+									<option value="10">October</option>
+									<option value="11">November</option>
+									<option value="12">December</option>
+								</select>
+								<label class="field-label" for="user_nights-month">Month</label>
+							</div>	
+						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="all_female_expeditions">
+							<h4 class="w-100 mb-3">All-Female Expeditions Parameters</h4>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="all_female_expeditions-year" class="input-field default no-option-fill year-select-field" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="all_female_expeditions-year">Year</label>
+							</div>
 						</div>
 
 						<div class="query-parameters-container hidden" data-query-name="count_climbers">

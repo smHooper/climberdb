@@ -238,10 +238,78 @@ class ClimberDBQuery extends ClimberDB {
 					'Flagged Reason': 'justify-content-start',
 				}
 			},
-			average_trip_length: {},
-			all_female_expeditions: {},
+			
+			all_female_expeditions: {
+				sql: `
+					SELECT
+						expedition_id,
+						"Group Name",
+						"Planned Departure",
+						"Group Status"
+					FROM
+						(
+							SELECT
+								expedition_id,
+								expedition_name AS "Group Name",
+								planned_departure_date AS "Planned Departure",
+								group_status_codes.name AS "Group Status",
+								every(sex_code = 1) AS is_all_female
+							FROM registered_climbs_view
+								JOIN group_status_codes ON group_status_code = group_status_codes.code
+							WHERE 
+								extract(year FROM planned_departure_date) = {year}
+							GROUP BY 
+								expedition_id,
+								expedition_name,
+								planned_departure_date,
+								"Group Status"
+						) _
+					WHERE is_all_female
+					ORDER BY
+						"Group Name"
+				`,
+				columns: [
+					"Group Name",
+					"Planned Departure",
+					"Group Status"
+				],
+				hrefs: {
+					'Group Name': 'expeditions.html?id={expedition_id}'
+				}
+			},
 			medical_issues: {},
-			user_nights: {}
+			user_nights: {
+				sql: `
+					SELECT 
+						mountain_name AS "Mountain", 
+						count(*) AS "Users", 
+						extract(day FROM sum(days)) AS "User Nights" 
+					FROM
+						(
+							SELECT DISTINCT 
+								expedition_member_id, 
+								mountain_name, 
+								least(coalesce(actual_return_date, now())::date, '{year}-{month}-1'::date + interval '1 month') - greatest(actual_departure_date, '{year}-{month}-1') AS days 
+							FROM registered_climbs_view
+							WHERE 
+								actual_departure_date IS NOT NULL AND 
+								coalesce(special_group_type_code, -1) <> 3 AND 
+								actual_departure_date BETWEEN '{year}-{month}-1' AND ('{year}-{month}-1'::date + interval '1 month')::date - 1
+						) _ 
+					GROUP BY mountain_name;
+				`,
+				columns: [
+					'Mountain',
+					'Users',
+					'User Nights'
+				]
+			},
+			average_trip_length: {
+				sql: `
+				`,
+				columns: [
+				]
+			}
 		};
 		return this;
 	}
