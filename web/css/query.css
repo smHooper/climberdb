@@ -234,7 +234,8 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 	opacity: 1;
 	pointer-events: all;
 }
-.icon-button.hide-query-parameter-button {
+.icon-button.hide-query-parameter-button,
+.icon-button.remove-stat-row-button {
 	opacity: 0;
 	background: none;
 	color: var(--ui-primary-text-color);
@@ -244,7 +245,9 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 	transition: all 0.3s;
 }
 .field-container:hover .icon-button.hide-query-parameter-button, 
-.input-field:focus ~ .icon-button.hide-query-parameter-button {
+.stat-field-row:hover .icon-button.remove-stat-row-button, 
+.input-field:focus ~ .icon-button.hide-query-parameter-button,
+.input-field:focus ~ .icon-button.remove-stat-row-button {
 	opacity: 1;
 	background: rgba(255, 255, 255, 0.3);
 }

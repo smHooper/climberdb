@@ -372,7 +372,9 @@ class ClimberDBQuery extends ClimberDB {
 		$('#add-numeric-stat-field-button').click(e => {
 			this.onAddNumericStatButtonClick(e);
 		})
-
+		$('.remove-stat-row-button').click(e => {
+			this.onRemoveNumericStatButtonClick(e);
+		})
 		$('#query-parameter-dragbar').mousedown(e => {
 			this.onDragbarMouseDown(e);
 		})
@@ -912,6 +914,9 @@ class ClimberDBQuery extends ClimberDB {
 		$row.find('')
 	}
 
+	onRemoveNumericStatButtonClick(e) {
+		$(e.target).closest('.stat-field-row').remove();
+	}
 
 	/*
 	When a user clicks the dragbar, 
