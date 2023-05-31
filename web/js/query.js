@@ -318,7 +318,19 @@ class ClimberDBQuery extends ClimberDB {
 		// $('.main-content-wrapper').append(`
 
 		// `);
-		
+		// When the user clicks the expand or contract sidebar button, expand or contract it accordingly
+		$('.change-query-option-sidebar-size-button').click(e => {
+			const $sideBar = $('.query-options-sidebar');
+			const isCollapsed = $sideBar.is('.collapsed');
+			$sideBar.toggleClass('collapsed', !isCollapsed);
+
+			const $i = $(e.target).closest('button').find('i');
+			// Delay changing icon until transition is finished
+			setTimeout(() => {
+				$i.toggleClass('fa-arrow-right fa-arrow-from-left', !$i.is('.fa-arrow-right'))
+			}, 200);
+		})
+
 		// filter query options when the user searches
 		$('#query-option-search-input').keyup(e => {
 			this.onSearchBarKeyUp(e);

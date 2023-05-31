@@ -1,6 +1,7 @@
 :root {
 	--search-bar-padding: 20px;
 	--query-parameter-container-height: 400px;
+	--sidebar-collapse-transition-length: 0.25s;
 }
 @import './climberdb.css';
 
@@ -12,6 +13,8 @@
 .fuzzy-search-bar {
 	text-indent: 0;
 	margin-bottom: var(--search-bar-padding);
+	padding-right: 60px;
+	transition: opacity var(--sidebar-collapse-transition-length);
 }
 .query-options-sidebar {
 	height: 100%;
@@ -21,6 +24,7 @@
 	z-index: 2;
 	box-shadow: 0px 14px 12px 8px #00000033;
 	padding: 20px;
+	transition: width 0.25;
 }
 .query-parameters-container {
 	width: 100%;
@@ -53,7 +57,7 @@
 	overflow: hidden;
 	cursor: pointer;
 	z-index: 0;
-	transition: 0.5s all;
+	transition: all 0.25s;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -79,6 +83,30 @@
 	flex-direction: column;
 	max-height: 100%;
 	background: linear-gradient(2deg, var(--sunrise-linear-gradient-colors))/*#44a9ba, #ffe7aad1);*/
+}
+
+/*collapse styling*/
+.change-query-option-sidebar-size-button {
+	position: absolute;
+	right: var(--search-bar-padding);
+}
+.query-options-sidebar.collapsed {
+	max-width: 60px;
+}
+.query-options-sidebar.collapsed .fuzzy-search-bar{
+	opacity: 0;
+	padding-right: 0;
+}
+.query-options-sidebar.collapsed #query-option-list {
+	overflow: hidden;
+}
+.query-options-sidebar.collapsed .query-option {
+	height: 0px;
+	color: #00679b00;
+	box-shadow: none;
+}
+.query-options-sidebar.collapsed .change-query-option-sidebar-size-button {
+	left: 15px;
 }
 
 .query-result-container {

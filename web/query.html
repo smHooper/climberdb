@@ -37,6 +37,9 @@
 			<div class="main-content-wrapper">
 				<div class="query-options-sidebar col-3">
 					<input id="query-option-search-input" class="fuzzy-search-bar w-100" placeholder="Type to search for queries" title="Search for queries">
+					<button class="icon-button change-query-option-sidebar-size-button collapse-sidebar-button" role="button" title="Collapse query-options">
+						<i class="fas fa-arrow-left fa-arrow-from-right fa-lg"></i>
+					</button>
 					<ul id="query-option-list">
 						<li class="query-option not-expandable" role="button" data-query-name="guide_company_client_status" data-tags="guide, guiding, accounting, status">Guided Client Status</li>
 						<li class="query-option not-expandable" role="button" data-query-name="guided_company_briefings" data-tags="guide, guiding, briefing, status">Guide Company Briefings</li>
@@ -63,7 +66,7 @@
 					</ul>
 					<h4 id="no-query-match-message" class="hidden" aria-hidden="true">No queries match your search</h4>
 				</div>
-				<div class="query-details-container col-9">
+				<div class="query-details-container col">
 					<div class="query-parameters-header">
 						<div class="query-parameters-container hidden" data-query-name="guide_company_client_status">
 							<h4 class="w-100 mb-3">Guided Client Status Query Parameters</h4>
