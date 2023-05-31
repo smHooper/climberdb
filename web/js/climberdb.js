@@ -1379,7 +1379,7 @@ class ClimberDB {
 									)
 								UNION ALL
 								SELECT ${queryFields}, 6 AS sort_order FROM climber_names WHERE 
-									re_full_name ILIKE '${searchString}%' AND 
+									similarity(re_full_name, '${searchString}%') > 0.5 AND 
 									(
 										re_first_name NOT ILIKE '${searchString}%' OR
 										re_first_name || re_middle_name NOT ILIKE '${searchString}%' OR
