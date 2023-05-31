@@ -447,6 +447,30 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		});
 
+		// When a user changes the highest_elevation_ft field, check/uncheck the Summited checkbox
+		$('.input-field[name=highest_elevation_ft]').change(e => {
+			const $highestElevationInput = $(e.target);
+			const highestElevation = $highestElevationInput.val();
+			const $card = $highestElevationInput.closest('.card');
+			const mountainCode = $card.find('.input-field[name=mountain_code]').val();
+			const summitElavation = this.mountainCodes[mountainCode].elevation_ft;
+			const $checkbox = $highestElevationInput.closest('.data-list-item').find('[name=route_was_summited]');
+
+			// Check to make sure the elvation entered is not greater than the summit elevation
+			if (highestElevation > summitElavation){
+				const message = `You entered a <em>Highest elevation</em> of <strong>${highestElevation}</strong>,` + 
+					` but the summit elevation is <strong>${summitElavation}</strong>. If the elevation you entered` + 
+					` is correct, you will have to manually check the <em>Summited?</em> checkbox. Otherwise,` +
+					` correct the <em>Highest elevation</em>`;
+				showModal(message, 'Invalid Highest Elevation')
+				return;
+			}
+
+			// Set the summitted checkbox based on whether the highest elev. value matches the
+			//	summit elev.
+			$checkbox.prop('checked', highestElevation == summitElavation).change();
+		});
+
 
 		// ask user to confirm removing CMC only if it already exists in the DB
 		$(document).on('click', '.delete-route-member-button', e => {
