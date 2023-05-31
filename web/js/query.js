@@ -12,7 +12,7 @@ class ClimberDBQuery extends ClimberDB {
 			members:  'SELECT DISTINCT ON (expedition_member_id) * FROM all_climbs_view',
 			climbs:   'SELECT * FROM all_climbs_view',
 		}
-		this.minDragbarPageY = 190; // min height to prevent user from covering query title when resizing param container
+		this.minDragbarPageY = 220; // min height to prevent user from covering query title when resizing param container
 		this.queries = {
 			guide_company_client_status: {
 				sql: 
@@ -357,6 +357,10 @@ class ClimberDBQuery extends ClimberDB {
 			this.onInputChange(e);
 		});
 
+		$('#add-numeric-stat-field-button').click(e => {
+			this.onAddNumericStatButtonClick(e);
+		})
+
 		$('#query-parameter-dragbar').mousedown(e => {
 			this.onDragbarMouseDown(e);
 		})
@@ -447,6 +451,7 @@ class ClimberDBQuery extends ClimberDB {
 		// Some fields have name attributes that make invalid jQuery expressions and throw and error
 		try {
 			$(`.input-field[name=${name}]`).not($target)
+				.not('.no-name-auto-update')
 				.val($target.val())	
 		} catch {
 			return
@@ -883,6 +888,19 @@ class ClimberDBQuery extends ClimberDB {
 	}
 
 
+	onAddNumericStatButtonClick() {
+		const $cloneable = $('.stat-field-row.cloneable');
+		const $row = $cloneable.clone(true);
+		$row.removeClass('cloneable')
+			.ariaHide(false)
+			.insertBefore($cloneable);
+		$row.find('.input-field[name=numeric_stat_field]')
+			.attr('id', '')
+			.focus();
+		$row.find('')
+	}
+
+
 	/*
 	When a user clicks the dragbar, 
 	*/
@@ -971,9 +989,15 @@ class ClimberDBQuery extends ClimberDB {
 
 
 	validateFields(queryName) {
-		const isValid = super.validateFields($(`.query-details-container [data-query-name=${queryName}]`));
+		super.validateFields($(`.query-details-container [data-query-name=${queryName}]`));
+		// If the field has a .cloneable ancestor, remove the error field
+		let $errors = $('.error');
+		for (const el of $errors) {
+			const $input = $(el);
+			if ($input.closest('.cloneable').length) $input.removeClass('error');
+		}
+		const isValid = $('.error').length === 0;
 		if (!isValid) {
-			const $errors = $('.error');
 			const $firstErrorField = $errors.first();
 			const firstErrorFieldName = $firstErrorField.data('validation-field-name') || $firstErrorField.siblings('.field-label').text();
 			const message = `The field <strong>${firstErrorFieldName}</strong> must be filled` +
@@ -1195,6 +1219,21 @@ class ClimberDBQuery extends ClimberDB {
 			// The columns of the result will change with each query, so set it here
 			this.queries.count_climbers.columns = groupByAliases.concat(['Count']);
 			this.queries.count_climbers.hrefs = {} // reset in case a raw-data query was run before
+
+			// Get stat fields
+			for (const el of $('.stat-field-row:not(.cloneable)')) {
+				const $row = $(el);
+				const $statNameSelect = $row.find('.numeric-stat-name');
+				const $fieldNameSelect = $row.find('.numeric-stat-field-name');
+				const stat = $statNameSelect.val();
+				const fieldName = $fieldNameSelect.val();
+				const fieldDisplayName = $fieldNameSelect.find(`option[value="${fieldName}"]`).text();
+				const statDisplayName = $statNameSelect.find(`option[value="${stat}"]`).text();
+				const columnName = `${statDisplayName} ${fieldDisplayName}`;
+				outerSelectClause += `, round(${stat}(${fieldName}), 1) AS "${columnName}"`;
+				this.queries.count_climbers.columns.push(columnName);
+			}
+
 		} else { // otherwise this is a raw-data query
 
 			// Add joins for lookup tables so the "WHERE"-criteria fields 
