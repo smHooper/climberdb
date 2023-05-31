@@ -184,7 +184,7 @@
 									<option value="climbers">Climbers</option>
 									<option value="expeditions">Expeditions</option>
 								</select>
-								<label class="field-label" for="count_per_guide_company-summary_or_records">What would you like to query?</label>
+								<label class="field-label" for="count_climbers-summary_or_records">What would you like to query?</label>
 							</div>
 							<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
 								<select id="count_climbers-count_field" class="input-field no-option-fill" name="count_climbers-count_field" title="Count expedition members, climbers, or climbs?" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
@@ -466,6 +466,33 @@
 									<i class="fas fa-lg fa-times"></i>
 								</button>
 								<label class="field-label" for="count_climbers-actual_return_date_operator">Actual return</label>
+							</div>
+							<div class="field-container-row collapse show w-100">
+								<div class="w-100 d-flex justify-content-start">
+									<button id="add-numeric-stat-field-button" class="generic-button mt-3">Add calculated field</button>
+								</div>
+								<div class="stat-field-row cloneable" aria-hidden="true">
+									<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3">
+										<select class="input-field query-option-input-field is-empty numeric-stat-field-name no-option-fill default no-name-auto-update" name="numeric_stat_field" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
+											<option value="">Field name</option>
+											<option value="age">Climber age</option>
+											<option value="trip_length_days">Trip length (days)</option>
+										</select>
+										<label class="field-label" for="count_climbers-country_code">Field name</label>
+									</div>
+									<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3">
+										<select class="input-field query-option-input-field is-empty numeric-stat-name no-option-fill default no-name-auto-update" name="numeric_stat" placeholder="Statistic" required>
+											<option value="">Statistic</option>
+											<option value="avg">Average</option>
+											<option value="min">Minimum</option>
+											<option value="max">Maximum</option>
+										</select>
+										<button class="icon-button hide-query-parameter-button">
+											<i class="fas fa-lg fa-times"></i>
+										</button>
+										<label class="field-label" for="count_climbers-country_code">Statistic</label>
+									</div>
+								</div>
 							</div>
 						</div>
 

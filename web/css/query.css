@@ -1,6 +1,6 @@
 :root {
 	--search-bar-padding: 20px;
-	--query-parameter-container-height: 300px;
+	--query-parameter-container-height: 400px;
 }
 @import './climberdb.css';
 
@@ -221,6 +221,15 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 	background: rgba(255, 255, 255, 0.3);
 }
 
+.stat-field-row {
+	width: 100%;
+	display: flex;
+	margin-top: 20px;
+}
+.stat-field-row.cloneable {
+	display: none;
+}
+
 /*resize bar*/
 .dragbar.vertical-resize {
 	width: 100%;
@@ -233,7 +242,7 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 	height: 100%;
 	width: 100%;
 	background-color: var(--ui-primary-color);
-	opacity: 0;
+	opacity: 0.1;
 	transition: 0.2s all ease-in 0.1s;
 }
 /*.dragbar.vertical-resize:hover,
