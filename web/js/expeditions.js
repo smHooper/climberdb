@@ -457,9 +457,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $checkbox = $highestElevationInput.closest('.data-list-item').find('[name=route_was_summited]');
 
 			// Check to make sure the elvation entered is not greater than the summit elevation
-			if (highestElevation > summitElavation){
+			if (parseInt(highestElevation) > parseInt(summitElavation)){
 				const message = `You entered a <em>Highest elevation</em> of <strong>${highestElevation}</strong>,` + 
-					` but the summit elevation is <strong>${summitElavation}</strong>. If the elevation you entered` + 
+					` but the summit elevation is only <strong>${summitElavation}</strong>. If the elevation you entered` + 
 					` is correct, you will have to manually check the <em>Summited?</em> checkbox. Otherwise,` +
 					` correct the <em>Highest elevation</em>`;
 				showModal(message, 'Invalid Highest Elevation')
