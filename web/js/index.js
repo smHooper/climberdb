@@ -346,43 +346,47 @@ class ClimberDBIndex extends ClimberDB {
 			$('#sign-in-button').data('target', targetURL.href);
 		}
 
-		if ( ('activation' in urlParams) || ('reset' in urlParams) ) {
-			this.toggleFormElements('.activation-element' + ('changePassword' in urlParams ? ', .change-password-element' : '') );
-			$formContainer.addClass('activation');
-			// If somehow the id param isn't in the URL query, tell the user and exit 
-			//	because no other initialization should occur
-			if (!('id' in urlParams)) {
-				this.showActivationErrorMessage('#bad-url-activation-message');
-				return;
-			}
-
-			if ( ('reset' in urlParams) || ('changePassword' in urlParams) ) {
-				$('#set-password-button')
-					.text('reset password')
-					.data('target', urlParams.referer || '');
-			}
-
-			if ('changePassword' in urlParams) {
-				$('#password-input').attr('placeholder', 'Old password')
-					.data('mode', 'reset')
-					.siblings('.field-label')
-						.text('Old password');
-				$('#hide-reset-password-button').text('back to change password')
-
-			}
-		}
-
 
 		const initDeferreds = super.init({addMenu: false});
 		$.when(...initDeferreds)
 			.done(resultString => {
 				const username = this.userInfo.ad_username;
 				const userStatus = this.userInfo.user_status_code;
+				const userStatusCodes = this.constants.userStatusCodes;
+				var isActivation = false;
+				if ( ('activation' in urlParams) || ('reset' in urlParams) ) {
 
-				const isActivation = $formContainer.is('.activation');
+					// If somehow the id param isn't in the URL query, tell the user and exit 
+					//	because no other initialization should occur
+					if (!('id' in urlParams)) {
+						this.showActivationErrorMessage('#bad-url-activation-message');
+						return;
+					}
+
+					if ( ('reset' in urlParams) || ('changePassword' in urlParams) ) {
+						$('#set-password-button')
+							.text('reset password')
+							.data('target', urlParams.referer || '');
+					}
+
+					if ('changePassword' in urlParams) {
+						$('#password-input').attr('placeholder', 'Old password')
+							.data('mode', 'reset')
+							.siblings('.field-label')
+								.text('Old password');
+						$('#hide-reset-password-button').text('back to change password')
+					}
+					
+					if (userStatus == userStatusCodes.inactive) {
+						this.toggleFormElements('.activation-element' + ('changePassword' in urlParams ? ', .change-password-element' : '') );
+						$formContainer.addClass('activation');
+						isActivation = true;
+					}
+
+				}
 
 				// If the user's account has been disabled, don't let them do anything else
-				if (userStatus == -1 || (userStatus == 1 && !isActivation)) {
+				if (userStatus == userStatusCodes.disabled || (userStatus == userStatusCodes.inactive && !isActivation)) {
 					$formContainer.addClass('activation')
 						.children().not('#activation-error-message-container').remove();
 					this.showActivationErrorMessage('#disabled-user-activation-message');

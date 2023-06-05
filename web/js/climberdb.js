@@ -223,6 +223,11 @@ class ClimberDB {
 				admin: 3,
 				superUser: 4,
 				readOnly: 5
+			},
+			userStatusCodes: {
+				active: 2,
+				inactive: 1,
+				disabled: -1
 			}
 		}
 		this.urlChannels = {}; // for checking if a URL is already open in another tab/window
