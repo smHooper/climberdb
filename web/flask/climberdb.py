@@ -454,8 +454,8 @@ def export_query():
 	
 	data = dict(request.form)
 
-	with open(os.path.join(get_exports_dir(), 'export_data.json'), 'w') as f:
-		json.dump(data, f)
+	# with open(os.path.join(get_exports_dir(), 'export_data.json'), 'w') as f:
+	# 	json.dump(data, f)
 
 	# Make sure any filename is unique
 	random_string = get_random_string()
@@ -483,9 +483,9 @@ def export_query():
 		# If not, just write the file without using a template and return
 		else:
 			# maybe set up a default file
-			query_data = pd.DataFrame(data['query_data']).reindex(data['columns'])
+			query_data = pd.DataFrame(data['query_data']).reindex(columns=data['columns'])
 			query_data.to_excel(excel_path, index=False)
-			return excel_path
+			return 'exports/' + excel_filename
 
 		if query_name == 'guide_company_client_status' or query_name == 'guide_company_briefings':
 			query_data = data['query_data']
