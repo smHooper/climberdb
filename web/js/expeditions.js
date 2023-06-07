@@ -459,7 +459,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// Check to make sure the elvation entered is not greater than the summit elevation
 			if (parseInt(highestElevation) > parseInt(summitElavation)){
 				const message = `You entered a <em>Highest elevation</em> of <strong>${highestElevation}</strong>,` + 
-					` but the summit elevation is only <strong>${summitElavation}</strong>. If the elevation you entered` + 
+					` which is greater than the summit elevation of <strong>${summitElavation}</strong>. If the elevation you entered` + 
 					` is correct, you will have to manually check the <em>Summited?</em> checkbox. Otherwise,` +
 					` correct the <em>Highest elevation</em>`;
 				showModal(message, 'Invalid Highest Elevation')
