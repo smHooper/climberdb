@@ -443,32 +443,13 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $highestElevationInput = $thisCheckbox.closest('li').find('.input-field[name=highest_elevation_ft]')
 			// if 1) the mountain is selected, 2) the route was summited, & 3) highest elevation isn't set
 			if (mountainCode && $thisCheckbox.prop('checked') && !$highestElevationInput.val()) {
-				$highestElevationInput.val(this.mountainCodes[mountainCode].elevation_ft)
+				$highestElevationInput.val(this.mountainCodes[mountainCode].elevation_ft).change();
 			}
 		});
 
 		// When a user changes the highest_elevation_ft field, check/uncheck the Summited checkbox
 		$('.input-field[name=highest_elevation_ft]').change(e => {
-			const $highestElevationInput = $(e.target);
-			const highestElevation = $highestElevationInput.val();
-			const $card = $highestElevationInput.closest('.card');
-			const mountainCode = $card.find('.input-field[name=mountain_code]').val();
-			const summitElavation = this.mountainCodes[mountainCode].elevation_ft;
-			const $checkbox = $highestElevationInput.closest('.data-list-item').find('[name=route_was_summited]');
-
-			// Check to make sure the elvation entered is not greater than the summit elevation
-			if (parseInt(highestElevation) > parseInt(summitElavation)){
-				const message = `You entered a <em>Highest elevation</em> of <strong>${highestElevation}</strong>,` + 
-					` which is greater than the summit elevation of <strong>${summitElavation}</strong>. If the elevation you entered` + 
-					` is correct, you will have to manually check the <em>Summited?</em> checkbox. Otherwise,` +
-					` correct the <em>Highest elevation</em>`;
-				showModal(message, 'Invalid Highest Elevation')
-				return;
-			}
-
-			// Set the summitted checkbox based on whether the highest elev. value matches the
-			//	summit elev.
-			$checkbox.prop('checked', highestElevation == summitElavation).change();
+			this.onHighestElevationChange(e);
 		});
 
 
@@ -1186,9 +1167,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $button = $(e.target);
 		const $card = $button.closest('.card');
 		const $checkboxes = $card.find('.data-list-item:not(.cloneable):not(.hidden) .center-checkbox-col .input-checkbox');
-		const cardID = $card.attr('id');
-		const checkboxIDs = '#' + $checkboxes.map((_, el) => el.id).get().join(',#');
-		const summitDateInputIDs = '#' + $checkboxes.closest('.center-checkbox-col').next().find('.input-field').map((_, el) => el.id).get().join(',#');
+		const $summitDateInputs = $checkboxes.closest('.center-checkbox-col').next().find('.input-field');
 		const allChecked = $checkboxes.filter(':checked').length == $checkboxes.length;
 		const expeditionName = this.expeditionInfo.expeditions.expedition_name;//$('#input-expedition_name').val();
 		const $routeInput = $button.closest('.card').find('.route-code-header-input:not(.mountain-code-header-input)');
@@ -1198,19 +1177,24 @@ class ClimberDBExpeditions extends ClimberDB {
 			return;
 		}
 		const routeName = $routeInput.find(`option[value=${routeCode}]`).text();
-		var message, title, onConfirmClick;
+		var message, title, onConfirmClickHandler;
 		if (allChecked) {
 			// Ask user to uncheck all and clear
 			message = `Are you sure you want to uncheck all ${routeName} summits for ${expeditionName}?`;
 			title = `Uncheck all ${routeName} summits`;
-			onConfirmClick = `
-				$('${checkboxIDs}').prop('checked', false);
-				$('${summitDateInputIDs}').val(null)
-					.closest('.collapse')
-						.collapse('hide');
-				const $card = $('#${cardID}');
-				$card.find('.check-all-summitted-button').text('check all');
-			`;
+			onConfirmClickHandler = () => {
+				$('.confirm-button').click( () => {
+					// Set summit checkboxes
+					$checkboxes.prop('checked', false).change();
+					// Set highest elevation to null
+					$card.find('.data-list-item:not(.cloneable) .input-field[name=highest_elevation_ft]')
+						.val(null)
+						.change();
+					// Set summit date to null
+					$summitDateInputs.val(null);
+					$card.find('.check-all-summitted-button').text('check all');
+				})
+			}
 
 		} else {
 			message = `<p>Do you want to mark all expedition members for the ${routeName} route` + 
@@ -1223,24 +1207,27 @@ class ClimberDBExpeditions extends ClimberDB {
 				</div>
 			`;
 			title = 'Enter summit date?';
-			onConfirmClick = `
-				const summitDate = $('#modal-summit-date-input').val();
-				const $summitDateInputs = $('${summitDateInputIDs}');
-				$('${checkboxIDs}').prop('checked', true).change();
-				// If the user entered a summit date, fill the inputs
-				if (summitDate) {
-					$summitDateInputs.val(summitDate)
-				}
-				const $card = $('#${cardID}');
-				$card.find('.check-all-summitted-button').text('uncheck all');
-			`;
+			onConfirmClickHandler = () => {
+				$('.confirm-button').click( () => {
+					const summitDate = $('#modal-summit-date-input').val();
+					$checkboxes.prop('checked', true).change();
+					// If the user entered a summit date, fill the inputs
+					if (summitDate) {
+						$summitDateInputs.val(summitDate).change();
+					}
+					$card.find('.check-all-summitted-button').text('uncheck all');
+
+				})
+			}
 		}
 		const footerButtons = `
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
+			<button class="generic-button modal-button danger-button close-modal confirm-button" data-dismiss="modal">OK</button>
 		`;
-		showModal(message, title, 'confirm', footerButtons);
+		showModal(message, title, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
 	}
+
+
 	/*
 	Helper function to convert unordered parameters 
 	into pre-prepared SQL statement and params
@@ -3840,6 +3827,33 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 		// Remove default placeholder option
 		$target.find('option[value=""]').remove();
+	}
+
+
+	/*
+	Make separate event handler method so it can be easily triggered, while controlling presence of e.originalEvent
+	*/
+	onHighestElevationChange(e) {
+		const $highestElevationInput = $(e.target);
+		const highestElevation = $highestElevationInput.val();
+		const $card = $highestElevationInput.closest('.card');
+		const mountainCode = $card.find('.input-field[name=mountain_code]').val();
+		const summitElevation = this.mountainCodes[mountainCode].elevation_ft;
+		const $checkbox = $highestElevationInput.closest('.data-list-item').find('[name=route_was_summited]');
+
+		// Check to make sure the elvation entered is not greater than the summit elevation
+		if (parseInt(highestElevation) > parseInt(summitElevation)){
+			const message = `You entered a <em>Highest elevation</em> of <strong>${highestElevation}</strong>,` + 
+				` which is greater than the summit elevation of <strong>${summitElevation}</strong>. If the elevation you entered` + 
+				` is correct, you will have to manually check the <em>Summited?</em> checkbox. Otherwise,` +
+				` correct the <em>Highest elevation</em>`;
+			showModal(message, 'Invalid Highest Elevation')
+			return;
+		}
+
+		// Set the summitted checkbox based on whether the highest elev. value matches the
+		//	summit elev. Only do this if highest elevation is truthy
+		if (highestElevation && e.originalEvent) $checkbox.prop('checked', highestElevation == summitElevation).change();
 	}
 
 
