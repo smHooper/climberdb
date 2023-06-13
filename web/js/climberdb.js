@@ -644,14 +644,14 @@ class ClimberDB {
 		$newItem.attr('id', newItemID);
 
 		if (parentDBID !== null) $newItem.data('parent-table-id', parentDBID);
-		if (dbID !== null) $newItem.data('table-id', dbID);
+		if (dbID !== null) $newItem.attr('data-table-id', dbID);
 
 		for (const el of $newItem.find('.input-field')) {
 			el.id = `${el.id}-${dbID || itemIndex}`;
 			const $el = $(el);
 			if ($el.data('dependent-target')) 
 				$el.data('dependent-target', `${$el.data('dependent-target')}-${dbID || itemIndex}`);
-			if (!isNaN(dbID)) $el.data('table-id', dbID);
+			if (!isNaN(dbID)) $el.attr('data-table-id', dbID);
 		}
 
 		return $newItem.addClass(newItemClass).insertBefore($cloneable);
@@ -728,7 +728,7 @@ class ClimberDB {
 				.attr('id', newID)
 				.siblings('.field-label')
 					.attr('for', newID);
-			if (dataTable in updateIDs)  $el.data('table-id', updateIDs[dataTable]);
+			if (dataTable in updateIDs)  $el.attr('data-table-id', updateIDs[dataTable]);
 			if ($el.is('select')) {
 				$el.val('').addClass('default');
 			}
@@ -737,7 +737,7 @@ class ClimberDB {
 		// if the accordion's data-table-name attribute is in update IDs, 
 		//	add the table-id attribute to the card's data
 		const accordionTableName = $accordion.data('table-name');
-		if (accordionTableName in updateIDs) $newCard.data('table-id', updateIDs[accordionTableName]);
+		if (accordionTableName in updateIDs) $newCard.attr('data-table-id', updateIDs[accordionTableName]);
 
 		// Open the card after a brief delay
 		//$newCard.find('.collapse:not(.show)').click();
@@ -1275,7 +1275,7 @@ class ClimberDB {
 			$el.addClass('default')
 		}
 
-		$el.data('table-id', dbID);
+		$el.attr('data-table-id', dbID);
 
 		if (elementData !== null) {
 			for (const property in elementData) {

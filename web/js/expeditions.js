@@ -444,6 +444,18 @@ class ClimberDBExpeditions extends ClimberDB {
 			// if 1) the mountain is selected, 2) the route was summited, & 3) highest elevation isn't set
 			if (mountainCode && $thisCheckbox.prop('checked') && !$highestElevationInput.val()) {
 				$highestElevationInput.val(this.mountainCodes[mountainCode].elevation_ft).change();
+				
+				// If this was a user click, check that this expedition member's status is "off mountain"
+				const expeditionMemberID = ($highestElevationInput.data('foreign-ids') || {}).expedition_member_id;
+				if (expeditionMemberID && e.originalEvent) {
+					const $memberCard = $(`#expedition-members-accordion .card[data-table-id=${expeditionMemberID}]`);
+					const $reservationStatusInput = $memberCard.find('.input-field[name=reservation_status_code]');
+					const reservationStatusCode = $reservationStatusInput.val();
+					const offMountainCode = this.constants.groupStatusCodes.offMountain;
+					if (reservationStatusCode != offMountainCode) {
+						$reservationStatusInput.val(offMountainCode).change();
+					}
+				}
 			}
 		});
 
@@ -1204,8 +1216,10 @@ class ClimberDBExpeditions extends ClimberDB {
 				<div class="field-container col-8 single-line-field">
 						<label class="field-label inline-label" for="modal-summit-date-input">Summit date</label>
 						<input id="modal-summit-date-input" class="input-field modal-input" type="date">
-				</div>
-			`;
+				</div>` +
+				'<p> Note that when you click <strong>OK</strong>, this group\'s status will be changed' + 
+				' to <strong>Done and off mountain</strong></p>'
+			;
 			title = 'Enter summit date?';
 			onConfirmClickHandler = () => {
 				$('.confirm-button').click( () => {
@@ -1216,6 +1230,8 @@ class ClimberDBExpeditions extends ClimberDB {
 						$summitDateInputs.val(summitDate).change();
 					}
 					$card.find('.check-all-summitted-button').text('uncheck all');
+
+					$('.input-field[name=group_status_code]').val(this.constants.groupStatusCodes.offMountain).change();
 
 				})
 			}
@@ -1547,8 +1563,8 @@ class ClimberDBExpeditions extends ClimberDB {
 						.attr('data-table-id', id)
 						.attr('data-table-name', tableName)
 						.find('.input-field.dirty')
-							.data('table-name', tableName)
-							.data('table-id', id);
+							.attr('data-table-name', tableName)
+							.attr('data-table-id', id);
 					const foreignIDs = Object.entries(returnedIDs).filter(([column, _]) => column !== 'id');
 					if (Object.keys(foreignIDs).length) $inputs.data('foreign-ids', Object.fromEntries(foreignIDs));
 					
