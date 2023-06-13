@@ -2046,20 +2046,27 @@ class ClimberDBExpeditions extends ClimberDB {
 				this.revertInputValue($select, {triggerChange: true})
 				return;
 			} else if ($memberCards.length === 1) {
-				$memberCards.find('.input-field[name=reservation_status_code]')
-					.val(statusCode)
-					.change();
+				const $reservationStatus = $memberCards.find('.input-field[name=reservation_status_code]');
+				if ($reservationStatus.val() != this.constants.groupStatusCodes.cancelled) {
+					$reservationStatus
+						.val(statusCode)
+						.change();
+				}
 			} else {
 				for (const el of $memberCards) {
 					const $card = $(el);
+
 					if (!this.climberCanBeConfirmed($card, $select)) {
 						// ^ warning already issued so just revert the group status field
 						this.revertInputValue($select, {triggerChange: true})
 						return;
 					} else {
+						const $reservationStatus = $card.find('.input-field[name=reservation_status_code]');
+						// Only change the value if this climber isn't canceled
+						if ($reservationStatus.val() == this.constants.groupStatusCodes.cancelled) continue;
+						
 						// Don't trigger change
-						const $reservationStatus = $card.find('.input-field[name=reservation_status_code]')
-							.val(statusCode);
+						$reservationStatus.val(statusCode);
 						// Instead, call the change handler manually so that things that downstream 
 						//	things that the group status shouldn't influence are unaffected. This also avoids 
 						//	and endless loop because onReservationStatusFieldChange also calls .change() on 
