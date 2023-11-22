@@ -52,7 +52,7 @@ if not app.config.from_file(CONFIG_FILE, load=json.load):
 	raise IOError(f'Could not read CONFIG_FILE: {CONFIG_FILE}')
 
 
-def connect_db():
+def get_engine():
 	return sqlalchemy.create_engine(
 		'postgresql://{username}:{password}@{host}:{port}/{db_name}'
 			.format(**app.config['DB_PARAMS'])
@@ -60,7 +60,7 @@ def connect_db():
 
 
 def get_config_from_db():
-	engine = connect_db()
+	engine = get_engine()
 	db_config = {}		
 	with engine.connect() as conn:
 		cursor = conn.execute('TABLE config');
@@ -103,7 +103,7 @@ def add_header(response):
 
 def validate_password(username, password):	
 	# Get user password from db
-	engine = connect_db()
+	engine = get_engine()
 	hashed_password = ''
 	with engine.connect() as conn:
 		cursor = conn.execute(f'''SELECT hashed_password FROM users WHERE ad_username='{username}';''')
@@ -180,7 +180,7 @@ def get_user_info():
 		sql += ' AND user_role_code=4' 
 
 	
-	engine = connect_db()
+	engine = get_engine()
 	user_info = pd.read_sql(sql, engine)
 	if len(user_info) == 0:
 		return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
@@ -207,7 +207,7 @@ def set_password():
 	hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), salt)
 	
 	# Update db
-	engine = connect_db()
+	engine = get_engine()
 	engine.execute(f'''UPDATE users SET hashed_password='{hashed_password.decode()}', user_status_code=2 WHERE ad_username='{username}';''')
 
 	return 'true'
@@ -310,7 +310,7 @@ def send_reset_password_request():
 	)
 	mailer.send(msg)
 
-	engine = connect_db()
+	engine = get_engine()
 	try:
 		engine.execute(f'UPDATE users SET user_status_code=1 WHERE id={user_id}')
 	except Exception as e:
@@ -546,6 +546,37 @@ def write_to_label_matrix():
 	return 'true'
 
 #-------------- cache tags -------------------#
+
+
+#---------------- DB I/O ---------------------#
+@app.route('/flask/permit_count', methods=['POST'])
+def get_permit_count():
+	
+	data = request.form
+	if not 'year' in data:
+		raise KeyError('Year not given in request data')
+	else:
+		year = data['year']
+
+	engine = get_engine()
+
+	sql = f'''
+		SELECT 
+			count(*) + 1 AS permit_count 
+		FROM expedition_members 
+		JOIN expeditions ON expedition_members.expedition_id=expeditions.id
+		WHERE extract(year FROM planned_departure_date)={year}
+	'''
+	with engine.connect() as conn:
+		cursor = conn.execute(sql)
+		row = cursor.first()
+		if row:
+			# format dateime, then substitue encounter data and configuration values
+			return str(row['permit_count'])
+		else:
+			raise ValueError(f'No expeditions in database for year {year}')
+
+#---------------- DB I/O ---------------------#
 
 
 if __name__ == '__main__':
