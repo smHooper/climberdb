@@ -2267,7 +2267,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		if (!exportType) exportType = $('#input-export_type').val();
 		
 		// Most of the necessary data will be in these two objects
-		var pdfData = {...this.expeditionInfo.expeditions, ...this.config};
+		var pdfData = {
+			...this.expeditionInfo.expeditions, 
+			...this.config
+		};
 		
 		// Get human-readable values from selects
 		for (const property of Object.keys(climberDB.expeditionInfo.expeditions).filter(k => k.endsWith('_code'))) {
@@ -2364,6 +2367,21 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 			// Format string as float
 			pdfData.total_payment = totalPayment.toFixed(2);
+
+			// Get briefing time
+			const briefingInfo = this.expeditionInfo.briefings;
+			if (briefingInfo.briefing_date && briefingInfo.briefing_time) {
+				const options = {
+					weekday: 'long',
+					year: 'numeric',
+					month: 'long',
+					day: 'numeric',
+					hour: 'numeric',
+					minute: 'numeric'
+				};
+				pdfData.briefing_time = new Date(`${briefingInfo.briefing_date} ${briefingInfo.briefing_time}`)
+					.toLocaleString('en-US', options);
+			}
 		}
 
 		if (exportType == 'registration_card') {

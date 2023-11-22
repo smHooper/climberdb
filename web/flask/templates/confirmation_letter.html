@@ -33,7 +33,10 @@
 	<section class="letter-body">
 		<p>
 			This letter confirms that the National Park Service has received registrations for your entire expedition and that 
-			you have completed all required steps for your trip departing on {{planned_departure_date}}.
+			you have completed all required steps for your trip departing on {{planned_departure_date}}. 
+			{% if briefing_time %}
+				A briefing with a National Park Service Ranger is scheduled for {{briefing_time}}.
+			{% endif %}
 		</p>
 		<p>
 			Your payment of ${{ total_payment }} for {{ total_climbers }} climber{{'s' if climbers|length > 1 else ''}} in your expedition has been processed. The
