@@ -345,16 +345,27 @@ CREATE VIEW climber_history_view AS
 		expeditions.equipment_loss,
 		expeditions.actual_departure_date, 
 		expeditions.actual_return_date,
-		expeditions.group_status_code  
+		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code  
 	FROM expedition_member_routes 
 		JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id 
 		JOIN expeditions ON expedition_members.expedition_id=expeditions.id 
 		JOIN climbers ON expedition_members.climber_id=climbers.id 
+		LEFT JOIN expedition_status_view ON expedition_status_view.expedition_id = expeditions.id
 	WHERE 
 		expeditions.actual_departure_date < now() 
 	ORDER BY 
 		expeditions.actual_departure_date DESC, 
 		expedition_member_routes.route_order ASC;
+
+
+CREATE VIEW expedition_status_view AS 
+	SELECT 
+		expedition_id,
+		min(reservation_status_code) AS expedition_status
+	FROM expedition_members
+	WHERE reservation_status_code >= 0
+	GROUP BY expedition_id;
+
 
 CREATE VIEW expedition_info_view AS 
 	SELECT 
@@ -389,7 +400,7 @@ CREATE VIEW expedition_info_view AS
 		expeditions.checked_in_datetime,
 		expeditions.sanitation_problems,
 		expeditions.equipment_loss,
-		COALESCE(gb.expedition_status, expeditions.group_status_code, 1) AS group_status_code,
+		COALESCE(expedition_status_view.expedition_status, expeditions.group_status_code, 1) AS group_status_code,
 		expeditions.needs_special_use_permit,
 		expeditions.special_group_type_code,
 		expeditions.last_modified_by,
@@ -448,14 +459,7 @@ CREATE VIEW expedition_info_view AS
 	LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 	LEFT JOIN transactions ON expedition_members.id = transactions.expedition_member_id
 	LEFT JOIN cmc_checkout ON expeditions.id = cmc_checkout.expedition_id
-	LEFT JOIN ( 
-		SELECT 
-			expedition_members_1.expedition_id AS gb_expedition_id,
-			min(expedition_members_1.reservation_status_code) AS expedition_status
-		FROM expedition_members expedition_members_1
-		WHERE expedition_members_1.reservation_status_code >= 0 AND expedition_members_1.reservation_status_code <= 5
-		GROUP BY expedition_members_1.expedition_id
-	) gb ON gb.gb_expedition_id = expeditions.id
+	LEFT JOIN expedition_status_view ON expedition_status_view.expedition_id = expeditions.id
 	ORDER BY 
 		(
 			CASE
@@ -508,7 +512,7 @@ CREATE VIEW briefings_expedition_info_view AS
 		CASE WHEN no_members THEN 0 ELSE gb.n_members END AS n_members,
 		expeditions.expedition_name,
 		expeditions.planned_departure_date,
-		expeditions.group_status_code,
+		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code,
 		briefings.expedition_id IS NULL AS unscheduled,
 		gb.routes
 	    FROM ( 
@@ -534,7 +538,8 @@ CREATE VIEW briefings_expedition_info_view AS
 			GROUP BY expedition_id, no_members, routes
 		) gb
 	LEFT JOIN briefings ON gb.expedition_id = briefings.expedition_id
-	JOIN expeditions ON expeditions.id = gb.expedition_id;
+	JOIN expeditions ON expeditions.id = gb.expedition_id
+	LEFT JOIN expedition_status_view ON expedition_status_view.expedition_id = expeditions.id;
 
 
 CREATE VIEW all_climbs_view AS 
@@ -553,7 +558,7 @@ CREATE VIEW all_climbs_view AS
 		expeditions.air_taxi_code,
 		expeditions.reviewed_by,
 		expeditions.briefed_by,
-		expeditions.group_status_code,
+		coalesce(expedition_status_view.expedition_status, expeditions.group_status_code, 1) AS group_status_code,
 		expeditions.special_group_type_code,
 		expedition_members.expedition_id,
 		expedition_members.climber_id,
@@ -575,7 +580,8 @@ CREATE VIEW all_climbs_view AS
 		JOIN climbers ON expedition_members.climber_id = climbers.id
 		JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 		JOIN route_codes ON expedition_member_routes.route_code = route_codes.code
-		JOIN mountain_codes ON route_codes.mountain_code = mountain_codes.code;
+		JOIN mountain_codes ON route_codes.mountain_code = mountain_codes.code
+		LEFT JOIN expedition_status_view ON expeditions.id = expedition_status_view.expedition_id;
 
 
 CREATE VIEW registered_climbs_view AS
@@ -591,7 +597,7 @@ CREATE VIEW solo_climbs_view AS
 		expeditions.actual_departure_date,
 		climbers.last_name || ', ' || climbers.first_name AS climber_name,
 		route_codes.name AS route_name,
-		group_status_code,
+		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code,
 		CASE 
 			WHEN group_status_codes.name = 'Done and off mountain' THEN 'Off mountain' 
 			ELSE group_status_codes.name 
@@ -606,7 +612,6 @@ CREATE VIEW solo_climbs_view AS
 	FROM expeditions
 	JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
 	JOIN climbers ON expedition_members.climber_id = climbers.id
-	JOIN group_status_codes ON group_status_code = group_status_codes.code
 	JOIN ( 
 			SELECT
 				expedition_members_1.expedition_id,
@@ -617,7 +622,9 @@ CREATE VIEW solo_climbs_view AS
 			GROUP BY expedition_members_1.expedition_id, expedition_member_routes.route_code
 		) t ON expeditions.id = t.expedition_id
 	JOIN route_codes ON t.route_code=route_codes.code 
-	WHERE t.count = 1 AND (expeditions.actual_departure_date IS NOT NULL OR expeditions.group_status_code = 3)
+	LEFT JOIN expedition_status_view ON expeditions.id = expedition_status_view.expedition_id
+	JOIN group_status_codes ON coalesce(expedition_status_view.expedition_status, 1) = group_status_codes.code
+	WHERE t.count = 1 AND (expeditions.actual_departure_date IS NOT NULL OR expedition_status_view.expedition_status = 3)
 
 
 

@@ -97,31 +97,41 @@ class ClimberDBDashboard extends ClimberDB {
 			SELECT
 				coalesce(mountain_name, 'Either') AS mountain_name,
 				value
-			FROM
-				(
-					SELECT 
-						mountain_name,
-						count(climber_id) AS value
-					FROM 
-					 	(
-						 	SELECT DISTINCT 
-								climber_id, 
-								mountain_name
-								FROM (
-									SELECT 
-										climber_id,
-										string_agg(mountain_name, ',') AS mountain_name
-									FROM 
-										(
-											{coreQuery}
-										) _
-									GROUP BY climber_id
-								) __
-						) ___
-					GROUP BY ROLLUP(mountain_name)
-					ORDER BY mountain_name
-				) ____ 
-			WHERE coalesce(mountain_name, '') NOT LIKE '%,%'
+			FROM (
+				-- 
+				SELECT 
+					mountain_name,
+					count(climber_id) AS value
+				FROM (
+				 	SELECT DISTINCT 
+						climber_id, 
+						mountain_name
+					FROM (
+						SELECT DISTINCT
+							climber_id, 
+							route_code,
+							mountain_name,
+							reservation_status_code
+						FROM registered_climbs_view
+						WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' 
+							{where}
+						ORDER BY climber_id, mountain_name
+					) _
+				) __
+				GROUP BY mountain_name
+				
+				UNION ALL
+				
+				SELECT 'Either' AS mountain_name, count(climber_id) AS value 
+				FROM (
+					SELECT DISTINCT
+						climber_id
+					FROM registered_climbs_view
+					WHERE 
+						planned_departure_date BETWEEN '2023-1-1' AND '2023-12-31'
+						{where}
+				) ___
+			) ____ 
 		`
 		const nullResult = [
 			{mountain_name: 'Denali', value: 0},
@@ -143,7 +153,8 @@ class ClimberDBDashboard extends ClimberDB {
 				result = Object.fromEntries(result.map(row => [row.mountain_name, row.value]));
 				if (!('Denali' in result)) {
 					result['Denali'] = 0
-				} else if (!('Foraker' in result)) {
+				}
+				if (!('Foraker' in result)) {
 					result['Foraker'] = 0
 				}
 				tableData[statName].data = result;
@@ -151,13 +162,7 @@ class ClimberDBDashboard extends ClimberDB {
 		}
 
 		// registered climbers
-		const registeredSQL = templateSQL.replace('{coreQuery}', `
-			SELECT DISTINCT
-				climber_id, mountain_name
-			FROM registered_climbs_view
-			WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31'
-			ORDER BY climber_id, mountain_name
-		`);
+		const registeredSQL = templateSQL.replace(/\{where\}/g, '');
 		const registeredDeferred =  this.queryDB(registeredSQL)
 			.done(queryResultString => {
 				processResult(queryResultString, 'registered', 'Registered climbers');
@@ -171,14 +176,7 @@ class ClimberDBDashboard extends ClimberDB {
 			});
 
 		// on the mountain
-		const onMountainSQL = templateSQL.replace('{coreQuery}', `
-			SELECT DISTINCT
-				climber_id, mountain_name
-			FROM registered_climbs_view
-			WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
-				reservation_status_code = 4 --4 == briefing complete
-			ORDER BY climber_id, mountain_name
-		`);
+		const onMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 4 --4 == briefing complete');
 		const onMountainDeferred =  this.queryDB(onMountainSQL)
 			.done(queryResultString => {
 				processResult(queryResultString, 'onMountain', 'On the mountain');
@@ -192,14 +190,7 @@ class ClimberDBDashboard extends ClimberDB {
 			});
 
 		// off mountain
-		const offMountainSQL = templateSQL.replace('{coreQuery}', `
-			SELECT DISTINCT
-				climber_id, mountain_name
-			FROM registered_climbs_view
-			WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
-				reservation_status_code = 5 --5 == returned
-			ORDER BY climber_id, mountain_name
-		`);
+		const offMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 5 --5 == returned');
 		const offMountainDeferred =  this.queryDB(offMountainSQL)
 			.done(queryResultString => {
 				processResult(queryResultString, 'offMountain', 'Done and off mountain');
@@ -213,19 +204,35 @@ class ClimberDBDashboard extends ClimberDB {
 			});
 
 		// summited
-		const summitedSQL = templateSQL.replace('{coreQuery}', `
-			SELECT DISTINCT
-				climber_id, 
-				route_code,
-				mountain_name,
-				reservation_status_code
-			FROM registered_climbs_view
-			WHERE 
-				planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
-				reservation_status_code = 5 AND
-				route_was_summited
-			ORDER BY climber_id, mountain_name
-		`);
+		const summitedSQL = `
+			SELECT
+				coalesce(mountain_name, 'Either') AS mountain_name,
+				value
+			FROM (
+				SELECT 
+					mountain_name,
+					count(climber_id) AS value
+				FROM (
+				 	SELECT DISTINCT 
+						climber_id, 
+						mountain_name
+					FROM (
+						SELECT DISTINCT
+							climber_id, 
+							route_code,
+							mountain_name,
+							reservation_status_code
+						FROM registered_climbs_view
+						WHERE 
+							planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
+							reservation_status_code = 5 AND
+							summit_date IS NOT NULL
+						ORDER BY climber_id, mountain_name
+					) _		
+				) __
+				GROUP BY ROLLUP(mountain_name)
+			) ___ 
+		`;
 
 		const summitedDeferred =  this.queryDB(summitedSQL)
 			.done(queryResultString => {
@@ -240,8 +247,8 @@ class ClimberDBDashboard extends ClimberDB {
 			});
 
 		const cancelledSQL = offMountainSQL
-			.replace('reservation_status_code = 5', 'reservation_status_code = 6')
-			.replace('registered_climbs_view', 'all_climbs_view');
+			.replace(/reservation_status_code = 5/g, 'reservation_status_code = 6')
+			.replace(/registered_climbs_view/g, 'all_climbs_view');
 
 		const cancelledDeferred = this.queryDB(cancelledSQL)
 					.done(queryResultString => {
