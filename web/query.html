@@ -45,6 +45,7 @@
 						<li class="query-option not-expandable" role="button" data-query-name="guided_company_briefings" data-tags="guide, guiding, briefing, status">Guide Company Briefings</li>
 						<li class="query-option not-expandable" role="button" data-query-name="count_per_guide_company" data-tags="guide, guiding, expeditions, climbers">Expeditions/Climbers Per Guide Company</li>
 						<li class="query-option" role="button" data-query-name="flagged_climbers" data-tags="climber, route">Flagged Expedition Members</li>
+						<li class="query-option" role="button" data-query-name="overdue_expeditions" data-tags="expeditions, sar, search, overdue">Find Overdue Expeditions</li>
 						<li class="query-option" role="button" data-query-name="user_nights" data-tags="climber, nights, stats, mountain">Users/User nights</li>
 						<li class="query-option" role="button" data-query-name="all_female_expeditions" data-tags="expeditions, women, female">All-Female Expeditions</li>
 						<li class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, route">Query Climbers/Climbs</li>
@@ -63,6 +64,8 @@
 						<li id="count-nps-by-gender-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="nps, gender, female, women">Count NPS patrollers by gender</li>
 						<li id="count-summits-per-month-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, month">Count summits per month</li>
 						<li id="count-summits-per-day-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, day">Count summits per day</li>
+						<li class="query-option" role="button" data-query-name="pro_pins" data-tags="climber, epeditions, pro, pro pin">Query Pro Pins</li>
+						
 					</ul>
 					<h4 id="no-query-match-message" class="hidden" aria-hidden="true">No queries match your search</h4>
 				</div>
@@ -199,8 +202,8 @@
 							</div>
 							<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
 								<select id="count_climbers-group_by_fields" class="input-field no-option-fill climberdb-select2 is-empty is-empty" multiple="multiple" name="group_by_fields" placeholder="Group rows by" placeholder="Group rows by" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
-									<!--<option value="reservation_status_code">Reservation status</option>--><!--don't include for now because can't map to lookup table-->
 									<option value="group_status_code">Group status</option>
+									<option value="reservation_status_code">Expedition member status</option>
 									<option value="special_group_type_code">Special group type</option>
 									<option value="guide_company_code">Guide company</option>
 									<option value="sex_code">Gender</option>
@@ -224,6 +227,7 @@
 								<select id="count_climbers-pivot_field" class="input-field default no-option-fill keep-default-option" name="pivot_field" title="Split columns by" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary">
 									<option value="">Split columns by</option>
 									<option value="group_status_code">Group status</option>
+									<option value="reservation_status_code">Expedition member status</option>
 									<option value="special_group_type_code">Special group type</option>
 									<option value="guide_company_code">Guide company</option>
 									<option value="sex_code">Gender</option>
@@ -245,6 +249,7 @@
 							<h5 class="w-100 mt-3">Query Parameters</h5>
 							<div class="query-parameter-option-container" role="list">
 								<div class="show-query-parameter-button" role="button" data-field-name="group_status_code">Group status</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="reservation_status_code">Expedition member status</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="special_group_type_code">Special group type</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="guide_company_code">Guide company</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="mountain_code">Mountain</div>
@@ -261,27 +266,21 @@
 								<div class="show-query-parameter-button" role="button" data-field-name="actual_departure_date">Actual departure</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="actual_return_date">Actual return</div>
 							</div>
-							<!--
-							additional stats for numeric fields:
-							- avg
-							- stddev_pop 
-							- min
-							- max
-							-->
-							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
-								<select id="count_climbers-reservation_status" class="input-field default climberdb-select2 is-empty where-clause-field" multiple="multiple" name="reservation_status" title="Expedition member status" placeholder="Expedition member status" data-lookup-table="group_status_codes" required></select>
-								<button class="icon-button hide-query-parameter-button">
-									<i class="fas fa-lg fa-times"></i>
-								</button>
-								<label class="field-label" for="count_climbers-reservation_status_code">Expedition member status</label>
-								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
-							</div>
+
 							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 								<select id="count_climbers-group_status" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field include-dsiabled-options" multiple="multiple" name="group_status_code" title="Group status" placeholder="Group status" required></select>
 								<button class="icon-button hide-query-parameter-button">
 									<i class="fas fa-lg fa-times"></i>
 								</button>
 								<label class="field-label" for="count_climbers-group_status">Group status</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-reservation_status" class="input-field default climberdb-select2 is-empty where-clause-field" multiple="multiple" name="reservation_status_code" title="Expedition member status" placeholder="Expedition member status" data-lookup-table="group_status_codes" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-reservation_status_code">Expedition member status</label>
 								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 							</div>
 							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
@@ -499,6 +498,15 @@
 							</div>
 						</div>
 
+						<div class="query-parameters-container hidden" data-query-name="pro_pins">
+							<h4 class="w-100 mb-3">Flagged Expedition Members Query Parameters</h4>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="pro_pins-year" class="input-field default no-option-fill year-select-field nullable" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="pro_pins-year">Year</label>
+							</div>	
+						</div>
 					</div>
 					<div class="w-100 d-flex justify-content-center">
 						<button id="run-query-button" class="generic-button hidden" title="Run query">Run query</button>

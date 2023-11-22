@@ -184,8 +184,7 @@ class ClimberDBQuery extends ClimberDB {
 				],
 				cssColumnClasses: {
 					'Guide Company': 'justify-content-start'
-				},
-				displayFunction: this.showcount_per_guide_company
+				}
 			},
 			count_climbers: {
 				sql: `
@@ -277,6 +276,73 @@ class ClimberDBQuery extends ClimberDB {
 					'Group Name': 'expeditions.html?id={expedition_id}'
 				}
 			},
+
+			overdue_expeditions: {
+				sql : `
+				SELECT
+					expedition_id,
+					expedition_name AS "Group Name",
+					planned_return_date AS "Planned Return",
+					COUNT(climbers.id) AS "Climber Count"
+				FROM expeditions
+					JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
+					JOIN climbers ON climbers.id = expedition_members.climber_id
+				WHERE 
+					extract(year FROM planned_return_date) = extract(year FROM now()) AND
+					planned_return_date < now()::date AND
+					actual_return_date IS NULL AND
+					group_status_code = 4
+				GROUP BY
+					expedition_members.expedition_id,
+					"Group Name",
+					"Planned Return"
+				ORDER BY
+					"Planned Return"
+				`,
+				columns: [
+					'Group Name',
+					'Climber Count',
+					'Planned Return'
+				],
+				hrefs: {
+					'Group Name': 'expeditions.html?id={expedition_id}'
+				}
+
+			},
+			pro_pins : {
+				sql: `
+				SELECT 
+					first_name || ' ' || last_name AS "Climber Name",
+					expedition_name AS "Group Name",
+					extract(year FROM planned_departure_date) AS "Year",
+					coalesce(expedition_members.reason_for_pro_pin, '') AS "Reason", 
+					climber_id,
+					expedition_id
+				FROM expedition_members 
+					JOIN climbers ON climbers.id = expedition_members.climber_id and climbers.id = expedition_members.climber_id 
+					JOIN expeditions ON expeditions.id=expedition_members.expedition_id
+				WHERE 
+					extract(year FROM actual_departure_date) {year} AND 
+					expedition_members.received_pro_pin -- AND expedition_members.reason_for_pro_pin IS NOT NULL
+				ORDER BY
+					"Climber Name";
+				`,
+				columns : [
+					'Climber Name',
+					'Group Name',
+					'Year',
+					'Reason'
+				],
+				hrefs : {
+					'Climber Name': 'climbers.html?id={climber_id}',
+					'Group Name': 'expeditions.html?id={expedition_id}'
+				},
+				cssColumnClasses: {
+					'Reason': 'justify-content-start'
+				}
+			},
+			
+
 			medical_issues: {},
 			user_nights: {
 				sql: `
@@ -398,6 +464,9 @@ class ClimberDBQuery extends ClimberDB {
 			this.onSortDataButtonClick(e);
 		});
 
+		//query button to find the all expeditions with past due dates
+		$(document).on('click')
+
 		$('#climbers-per-mountain-query-button').click(e => {
 			this.onClimbersPerMountainButtonClick()
 		});
@@ -443,6 +512,7 @@ class ClimberDBQuery extends ClimberDB {
 		$('#count-summits-per-day-query-button').click(e => {
 			this.onSummitsPerDayClick()
 		});
+
 		//$(window).resize(e => {onWindowResize(e)})
 		
 		// Record current value for .revertable inputs so the value can be reverted after a certain event
@@ -1353,8 +1423,10 @@ class ClimberDBQuery extends ClimberDB {
 		return this.queryDB(sql)
 			.done(queryResultString => {
 				if (!this.queryReturnedError(queryResultString)) {
+					$('.year-select-field.nullable').append(`<option value=" IS NOT NULL">All</option>`);
 					for (const row of $.parseJSON(queryResultString)) {
-						$('.year-select-field').append(`<option value=${row.year}>${row.year}</option>`);
+						$('.year-select-field:not(.nullable)').append(`<option value=${row.year}>${row.year}</option>`);
+						$('.year-select-field.nullable').append(`<option value="= ${row.year}">${row.year}</option>`);
 					}
 				}
 			})
