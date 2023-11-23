@@ -549,8 +549,8 @@ def write_to_label_matrix():
 
 
 #---------------- DB I/O ---------------------#
-@app.route('/flask/permit_count', methods=['POST'])
-def get_permit_count():
+@app.route('/flask/next_permit_number', methods=['POST'])
+def get_next_permit_number():
 	
 	data = request.form
 	if not 'year' in data:
@@ -562,7 +562,7 @@ def get_permit_count():
 
 	sql = f'''
 		SELECT 
-			count(*) + 1 AS permit_count 
+		max(expedition_members.permit_number) AS max_permit 
 		FROM expedition_members 
 		JOIN expeditions ON expedition_members.expedition_id=expeditions.id
 		WHERE extract(year FROM planned_departure_date)={year}
@@ -571,10 +571,10 @@ def get_permit_count():
 		cursor = conn.execute(sql)
 		row = cursor.first()
 		if row:
-			# format dateime, then substitue encounter data and configuration values
-			return str(row['permit_count'])
+			# Permit format: TKA-YY-####. Just return just the number + 1
+			return str(int((row.max_permit or '0000').split('-')[-1]) + 1)
 		else:
-			raise ValueError(f'No expeditions in database for year {year}')
+			raise RuntimeError('Failed to get next permit number')
 
 #---------------- DB I/O ---------------------#
 
