@@ -1426,7 +1426,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const permitCountDeferred = permitNumbersFilled ? 
 			$.Deferred().resolve() : // resolve the promise immediately so the SQL save request doesn't wait
 			$.post({
-				url: 'flask/permit_count',
+				url: 'flask/next_permit_number',
 				data: {year: year}
 			}).done(response => {
 				if (this.pythonReturnedError(response)) {
@@ -1445,25 +1445,30 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	transactions and routes for an expedition member can't be INSERTed before the member
 		const getExpeditionMemberSQL = ($card) => {
 			const climberID = $card.data('climber-id');
-			const [sql, parameters] = this.inputsToSQL(
-				$card.find('.expedition-info-tab-pane, .card-header'),
-				'expedition_members', 
-				now, 
-				userName, 
-				{
-					updateID: $card.data('table-id') || null, 
-					foreignIDs: {
-						expeditions: expeditionID, 
-						climbers: climberID
-					},
-					insertArray: inserts
-				}
-			);
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
+			// members
+			if ($card.find('.card-header .input-field.dirty, .expedition-info-tab-pane .input-field.dirty').length) {
+				const [sql, parameters] = this.inputsToSQL(
+					$card.find('.expedition-info-tab-pane, .card-header'),
+					'expedition_members', 
+					now, 
+					userName, 
+					{
+						updateID: $card.data('table-id') || null, 
+						foreignIDs: {
+							expeditions: expeditionID, 
+							climbers: climberID
+						},
+						insertArray: inserts
+					}
+				);
+				sqlStatements.push(sql);
+				sqlParameters.push(parameters);
+			}
 
 			// transactions
-			for (const li of $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)').has('.input-field.dirty')) {
+			const $transactionItems = $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)')
+				.has('.input-field.dirty');
+			for (const li of $transactionItems) {
 				const dbID = $(li).data('table-id');
 				const [sql, parameters] = this.inputsToSQL(
 					li, 
@@ -1522,7 +1527,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				})
 			} 
 			// Otherwise, if there are other edits, just get the SQL immediately
-			else if ($card.find('.card-header .input-field.dirty, .expedition-info-tab-pane .input-field.dirty').length) {
+			else {
 				getExpeditionMemberSQL($card);
 			}
 
