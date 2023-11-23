@@ -1420,14 +1420,32 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		// Get expedition members and member transactions
-		//	Transactions and routes might have edits without expedition members having any, so loop 
-		//	through each expedition member card, regardless of whether it has any dirty inputs
-		for (const el of $('#expedition-members-accordion .card:not(.cloneable)')) {
-			const $card = $(el);
+		const year = new Date($('#input-planned_departure_date').val()).getFullYear();
+		let permitCount;
+		const permitNumbersFilled = $('input[name=permit_number]').map((_, el) => el.value).get().every(v => v);
+		const permitCountDeferred = permitNumbersFilled ? 
+			$.Deferred().resolve() : // resolve the promise immediately so the SQL save request doesn't wait
+			$.post({
+				url: 'flask/next_permit_number',
+				data: {year: year}
+			}).done(response => {
+				if (this.pythonReturnedError(response)) {
+					print('Failed to get next permit number with error: ' + response);
+				} else {
+					permitCount = response;
+				}
+			}).fail((xhr, status, error) => {
+				print('Failed to get next permit number with error: ' + error)
+			});
 
-			// expedition member
-			const dbID = $card.data('table-id');
+		// Make a convenience function to get SQL for expedition members because the method 
+		//	for doing so differs depending on whether the permit number needs to be filled 
+		//	for each individual expedition member in the for loop below. This needs to 
+		//	include transactions and route memebers so the SQL statements are in order. That is,
+		//	transactions and routes for an expedition member can't be INSERTed before the member
+		const getExpeditionMemberSQL = ($card) => {
 			const climberID = $card.data('climber-id');
+			// members
 			if ($card.find('.card-header .input-field.dirty, .expedition-info-tab-pane .input-field.dirty').length) {
 				const [sql, parameters] = this.inputsToSQL(
 					$card.find('.expedition-info-tab-pane, .card-header'),
@@ -1435,7 +1453,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					now, 
 					userName, 
 					{
-						updateID: dbID || null, 
+						updateID: $card.data('table-id') || null, 
 						foreignIDs: {
 							expeditions: expeditionID, 
 							climbers: climberID
@@ -1448,7 +1466,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 			// transactions
-			for (const li of $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)').has('.input-field.dirty')) {
+			const $transactionItems = $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)')
+				.has('.input-field.dirty');
+			for (const li of $transactionItems) {
 				const dbID = $(li).data('table-id');
 				const [sql, parameters] = this.inputsToSQL(
 					li, 
@@ -1486,6 +1506,31 @@ class ClimberDBExpeditions extends ClimberDB {
 				sqlParameters.push(parameters);
 
 			}
+		}
+
+		// Transactions and routes might have edits without expedition members having any, so loop 
+		//	through each expedition member card, regardless of whether it has any dirty inputs
+		for (const el of $('#expedition-members-accordion .card:not(.cloneable)')) {
+			const $card = $(el);
+
+			// expedition member
+			const $permitNumberField = $card.find('input[name=permit_number]');
+			const permitNumberEmpty = !$permitNumberField.val();
+			// If the permit number field is empty, wait for the permit count request before getting SQL
+			if (permitNumberEmpty) {
+				permitCountDeferred.then(() => {
+					const thisPermitNumber = `TKA-${year.toString().slice(2,4)}-${String(permitCount).padStart(4, '0')}`;
+					$permitNumberField.val(thisPermitNumber)
+							.change();
+					permitCount ++; //increment for next permit
+					getExpeditionMemberSQL($card);
+				})
+			} 
+			// Otherwise, if there are other edits, just get the SQL immediately
+			else {
+				getExpeditionMemberSQL($card);
+			}
+
 		}
 
 		// CMCs
@@ -1526,71 +1571,75 @@ class ClimberDBExpeditions extends ClimberDB {
 			sqlParameters.push(parameters);
 		}
 		
+		// Make sure, if permit numbers had to be created, that the request was 
+		//	answered first. If it wasn't necessary, the permitCountDeferred was
+		//	resolved immediately and the request to save the data will fire 
+		//	immediately as well
+		return permitCountDeferred.then(() => {
 
-		return $.ajax({ 
-			url: 'climberdb.php',
-			method: 'POST',
-			data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
-			cache: false
-		}).done(queryResultString => {
-			if (climberDB.queryReturnedError(queryResultString)) { 
-				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-				return;
-			} else {
-				const result = $.parseJSON(queryResultString)
-					.filter(row => row != null);
-				var expeditionID = this.expeditionInfo.expeditions.id;
-				for (const i in result) {
-					const returnedIDs = result[i];
-					const id = returnedIDs.id;
-					if (id == null || id === '') continue;
+			return $.post({ 
+				url: 'climberdb.php',
+				data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
+				cache: false
+			}).done(queryResultString => {
+				if (climberDB.queryReturnedError(queryResultString)) { 
+					showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+					return;
+				} else {
+					const result = $.parseJSON(queryResultString)
+						.filter(row => row != null);
+					var expeditionID = this.expeditionInfo.expeditions.id;
+					for (const i in result) {
+						const returnedIDs = result[i];
+						const id = returnedIDs.id;
+						if (id == null || id === '') continue;
 
-					const {container, tableName} = inserts[i];
-					if (tableName === 'expeditions') {
-						expeditionID = id;
+						const {container, tableName} = inserts[i];
+						if (tableName === 'expeditions') {
+							expeditionID = id;
+							
+							// this was a new expedition, so add the expedition to the URL history
+							this.updateURLHistory(expeditionID, $('#expedition-id-input'));
+						}
+
+						// Set the card's/list item's class and inputs' attributes so changes will register as updates
+						const $container = $(container).closest('.data-list-item, .card');
+						const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
+						if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
+						const $inputs = $container.closest('.data-list-item, .card')
+							.removeClass('new-card')
+							.removeClass('new-list-item')
+							.attr('data-table-id', id)
+							.attr('data-table-name', tableName)
+							.find('.input-field.dirty')
+								.attr('data-table-name', tableName)
+								.attr('data-table-id', id);
+						const foreignIDs = Object.entries(returnedIDs).filter(([column, _]) => column !== 'id');
+						if (Object.keys(foreignIDs).length) $inputs.data('foreign-ids', Object.fromEntries(foreignIDs));
 						
-						// this was a new expedition, so add the expedition to the URL history
-						this.updateURLHistory(expeditionID, $('#expedition-id-input'));
 					}
 
-					// Set the card's/list item's class and inputs' attributes so changes will register as updates
-					const $container = $(container).closest('.data-list-item, .card');
-					const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
-					if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
-					const $inputs = $container.closest('.data-list-item, .card')
-						.removeClass('new-card')
-						.removeClass('new-list-item')
-						.attr('data-table-id', id)
-						.attr('data-table-name', tableName)
-						.find('.input-field.dirty')
-							.attr('data-table-name', tableName)
-							.attr('data-table-id', id);
-					const foreignIDs = Object.entries(returnedIDs).filter(([column, _]) => column !== 'id');
-					if (Object.keys(foreignIDs).length) $inputs.data('foreign-ids', Object.fromEntries(foreignIDs));
-					
+
+					// update in-memory data for each edited input
+					const edits = this.edits;
+					const expeditionInfo = this.expeditionInfo;
+					const $editedInputs =  $('.input-field.dirty').removeClass('dirty');
+					this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
+
+
+					// Hide the save button again since there aren't any edits
+					$('#save-expedition-button').ariaHide(true);
+					// but open the reports modal button since there's something to show
+					$('#open-reports-modal-button, #print-cache-tag-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
+
 				}
-
-
-				// update in-memory data for each edited input
-				const edits = this.edits;
-				const expeditionInfo = this.expeditionInfo;
-				const $editedInputs =  $('.input-field.dirty').removeClass('dirty');
-				this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
-
-
-				// Hide the save button again since there aren't any edits
-				$('#save-expedition-button').ariaHide(true);
-				// but open the reports modal button since there's something to show
-				$('#open-reports-modal-button, #print-cache-tag-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
-
-			}
-		}).fail((xhr, status, error) => {
-			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-			// roll back in-memory data
-		}).always(() => {
-		 	climberDB.hideLoadingIndicator();
-		});
-
+			}).fail((xhr, status, error) => {
+				showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+				// roll back in-memory data
+			}).always(() => {
+			 	climberDB.hideLoadingIndicator();
+			});
+		})
 	}
 	
 
