@@ -3058,6 +3058,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#expedition-modified-time-result-summary-item .result-details-summary-value')
 			.text((new Date()).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}));	
 		$('#expedition-n-members-result-summary-item').collapse('hide');
+		$('#expedition-number-result-summary-item').collapse('hide')
+			.find('.result-details-summary-value').text('');
 
 		$('.needs-filled-by-default').addClass('filled-by-default')
 	}
@@ -3261,6 +3263,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		for (const el of $('#expedition-data-container .input-field')) {
 			this.setInputFieldValue(el, expeditionData, {dbID: expeditionData.id, triggerChange: true});
 		}
+		$('#expedition-number-result-summary-item > .result-details-summary-value').text(expeditionData.id).closest('.collapse').collapse('show');
 		$('#expedition-modified-by-result-summary-item > .result-details-summary-value').text(expeditionData.expeditions_last_modified_by);
 		$('#expedition-modified-time-result-summary-item > .result-details-summary-value').text(expeditionData.expeditions_last_modified_time);
 
