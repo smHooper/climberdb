@@ -2087,11 +2087,11 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $select = $(e.target);
 			//const statusCode = $select.val();
 			const status = $select.find(`option[value=${statusCode}]`).text();
-			const $memberCards = $('#expedition-members-accordion .card:not(.cloneable)');
+			const $memberCards = $('#expedition-members-accordion .card:not(.cloneable, .cancelled)');
 			const expeditionInfo =  this.expeditionInfo;
 			
 			if ($memberCards.length === 0) {
-				showModal(`You have not added any expedition members yet, so this expedition's status can't be changed to ${status}.`, 'No Expedition Members');
+				showModal(`You have not added any (non-canceled) expedition members yet, so this expedition's status can't be changed to ${status}.`, 'No Expedition Members');
 				this.revertInputValue($select, {triggerChange: true})
 				return;
 			} else if ($memberCards.length === 1) {
