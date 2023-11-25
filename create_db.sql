@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	date_confirmed DATE,
 	needs_special_use_permit BOOLEAN, 
 	special_group_type_code INTEGER REFERENCES special_group_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	expected_expedition_size INTEGER,
 	last_modified_by VARCHAR(50),
 	last_modified_time TIMESTAMP
 );
@@ -401,6 +402,7 @@ CREATE VIEW expedition_info_view AS
 		expeditions.sanitation_problems,
 		expeditions.equipment_loss,
 		COALESCE(expedition_status_view.expedition_status, expeditions.group_status_code, 1) AS group_status_code,
+		expeditions.expected_expedition_size,
 		expeditions.needs_special_use_permit,
 		expeditions.special_group_type_code,
 		expeditions.last_modified_by,
@@ -626,6 +628,61 @@ CREATE VIEW solo_climbs_view AS
 	JOIN group_status_codes ON coalesce(expedition_status_view.expedition_status, 1) = group_status_codes.code
 	WHERE t.count = 1 AND (expeditions.actual_departure_date IS NOT NULL OR expedition_status_view.expedition_status = 3)
 
+
+CREATE VIEW missing_sup_or_payment_dashboard_view AS 
+	SELECT 
+		expedition_id,
+		expedition_name,
+		days_to_departure,
+		CASE WHEN missing_sup = 0 THEN NULL ELSE missing_sup END AS missing_sup,
+		CASE WHEN missing_payment = 0 THEN NULL ELSE missing_payment END AS missing_payment
+	FROM (
+		SELECT 
+			coalesce(sup.expedition_id, fee.expedition_id) AS expedition_id,
+			expedition_name, 
+			extract(days FROM planned_departure_date - now()) AS days_to_departure, 
+			CASE 
+				WHEN expected_expedition_size > n_members THEN expected_expedition_size - has_sup
+				ELSE n_members - has_sup
+			END AS missing_sup,
+			CASE 
+				WHEN expected_expedition_size > n_members THEN expected_expedition_size - has_fee
+				ELSE n_members - has_fee
+			END AS missing_payment
+		FROM expeditions 
+		LEFT JOIN (
+			SELECT 
+				expedition_id, 
+				sum(application_complete::integer) AS has_sup,
+				count(id) as n_members
+			FROM expedition_members 
+			WHERE reservation_status_code <> 6 AND expedition_id > 6000
+			GROUP BY expedition_id
+		) sup ON expeditions.id=sup.expedition_id 
+		LEFT JOIN (
+			SELECT 
+				expedition_id, 
+				sum((balance <= 0::MONEY)::integer) AS has_fee  
+			FROM (
+				SELECT
+					expedition_id,
+					expedition_member_id,
+					sum(transaction_value) AS balance
+				FROM expedition_members
+				JOIN transactions ON expedition_members.id=transactions.expedition_member_id
+				WHERE
+					reservation_status_code <> 6 AND 
+					transaction_type_code IN (3, 10, 12, 14, 15, 23, 24) 
+				GROUP BY expedition_id, expedition_member_id
+			) climbing_fee_balance 
+			GROUP BY expedition_id
+		) fee ON expeditions.id=fee.expedition_id
+		WHERE 
+			planned_departure_date >= now()::date
+	) _
+	WHERE 
+		missing_sup > 0 OR missing_payment > 0
+	ORDER BY days_to_departure, expedition_name;
 
 
 CREATE MATERIALIZED VIEW table_info_matview AS 

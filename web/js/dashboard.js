@@ -373,43 +373,7 @@ class ClimberDBDashboard extends ClimberDB {
 
 
 	configureMisingPaymentOrSUP() {
-		const sql = `
-			SELECT 
-				expedition_name, 
-				extract(days FROM planned_departure_date - now()) AS days_to_departure, 
-				sup.missing_sup, 
-				coalesce(sup.expedition_id, fee.expedition_id) AS expedition_id,
-				fee.missing_payment 
-			FROM expeditions 
-			LEFT JOIN (
-				SELECT 
-					expedition_id, 
-					count(id) AS missing_sup
-				FROM expedition_members 
-				WHERE NOT application_complete AND reservation_status_code <> 6
-				GROUP BY expedition_id
-			) sup ON expeditions.id=sup.expedition_id 
-			LEFT JOIN (
-				SELECT 
-					expedition_id, 
-					count(expedition_member_id) AS missing_payment
-				FROM (
-					SELECT
-						expedition_id,
-						expedition_member_id,
-						sum(transaction_value) AS balance
-					FROM expedition_members
-					JOIN transactions ON expedition_members.id=transactions.expedition_member_id
-					WHERE transaction_type_code IN (3, 10, 12, 14, 15, 23, 24) 
-					GROUP BY expedition_id, expedition_member_id
-				) climbing_fee_balance 
-				WHERE balance > 0::MONEY
-				GROUP BY expedition_id
-			) fee ON expeditions.id=fee.expedition_id
-			WHERE 
-				planned_departure_date >= now()::date AND
-				(sup.missing_sup IS NOT NULL OR fee.missing_payment IS NOT NULL)
-			ORDER BY days_to_departure, expedition_name;`
+		const sql = 'TABLE missing_sup_or_payment_dashboard_view';
 		
 		return this.queryDB(sql)
 			.done(queryResultString => {
