@@ -1544,7 +1544,7 @@ class ClimberDBBriefings extends ClimberDB {
 		
 		$.post({
 			url: 'flask/reports/briefing_schedule',
-			data: {
+			data: { // flask mutilates arrays in JS objects so stringify them
 				time_slots: JSON.stringify(exportData.time_slots),
 				briefings: JSON.stringify(exportData.briefings)
 			}
