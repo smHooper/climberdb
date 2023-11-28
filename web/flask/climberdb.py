@@ -428,17 +428,9 @@ def get_briefing_schedule():
 	data = dict(request.form)
 	data['time_slots'] = json.loads(data['time_slots'])
 	data['briefings'] = json.loads(data['briefings'])
-	# # render html
-	# wait_for_weasyprint()
-	# html = weasyprint.HTML(string=data['html'])
-	
-	# # write to disk as PDF
-	# pdf_filename = f'''briefing_schedule_{data['date']}.pdf'''
-	# pdf_path = os.path.join(get_exports_dir(), pdf_filename)
-	# html.write_pdf(pdf_path)
-
 
 	excel_filename = briefings_to_excel(data, get_exports_dir())
+	
 	return 'exports/' + excel_filename
 
 
