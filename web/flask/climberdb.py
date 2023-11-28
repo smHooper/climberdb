@@ -16,6 +16,8 @@ from datetime import datetime
 from flask import Flask, render_template, request, json, url_for
 from flask_mail import Mail, Message
 
+from export_briefings import briefings_to_excel
+
 # Asynchronously load weasyprint because it takes forever and it should only block when it's needed (exporting PDFs)
 import threading
 import importlib
@@ -411,7 +413,7 @@ def get_transaction_history(expedition_id):
 	return 'exports/' + pdf_filename #pdf_data
 
 
-@app.route('/flask/reports/transaction_history/<expedition_id>', methods=['POST'])
+@app.route('/flask/reports/transaction_history/<expedition_id>', methods=['GET', 'POST'])
 def get_transaction_history_html(expedition_id):
 	data = dict(request.form)
 
@@ -419,6 +421,18 @@ def get_transaction_history_html(expedition_id):
 
 	# Get HTML string
 	return render_template('transaction_history.html', **data)
+
+
+@app.route('/flask/reports/briefing_schedule', methods=['POST'])
+def get_briefing_schedule():
+	data = dict(request.form)
+	data['time_slots'] = json.loads(data['time_slots'])
+	data['briefings'] = json.loads(data['briefings'])
+
+	excel_filename = briefings_to_excel(data, get_exports_dir())
+	
+	return 'exports/' + excel_filename
+
 
 
 

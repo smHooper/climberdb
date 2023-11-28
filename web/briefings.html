@@ -26,6 +26,9 @@
 	<link href="packages/select2/select2.min.css" rel="stylesheet" />
 	<script src="packages/select2/select2.min.js"></script>
 
+	<!-- html2canvas-->
+	<!-- <script src="packages/html2canvas/html2canvas.min.js"></script> -->
+
 	<link rel="stylesheet" href="css/climberdb.css">
 	<link rel="stylesheet" href="css/climbers.css">
 	<link rel="stylesheet" href="css/briefings.css">
@@ -68,7 +71,12 @@
 						<button class="icon-button change-briefing-details-size-button expand-briefing-details-button" role="button" title="Expand briefing schedule details">
 							<i class="fas fa-arrow-left fa-arrow-from-right fa-lg"></i>
 						</button>
-						<h3 class="briefing-details-sidebar-header col"></h3>
+						<div class="d-flex col justify-content-center">
+							<h3 class="briefing-details-sidebar-header"></h3>
+							<button id="open-export-modal-button" class="icon-button ml-3" type="button" aria-label="Open exports menu" title="Open exports menu" aria-hidden="false">
+								<i class="fas fa-2x fa-file-export"></i>
+							</button>
+						</div>
 						<button class="icon-button change-briefing-details-size-button contract-briefing-details-button" role="button" title="Contract briefing schedule details">
 							<i class="fas fa-arrow-right fa-arrow-to-right fa-lg"></i>
 						</button>
@@ -230,11 +238,41 @@
 
 	<!--alert/message modal -->
 	<div class="modal fade" id="alert-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
+
+	<div class="modal fade" id="exports-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered" role="document">
+			<div class="modal-content">
+		    	<div class="modal-header">
+			    	<h5 class="modal-title">Export Briefings</h5>
+					<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<p>
+						Select a start date and an end date to export briefings to Excel. Each day within 
+						the selected range will be its own sheet in the Excel file.
+					</p>
+					<div class="field-container">
+						<div class="field-container col-6">
+							<input class="input-field ignore-on-save" id="input-export_start_date" name="export_start_date" type="date">
+							<label class="field-label" for="input-export_start_date">Start date</label>
+						</div>
+						<div class="field-container col-6">
+							<input class="input-field ignore-on-save" id="input-export_end_date" name="export_end_date" type="date">
+							<label class="field-label" for="input-export_end_date">End date</label>
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>
+					<button class="generic-button d-inline" id="export-briefings-button" title="Export">Export</button>
+				</div>
+			</div>
+		</div>
+	</div>
 	
-<!-- 	<script type="text/javascript">
-		$('.modal.fade').after(`<script src="js/climbers.js?t=${(new Date).getTime()}"><\/script>`);
-		$('.modal.fade').after(`<script src="js/climberdb.js?t=${(new Date).getTime()}"><\/script>`);
-	</script> -->
+
 	<script src="packages/bootstrap/bootstrap.min.js"></script>
 	<script src="js/climberdb.js"></script>
 	<script src="js/briefings.js"></script>

@@ -61,7 +61,7 @@ class ClimberDBBriefings extends ClimberDB {
 		// Add days for next month
 		const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 0);
 		const endDayOfWeek = lastDayOfMonth.getDay();
-		for (let i = 0; i + endDayOfWeek < 6; i++) { // < 6 because getDay() returns 0-indexed day od week
+		for (let i = 0; i + endDayOfWeek < 6; i++) { // < 6 because getDay() returns 0-indexed day of week
 			$calendarBody.append(`
 				<div class="calendar-cell disabled" data-date="${getFormattedTimestamp(new Date(date.getTime() + this.constants.millisecondsPerDay * i))}">
 					<label class="calendar-cell-date-label">${i + 1}</label>
@@ -239,6 +239,17 @@ class ClimberDBBriefings extends ClimberDB {
 			this.onDeleteButtonClick(e);
 		})
 
+		$('#open-export-modal-button').click(() => {
+			$('#exports-modal').modal();
+			const selectedDateStr = $('.calendar-cell.selected').data('date')
+			const selectedDate = new Date(selectedDateStr + ' 00:00')
+			$('#input-export_start_date').val(getFormattedTimestamp(selectedDate));
+			$('#input-export_end_date').val(getFormattedTimestamp(selectedDate.addDays(6)));
+		});
+
+		$('#export-briefings-button').click(() => {
+			this.onExportBriefingsClick();
+		})
 	}
 
 
@@ -304,12 +315,15 @@ class ClimberDBBriefings extends ClimberDB {
 	(re)Calculate the CSS grid start column (end column will fill to the max). 
 		1. Find the max number of columns for any time slot
 		2. Find the max start column for each briefing
+	This method is called when the daily schedule details need to be loaded/changed 
+	and when exporting to Excel. The setUI parameter should be set to true unless
+	exporting to Excel
 	*/
-	setBriefingAppointmentColumns({appointmentTimes=[]}={}) {
+	setBriefingAppointmentColumns({appointmentTimes=[], dateString='', setUI=true}={}) {
 		
 		if (!appointmentTimes.length) appointmentTimes = this.getAppointmentTimes();
 
-		const dateString = $('.calendar-cell.selected').data('date');
+		dateString = dateString || $('.calendar-cell.selected').data('date');
 
 		// First, loop through the briefings and determine the number of briefings per time slot
 		const allBriefings = Object.values(climberDB.briefings[dateString]);
@@ -322,7 +336,7 @@ class ClimberDBBriefings extends ClimberDB {
 			const briefingID = briefing.id;
 			rowIndices[briefingID] = [startIndex, endIndex];
 			
-			// Gather sets of briefings with the same 
+			// Gather sets of briefings with the same start and end
 			const gridRowString = `${startIndex + 1} / ${endIndex + 1}`;
 			if (!(gridRowString in uniqueGridRows)) {
 				uniqueGridRows[gridRowString] = {
@@ -342,15 +356,11 @@ class ClimberDBBriefings extends ClimberDB {
 		const uniqueCounts = [... new Set(briefingCountPerSlot)];
 		const nColumns = this.leastCommonMultiple(uniqueCounts);
 
-		// Get unique combinations of briefings.
-		//const briefingIDStrings = briefingsPerSlot.map(a => a.toString()); 
-		//const uniqueCombinations = [...new Set(briefingIDStrings)].filter(s => s !== '')
-
 		// Sort briefings that have the same start and end time in descending order of length
 		const sortedGridRows = Object.values(uniqueGridRows).sort( 
 			(a, b) =>  (b.length > a.length) - (a.length > b.length)
 		);
-		let placedBriefings = [];
+		let placedBriefings = {};
 		for (const {startIndex, endIndex} of sortedGridRows) {
 			const maxCount = Math.max(...briefingCountPerSlot.slice(startIndex, endIndex));
 			// Get all briefings that intersect this set of briefings
@@ -362,12 +372,34 @@ class ClimberDBBriefings extends ClimberDB {
 				if (id in placedBriefings) continue;
 				// Otherwise, set the grid-column
 				const startColumn = i * briefingWidth + 1; 
-				$(`.briefing-appointment-container[data-briefing-id=${id}]`).css('grid-column', `${startColumn} / ${startColumn + briefingWidth}`);
-				placedBriefings.push(id)
+				const endColumn = startColumn + briefingWidth;
+				if (setUI) {
+					$(`.briefing-appointment-container[data-briefing-id=${id}]`).css('grid-column', `${startColumn} / ${endColumn}`);
+				}
+				
+				placedBriefings[id] = {startColumn: startColumn, endColumn: endColumn}
 			}
 		}
 
+		return placedBriefings;
+
 	}
+
+
+	/*
+	Helper method to get the row index of a briefing appointment. Called when adding a 
+	briefing to the schedule and when exporting briefing schedule to Excel
+	*/
+	getAppointmentRowIndex(briefingInfo, {appointmentTimes=[]}={}) {
+		if (!appointmentTimes.length) appointmentTimes = this.getAppointmentTimes();
+
+		// Calculate the CSS grid row index for the given start and end times
+		const rowIndexStart = appointmentTimes.indexOf(briefingInfo.briefing_start_time) + 1;
+		const rowIndexEnd = appointmentTimes.indexOf(briefingInfo.briefing_end_time) + 1;
+
+		return [rowIndexStart, rowIndexEnd]
+	}
+
 
 
 	/*
@@ -377,11 +409,7 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	addBriefingToSchedule(briefingInfo, {appointmentTimes=[]}={}) {
 		
-		if (!appointmentTimes.length) appointmentTimes = this.getAppointmentTimes();
-
-		// Calculate the CSS grid row index for the given start and end times
-		const rowIndexStart = appointmentTimes.indexOf(briefingInfo.briefing_start_time) + 1;
-		const rowIndexEnd = appointmentTimes.indexOf(briefingInfo.briefing_end_time) + 1;
+		const [rowIndexStart, rowIndexEnd] = this.getAppointmentRowIndex(briefingInfo, {appointmentTimes: appointmentTimes});
 
 		$('.schedule-ui-container').append(`
 			<div class="briefing-appointment-container" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}" data-briefing-id=${briefingInfo.id} title="${briefingInfo.expedition_name}">
@@ -526,7 +554,7 @@ class ClimberDBBriefings extends ClimberDB {
 		var fields = [];
 		var values = [];
 		const briefingDate = $('#input-briefing_date').val();
-		for (const el of $('.input-field:not(#input-briefing_date)')) {
+		for (const el of $('.input-field:not(#input-briefing_date, .ignore-on-save)')) {
 			const $input = $(el);
 			if (el.id.endsWith('_time')) {
 				fields.push(el.name.replace(/_time$/, ''));
@@ -1462,6 +1490,84 @@ class ClimberDBBriefings extends ClimberDB {
 					this.fillExpeditionsSelectOptions(result);
 				}
 			})
+	}
+
+	/*
+	Export briefings to Excel. startDateStr and endDateStr should be in ISO 
+	date format YYYY-mm-dd
+	*/
+	exportBriefingSchedule(startDateStr, endDateStr) {
+		// $startCalendarCell = $(`.calendar-cell[data-date=${startDateStr}]`);
+		// $endCalendarCell = $(`.calendar-cell[data-date=${endDateStr}]`);
+
+		showLoadingIndicator('exportBriefingSchedule');
+
+		var exportData = {
+			time_slots: $('.time-label').map((_, el) => el.innerHTML).get(),
+			briefings: {}
+		};
+		const appointmentTimes = this.getAppointmentTimes();
+
+		var currentDate = new Date(startDateStr + ' 00:00');
+
+		while (currentDate <= new Date(endDateStr + ' 00:00')) {
+			
+			const thisDateStr = getFormattedTimestamp(currentDate);
+			const columnIndices = this.setBriefingAppointmentColumns({
+				appointmentTimes: appointmentTimes,
+				dateString: thisDateStr,
+				setUI: false
+			});
+			 
+			let thisExportInfo = [];
+
+			for (const id in this.briefings[thisDateStr] || {}) {
+				const briefingInfo = this.briefings[thisDateStr][id];
+				const briefingText = `Routes: ${briefingInfo.routes.replace(/; /g, ', ')}
+					${briefingInfo.n_members} climber${briefingInfo.n_members > 1 ? 's' : ''}
+					${briefingInfo.ranger_last_name || ''}`.replace(/\t/g, '');
+				const {startColumn, endColumn} = columnIndices[id]; 
+				const [startRow, endRow] = this.getAppointmentRowIndex(briefingInfo, {appointmentTimes: appointmentTimes});
+				thisExportInfo.push({
+					expedition_name: briefingInfo.expedition_name,
+					briefing_text: briefingText,
+					// CSS Grid layout indices are inclusive at start and exclusive at end whereas 
+					//	openpyxl range indices are all inclusive, so subtract 1 from the end indices
+					cell_indices: [startRow, startColumn, endRow - 1, endColumn - 1]
+				})
+				
+			}
+			exportData.briefings[thisDateStr] = thisExportInfo;
+
+			currentDate = currentDate.addDays(1);
+		}
+		
+		$.post({
+			url: 'flask/reports/briefing_schedule',
+			data: { // flask mutilates arrays in JS objects so stringify them
+				time_slots: JSON.stringify(exportData.time_slots),
+				briefings: JSON.stringify(exportData.briefings)
+			}
+		}).done(resultString => {
+			if (this.pythonReturnedError(resultString)) {
+				showModal('An unexpected error occurred while exporting the briefing schedule: ' + resultString, 'Export Error')
+			} else {
+				window.location.href = resultString;
+			}
+		}).fail((xhr, status, error) => {
+			showModal('An unexpected error occurred while exporting the briefing schedule: ' + error)
+		}).always(() => {hideLoadingIndicator()})
+
+	}
+
+
+	/*
+	Export button event handler
+	*/
+	onExportBriefingsClick() {
+		const startDateStr = $('#input-export_start_date').val();
+		const endDateStr = $('#input-export_end_date').val();
+		this.exportBriefingSchedule(startDateStr, endDateStr);
 	}
 
 	init() {
