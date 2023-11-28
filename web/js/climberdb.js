@@ -15,6 +15,7 @@ function getFormattedTimestamp(date, {format='date'}={}) {
 	);
 }
 
+
 function print(i) {
 	console.log(i);
 }
@@ -1595,3 +1596,9 @@ class ClimberDB {
 }( jQuery ));
 
 
+// Extend Date class to increment by a given number of days
+Date.prototype.addDays = function(days) {
+	var date = new Date(this.valueOf());
+	date.setDate(date.getDate() + days);
+	return date;
+}
