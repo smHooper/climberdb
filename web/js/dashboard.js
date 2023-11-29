@@ -119,24 +119,11 @@ class ClimberDBDashboard extends ClimberDB {
 					) _
 				) __
 				GROUP BY mountain_name
-				
-				UNION ALL
-				
-				SELECT 'Either' AS mountain_name, count(climber_id) AS value 
-				FROM (
-					SELECT DISTINCT
-						climber_id
-					FROM registered_climbs_view
-					WHERE 
-						planned_departure_date BETWEEN '2023-1-1' AND '2023-12-31'
-						{where}
-				) ___
 			) ____ 
 		`
 		const nullResult = [
 			{mountain_name: 'Denali', value: 0},
-			{mountain_name: 'Foraker', value: 0}, 
-			{mountain_name: 'Either', value: 0} 
+			{mountain_name: 'Foraker', value: 0}
 		]
 		
 		const processResult = (queryResultString, statName, displayName) => {
@@ -268,7 +255,6 @@ class ClimberDBDashboard extends ClimberDB {
 					<td>${statDisplayName}</td>
 					<td>${rowData['Denali']}</td>
 					<td>${rowData['Foraker']}</td>
-					<td>${rowData['Either']}</td>
 				</tr>
 			`).appendTo($('#season-mountain-stats-card .climberdb-dashboard-table tbody'))
 		}
@@ -292,12 +278,6 @@ class ClimberDBDashboard extends ClimberDB {
 				Math.round(
 					tableData.summited.data.Foraker / 
 					(tableData.offMountain.data.Foraker || 1) 
-					* 100
-				) + '%';
-			tableData.summitPercent.data.Either =
-				Math.round(
-					tableData.summited.data.Either /  
-					(tableData.offMountain.data.Either || 1) 
 					* 100
 				) + '%';
 
