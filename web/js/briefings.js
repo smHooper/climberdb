@@ -326,59 +326,61 @@ class ClimberDBBriefings extends ClimberDB {
 		dateString = dateString || $('.calendar-cell.selected').data('date');
 
 		// First, loop through the briefings and determine the number of briefings per time slot
-		const allBriefings = Object.values(climberDB.briefings[dateString]);
-		let briefingsPerSlot = appointmentTimes.map(() => []);
-		let rowIndices = {};
-		let uniqueGridRows = {};
-		for (const briefing of allBriefings) {
-			const startIndex = appointmentTimes.indexOf(briefing.briefing_start_time);
-			const endIndex = appointmentTimes.indexOf(briefing.briefing_end_time);
+		//	Sort the briefings in descending order of duration first so that long briefings display
+		//	first (further left), which is more visually coherent
+		const sortedBriefings = Object.values(climberDB.briefings[dateString])
+			.sort((a, b) => {
+				const aDuration =  new Date(a.briefing_end) - new Date(a.briefing_start);
+				const bDuration = new Date(b.briefing_end) - new Date(b.briefing_start);
+				return (bDuration > aDuration) - (aDuration > bDuration);
+			});
+		let briefingsPerRow = appointmentTimes.map(() => []);
+		let rowIndices = [];
+		for (const briefing of sortedBriefings) {
 			const briefingID = briefing.id;
-			rowIndices[briefingID] = [startIndex, endIndex];
-			
-			// Gather sets of briefings with the same start and end
-			const gridRowString = `${startIndex + 1} / ${endIndex + 1}`;
-			if (!(gridRowString in uniqueGridRows)) {
-				uniqueGridRows[gridRowString] = {
-					startIndex: startIndex, 
-					endIndex: endIndex, 
-					briefingIDs: [briefingID]
-				}
-			} else {
-				uniqueGridRows[gridRowString].briefingIDs.push(briefingID)
-			}
+			const [rowStart, rowEnd] = this.getAppointmentRowIndex(briefing, {appointmentTimes: appointmentTimes});
+			rowIndices.push([briefingID, rowStart, rowEnd]);
 
-			for (let i = startIndex; i < endIndex; i++) {
-				briefingsPerSlot[i].push(briefingID)
+			for (let i = rowStart; i < rowEnd; i++) {
+				briefingsPerRow[i].push(briefingID)
 			}
 		}
-		const briefingCountPerSlot = briefingsPerSlot.map(a => a.length);
-		const uniqueCounts = [... new Set(briefingCountPerSlot)];
+		// Determine the total number of columns by getting the count of briefings
+		//	in each time slot and calculating the lowest common multiple
+		const briefingCountPerRow = briefingsPerRow.map(a => a.length);
+		const uniqueCounts = [... new Set(briefingCountPerRow)];
 		const nColumns = this.leastCommonMultiple(uniqueCounts);
 
-		// Sort briefings that have the same start and end time in descending order of length
-		const sortedGridRows = Object.values(uniqueGridRows).sort( 
-			(a, b) =>  (b.length > a.length) - (a.length > b.length)
-		);
+		// Loop through the sorted briefings (longest to shortest) and set their
+		//	horizontal extents
 		let placedBriefings = {};
-		for (const {startIndex, endIndex} of sortedGridRows) {
-			const maxCount = Math.max(...briefingCountPerSlot.slice(startIndex, endIndex));
-			// Get all briefings that intersect this set of briefings
-			const briefingIDs = [...new Set(briefingsPerSlot.slice(startIndex, endIndex).flat())]
-			const briefingWidth = nColumns / maxCount;
-			for (const i in briefingIDs) {
-				const id = parseInt(briefingIDs[i]);
-				// If this briefing has already been placed (i.e., it intersected with a previous set), skip it
-				if (id in placedBriefings) continue;
-				// Otherwise, set the grid-column
-				const startColumn = i * briefingWidth + 1; 
-				const endColumn = startColumn + briefingWidth;
-				if (setUI) {
-					$(`.briefing-appointment-container[data-briefing-id=${id}]`).css('grid-column', `${startColumn} / ${endColumn}`);
-				}
-				
-				placedBriefings[id] = {startColumn: startColumn, endColumn: endColumn}
+		for (const [briefingID, rowStart, rowEnd] of rowIndices) {
+			// Get a 2-D array of just the rows (i.e., time slots) for the extent of this briefing
+			const overlappingBriefingsPerRow = briefingsPerRow.slice(rowStart, rowEnd);
+			
+			// Find row with the greatest numebr of briefings. A briefing that overlaps with 
+			//	multiple briefings at different times should be as narrow as its most crowded
+			//	overlapping row
+			const longestRow = overlappingBriefingsPerRow.reduce(
+				(currentMaxRow, currentRow, currentIndex) => currentRow.length > currentMaxRow.length ? currentRow : currentMaxRow,
+				overlappingBriefingsPerRow[0] // initiate currentMaxIndex to 0
+			)
+
+			// The width in columns is the total number of columns divided by the
+			//	number of briefings in the most crowded row
+			const briefingWidth = nColumns / longestRow.length
+			
+			// Because the briefings were initially sorted by length in the first for loop,
+			//	the start column can be reliably calculated by getting this briefing's index
+			//	in the longest row without the possibility of any briefing containers overlapping
+			const startColumn = longestRow.indexOf(briefingID) * briefingWidth + 1; 
+			const endColumn = startColumn + briefingWidth;
+
+			if (setUI) {
+				$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`).css('grid-column', `${startColumn} / ${endColumn}`);
 			}
+			const id = parseInt(briefingID);
+			placedBriefings[id] = {startColumn: startColumn, endColumn: endColumn}
 		}
 
 		return placedBriefings;
@@ -454,7 +456,7 @@ class ClimberDBBriefings extends ClimberDB {
 				const info = briefingAppointments[expeditionID];
 				this.addBriefingToSchedule(info, {appointmentTimes: appointmentTimes})
 			}
-			this.setBriefingAppointmentColumns();
+			this.setBriefingAppointmentColumns({appointmentTimes: appointmentTimes, dateString: dateString});
 	
 		}
 		
@@ -1040,8 +1042,6 @@ class ClimberDBBriefings extends ClimberDB {
 	check ranger availability. If that's good, move the appointment
 	*/
 	onBriefingTimeChange($target) {
-
-
 
 		const appointmentTimes = this.getAppointmentTimes();
 		
