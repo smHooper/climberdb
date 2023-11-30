@@ -29,6 +29,10 @@ CREATE TABLE transaction_type_codes (
 	code INTEGER UNIQUE,
 	sort_order INTEGER,
 	is_credit BOOLEAN,
+	is_payment BOOLEAN,
+	permit_fee_multiplier INTEGER,
+	entrance_fee_multiplier	INTEGER,
+	youth_discount_multiplier	INTEGER,
 	default_fee MONEY
 );
 CREATE TABLE IF NOT EXISTS user_role_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
@@ -683,6 +687,30 @@ CREATE VIEW missing_sup_or_payment_dashboard_view AS
 	WHERE 
 		missing_sup > 0 OR missing_payment > 0
 	ORDER BY days_to_departure, expedition_name;
+
+
+CREATE VIEW transaction_type_view AS 
+SELECT 
+	name,
+	code,
+	is_credit,
+	sort_order,
+	is_payment, 
+	coalesce(
+		climbing_fee_multiplier * climbing_permit_fee + entrance_fee_multiplier * entrance_fee + youth_discount_multiplier * youth_discount_fee,
+		default_fee
+	) as default_fee
+FROM transaction_type_codes AS codes JOIN (
+	SELECT *  FROM crosstab(
+		'SELECT -1 AS id, property, value::MONEY
+		FROM config
+		WHERE property IN (''climbing_permit_fee'', ''entrance_fee'', ''cancellation_fee'', ''youth_discount_fee'')
+		ORDER BY property',
+		'SELECT property FROM config WHERE property IN (''climbing_permit_fee'', ''entrance_fee'', ''cancellation_fee'', ''youth_discount_fee'') ORDER BY property'
+	) AS _ (id INT, cancellation_fee MONEY, climbing_permit_fee MONEY, entrance_fee MONEY, youth_discount_fee MONEY)
+) AS fees ON codes.id <> fees.id
+WHERE sort_order IS NOT NULL 
+ORDER BY sort_order;
 
 
 CREATE MATERIALIZED VIEW table_info_matview AS 
