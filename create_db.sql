@@ -685,6 +685,30 @@ CREATE VIEW missing_sup_or_payment_dashboard_view AS
 	ORDER BY days_to_departure, expedition_name;
 
 
+CREATE VIEW transaction_type_view AS 
+SELECT 
+	name,
+	code,
+	is_credit,
+	sort_order,
+	is_payment, 
+	coalesce(
+		climbing_fee_multiplier * climbing_permit_fee + entrance_fee_multiplier * entrance_fee,
+		default_fee
+	) as default_fee
+FROM transaction_type_codes AS codes JOIN (
+	SELECT *  FROM crosstab(
+		'SELECT -1 AS id, property, value::MONEY
+		FROM config
+		WHERE property IN (''climbing_permit_fee'', ''entrance_fee'', ''cancellation_fee'')
+		ORDER BY property',
+		'SELECT property FROM config WHERE property IN (''climbing_permit_fee'', ''entrance_fee'', ''cancellation_fee'') ORDER BY property'
+	) AS _ (id INT, cancellation_fee MONEY, climbing_permit_fee MONEY, entrance_fee MONEY)
+) AS fees ON codes.id <> fees.id
+WHERE sort_order IS NOT NULL 
+ORDER BY sort_order;
+
+
 CREATE MATERIALIZED VIEW table_info_matview AS 
    SELECT columns.column_name,
   		columns.table_name,

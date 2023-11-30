@@ -4122,7 +4122,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				})
 		);
 		lookupDeferreds.push(
-			this.queryDB('SELECT code, default_fee, is_credit, is_payment FROM transaction_type_codes')
+			this.queryDB('SELECT code, default_fee, is_credit, is_payment FROM transaction_type_view')
 				.done(queryResultString => {
 					if (!this.queryReturnedError(queryResultString)) {
 						for (const row of $.parseJSON(queryResultString)) {
@@ -4144,12 +4144,12 @@ class ClimberDBExpeditions extends ClimberDB {
 			const params = this.parseURLQueryString();
 			// if the URL specifies a specific expedition (id) to load, do so
 			if ('id' in params) {
-					this.queryExpedition(params.id).done(() => {
-						// add to history buffer for keeping track of browser nav via back/forward buttons
-						this.historyBuffer.push(params.id);
-					});
-					window.history.replaceState({id: params.id, historyIndex: 0}, '', window.location.href);
-					$('#expedition-search-bar').data('current-value', params.id);
+				this.queryExpedition(params.id).done(() => {
+					// add to history buffer for keeping track of browser nav via back/forward buttons
+					this.historyBuffer.push(params.id);
+				});
+				window.history.replaceState({id: params.id, historyIndex: 0}, '', window.location.href);
+				$('#expedition-search-bar').data('current-value', params.id);
 			} 
 			// Otherwise, prepare the page for creating a new expedition
 			else if (this.checkEditPermissions()) {
