@@ -309,6 +309,9 @@
 													<li class="nav-item show-transaction-tab-button" role="presentation">
 														<a id="transactions-tab-button" class="nav-link" data-toggle="tab" href="#transactions-tab-pane" type="button" role="tab" aria-controls="transactions-tab-pane" aria-selected="false" title="Show expedition member transactions">Transactions</a>
 													</li>
+													<li class="nav-item" role="presentation">
+														<a id="attachments-tab-button" class="nav-link" data-toggle="tab" href="#attachments-tab-pane" type="button" role="tab" aria-controls="attachments-tab-pane" aria-selected="false" title="Show expedition member attachments">Attachments</a>
+													</li>
 												</ul>
 												<div class="tab-content expedition-member-tab-content">
 													<div id="expedition-info-tab-pane" class="tab-pane expedition-info-tab-pane fade show active" role="tabpanel" aria-labelledby="expedition-info-tab-button">
@@ -478,8 +481,8 @@
 																<label class="data-list-col data-list-header-label col col-13-percent transaction-value-column">Value</label>
 																<label class="data-list-col data-list-header-label col-2 transaction-date-column">Date</label>
 																<label class="data-list-col data-list-header-label col transaction-notes-column">Transaction notes</label>
-																<label class="data-list-col data-list-header-label modal-only transaction-entry-metadata-column hidden">Last edit by</label>
-																<label class="data-list-col data-list-header-label modal-only transaction-entry-metadata-column hidden">Last edit date</label>
+																<label class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit by</label>
+																<label class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit date</label>
 															</div>
 															<ul id="transactions-list" class="data-list">
 																<li class="data-list-item show-children-on-hover cloneable hidden">
@@ -508,10 +511,10 @@
 																			</button>
 																		</div>
 																	</div>
-																	<div class="transaction-entry-metadata-column modal-only hidden" aria-hidden="true">
+																	<div class="data-list-metadata-column modal-only hidden" aria-hidden="true">
 																		<span id="text-last_modified_by" class="input-field entry-metadata-field last-modified-by-field"></span>
 																	</div>
-																	<div class="transaction-entry-metadata-column modal-only hidden" aria-hidden="true">
+																	<div class="data-list-metadata-column modal-only hidden" aria-hidden="true">
 																		<span id="text-last_modified_time" class="input-field entry-metadata-field last-modified-time-field"></span>
 																	</div>
 																</li>
@@ -524,11 +527,68 @@
 																</label>
 																<label class="data-list-col data-list-header-label col-2 transaction-date-column"></label>
 																<label class="data-list-col data-list-header-label col transaction-notes-column"></label>
-																<label class="data-list-col data-list-header-label transaction-entry-metadata-column modal-only hidden"></label>
-																<label class="data-list-col data-list-header-label transaction-entry-metadata-column modal-only hidden"></label>
+																<label class="data-list-col data-list-header-label data-list-metadata-column modal-only hidden"></label>
+																<label class="data-list-col data-list-header-label data-list-metadata-column modal-only hidden"></label>
 															</div>
 														</div>
 													</div>
+													<div id="attachments-tab-pane" class="tab-pane attachments-tab-pane fade" role="tabpanel" aria-labelledby="attachments-tab-button">
+														<div class="attachments-header-container">
+															<h5 class="expedition-data-sub-header"></h5>
+															<button class="generic-button add-data-button add-attachment-button" role="button" type="button" title="Add attchment">Add attchment</button>
+														</div>
+														<div class="attachments-container-body">
+															<div class="data-list-item data-list-item-header">
+																<label id="document-type-attachment-header" class="data-list-col data-list-header-label col-3 document-type-column">Document type</label>
+																<label id="date-received-attachment-header" class="data-list-col data-list-header-label col-2 attachment-received-column">Date received</label>
+																<label id="file-name-attachment-header" class="data-list-col data-list-header-label col-4 file-name-column">File name</label>
+																<label id="attachment-notes-attachment-header" class="data-list-col data-list-header-label col modal-only attachment-notes-column hidden">Attachment notes</label>
+																<label id="last-modified-by-attachment-header" class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit by</label>
+																<label id="last-modified-date-attachment-header" class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit date</label>
+																<label class="data-list-col data-list-header-label col preview-attachment-button-column"></label>
+															</div>
+															<ul id="attachments-list" class="data-list">
+																<li class="data-list-item show-children-on-hover cloneable hidden" aria-hidden="true">
+																	<div class="col-3 d-flex document-type-column">
+																		<select id="input-attachment_type" class="input-field attachment-type-field" name="attachment_type_code" data-table-name="attachments" placeholder="Attachment type" title="Attachment type" aria-labelledby="document-type-attachment-header" required=""></select>
+																		<span class="required-indicator">*</span>
+																	</div>
+																	<div class="col-2 attachment-received-column">
+																		<input id="input-date_received" class="input-field" name="date_received" type="date" data-table-name="attachments"title="Payment method" aria-labelledby="date-received-attachment-header" required="">
+																		<span class="required-indicator">*</span>
+																	</div>
+																	<div class="col col-4 file-name-column">
+																		<div class="d-flex justify-content-center">
+																			<label class="generic-button file-input-label" for="attachment-upload">Select file</label>
+																			<input id="attachment-upload" class="input-field hidden attachment-input" type="file" accept="image/*, .pdf" name="file_upload" aria-hidden="true" required="">
+																		</div>
+																		<div class="attachment-progress-bar-container hidden" aria-hidden="true">
+																			<div class="attachment-progress-bar">
+																				<div class="attachment-progress-indicator"></div>
+																			</div>
+																		</div>
+																		<input id="input-client_filename" class="input-field file-name-field hidden" name="client_filename" data-table-name="attachments" title="File name" aria-hidden="true" aria-labelledby="file-name-attachment-header"> 
+																	</div>
+																	<div class="col d-flex attachment-notes-column modal-only hidden">
+																		<input id="input-attachment_notes" class="input-field" name="attachment_notes" type="text" data-table-name="attachments" title="Transaction type"> 
+																	</div>
+																	<div class="data-list-metadata-column modal-only hidden" aria-hidden="true">
+																		<span id="text-last_modified_by" class="input-field entry-metadata-field last-modified-by-field"></span>
+																	</div>
+																	<div class="data-list-metadata-column modal-only hidden" aria-hidden="true">
+																		<span id="text-last_modified_time" class="input-field entry-metadata-field last-modified-time-field"></span>
+																	</div>
+																	<div class="col d-flex preview-attachment-button-column">
+																		<button class="icon-button delete-button delete-attchment-button show-on-parent-hover" title="Delete attachment">
+																			<i class="fas fa-trash fa-lg"></i>
+																		</button>
+																		<button class="text-only-button fw-bold preview-attachment-button show-on-parent-hover hidden" role="button" type="button" title="Open attachment" aria-hidden="true">Open</button> 
+																	</div>
+																</li>
+															</ul>
+														</div>
+													</div>
+													
 												</div>
 
 											</div>
@@ -786,6 +846,25 @@
 	
 	<!-- modal for selecting climbers to add to expeditions -->
 	<div id="add-climber-form-modal-container" class="climber-form-modal-container uneditable hidden" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
+
+	<!-- attachment viewer modal -->
+	<div class="modal fade lightbox-modal" id="attachment-modal" tabindex="-1" role="dialog" aria-hidden="true">
+	  <div class="modal-dialog" role="document" data-dismiss="modal">
+	    <div class="modal-content" data-dismiss="modal">
+	      <div class="modal-body modal-img-body" >
+	      	<div class="modal-header-container" data-dismiss="modal">
+		      	<div class="modal-img-body-header">
+			        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+			        	<span aria-hidden="true">&times;</span>
+			        </button>
+		      	</div>
+		    </div>
+			<img class="modal-img hidden" src="#" id="modal-img-preview" alt="preview of uploaded image">
+			<object type="application/pdf" data="" width="100%" height="100%">Sorry, your browser doesn't support viewing a PDF</object>
+	      </div>
+	    </div>
+	  </div>
+	</div>
 
 	<script src="packages/bootstrap/bootstrap.min.js"></script>
 	<script src="js/climberdb.js"></script>

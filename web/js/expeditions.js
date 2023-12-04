@@ -33,6 +33,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 		this.historyBuffer = []; // for keeping track of browser navigation via back and forward buttons
 		this.currentHistoryIndex = 0;
+		this.attachments = {};
+
 		return this;
 	}
 
@@ -332,6 +334,13 @@ class ClimberDBExpeditions extends ClimberDB {
 			$newItem.attr('data-parent-table-id', $card.data('table-id'));
 		});
 
+		$(document).on('click', '.add-attachment-button', e => {
+			const $newItem = this.addNewListItem($(e.target).closest('.attachments-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
+
+			const $card = $newItem.closest('.card');
+			$newItem.attr('data-parent-table-id', $card.data('table-id'));
+		});
+
 		// When the leader input checkbox changes, set the transparent class appropriately
 		$(document).on('change', '.leader-checkbox-container .input-checkbox', e => {
 			const $checkbox = $(e.target).closest('.input-checkbox');
@@ -406,6 +415,14 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$(document).on('click', '.delete-transaction-button', e => {
 			this.onDeleteTransactionButtonClick(e);
+		})
+
+		$(document).on('change', '.attachment-input', e => {
+			this.onAttachmentInputChange(e);
+		});
+
+		$(document).on('click', '.preview-attachment-button', e => {
+			this.onPreviewAttachmentButtonClick(e)
 		})
 		// ^^^^^^^^^^ Members/transactions ^^^^^^^^^^^
 
@@ -3130,7 +3147,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		for (const el of $newCard.find('.nav-tabs, .tab-content')) {
 			el.id = el.id + cardID;
 		}
-		const $transactionsList = $newCard.find('.data-list');
+		const $transactionsList = $newCard.find('.transactions-tab-pane	.data-list');
 		$transactionsList.attr('id', $transactionsList.attr('id') + '-' + climberID);
 		
 		// Fill inputs
@@ -3862,6 +3879,203 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 	}
 
+
+
+	/*
+	Handler for when the user changes the attachment type
+	*/
+	onAttachmentTypeChange(e) {
+
+		const $fileTypeSelect = $(e.target);
+		const fileTypeSelectID = $fileTypeSelect.attr('id');
+		const previousFileType = $fileTypeSelect.data('previous-value');//should be undefined if this is the first time this function has been called
+		const $fileInput = $fileTypeSelect.closest('.card-body').find('.file-input-label ~ input[type=file]');
+		const $fileInputLabel = $fileTypeSelect.closest('.card-body').find('.file-input-label');
+		const fileInputID = $fileInput.attr('id');
+
+		if ($fileTypeSelect.val()) {
+			$fileInput.removeAttr('disabled')
+			$fileInputLabel.removeAttr('disabled')
+		}
+		else {
+			$fileInput.attr('disabled', true)
+			$fileInputLabel.attr('disabled', true)
+		}
+
+		// If the data-previous-value attribute has been set and there's already a file uploaded, that means the user has already selected a file
+		if (previousFileType && $fileInput.get(0).files[0]) {
+			const onConfirmClick = `
+				entryForm.updateAttachmentAcceptString('${fileTypeSelectID}');
+				$('#${fileInputID}').click();
+			`;
+			const footerButtons = `
+				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal" onclick="$('#${fileTypeSelectID}').val('${previousFileType}');">No</button>
+				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
+			`;
+			const fileTypeCode = $fileTypeSelect.val();
+			const fileType = $fileTypeSelect.find('option')
+				.filter((_, option) => {return option.value === fileTypeCode})
+				.html()
+				.toLowerCase();
+			showModal(`You already selected a file. Do you want to upload a new <strong>${fileType}</strong> file instead?`, `Upload a new file?`, 'confirm', footerButtons);
+		} else {
+			_this.updateAttachmentAcceptString($fileTypeSelect.attr('id'));
+		}
+	}
+
+
+	/*
+	Read an image or PDF
+	*/
+	readAttachment(sourceInput, $progressIndicator) {
+
+		const $barContainer = $progressIndicator.closest('.attachment-progress-bar-container');
+	 	const file = sourceInput.files[0];
+		
+		if (sourceInput.files && file) {
+			var reader = new FileReader();
+			const fileName = file.name;
+
+			reader.onprogress = function(e) {
+				// Show progress
+				// **** unfortunately a browser bug seems to prevent onprogress from being
+				//		called until the file is completely loaded *****
+				if (e.lengthComputable) {
+					const progress = e.loaded / e.total;
+					$progressIndicator.css('width', `${$barContainer.width() * progress}px`)
+				}
+			}
+
+			reader.onerror = function(e) {
+				// Hide preview and progress bar and notify the user
+				$progressBar.ariaHide();
+				showModal(`The file '${fileName}' failed to upload correctly. Make sure your internet connection is consistent and try again.`, 'Upload failed');
+			}
+
+			// Get local reference to .attachments attribute because `this` refers to the FieReader 
+			//	when used within a method of the Reader's 
+			const attachments = this.attachments;
+			reader.onload = function(e) {
+				
+				// Hide the progress bar
+				$barContainer.ariaHide(true);
+				
+				// Reset the progress indicator
+				$progressIndicator.css('width', '0px');
+
+				// Store in memory for now
+				attachments[sourceInput.id] = {
+					file: file,
+					src: e.target.result,
+					url: URL.createObjectURL(file)
+				};
+				
+				const $listItem = $barContainer.closest('.data-list-item');
+				$listItem.find('.file-input-label')
+					.ariaHide(true);
+				
+				// Show the filename field and the preview button
+				$listItem.find('.file-name-field')
+					.val(fileName)
+					.ariaHide(false);
+				$listItem.find('.preview-attachment-button')
+					.ariaHide(false);
+
+			}
+
+			reader.readAsDataURL(file); 
+			
+		}
+	}
+
+
+	/*
+	Event handler for attachment input
+	*/
+	onAttachmentInputChange(e) {
+
+		const el = e.target; 
+		const $input = $(el);
+
+		// If the user cancels, it resets the input files attribute to null 
+		//	which is dumb. Reset it to the previous file and exit
+		if (el.files.length === 0) {
+			el.files = _this.attachmentFiles[el.id];
+			return
+		}
+
+		$input.siblings('.file-input-label').ariaHide(true);
+		const $progressIndicator = $input.closest('.data-list-item')
+			.find('.attachment-progress-bar-container')
+				.ariaHide(false) // unhide
+				.find('.attachment-progress-indicator');
+
+		$input.siblings('.file-name-field')
+			.val(el.files[0].name)
+			.change();
+		
+		this.readAttachment(el, $progressIndicator);
+	}
+
+
+	/*
+	Show the attachment when the user clicks its 'open' button
+	*/
+	onPreviewAttachmentButtonClick(e) {
+		const $listItem = $(e.target).closest('.data-list-item');
+		const fileInput = $listItem.find('input[type=file]').get(0);
+		const attachment = this.attachments[fileInput.id];
+
+		// Check that the attachment has been loaded. This should always be the case
+		//	because the preview button shouldn't be visible otherwise, but best to 
+		//	check anyway
+		if (!attachment) return;
+
+		const src = attachment.src;
+			
+		const $attachmentModal = $('#attachment-modal');
+		if (attachment.file.type.toLowerCase().endsWith('pdf')) {
+			// hide the image
+			$attachmentModal.find('img').ariaHide(true);
+
+			// For some stupid reason, loading a different PDF doesn't work so remove the 
+			//	old object and replace it if this is a different PDF
+			const $modalBody = $attachmentModal.find('.modal-img-body')//.remove()
+			let $object = $modalBody.find('object');
+			const currentData = $object.attr('data');
+			if (currentData !== attachment.url) {
+				$object.remove();
+				$object = $modalBody.append(
+					`<object type="application/pdf" data="${attachment.url}" width="100%" height="100%">Sorry, your browser doesn't support viewing a PDF</object>`
+				);
+			}
+
+			// Reset the modal width in case an image was shown before and manually set it
+			$modalBody.css('width', '');
+			
+		} 
+		// otherwise, it's an image
+		else {
+			// Hide the PDF object element
+			$attachmentModal.find('object').ariaHide(true);
+			
+			// Show the pdf <object> and set its 'data' attribute
+			const $img = $attachmentModal.find('img')
+				.ariaHide(false)
+				.attr('src', attachment.src);
+			//$img.siblings(':not(.modal-header-container)').addClass('hidden');
+			const img = $img.get(0);
+			const imgWidth = Math.min(
+				window.innerHeight * .8 * img.naturalWidth/img.naturalHeight,//img.height doesn't work because display height not set immediately
+				window.innerWidth - 40
+			);
+			$img.closest('.modal').find('.modal-img-body').css('width', imgWidth);
+		}
+
+		// Show the modal
+		$attachmentModal.modal();
+		
+	}
 
 	onAddRouteButtonClick(e) {
 		if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {

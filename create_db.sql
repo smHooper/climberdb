@@ -1,6 +1,7 @@
 CREATE DATABASE climbing_permits;
 
 --Create lookup tables
+CREATE TABLE IF NOT EXISTS attachment_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS country_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS cmc_status_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS communication_device_type_codes (id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
@@ -32,7 +33,7 @@ CREATE TABLE transaction_type_codes (
 	is_payment BOOLEAN,
 	permit_fee_multiplier INTEGER,
 	entrance_fee_multiplier	INTEGER,
-	youth_discount_multiplier	INTEGER,
+	youth_discount_multiplier INTEGER,
 	default_fee MONEY
 );
 CREATE TABLE IF NOT EXISTS user_role_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
@@ -148,6 +149,22 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	last_modified_by VARCHAR(50),
 	last_modified_time TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS attachments (
+	id SERIAL PRIMARY KEY,
+	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	attachment_type_code INTEGER REFERENCES attachment_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	date_received DATE,
+	attachment_notes TEXT, 
+	client_filename VARCHAR(255),
+	mime_type varchar(50),
+	file_path VARCHAR(255), 
+	file_size_kb INTEGER,  
+	datetime_attached TIMESTAMP, 
+	attached_by VARCHAR(50), 
+	datetime_last_changed TIMESTAMP, 
+	last_changed_by VARCHAR(50)
+)
 
 CREATE TABLE IF NOT EXISTS expedition_member_routes (
 	id SERIAL PRIMARY KEY,

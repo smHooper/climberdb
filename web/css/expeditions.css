@@ -88,6 +88,96 @@
 
 /* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
 
+/* -------------------- attachment modal --------------*/
+.modal.lightbox-modal{
+    -webkit-transition: opacity .2s linear, none;
+    -moz-transition: opacity .2s linear, none;
+    -ms-transition: opacity .2s linear, none;
+    -o-transition: opacity .2s linear, none;
+    transition: opacity .2s linear, none;
+    z-index: 10000;
+}
+
+.modal.lightbox-modal.fade .modal-dialog {
+  /* turn off slide effect of the "fade" class*/
+  transition: none;
+  transform: none;
+
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+.lightbox-modal .modal-content {
+  background-color: rgba(0,0,0,0);
+  border: none;
+  height: 80%;
+  /* display: flex; */
+  width: 80%;
+  justify-content: center;
+  align-items: center;
+  margin-top: -3rem; /*adjust for header height*/
+}
+
+.modal-img-body {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.modal-img-header {
+  padding: 0;
+}
+
+.modal-img-header .close,
+.modal-img-body-header .close {
+  color: white;
+}
+.modal-img-body-header .close img {
+  filter: invert(100%);/*makes black SVG imgs white*/
+}
+.modal-img-body {
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.modal-header-container {
+  width: 100%;
+  height: 3rem;
+  display: flex;
+  justify-content: center;
+}
+
+.modal-img-body-header {
+  width: 100%;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-img-body-header > .close {
+  color: white;
+  font-size: 2rem;
+}
+
+.modal-img {
+  width: 100%;
+  height: calc(100% - 20px - 1rem);
+  object-fit: contain;
+}
+/* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
+
 /*----- expedition search bar dropdowns ------*/
 .fuzzy-search-bar-drawer {
 	width: 100%;
@@ -516,11 +606,49 @@
 	width: 100%;
 	margin-top: 25px;
 }
+
+.file-input-label {
+	width: 150px;
+}
+.preview-attachment-button {
+	min-width: 0;
+	width: 100px;
+}
+.attachment-progress-bar-container {
+	height: 100%;
+	display: flex;
+	align-items: center;
+}
+.attachment-progress-bar {
+	width: 100%;
+	height: .75rem;
+	border-radius: 1rem;
+	background-color: #D4D4D4;
+	overflow: hidden;
+}
+.attachment-progress-indicator {
+	background-color: var(--ui-secondary-highlight-color);
+	width: 0%;
+	height: 100%;
+	border-top-right-radius: 0px;
+	border-bottom-right-radius: 0px;
+	text-align: right;
+	text-indent: 5px;
+	font-size: .7rem;
+	color: white;
+	line-height: 100%;
+	transition: all 0.1s linear;
+}
+
+.preview-attachment-button-column {
+	width: 120px;
+}
 .transactions-container-body,
 .transactions-header-container {
 	width: 100%;
 }
-.transactions-header-container {
+.transactions-header-container,
+.attachments-header-container {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -541,10 +669,13 @@
 }
 .expedition-modal .transaction-type-column,
 .expedition-modal .payment-method-column,
-.expedition-modal .transaction-date-column {
+.expedition-modal .transaction-date-column, 
+.expedition-modal .document-type-column, 
+.expedition-modal .attachment-received-column, 
+.expedition-modal .file-name-column {
 	max-width: 200px;
 }
-.transaction-entry-metadata-column {
+.data-list-metadata-column {
 	width: 100px;
 }
 .route-member-name-column {
