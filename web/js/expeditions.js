@@ -341,6 +341,10 @@ class ClimberDBExpeditions extends ClimberDB {
 			$newItem.attr('data-parent-table-id', $card.data('table-id'));
 		});
 
+		$(document).on('click', '.delete-attchment-button', e => {
+			this.onDeleteAttachmentButtonClick(e);
+		})
+
 		// When the leader input checkbox changes, set the transparent class appropriately
 		$(document).on('change', '.leader-checkbox-container .input-checkbox', e => {
 			const $checkbox = $(e.target).closest('.input-checkbox');
@@ -3971,6 +3975,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				};
 				
 				const $listItem = $barContainer.closest('.data-list-item');
+				
+				// hide the select-file button (label)
 				$listItem.find('.file-input-label')
 					.ariaHide(true);
 				
@@ -4076,6 +4082,35 @@ class ClimberDBExpeditions extends ClimberDB {
 		$attachmentModal.modal();
 		
 	}
+
+
+	/*
+	Attachment delete button handler
+	*/
+	onDeleteAttachmentButtonClick(e) {
+		const $li = $(e.target).closest('.data-list-item');
+		if ($li.is('.new-list-item')) {
+			this.deleteListItem($li);
+		} else {
+			
+			const onConfirmClickHandler = () => {
+				$('.modal-button.confirm-delete').click( () => {
+					const dbID = $li.data('table-id');
+					this.deleteListItem($li, 'attachments', dbID);
+				})
+			}
+			const message = 
+				'Are you sure you want to delete this Attachment? This action is permanent' + 
+				' and cannot be undone.';
+			const title = 'Delete Attachment?';
+			const footerButtons = 
+				'<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>' +
+				'<button class="generic-button modal-button danger-button close-modal confirm-delete" data-dismiss="modal">Delete</button>';
+			showModal(message, title, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});	
+		}
+
+	}
+
 
 	onAddRouteButtonClick(e) {
 		if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
