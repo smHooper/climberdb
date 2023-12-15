@@ -1416,10 +1416,6 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// collect info about inserts so attributes can be changes such that future edits are treated as updates
 		var inserts = []; //{container: container, tableName: tableName}
-
-
-
-
 		// get expedition table edits
 		var expeditionValues = [];
 		var expeditionFields = []; 
@@ -3957,7 +3953,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		if (sourceInput.files && file) {
 			var reader = new FileReader();
-			const fileName = file.name;
+			const filename = file.name;
 
 			reader.onprogress = function(e) {
 				// Show progress
@@ -3972,7 +3968,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			reader.onerror = function(e) {
 				// Hide preview and progress bar and notify the user
 				$progressBar.ariaHide();
-				showModal(`The file '${fileName}' failed to upload correctly. Make sure your internet connection is consistent and try again.`, 'Upload failed');
+				showModal(`The file '${filename}' failed to upload correctly. Make sure your internet connection is consistent and try again.`, 'Upload failed');
 			}
 
 			// Get local reference to .attachments attribute because `this` refers to the FieReader 
@@ -4001,7 +3997,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				
 				// Show the filename field and the preview button
 				$listItem.find('.file-name-field')
-					.val(fileName)
+					.val(filename)
 					.ariaHide(false);
 				$listItem.find('.preview-attachment-button')
 					.ariaHide(false);
@@ -4022,11 +4018,22 @@ class ClimberDBExpeditions extends ClimberDB {
 		const el = e.target; 
 		const $input = $(el);
 
-		// If the user cancels, it resets the input files attribute to null 
-		//	which is dumb. Reset it to the previous file and exit
-		if (el.files.length === 0) {
-			el.files = _this.attachmentFiles[el.id];
-			return
+		// If the user cancels, just exit
+		if (el.files.length === 0) return;
+
+		// Make sure the filename doesn't already exist. This is only necessary because 
+		//	when saving multiple attachments, the file and associated info is related 
+		//	by the filename. It's also probably just good practice to enforce
+		const existingfilenames = $('.file-name-field')
+			.map((_, el) => el.value)
+			.get() // get as JS array, not jQuery
+			.filter(v => v) // drop null values
+		const filename = el.files[0].name;
+		if (existingfilenames.includes(filename)) {
+			showModal(`An attachment with the filename <strong>${filename}</strong> already` + 
+				' exists. All attachments for an expedition must have unique filenames.' + 
+				' Please rename the file and upload it again.', 'Duplicate filename')
+			return;
 		}
 
 		$input.siblings('.file-input-label').ariaHide(true);
@@ -4036,7 +4043,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				.find('.attachment-progress-indicator');
 
 		$input.siblings('.file-name-field')
-			.val(el.files[0].name)
+			.val(filename)
 			.change();
 		
 		this.readAttachment(el, $progressIndicator);

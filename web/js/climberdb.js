@@ -648,7 +648,7 @@ class ClimberDB {
 		if (parentDBID !== null) $newItem.data('parent-table-id', parentDBID);
 		if (dbID !== null) $newItem.attr('data-table-id', dbID);
 
-		for (const el of $newItem.find('.input-field')) {
+		for (const el of $newItem.find('.input-field, .attachment-input')) {
 			el.id = `${el.id}-${dbID || itemIndex}`;
 			const $el = $(el);
 			if ($el.data('dependent-target')) 
@@ -722,7 +722,7 @@ class ClimberDB {
 		// Add to the accordion
 		$newCard.addClass(newCardClass).appendTo($accordion).fadeIn();
 
-		for (const el of $newCard.find('.input-field')) {
+		for (const el of $newCard.find('.input-field, .attachment-input')) {
 			const $el = $(el);
 			const newID = `${el.id}-${cardIndex}`;
 			const dataTable = $el.data('table-name');
