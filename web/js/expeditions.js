@@ -335,10 +335,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		$(document).on('click', '.add-attachment-button', e => {
-			const $newItem = this.addNewListItem($(e.target).closest('.attachments-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
-
-			const $card = $newItem.closest('.card');
-			$newItem.attr('data-parent-table-id', $card.data('table-id'));
+			this.onAddAttachmentItemButtonClick(e);
 		});
 
 		$(document).on('click', '.delete-attchment-button', e => {
@@ -428,7 +425,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(document).on('click', '.preview-attachment-button', e => {
 			this.onPreviewAttachmentButtonClick(e)
 		})
-		// ^^^^^^^^^^ Members/transactions ^^^^^^^^^^^
+		// ^^^^^^^^^^ Members/transactions/attachments ^^^^^^^^^^^
 
 		// ---------- Route stuff ----------
 
@@ -1371,8 +1368,9 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	saveEdits() {
 
-		var sqlStatements = [];
-		var sqlParameters = [];
+		var sqlStatements = [],
+			sqlParameters = [],
+			attachmentDeferreds = [];
 		
 		const $editParents = $(`
 				.data-list-item:not(.cloneable), 
@@ -1418,6 +1416,9 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// collect info about inserts so attributes can be changes such that future edits are treated as updates
 		var inserts = []; //{container: container, tableName: tableName}
+
+
+
 
 		// get expedition table edits
 		var expeditionValues = [];
@@ -1596,7 +1597,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	answered first. If it wasn't necessary, the permitCountDeferred was
 		//	resolved immediately and the request to save the data will fire 
 		//	immediately as well
-		return permitCountDeferred.then(() => {
+		return $.when(permitCountDeferred, ...attachmentDeferreds).then(() => {
 
 			return $.post({ 
 				url: 'climberdb.php',
@@ -3884,6 +3885,24 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	/*
+	Add new attachment unless this expedition member has yet to be saved
+	*/
+	onAddAttachmentItemButtonClick(e) {
+		const $button = $(e.target);
+		// Prevent the user from adding an attachment to a new expedition member. This is so that, 
+		//	when saving an attachment, there is already an expedition_member_id to be able to relate 
+		//	the new attachment record to an expedition_member record. In this case, saving the attachment 
+		//	file and db record can be handled completely server-side 
+		if ($button.closest('.card').is('.new-card')) {
+			showModal('You must save this expedition member before you can add an attachment.', 'Invalid Operation');
+			return;
+		}
+		const $newItem = this.addNewListItem($button.closest('.attachments-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
+		const $card = $newItem.closest('.card');
+		$newItem.attr('data-parent-table-id', $card.data('table-id'));
+	}
+
 
 	/*
 	Handler for when the user changes the attachment type
@@ -4091,8 +4110,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $li = $(e.target).closest('.data-list-item');
 		if ($li.is('.new-list-item')) {
 			this.deleteListItem($li);
-		} else {
-			
+		} else {			
 			const onConfirmClickHandler = () => {
 				$('.modal-button.confirm-delete').click( () => {
 					const dbID = $li.data('table-id');
@@ -4108,7 +4126,6 @@ class ClimberDBExpeditions extends ClimberDB {
 				'<button class="generic-button modal-button danger-button close-modal confirm-delete" data-dismiss="modal">Delete</button>';
 			showModal(message, title, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});	
 		}
-
 	}
 
 
