@@ -1055,7 +1055,7 @@ class ClimberDB {
 
 
 	pythonReturnedError(resultString) {
-
+		resultString = String(resultString); // force as string in case it's something else
 		return resultString.startsWith('ERROR: Internal Server Error') ?
 		   resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/)[0].trim() :
 		   false;
