@@ -27,10 +27,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.lastSearchQuery = (new Date()).getTime();
 		this.totalResultCount;
 		this.climberForm;
-		this.edits = {
-			updates: {},
-			inserts: {}
-		}
 		this.historyBuffer = []; // for keeping track of browser navigation via back and forward buttons
 		this.currentHistoryIndex = 0;
 		this.attachments = {};
@@ -1365,6 +1361,47 @@ class ClimberDBExpeditions extends ClimberDB {
 		return [sql, parameters];
 	}
 
+	/*
+	Helper method to set attributes of inputs and their containers after successfully saving newly inserted data. 
+	The helper function is used after saving new attachments and after INSERTing other data. 
+	*/
+	setInsertedIDs(result, inserts) {
+
+		var expeditionID = this.expeditionInfo.expeditions.id;
+		for (const i in result) {
+			const returnedIDs = result[i];
+			const id = returnedIDs.id;
+			if (id == null || id === '') continue;
+
+			const {container, tableName} = inserts[i];
+			if (tableName === 'expeditions') {
+				expeditionID = id;
+				
+				// this was a new expedition, so add the expedition to the URL history
+				this.updateURLHistory(expeditionID, $('#expedition-id-input'));
+			}
+
+			// Set the card's/list item's class and inputs' attributes so changes will register as updates
+			const $container = $(container).closest('.data-list-item, .card');
+			const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
+			if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
+			const $inputs = $container.closest('.data-list-item, .card')
+				.removeClass('new-card')
+				.removeClass('new-list-item')
+				.attr('data-table-id', id)
+				.attr('data-table-name', tableName)
+				.find('.input-field.dirty')
+					.attr('data-table-name', tableName)
+					.attr('data-table-id', id)
+					.removeClass('dirty');
+			const foreignIDs = Object.entries(returnedIDs).filter(([column, _]) => column !== 'id');
+			if (Object.keys(foreignIDs).length) $inputs.data('foreign-ids', Object.fromEntries(foreignIDs));
+			
+		}
+
+		return expeditionID;
+	}
+
 
 	saveEdits() {
 
@@ -1410,12 +1447,82 @@ class ClimberDBExpeditions extends ClimberDB {
 		const userName = this.userInfo.ad_username;
 		const lastModified = [userName, now];
 		
+		// collect info about inserts so attributes can be changes such that future edits are treated as updates
+		var inserts = [], //{container: container, tableName: tableName}
+			attachmentInserts = []; 
+		
+		// Save new attachments before writing other changes to the DB because files need
+		//	to be saved to the server
+		var attachmentData = {},
+			attachmentItems = {};
+		// package the file up in a FormData instance because the file isn't within 
+		//	a <form> element
+		const formData = new FormData(); 
+		const $attachmentItems = $('#expedition-members-accordion .card:not(.cloneable) .attachments-tab-pane .data-list > .new-list-item:not(.cloneable)');
+		for (const li of $attachmentItems) {
+			const $li = $(li);
+			const fileInputID = $li.find('.attachment-input').attr('id');
+			const attachmentFile = this.attachments[fileInputID].file;
+			const filename = attachmentFile.name;
+			formData.append(filename, attachmentFile, filename)
+			attachmentData[filename] = {
+				expedition_member_id: $li.closest('.card').data('table-id'),
+				attachment_type_code: $li.find('.input-field[name=attachment_type_code]').val(),
+				attachment_type_code: $li.find('.input-field[name=date_recieved]').val(),
+				attachment_notes: $li.find('.input-field[name=attachment_notes]').val(),
+				client_filename: filename,
+				mime_type: attachmentFile.type,
+				file_size_kb: Math.ceil(attachmentFile.size / 1000),
+				datetime_attached: now,
+				attached_by: userName,
+				datetime_last_changed: now,
+				last_changed_by: userName
+			}
+			// Capture the filename/list-item relationship so .data() attributes can be set later
+			// attachmentItems[filename] = $li;
+
+			attachmentInserts.push({container: li, tableName: 'attachments'});
+		}
+		formData.append('attachment_data', JSON.stringify(attachmentData))
+		const failedUploadMessage = 
+			'Your edits could not be saved because uploading attachments' +
+			` failed with the error \n"{error}"\n. Make sure the file is valid` + 
+			` and try again. If this problem persists, ` + 
+			` <a href="mailto:${this.config.db_admin_email}">contact the` + 
+			` database adminstrator</a>.`;
+		const attachmentDeferred =
+			$.post({
+				url: 'flask/attachments/add_expedition_member_files',
+				data: formData,
+				contentType: false,
+				processData: false,
+				dataType: 'json'
+			}).done(response => {
+				const failedFiles = response.failed_files;
+				if (this.pythonReturnedError(response)) {
+					showModal(failedUploadMessage.replace(/\{error\}/, response), 'Attachment Upload Failed');
+					hideLoadingIndicator();
+				} else if (failedFiles.length) {
+					if (Array.isArray(failedFiles) && (failedFiles.length)) {
+						const message = 'Your edits were not saved because the following files failed to upload:<ul>' +
+							failedFiles.map(({filename}) => `<li>${filename}</li>`).join('') + '</ul>';
+						showModal(message, 'Attachment Upload Failed');
+						print(response);
+						hideLoadingIndicator();
+					}
+				} else { // attachments all saved successfully
+					const returnedIDs = response.attachment_ids;
+					this.setInsertedIDs(returnedIDs, attachmentInserts)
+				}
+			}).fail((xhr, status, error) => {
+				showModal(failedUploadMessage.replace(/\{error\}/, error), 'Attachment Upload Failed');
+				hideLoadingIndicator()
+			})
+
 		// determine if this is a new expedition or not
 		const expeditionID = $('#input-planned_departure_date').data('table-id') || null;
 		const isNewExpedition = expeditionID === undefined;
 
-		// collect info about inserts so attributes can be changes such that future edits are treated as updates
-		var inserts = []; //{container: container, tableName: tableName}
 		// get expedition table edits
 		var expeditionValues = [];
 		var expeditionFields = []; 
@@ -1491,6 +1598,26 @@ class ClimberDBExpeditions extends ClimberDB {
 				const [sql, parameters] = this.inputsToSQL(
 					li, 
 					'transactions', 
+					now, 
+					userName, 
+					{
+						updateID: dbID || null,
+						foreignIDs: {expedition_members: $(li).data('parent-table-id')},
+						insertArray: inserts
+					}
+				);
+				sqlStatements.push(sql);
+				sqlParameters.push(parameters);
+			}
+
+			// attachment updates
+			const $attachmentItems = $card.find('.attachments-tab-pane .data-list > li.data-list-item:not(.cloneable, .new-list-item)')
+				.has('.input-field.dirty');
+			for (const li of $attachmentItems) {
+				const dbID = $(li).data('table-id');
+				const [sql, parameters] = this.inputsToSQL(
+					li, 
+					'attachments', 
 					now, 
 					userName, 
 					{
@@ -1593,7 +1720,18 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	answered first. If it wasn't necessary, the permitCountDeferred was
 		//	resolved immediately and the request to save the data will fire 
 		//	immediately as well
-		return $.when(permitCountDeferred, ...attachmentDeferreds).then(() => {
+		return $.when(permitCountDeferred, attachmentDeferred).then((permitCountResponse, attachmentResponse) => {
+			// If the only changes were new attachments, exit
+			if (!$('.dirty').length) {
+				hideLoadingIndicator();
+				const expeditionID = this.expeditionInfo.expeditions.id;
+				if (expeditionID) this.queryExpedition(expeditionID, {showOnLoadWarnings: false}); //suppress flagged expedition member warnings
+				return $.Deferred().resolve();
+			}
+			if (attachmentResponse[0].failed_files.length) {
+				hideLoadingIndicator();
+				return $.Deferred.reject();
+			}
 
 			return $.post({ 
 				url: 'climberdb.php',
@@ -1601,47 +1739,14 @@ class ClimberDBExpeditions extends ClimberDB {
 				cache: false
 			}).done(queryResultString => {
 				if (climberDB.queryReturnedError(queryResultString)) { 
-					showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+					showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists.`, 'Unexpected error');
 					return;
 				} else {
 					const result = $.parseJSON(queryResultString)
 						.filter(row => row != null);
-					var expeditionID = this.expeditionInfo.expeditions.id;
-					for (const i in result) {
-						const returnedIDs = result[i];
-						const id = returnedIDs.id;
-						if (id == null || id === '') continue;
-
-						const {container, tableName} = inserts[i];
-						if (tableName === 'expeditions') {
-							expeditionID = id;
-							
-							// this was a new expedition, so add the expedition to the URL history
-							this.updateURLHistory(expeditionID, $('#expedition-id-input'));
-						}
-
-						// Set the card's/list item's class and inputs' attributes so changes will register as updates
-						const $container = $(container).closest('.data-list-item, .card');
-						const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
-						if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
-						const $inputs = $container.closest('.data-list-item, .card')
-							.removeClass('new-card')
-							.removeClass('new-list-item')
-							.attr('data-table-id', id)
-							.attr('data-table-name', tableName)
-							.find('.input-field.dirty')
-								.attr('data-table-name', tableName)
-								.attr('data-table-id', id);
-						const foreignIDs = Object.entries(returnedIDs).filter(([column, _]) => column !== 'id');
-						if (Object.keys(foreignIDs).length) $inputs.data('foreign-ids', Object.fromEntries(foreignIDs));
-						
-					}
-
+					const expeditionID = this.setInsertedIDs(result, inserts);
 
 					// update in-memory data for each edited input
-					const edits = this.edits;
-					const expeditionInfo = this.expeditionInfo;
-					const $editedInputs =  $('.input-field.dirty').removeClass('dirty');
 					this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
 
 
@@ -3512,6 +3617,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 
 					// Get data for right-side tables
+					// TODO: add attachments
 					let members = this.expeditionInfo.expedition_members;
 					let transactions = this.expeditionInfo.transactions;
 					let routes = this.expeditionInfo.expedition_member_routes;

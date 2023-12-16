@@ -12,9 +12,12 @@ import pandas as pd
 import smtplib
 
 from datetime import datetime
+from uuid import uuid4
 
 from flask import Flask, render_template, request, json, url_for
 from flask_mail import Mail, Message
+
+from sqlalchemy import text as sqlatext
 
 from export_briefings import briefings_to_excel
 
@@ -75,8 +78,8 @@ def get_config_from_db():
 get_config_from_db()
 
 
-def get_exports_dir():
-	return os.path.join(os.path.dirname(__file__), '..', 'exports')
+def get_content_dir(dirname='exports'):
+	return os.path.join(os.path.dirname(__file__), '..', dirname)
 
 
 def get_random_string(length=8):
@@ -351,7 +354,7 @@ def get_confirmation_letter(expedition_id):
 	#pdf_data = weasyprint.render_pdf(html, download_filename=pdf_filename)
 	
 	# write to disk as PDF
-	pdf_path = os.path.join(get_exports_dir(), pdf_filename)
+	pdf_path = os.path.join(get_content_dir('exports'), pdf_filename)
 	html.write_pdf(pdf_path)
 
 	return 'exports/' + pdf_filename #pdf_data
@@ -383,7 +386,7 @@ def get_registration_card(expedition_id):
 	html = weasyprint.HTML(string=html)
 	
 	# write to disk as PDF
-	pdf_path = os.path.join(get_exports_dir(), pdf_filename)
+	pdf_path = os.path.join(get_content_dir('exports'), pdf_filename)
 	html.write_pdf(pdf_path)
 	#pdf_data = weasyprint.render_pdf()
 	
@@ -407,7 +410,7 @@ def get_transaction_history(expedition_id):
 	html = weasyprint.HTML(string=html)
 	
 	# write to disk as PDF
-	pdf_path = os.path.join(get_exports_dir(), pdf_filename)
+	pdf_path = os.path.join(get_content_dir('exports'), pdf_filename)
 	html.write_pdf(pdf_path)
 
 	return 'exports/' + pdf_filename #pdf_data
@@ -429,7 +432,7 @@ def get_briefing_schedule():
 	data['time_slots'] = json.loads(data['time_slots'])
 	data['briefings'] = json.loads(data['briefings'])
 
-	excel_filename = briefings_to_excel(data, get_exports_dir())
+	excel_filename = briefings_to_excel(data, get_content_dir('exports'))
 	
 	return 'exports/' + excel_filename
 
@@ -468,7 +471,7 @@ def export_query():
 	
 	data = dict(request.form)
 
-	# with open(os.path.join(get_exports_dir(), 'export_data.json'), 'w') as f:
+	# with open(os.path.join(get_content_dir('exports'), 'export_data.json'), 'w') as f:
 	# 	json.dump(data, f)
 
 	# Make sure any filename is unique
@@ -490,7 +493,7 @@ def export_query():
 		
 		# If a template Excel file exists, make a copy in the exports directory to make a new file to write to
 		excel_filename =  data['base_filename'] + '.xlsx' if 'base_filename' in data else f'{query_name}_{random_string}.xlsx'
-		excel_path = os.path.join(get_exports_dir(), excel_filename)
+		excel_path = os.path.join(get_content_dir('exports'), excel_filename)
 		excel_template_path = os.path.join(os.path.dirname(__file__), 'templates', f'{query_name}.xlsx')
 		if os.path.isfile(excel_template_path):
 			shutil.copy(excel_template_path, excel_path)
@@ -539,7 +542,7 @@ def export_query():
 
 		# write to disk
 		pdf_filename = f'{query_name}.pdf' #f'{query_name}_{random_string}.pdf'
-		pdf_path = os.path.join(get_exports_dir(), pdf_filename)
+		pdf_path = os.path.join(get_content_dir('exports'), pdf_filename)
 		html.write_pdf(pdf_path)
 
 		return 'exports/' + pdf_filename
@@ -589,6 +592,47 @@ def get_next_permit_number():
 			return str(int((row.max_permit or '0000').split('-')[-1]) + 1)
 		else:
 			raise RuntimeError('Failed to get next permit number')
+
+
+@app.route('/flask/attachments/add_expedition_member_files', methods=['POST'])
+def save_attachment():
+	
+	attachment_data = json.loads(request.form['attachment_data'])
+	engine = get_engine()
+	failed_files = []
+	attachment_ids = [] # return to set UI element .data() attributes
+	with engine.connect() as conn:
+		for filename, data in attachment_data.items():
+			try:
+				client_filename = data['client_filename']
+				uploaded_files = request.files[client_filename]
+				client_basename, extension = os.path.splitext(client_filename)
+				server_filename = str(uuid4()) + extension	
+				file_path = os.path.join(get_content_dir('attachments'), server_filename)
+				data['file_path'] = os.path.abspath(file_path)
+				request.files[client_filename].save(file_path)
+				sorted_columns = sorted(data.keys())
+				sql = f'''
+					INSERT INTO attachments ({','.join(sorted_columns)}) 
+					VALUES ({','.join([':' + k for k in sorted_columns])})
+					RETURNING id
+				'''
+				cursor = conn.execute(sqlatext(sql), data)
+				result = cursor.first()
+				attachment_ids.append({
+					'id': result.id, 
+					'expedition_member_id': data['expedition_member_id']
+				})
+			except Exception as e:
+				failed_files.append({
+					'filename': client_filename,
+					'error': str(e),
+					'attachment_data': data
+				})
+
+	return {'failed_files': failed_files, 'attachment_ids': attachment_ids}
+
+
 
 #---------------- DB I/O ---------------------#
 
