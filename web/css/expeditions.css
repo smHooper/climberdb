@@ -672,8 +672,14 @@
 .expedition-modal .transaction-date-column, 
 .expedition-modal .document-type-column, 
 .expedition-modal .attachment-received-column, 
-.expedition-modal .file-name-column {
+.expedition-modal .attachment-type-field {
 	max-width: 200px;
+}
+.expedition-modal .file-name-column {
+	max-width: 250px;
+}
+.expedition-modal .preview-attachment-button-column {
+	max-width: 100px;
 }
 .data-list-metadata-column {
 	width: 100px;
@@ -712,12 +718,14 @@
 }
 .transactions-tab-pane .refund-post-item .input-field,
 .transactions-tab-pane .refund-post-item .unit-symbol,
-.transactions-tab-pane .entry-metadata-field {
+.transactions-tab-pane .entry-metadata-field,
+.attachments-tab-pane .entry-metadata-field {
 	color: hsl(0, 0%, 40%);
 	font-style: italic;
 }
 .transactions-tab-pane .refund-post-item .input-field,
-.transactions-tab-pane .entry-metadata-field {
+.transactions-tab-pane .entry-metadata-field,
+.attachments-tab-pane .entry-metadata-field {
 	pointer-events: none;
 	border-bottom: none;
 /*	position: relative; /*allows hiding calendar-date-picker*/
