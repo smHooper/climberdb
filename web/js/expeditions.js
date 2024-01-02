@@ -12,6 +12,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			expedition_members: {data: {}, order: []}, 
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
+			attachments: {}, // props are exp. member IDs
 			cmc_checkout: {data: {}, order: []},
 			communication_devices: {data: {}, order: []},
 			briefings: {} 
@@ -1468,15 +1469,15 @@ class ClimberDBExpeditions extends ClimberDB {
 			attachmentData[filename] = {
 				expedition_member_id: $li.closest('.card').data('table-id'),
 				attachment_type_code: $li.find('.input-field[name=attachment_type_code]').val(),
-				attachment_type_code: $li.find('.input-field[name=date_recieved]').val(),
+				date_received: $li.find('.input-field[name=date_received]').val(),
 				attachment_notes: $li.find('.input-field[name=attachment_notes]').val(),
 				client_filename: filename,
 				mime_type: attachmentFile.type,
 				file_size_kb: Math.ceil(attachmentFile.size / 1000),
-				datetime_attached: now,
-				attached_by: userName,
-				datetime_last_changed: now,
-				last_changed_by: userName
+				entry_time: now,
+				entered_by: userName,
+				last_modified_time: now,
+				last_modified_by: userName
 			}
 			// Capture the filename/list-item relationship so .data() attributes can be set later
 			// attachmentItems[filename] = $li;
@@ -1730,7 +1731,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 			if (attachmentResponse[0].failed_files.length) {
 				hideLoadingIndicator();
-				return $.Deferred.reject();
+				return $.Deferred().reject();
 			}
 
 			return $.post({ 
@@ -3209,6 +3210,28 @@ class ClimberDBExpeditions extends ClimberDB {
 			.closest('.collapse').collapse(nMembers ? 'show' : 'hide');
 	}
 
+
+	/*
+	Helper function to show/hide fields/buttons when an attachment file is selected or an existing 
+	attachment is loaded
+	*/
+	setAttachmentFileInput($listItem, filename) {
+		// hide the select-file button (label)
+		$listItem.find('.file-input-label')
+			.ariaHide(true);
+		
+		// Show the filename field and the preview button
+		$listItem.find('.file-name-field')
+			.val(filename)
+			.ariaHide(false);
+		$listItem.find('.preview-attachment-button')
+			.ariaHide(false);
+	}
+
+
+	/*
+	Add a new card to the expedition member accordion. Fill fields if data is given
+	*/
 	addExpeditionMemberCard({expeditionMemberID=null, firstName=null, lastName=null, climberID=null, showCard=false, isNewCard=false, climberInfo={}}={}) {
 		const expeditionMemberInfo = this.expeditionInfo.expedition_members.data[expeditionMemberID];
 		if (expeditionMemberInfo) {
@@ -3253,8 +3276,11 @@ class ClimberDBExpeditions extends ClimberDB {
 		for (const el of $newCard.find('.nav-tabs, .tab-content')) {
 			el.id = el.id + cardID;
 		}
-		const $transactionsList = $newCard.find('.transactions-tab-pane	.data-list');
+		const $transactionsList = $newCard.find('.transactions-tab-pane .data-list');
 		$transactionsList.attr('id', $transactionsList.attr('id') + '-' + climberID);
+		
+		const $attachmentsList = $newCard.find('.attachments-tab-pane .data-list');
+		$attachmentsList.attr('id', $attachmentsList.attr('id') + '-' + climberID);
 		
 		// Fill inputs
 		if (expeditionMemberInfo) {
@@ -3286,6 +3312,37 @@ class ClimberDBExpeditions extends ClimberDB {
 				$item.find('.last-modified-time-field').text(thisTransaction.transactions_last_modified_time || '');
 			}
 			this.getTransactionBalance($transactionsList);
+
+			// Add attachments
+			const attachmentInfo = this.expeditionInfo.attachments[expeditionMemberID];
+			for (const attachmentID of attachmentInfo.order) {
+				const $item = this.addNewListItem(
+					$attachmentsList, 
+					{
+						dbID: attachmentID, 
+						parentDBID: expeditionMemberID, 
+						newItemClass: isNewCard ? 'new-list-item' : ''
+					}
+				);
+				const thisAttachment = attachmentInfo.data[attachmentID];
+				for (const el of $item.find('.input-field:not(.entry-metadata-field):not([type=file])')) {
+					this.setInputFieldValue(el, thisAttachment, {dbID: attachmentID, triggerChange: true});
+				}
+
+				// set the file path
+				this.setAttachmentFileInput($item, thisAttachment.client_filename);
+				
+				// Add the attachment information for previewing the file
+				this.attachments[$item.find('input[type=file]').attr('id')] = {
+					mime_type: thisAttachment.mime_type,
+					src: thisAttachment.file_path,
+					url: thisAttachment.file_path
+				}
+
+				// Fill metadata field, which is only shown in the modal view
+				$item.find('.last-modified-by-field').text(thisAttachment.attachments_last_modified_by || '');
+				$item.find('.last-modified-time-field').text(thisAttachment.attachments_last_modified_time || '');
+			}
 
 			// Since the frostbite checbox is not a field in the database, it needs to be manually set when loading data
 			const frostbiteSeverity = $newCard.find('.input-field[name=frostbite_severity_code]').val();
@@ -3532,6 +3589,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			expedition_members: {data: {}, order: []}, 
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
+			attachments: {}, // props are exp. member IDs
 			cmc_checkout: {data: {}, order: []},
 			communication_devices: {data: {}, order: []},
 			briefings: {}
@@ -3617,9 +3675,9 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 
 					// Get data for right-side tables
-					// TODO: add attachments
 					let members = this.expeditionInfo.expedition_members;
 					let transactions = this.expeditionInfo.transactions;
+					let attachments = this.expeditionInfo.attachments;
 					let routes = this.expeditionInfo.expedition_member_routes;
 					let cmcs = this.expeditionInfo.cmc_checkout;
 					let briefingInfo = this.expeditionInfo.briefings;
@@ -3630,6 +3688,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							members.data[memberID] = {};
 							members.order.push(memberID);
 							transactions[memberID] = {data: {}, order: []};
+							attachments[memberID] = {data: {}, order: []};
 							for (const fieldName in this.tableInfo.tables.expedition_members.columns) {
 								const queryField = this.entryMetaFields.includes(fieldName) ? 'expedition_members_' + fieldName : fieldName;
 								members.data[memberID][fieldName] = row[queryField];
@@ -3654,6 +3713,18 @@ class ClimberDBExpeditions extends ClimberDB {
 										queryField === 'transaction_value' ? 
 										row[queryField].replace(/\(/, '-').replace(/[$)]/g, '') :
 										row[queryField];
+								}
+							}
+						}
+
+						const attachmentID = row.attachment_id;
+						if (attachmentID != null) {
+							if (!(attachmentID in attachments[memberID].data)) {
+								attachments[memberID].data[attachmentID] = {};
+								attachments[memberID].order.push(attachmentID);
+								for (const fieldName in this.tableInfo.tables.attachments.columns) {
+									const queryField = this.entryMetaFields.includes(fieldName) ? 'attachments_' + fieldName : fieldName;
+									attachments[memberID].data[attachmentID][fieldName] = row[queryField];
 								}
 							}
 						}
@@ -4079,7 +4150,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			// Get local reference to .attachments attribute because `this` refers to the FieReader 
 			//	when used within a method of the Reader's 
-			const attachments = this.attachments;
+			const _this = this; // avoid 'this' collision within .onload() method
 			reader.onload = function(e) {
 				
 				// Hide the progress bar
@@ -4089,24 +4160,16 @@ class ClimberDBExpeditions extends ClimberDB {
 				$progressIndicator.css('width', '0px');
 
 				// Store in memory for now
-				attachments[sourceInput.id] = {
+				_this.attachments[sourceInput.id] = {
 					file: file,
+					mime_type: file.type,
 					src: e.target.result,
 					url: URL.createObjectURL(file)
 				};
 				
 				const $listItem = $barContainer.closest('.data-list-item');
 				
-				// hide the select-file button (label)
-				$listItem.find('.file-input-label')
-					.ariaHide(true);
-				
-				// Show the filename field and the preview button
-				$listItem.find('.file-name-field')
-					.val(filename)
-					.ariaHide(false);
-				$listItem.find('.preview-attachment-button')
-					.ariaHide(false);
+				_this.setAttachmentFileInput($listItem, filename)
 
 			}
 
@@ -4168,11 +4231,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	because the preview button shouldn't be visible otherwise, but best to 
 		//	check anyway
 		if (!attachment) return;
-
-		const src = attachment.src;
 			
 		const $attachmentModal = $('#attachment-modal');
-		if (attachment.file.type.toLowerCase().endsWith('pdf')) {
+		if (attachment.mime_type.toLowerCase().endsWith('pdf')) {
 			// hide the image
 			$attachmentModal.find('img').ariaHide(true);
 

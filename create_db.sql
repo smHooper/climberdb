@@ -160,10 +160,10 @@ CREATE TABLE IF NOT EXISTS attachments (
 	mime_type varchar(50),
 	file_path VARCHAR(255), 
 	file_size_kb INTEGER,  
-	datetime_attached TIMESTAMP, 
-	attached_by VARCHAR(50), 
-	datetime_last_changed TIMESTAMP, 
-	last_changed_by VARCHAR(50)
+	entry_time TIMESTAMP, 
+	entered_by VARCHAR(50), 
+	last_modified_time TIMESTAMP, 
+	last_modified_by VARCHAR(50)
 )
 
 CREATE TABLE IF NOT EXISTS expedition_member_routes (
@@ -406,6 +406,10 @@ CREATE VIEW expedition_info_view AS
 		transactions.entered_by AS transactions_entered_by,
 		to_char(transactions.last_modified_time, 'Mon FMDD, YYYY') AS transactions_last_modified_time,
 		transactions.last_modified_by AS transactions_last_modified_by,
+		to_char(attachments.entry_time, 'Mon DD, YYYY'::text) AS attachments_entry_time,
+		attachments.entered_by AS attachments_entered_by,
+		to_char(attachments.last_modified_time, 'Mon FMDD, YYYY') AS attachments_last_modified_time,
+		attachments.last_modified_by AS attachments_last_modified_by,
 		expeditions.id AS expedition_id,
 		expeditions.expedition_name,
 		expeditions.date_confirmed,
@@ -465,6 +469,14 @@ CREATE VIEW expedition_info_view AS
 		transactions.transaction_notes,
 		transactions.transaction_date,
 		transactions.payment_method_code,
+		attachments.id AS attachment_id,
+		attachments.attachment_type_code,
+		attachments.date_received,
+		attachments.attachment_notes,
+		attachments.client_filename,
+		attachments.mime_type,
+		'attachments/' || split_part(attachments.file_path, '\', -1) AS file_path, --'
+		attachments.file_size_kb,
 		cmc_checkout.id AS cmc_checkout_id,
 		cmc_checkout.cmc_id,
 		cmc_checkout.issued_by,
@@ -481,6 +493,7 @@ CREATE VIEW expedition_info_view AS
 	LEFT JOIN briefings ON expeditions.id = briefings.expedition_id
 	LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 	LEFT JOIN transactions ON expedition_members.id = transactions.expedition_member_id
+	LEFT JOIN attachments ON expedition_members.id = attachments.expedition_member_id
 	LEFT JOIN cmc_checkout ON expeditions.id = cmc_checkout.expedition_id
 	LEFT JOIN expedition_status_view ON expedition_status_view.expedition_id = expeditions.id
 	ORDER BY 
@@ -493,7 +506,8 @@ CREATE VIEW expedition_info_view AS
 		climbers.last_name, 
 		climbers.first_name, 
 		transactions.transaction_date, 
-		transactions.id;
+		transactions.id,
+		attachments.id;
 
 
 CREATE VIEW seven_day_rule_view AS 
