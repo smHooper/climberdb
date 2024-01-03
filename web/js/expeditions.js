@@ -12,6 +12,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			expedition_members: {data: {}, order: []}, 
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
+			attachments: {}, // props are exp. member IDs
 			cmc_checkout: {data: {}, order: []},
 			communication_devices: {data: {}, order: []},
 			briefings: {} 
@@ -27,12 +28,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.lastSearchQuery = (new Date()).getTime();
 		this.totalResultCount;
 		this.climberForm;
-		this.edits = {
-			updates: {},
-			inserts: {}
-		}
 		this.historyBuffer = []; // for keeping track of browser navigation via back and forward buttons
 		this.currentHistoryIndex = 0;
+		this.attachments = {};
+
 		return this;
 	}
 
@@ -332,6 +331,14 @@ class ClimberDBExpeditions extends ClimberDB {
 			$newItem.attr('data-parent-table-id', $card.data('table-id'));
 		});
 
+		$(document).on('click', '.add-attachment-button', e => {
+			this.onAddAttachmentItemButtonClick(e);
+		});
+
+		$(document).on('click', '.delete-attchment-button', e => {
+			this.onDeleteAttachmentButtonClick(e);
+		})
+
 		// When the leader input checkbox changes, set the transparent class appropriately
 		$(document).on('change', '.leader-checkbox-container .input-checkbox', e => {
 			const $checkbox = $(e.target).closest('.input-checkbox');
@@ -407,7 +414,21 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(document).on('click', '.delete-transaction-button', e => {
 			this.onDeleteTransactionButtonClick(e);
 		})
-		// ^^^^^^^^^^ Members/transactions ^^^^^^^^^^^
+
+		$(document).on('change', '.attachment-input', e => {
+			this.onAttachmentInputChange(e);
+		});
+
+		$(document).on('click', '.show-attachment-details-button', e => {
+			const $wrapper = $(e.target).closest('.expedition-data-wrapper')
+			const $expandButton = $wrapper.find('.expedition-data-header-container .expand-card-button')
+			this.setExpandCardButtonLabelText($expandButton, $wrapper.is('.expedition-modal'))
+		});
+
+		$(document).on('click', '.preview-attachment-button', e => {
+			this.onPreviewAttachmentButtonClick(e)
+		})
+		// ^^^^^^^^^^ Members/transactions/attachments ^^^^^^^^^^^
 
 		// ---------- Route stuff ----------
 
@@ -947,6 +968,21 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	
+	/*
+	Helper function to set the .expand-card-button label and the associated icon to 
+	either 'minimize' or 'maximize'
+	*/
+	setExpandCardButtonLabelText($button, shouldExpand) {
+		// Font awesome classes don't neatly override each other by last-in-wins so toggle each class separately
+		$button.find('.expand-card-icon')
+			.toggleClass('fa-expand-alt', !shouldExpand)
+			.toggleClass('fa-compress-alt', shouldExpand);
+
+		$button.find('.icon-button-label').text(shouldExpand ? 'minimize' : 'maximize');
+	}
+
+
 	/*
 	Expand a card to take the whole screen as a modal when the expand button is clicked
 	*/
@@ -967,12 +1003,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Show any elements that only appear in modal view
 		$wrapper.find('.modal-only').ariaHide(!shouldExpand);
 
-		// Font awesome classes don't neatly override each other by last-in-wins so toggle each class separately
-		$button.find('.expand-card-icon')
-			.toggleClass('fa-expand-alt', !shouldExpand)
-			.toggleClass('fa-compress-alt', shouldExpand);
-
-		$button.find('.icon-button-label').text(shouldExpand ? 'minimize' : 'maximize');
+		this.setExpandCardButtonLabelText($button, shouldExpand)
 	}
 
 
@@ -1347,11 +1378,53 @@ class ClimberDBExpeditions extends ClimberDB {
 		return [sql, parameters];
 	}
 
+	/*
+	Helper method to set attributes of inputs and their containers after successfully saving newly inserted data. 
+	The helper function is used after saving new attachments and after INSERTing other data. 
+	*/
+	setInsertedIDs(result, inserts) {
+
+		var expeditionID = this.expeditionInfo.expeditions.id;
+		for (const i in result) {
+			const returnedIDs = result[i];
+			const id = returnedIDs.id;
+			if (id == null || id === '') continue;
+
+			const {container, tableName} = inserts[i];
+			if (tableName === 'expeditions') {
+				expeditionID = id;
+				
+				// this was a new expedition, so add the expedition to the URL history
+				this.updateURLHistory(expeditionID, $('#expedition-id-input'));
+			}
+
+			// Set the card's/list item's class and inputs' attributes so changes will register as updates
+			const $container = $(container).closest('.data-list-item, .card');
+			const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
+			if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
+			const $inputs = $container.closest('.data-list-item, .card')
+				.removeClass('new-card')
+				.removeClass('new-list-item')
+				.attr('data-table-id', id)
+				.attr('data-table-name', tableName)
+				.find('.input-field.dirty')
+					.attr('data-table-name', tableName)
+					.attr('data-table-id', id)
+					.removeClass('dirty');
+			const foreignIDs = Object.entries(returnedIDs).filter(([column, _]) => column !== 'id');
+			if (Object.keys(foreignIDs).length) $inputs.data('foreign-ids', Object.fromEntries(foreignIDs));
+			
+		}
+
+		return expeditionID;
+	}
+
 
 	saveEdits() {
 
-		var sqlStatements = [];
-		var sqlParameters = [];
+		var sqlStatements = [],
+			sqlParameters = [],
+			attachmentDeferreds = [];
 		
 		const $editParents = $(`
 				.data-list-item:not(.cloneable), 
@@ -1391,12 +1464,81 @@ class ClimberDBExpeditions extends ClimberDB {
 		const userName = this.userInfo.ad_username;
 		const lastModified = [userName, now];
 		
+		// collect info about inserts so attributes can be changes such that future edits are treated as updates
+		var inserts = [], //{container: container, tableName: tableName}
+			attachmentInserts = []; 
+		
+		// Save new attachments before writing other changes to the DB because files need
+		//	to be saved to the server
+		var attachmentData = {},
+			attachmentItems = {};
+		// package the file up in a FormData instance because the file isn't within 
+		//	a <form> element
+		const formData = new FormData(); 
+		const $attachmentItems = $('#expedition-members-accordion .card:not(.cloneable) .attachments-tab-pane .data-list > .new-list-item:not(.cloneable)');
+		for (const li of $attachmentItems) {
+			const $li = $(li);
+			const fileInputID = $li.find('.attachment-input').attr('id');
+			const attachmentFile = this.attachments[fileInputID].file;
+			const filename = attachmentFile.name;
+			formData.append(filename, attachmentFile, filename)
+			attachmentData[filename] = {
+				expedition_member_id: $li.closest('.card').data('table-id'),
+				attachment_type_code: $li.find('.input-field[name=attachment_type_code]').val(),
+				date_received: $li.find('.input-field[name=date_received]').val(),
+				attachment_notes: $li.find('.input-field[name=attachment_notes]').val(),
+				client_filename: filename,
+				mime_type: attachmentFile.type,
+				file_size_kb: Math.ceil(attachmentFile.size / 1000),
+				entry_time: now,
+				entered_by: userName,
+				last_modified_time: now,
+				last_modified_by: userName
+			}
+			// Capture the filename/list-item relationship so .data() attributes can be set later
+			// attachmentItems[filename] = $li;
+
+			attachmentInserts.push({container: li, tableName: 'attachments'});
+		}
+		formData.append('attachment_data', JSON.stringify(attachmentData))
+		const failedUploadMessage = 
+			'Your edits could not be saved because uploading attachments' +
+			` failed with the error \n"{error}"\n. Make sure the file is valid` + 
+			` and try again. If this problem persists, ` + 
+			` <a href="mailto:${this.config.db_admin_email}">contact the` + 
+			` database adminstrator</a>.`;
+		const attachmentDeferred =
+			$.post({
+				url: 'flask/attachments/add_expedition_member_files',
+				data: formData,
+				contentType: false,
+				processData: false,
+				dataType: 'json'
+			}).done(response => {
+				const failedFiles = response.failed_files;
+				if (this.pythonReturnedError(response)) {
+					showModal(failedUploadMessage.replace(/\{error\}/, response), 'Attachment Upload Failed');
+					hideLoadingIndicator();
+				} else if (failedFiles.length) {
+					if (Array.isArray(failedFiles) && (failedFiles.length)) {
+						const message = 'Your edits were not saved because the following files failed to upload:<ul>' +
+							failedFiles.map(({filename}) => `<li>${filename}</li>`).join('') + '</ul>';
+						showModal(message, 'Attachment Upload Failed');
+						print(response);
+						hideLoadingIndicator();
+					}
+				} else { // attachments all saved successfully
+					const returnedIDs = response.attachment_ids;
+					this.setInsertedIDs(returnedIDs, attachmentInserts)
+				}
+			}).fail((xhr, status, error) => {
+				showModal(failedUploadMessage.replace(/\{error\}/, error), 'Attachment Upload Failed');
+				hideLoadingIndicator()
+			})
+
 		// determine if this is a new expedition or not
 		const expeditionID = $('#input-planned_departure_date').data('table-id') || null;
 		const isNewExpedition = expeditionID === undefined;
-
-		// collect info about inserts so attributes can be changes such that future edits are treated as updates
-		var inserts = []; //{container: container, tableName: tableName}
 
 		// get expedition table edits
 		var expeditionValues = [];
@@ -1473,6 +1615,26 @@ class ClimberDBExpeditions extends ClimberDB {
 				const [sql, parameters] = this.inputsToSQL(
 					li, 
 					'transactions', 
+					now, 
+					userName, 
+					{
+						updateID: dbID || null,
+						foreignIDs: {expedition_members: $(li).data('parent-table-id')},
+						insertArray: inserts
+					}
+				);
+				sqlStatements.push(sql);
+				sqlParameters.push(parameters);
+			}
+
+			// attachment updates
+			const $attachmentItems = $card.find('.attachments-tab-pane .data-list > li.data-list-item:not(.cloneable, .new-list-item)')
+				.has('.input-field.dirty');
+			for (const li of $attachmentItems) {
+				const dbID = $(li).data('table-id');
+				const [sql, parameters] = this.inputsToSQL(
+					li, 
+					'attachments', 
 					now, 
 					userName, 
 					{
@@ -1575,7 +1737,18 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	answered first. If it wasn't necessary, the permitCountDeferred was
 		//	resolved immediately and the request to save the data will fire 
 		//	immediately as well
-		return permitCountDeferred.then(() => {
+		return $.when(permitCountDeferred, attachmentDeferred).then((permitCountResponse, attachmentResponse) => {
+			// If the only changes were new attachments, exit
+			if (!$('.dirty').length) {
+				hideLoadingIndicator();
+				const expeditionID = this.expeditionInfo.expeditions.id;
+				if (expeditionID) this.queryExpedition(expeditionID, {showOnLoadWarnings: false}); //suppress flagged expedition member warnings
+				return $.Deferred().resolve();
+			}
+			if (attachmentResponse[0].failed_files.length) {
+				hideLoadingIndicator();
+				return $.Deferred().reject();
+			}
 
 			return $.post({ 
 				url: 'climberdb.php',
@@ -1583,47 +1756,14 @@ class ClimberDBExpeditions extends ClimberDB {
 				cache: false
 			}).done(queryResultString => {
 				if (climberDB.queryReturnedError(queryResultString)) { 
-					showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+					showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists.`, 'Unexpected error');
 					return;
 				} else {
 					const result = $.parseJSON(queryResultString)
 						.filter(row => row != null);
-					var expeditionID = this.expeditionInfo.expeditions.id;
-					for (const i in result) {
-						const returnedIDs = result[i];
-						const id = returnedIDs.id;
-						if (id == null || id === '') continue;
-
-						const {container, tableName} = inserts[i];
-						if (tableName === 'expeditions') {
-							expeditionID = id;
-							
-							// this was a new expedition, so add the expedition to the URL history
-							this.updateURLHistory(expeditionID, $('#expedition-id-input'));
-						}
-
-						// Set the card's/list item's class and inputs' attributes so changes will register as updates
-						const $container = $(container).closest('.data-list-item, .card');
-						const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
-						if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
-						const $inputs = $container.closest('.data-list-item, .card')
-							.removeClass('new-card')
-							.removeClass('new-list-item')
-							.attr('data-table-id', id)
-							.attr('data-table-name', tableName)
-							.find('.input-field.dirty')
-								.attr('data-table-name', tableName)
-								.attr('data-table-id', id);
-						const foreignIDs = Object.entries(returnedIDs).filter(([column, _]) => column !== 'id');
-						if (Object.keys(foreignIDs).length) $inputs.data('foreign-ids', Object.fromEntries(foreignIDs));
-						
-					}
-
+					const expeditionID = this.setInsertedIDs(result, inserts);
 
 					// update in-memory data for each edited input
-					const edits = this.edits;
-					const expeditionInfo = this.expeditionInfo;
-					const $editedInputs =  $('.input-field.dirty').removeClass('dirty');
 					this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
 
 
@@ -3086,6 +3226,28 @@ class ClimberDBExpeditions extends ClimberDB {
 			.closest('.collapse').collapse(nMembers ? 'show' : 'hide');
 	}
 
+
+	/*
+	Helper function to show/hide fields/buttons when an attachment file is selected or an existing 
+	attachment is loaded
+	*/
+	setAttachmentFileInput($listItem, filename) {
+		// hide the select-file button (label)
+		$listItem.find('.file-input-label')
+			.ariaHide(true);
+		
+		// Show the filename field and the preview button
+		$listItem.find('.file-name-field')
+			.val(filename)
+			.ariaHide(false);
+		$listItem.find('.preview-attachment-button')
+			.ariaHide(false);
+	}
+
+
+	/*
+	Add a new card to the expedition member accordion. Fill fields if data is given
+	*/
 	addExpeditionMemberCard({expeditionMemberID=null, firstName=null, lastName=null, climberID=null, showCard=false, isNewCard=false, climberInfo={}}={}) {
 		const expeditionMemberInfo = this.expeditionInfo.expedition_members.data[expeditionMemberID];
 		if (expeditionMemberInfo) {
@@ -3130,8 +3292,11 @@ class ClimberDBExpeditions extends ClimberDB {
 		for (const el of $newCard.find('.nav-tabs, .tab-content')) {
 			el.id = el.id + cardID;
 		}
-		const $transactionsList = $newCard.find('.data-list');
+		const $transactionsList = $newCard.find('.transactions-tab-pane .data-list');
 		$transactionsList.attr('id', $transactionsList.attr('id') + '-' + climberID);
+		
+		const $attachmentsList = $newCard.find('.attachments-tab-pane .data-list');
+		$attachmentsList.attr('id', $attachmentsList.attr('id') + '-' + climberID);
 		
 		// Fill inputs
 		if (expeditionMemberInfo) {
@@ -3163,6 +3328,37 @@ class ClimberDBExpeditions extends ClimberDB {
 				$item.find('.last-modified-time-field').text(thisTransaction.transactions_last_modified_time || '');
 			}
 			this.getTransactionBalance($transactionsList);
+
+			// Add attachments
+			const attachmentInfo = this.expeditionInfo.attachments[expeditionMemberID];
+			for (const attachmentID of attachmentInfo.order) {
+				const $item = this.addNewListItem(
+					$attachmentsList, 
+					{
+						dbID: attachmentID, 
+						parentDBID: expeditionMemberID, 
+						newItemClass: isNewCard ? 'new-list-item' : ''
+					}
+				);
+				const thisAttachment = attachmentInfo.data[attachmentID];
+				for (const el of $item.find('.input-field:not(.entry-metadata-field):not([type=file])')) {
+					this.setInputFieldValue(el, thisAttachment, {dbID: attachmentID, triggerChange: true});
+				}
+
+				// set the file path
+				this.setAttachmentFileInput($item, thisAttachment.client_filename);
+				
+				// Add the attachment information for previewing the file
+				this.attachments[$item.find('input[type=file]').attr('id')] = {
+					mime_type: thisAttachment.mime_type,
+					src: thisAttachment.file_path,
+					url: thisAttachment.file_path
+				}
+
+				// Fill metadata field, which is only shown in the modal view
+				$item.find('.last-modified-by-field').text(thisAttachment.attachments_last_modified_by || '');
+				$item.find('.last-modified-time-field').text(thisAttachment.attachments_last_modified_time || '');
+			}
 
 			// Since the frostbite checbox is not a field in the database, it needs to be manually set when loading data
 			const frostbiteSeverity = $newCard.find('.input-field[name=frostbite_severity_code]').val();
@@ -3409,6 +3605,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			expedition_members: {data: {}, order: []}, 
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
+			attachments: {}, // props are exp. member IDs
 			cmc_checkout: {data: {}, order: []},
 			communication_devices: {data: {}, order: []},
 			briefings: {}
@@ -3496,6 +3693,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					// Get data for right-side tables
 					let members = this.expeditionInfo.expedition_members;
 					let transactions = this.expeditionInfo.transactions;
+					let attachments = this.expeditionInfo.attachments;
 					let routes = this.expeditionInfo.expedition_member_routes;
 					let cmcs = this.expeditionInfo.cmc_checkout;
 					let briefingInfo = this.expeditionInfo.briefings;
@@ -3506,6 +3704,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							members.data[memberID] = {};
 							members.order.push(memberID);
 							transactions[memberID] = {data: {}, order: []};
+							attachments[memberID] = {data: {}, order: []};
 							for (const fieldName in this.tableInfo.tables.expedition_members.columns) {
 								const queryField = this.entryMetaFields.includes(fieldName) ? 'expedition_members_' + fieldName : fieldName;
 								members.data[memberID][fieldName] = row[queryField];
@@ -3530,6 +3729,18 @@ class ClimberDBExpeditions extends ClimberDB {
 										queryField === 'transaction_value' ? 
 										row[queryField].replace(/\(/, '-').replace(/[$)]/g, '') :
 										row[queryField];
+								}
+							}
+						}
+
+						const attachmentID = row.attachment_id;
+						if (attachmentID != null) {
+							if (!(attachmentID in attachments[memberID].data)) {
+								attachments[memberID].data[attachmentID] = {};
+								attachments[memberID].order.push(attachmentID);
+								for (const fieldName in this.tableInfo.tables.attachments.columns) {
+									const queryField = this.entryMetaFields.includes(fieldName) ? 'attachments_' + fieldName : fieldName;
+									attachments[memberID].data[attachmentID][fieldName] = row[queryField];
 								}
 							}
 						}
@@ -3859,6 +4070,267 @@ class ClimberDBExpeditions extends ClimberDB {
 				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.deleteTransactionItem('#${$li.attr('id')}')">OK</button>
 			`
 			showModal(message, 'Permanently Delete Transaction?', 'confirm', footerButtons);
+		}
+	}
+
+
+	/*
+	Add new attachment unless this expedition member has yet to be saved
+	*/
+	onAddAttachmentItemButtonClick(e) {
+		const $button = $(e.target);
+		// Prevent the user from adding an attachment to a new expedition member. This is so that, 
+		//	when saving an attachment, there is already an expedition_member_id to be able to relate 
+		//	the new attachment record to an expedition_member record. In this case, saving the attachment 
+		//	file and db record can be handled completely server-side 
+		if ($button.closest('.card').is('.new-card')) {
+			showModal('You must save this expedition member before you can add an attachment.', 'Invalid Operation');
+			return;
+		}
+		const $newItem = this.addNewListItem($button.closest('.attachments-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
+		const $card = $newItem.closest('.card');
+		$newItem.attr('data-parent-table-id', $card.data('table-id'));
+	}
+
+
+	/*
+	Handler for when the user changes the attachment type
+	*/
+	onAttachmentTypeChange(e) {
+
+		const $fileTypeSelect = $(e.target);
+		const fileTypeSelectID = $fileTypeSelect.attr('id');
+		const previousFileType = $fileTypeSelect.data('previous-value');//should be undefined if this is the first time this function has been called
+		const $fileInput = $fileTypeSelect.closest('.card-body').find('.file-input-label ~ input[type=file]');
+		const $fileInputLabel = $fileTypeSelect.closest('.card-body').find('.file-input-label');
+		const fileInputID = $fileInput.attr('id');
+
+		if ($fileTypeSelect.val()) {
+			$fileInput.removeAttr('disabled')
+			$fileInputLabel.removeAttr('disabled')
+		}
+		else {
+			$fileInput.attr('disabled', true)
+			$fileInputLabel.attr('disabled', true)
+		}
+
+		// If the data-previous-value attribute has been set and there's already a file uploaded, that means the user has already selected a file
+		if (previousFileType && $fileInput.get(0).files[0]) {
+			const onConfirmClick = `
+				entryForm.updateAttachmentAcceptString('${fileTypeSelectID}');
+				$('#${fileInputID}').click();
+			`;
+			const footerButtons = `
+				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal" onclick="$('#${fileTypeSelectID}').val('${previousFileType}');">No</button>
+				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
+			`;
+			const fileTypeCode = $fileTypeSelect.val();
+			const fileType = $fileTypeSelect.find('option')
+				.filter((_, option) => {return option.value === fileTypeCode})
+				.html()
+				.toLowerCase();
+			showModal(`You already selected a file. Do you want to upload a new <strong>${fileType}</strong> file instead?`, `Upload a new file?`, 'confirm', footerButtons);
+		} else {
+			_this.updateAttachmentAcceptString($fileTypeSelect.attr('id'));
+		}
+	}
+
+
+	/*
+	Read an image or PDF
+	*/
+	readAttachment(sourceInput, $progressIndicator) {
+
+		const $barContainer = $progressIndicator.closest('.attachment-progress-bar-container');
+	 	const file = sourceInput.files[0];
+		
+		if (sourceInput.files && file) {
+			var reader = new FileReader();
+			const filename = file.name;
+
+			reader.onprogress = function(e) {
+				// Show progress
+				// **** unfortunately a browser bug seems to prevent onprogress from being
+				//		called until the file is completely loaded *****
+				if (e.lengthComputable) {
+					const progress = e.loaded / e.total;
+					$progressIndicator.css('width', `${$barContainer.width() * progress}px`)
+				}
+			}
+
+			reader.onerror = function(e) {
+				// Hide preview and progress bar and notify the user
+				$progressBar.ariaHide();
+				showModal(`The file '${filename}' failed to upload correctly. Make sure your internet connection is consistent and try again.`, 'Upload failed');
+			}
+
+			// Get local reference to .attachments attribute because `this` refers to the FieReader 
+			//	when used within a method of the Reader's 
+			const _this = this; // avoid 'this' collision within .onload() method
+			reader.onload = function(e) {
+				
+				// Hide the progress bar
+				$barContainer.ariaHide(true);
+				
+				// Reset the progress indicator
+				$progressIndicator.css('width', '0px');
+
+				// Store in memory for now
+				_this.attachments[sourceInput.id] = {
+					file: file,
+					mime_type: file.type,
+					src: e.target.result,
+					url: URL.createObjectURL(file)
+				};
+				
+				const $listItem = $barContainer.closest('.data-list-item');
+				
+				_this.setAttachmentFileInput($listItem, filename)
+
+			}
+
+			reader.readAsDataURL(file); 
+			
+		}
+	}
+
+
+	/*
+	Event handler for attachment input
+	*/
+	onAttachmentInputChange(e) {
+
+		const el = e.target; 
+		const $input = $(el);
+
+		// If the user cancels, just exit
+		if (el.files.length === 0) return;
+
+		// Make sure the filename doesn't already exist. This is only necessary because 
+		//	when saving multiple attachments, the file and associated info is related 
+		//	by the filename. It's also probably just good practice to enforce
+		const existingfilenames = $('.file-name-field')
+			.map((_, el) => el.value)
+			.get() // get as JS array, not jQuery
+			.filter(v => v) // drop null values
+		const filename = el.files[0].name;
+		if (existingfilenames.includes(filename)) {
+			showModal(`An attachment with the filename <strong>${filename}</strong> already` + 
+				' exists. All attachments for an expedition must have unique filenames.' + 
+				' Please rename the file and upload it again.', 'Duplicate filename')
+			return;
+		}
+
+		$input.siblings('.file-input-label').ariaHide(true);
+		const $progressIndicator = $input.closest('.data-list-item')
+			.find('.attachment-progress-bar-container')
+				.ariaHide(false) // unhide
+				.find('.attachment-progress-indicator');
+
+		$input.siblings('.file-name-field')
+			.val(filename)
+			.change();
+		
+		this.readAttachment(el, $progressIndicator);
+	}
+
+
+	/*
+	Show the attachment when the user clicks its 'open' button
+	*/
+	onPreviewAttachmentButtonClick(e) {
+		const $listItem = $(e.target).closest('.data-list-item');
+		const fileInput = $listItem.find('input[type=file]').get(0);
+		const attachment = this.attachments[fileInput.id];
+
+		// Check that the attachment has been loaded. This should always be the case
+		//	because the preview button shouldn't be visible otherwise, but best to 
+		//	check anyway
+		if (!attachment) return;
+			
+		const $attachmentModal = $('#attachment-modal');
+		if (attachment.mime_type.toLowerCase().endsWith('pdf')) {
+			// hide the image
+			$attachmentModal.find('img').ariaHide(true);
+
+			// For some stupid reason, loading a different PDF doesn't work so remove the 
+			//	old object and replace it if this is a different PDF
+			const $modalBody = $attachmentModal.find('.modal-img-body')//.remove()
+			let $object = $modalBody.find('object');
+			const currentData = $object.attr('data');
+			if (currentData !== attachment.url) {
+				$object.remove();
+				$object = $modalBody.append(
+					`<object type="application/pdf" data="${attachment.url}" width="100%" height="100%">Sorry, your browser doesn't support viewing a PDF</object>`
+				);
+			}
+
+			// Reset the modal width in case an image was shown before and manually set it
+			$modalBody.css('width', '');
+			
+		} 
+		// otherwise, it's an image
+		else {
+			// Hide the PDF object element
+			$attachmentModal.find('object').ariaHide(true);
+			
+			// Show the pdf <object> and set its 'data' attribute
+			const $img = $attachmentModal.find('img')
+				.ariaHide(false)
+				.attr('src', attachment.src);
+			//$img.siblings(':not(.modal-header-container)').addClass('hidden');
+			const img = $img.get(0);
+			const imgWidth = Math.min(
+				window.innerHeight * .8 * img.naturalWidth/img.naturalHeight,//img.height doesn't work because display height not set immediately
+				window.innerWidth - 40
+			);
+			$img.closest('.modal').find('.modal-img-body').css('width', imgWidth);
+		}
+
+		// Show the modal
+		$attachmentModal.modal();
+		
+	}
+
+
+	/*
+	Attachment delete button handler
+	*/
+	onDeleteAttachmentButtonClick(e) {
+		const $li = $(e.target).closest('.data-list-item');
+		if ($li.is('.new-list-item')) {
+			this.deleteListItem($li);
+		} else {			
+			const onConfirmClickHandler = () => {
+				$('.modal-button.confirm-delete').click( () => {
+					const dbID = $li.data('table-id');
+					
+					// try to delete the file from the server
+					$.post({
+						url: 'flask/attachments/delete_expedition_member_file',
+						data: {
+							file_path: this.attachments[$li.find('input[type=file]').attr('id')].url
+						}
+					}).done(response => {
+						if (this.pythonReturnedError(response)) {
+							console.log(response)
+						}
+					}).fail((xhr, status, error) => {
+						conole.log(error)
+					})
+
+					// Delete the DB record regardless of whether deleting the file succeeded
+					this.deleteListItem($li, 'attachments', dbID);
+				})
+			}
+			const message = 
+				'Are you sure you want to delete this Attachment? This action is permanent' + 
+				' and cannot be undone.';
+			const title = 'Delete Attachment?';
+			const footerButtons = 
+				'<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>' +
+				'<button class="generic-button modal-button danger-button close-modal confirm-delete" data-dismiss="modal">Delete</button>';
+			showModal(message, title, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});	
 		}
 	}
 

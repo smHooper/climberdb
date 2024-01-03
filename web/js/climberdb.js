@@ -631,6 +631,7 @@ class ClimberDB {
 		const $cloneable = $ul.find('li.cloneable');
 		const $newItem = $cloneable.clone(true)//withDataAndEvents=true
 			.removeClass('cloneable hidden')
+			.attr('aria-hidden', false);
 
 		var itemIndex = $ul.find('li:not(.cloneable)').length;
 		var newItemID = `${$ul.attr('id')}-${itemIndex}`;
@@ -647,12 +648,19 @@ class ClimberDB {
 		if (parentDBID !== null) $newItem.data('parent-table-id', parentDBID);
 		if (dbID !== null) $newItem.attr('data-table-id', dbID);
 
-		for (const el of $newItem.find('.input-field')) {
+		for (const el of $newItem.find('.input-field, .attachment-input')) {
 			el.id = `${el.id}-${dbID || itemIndex}`;
 			const $el = $(el);
 			if ($el.data('dependent-target')) 
 				$el.data('dependent-target', `${$el.data('dependent-target')}-${dbID || itemIndex}`);
 			if (!isNaN(dbID)) $el.attr('data-table-id', dbID);
+		}
+
+		for (const el of $newItem.find('label.generic-button')) {
+			const $el = $(el);
+			if ($el.prop('for')) {
+				$el.prop('for', `${$el.prop('for')}-${dbID || itemIndex}`);
+			}
 		}
 
 		return $newItem.addClass(newItemClass).insertBefore($cloneable);
@@ -714,7 +722,7 @@ class ClimberDB {
 		// Add to the accordion
 		$newCard.addClass(newCardClass).appendTo($accordion).fadeIn();
 
-		for (const el of $('#' + newCardID).find('.input-field')) {
+		for (const el of $newCard.find('.input-field, .attachment-input')) {
 			const $el = $(el);
 			const newID = `${el.id}-${cardIndex}`;
 			const dataTable = $el.data('table-name');
@@ -733,6 +741,13 @@ class ClimberDB {
 			if ($el.is('select')) {
 				$el.val('').addClass('default');
 			}
+		}
+
+		for (const el of $newCard.find('label.generic-button')) {
+			const $el = $(el);
+			if ($el.prop('for')) {
+				$el.prop('for', `${$el.prop('for')}-${cardIndex}`);
+			}			
 		}
 
 		// if the accordion's data-table-name attribute is in update IDs, 
@@ -1040,7 +1055,7 @@ class ClimberDB {
 
 
 	pythonReturnedError(resultString) {
-
+		resultString = String(resultString); // force as string in case it's something else
 		return resultString.startsWith('ERROR: Internal Server Error') ?
 		   resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/)[0].trim() :
 		   false;
