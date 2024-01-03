@@ -4288,6 +4288,22 @@ class ClimberDBExpeditions extends ClimberDB {
 			const onConfirmClickHandler = () => {
 				$('.modal-button.confirm-delete').click( () => {
 					const dbID = $li.data('table-id');
+					
+					// try to delete the file from the server
+					$.post({
+						url: 'flask/attachments/delete_expedition_member_file',
+						data: {
+							file_path: this.attachments[$li.find('input[type=file]').attr('id')].url
+						}
+					}).done(response => {
+						if (this.pythonReturnedError(response)) {
+							console.log(response)
+						}
+					}).fail((xhr, status, error) => {
+						conole.log(error)
+					})
+
+					// Delete the DB record regardless of whether deleting the file succeeded
 					this.deleteListItem($li, 'attachments', dbID);
 				})
 			}

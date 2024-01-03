@@ -633,6 +633,16 @@ def save_attachment():
 	return {'failed_files': failed_files, 'attachment_ids': attachment_ids}
 
 
+@app.route('/flask/attachments/delete_expedition_member_file', methods=['POST'])
+def delete_attachment():
+	filename = os.path.basename(request.form['file_path'])
+	file_path = os.path.join(get_content_dir('attachments'), filename)
+	if (os.path.isfile(file_path)):
+		os.remove(file_path) # requires modify permissions for server AD user
+		return 'true'
+	else:
+		return 'false'
+	
 
 #---------------- DB I/O ---------------------#
 
