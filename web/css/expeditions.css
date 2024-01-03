@@ -641,8 +641,23 @@
 }
 
 .preview-attachment-button-column {
-	width: 120px;
+	width: 150px;
 }
+.preview-attachment-button-column .show-attachment-details-button {
+	font-weight: bold;
+}
+/*set the button text depending on whether the card is being shown as a modal or not*/
+.preview-attachment-button-column .show-attachment-details-button::before {
+	content: 'More...';
+}
+.expedition-modal .preview-attachment-button-column .show-attachment-details-button::before {
+	content: 'Less...';
+}
+/*match the botton margin of uneditable inputs*/
+.uneditable .show-attachment-details-button {
+	margin-bottom: 0.75rem;
+}
+
 .transactions-container-body,
 .transactions-header-container {
 	width: 100%;
@@ -679,7 +694,7 @@
 	max-width: 250px;
 }
 .expedition-modal .preview-attachment-button-column {
-	max-width: 100px;
+	max-width: 150px;
 }
 .data-list-metadata-column {
 	width: 100px;

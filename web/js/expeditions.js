@@ -419,6 +419,12 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.onAttachmentInputChange(e);
 		});
 
+		$(document).on('click', '.show-attachment-details-button', e => {
+			const $wrapper = $(e.target).closest('.expedition-data-wrapper')
+			const $expandButton = $wrapper.find('.expedition-data-header-container .expand-card-button')
+			this.setExpandCardButtonLabelText($expandButton, $wrapper.is('.expedition-modal'))
+		});
+
 		$(document).on('click', '.preview-attachment-button', e => {
 			this.onPreviewAttachmentButtonClick(e)
 		})
@@ -962,6 +968,21 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	
+	/*
+	Helper function to set the .expand-card-button label and the associated icon to 
+	either 'minimize' or 'maximize'
+	*/
+	setExpandCardButtonLabelText($button, shouldExpand) {
+		// Font awesome classes don't neatly override each other by last-in-wins so toggle each class separately
+		$button.find('.expand-card-icon')
+			.toggleClass('fa-expand-alt', !shouldExpand)
+			.toggleClass('fa-compress-alt', shouldExpand);
+
+		$button.find('.icon-button-label').text(shouldExpand ? 'minimize' : 'maximize');
+	}
+
+
 	/*
 	Expand a card to take the whole screen as a modal when the expand button is clicked
 	*/
@@ -982,12 +1003,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Show any elements that only appear in modal view
 		$wrapper.find('.modal-only').ariaHide(!shouldExpand);
 
-		// Font awesome classes don't neatly override each other by last-in-wins so toggle each class separately
-		$button.find('.expand-card-icon')
-			.toggleClass('fa-expand-alt', !shouldExpand)
-			.toggleClass('fa-compress-alt', shouldExpand);
-
-		$button.find('.icon-button-label').text(shouldExpand ? 'minimize' : 'maximize');
+		this.setExpandCardButtonLabelText($button, shouldExpand)
 	}
 
 
