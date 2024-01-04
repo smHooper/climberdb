@@ -47,11 +47,11 @@ class ClimberForm {
 					<div class="expedition-modal-only expedition-modal-climber-form-header hidden">
 						<div class="expedition-modal-search-container" aria-hidden="true">
 							<div class="fuzzy-search-bar-container col-6">
-								<textarea id="modal-climber-search-bar" class="fuzzy-search-bar no-click-trigger-on-enter" placeholder="Type text to filter climbers" title="Type text to filter climbers" autocomplete="__never"></textarea>
+								<textarea id="modal-climber-search-bar" class="fuzzy-search-bar climber-search-select-filter no-click-trigger-on-enter" placeholder="Type to filter climbers" title="Type to filter climbers" autocomplete="__never"></textarea>
 								<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
 							</div>	
 							<div class="modal-climber-select-container collapse">
-								<select id="modal-climber-select" class="fuzzy-search-bar default ml-1">
+								<select id="modal-climber-select" class="fuzzy-search-bar climber-select default ml-1">
 									<option value="">Search climbers to filter results</option>
 								</select>
 								<button id="refresh-modal-climber-select" class="icon-button" title="Refresh climber search results">
@@ -62,21 +62,21 @@ class ClimberForm {
 						<div class="expedition-modal-search-container" aria-hidden="true">
 							<div class="field-container checkbox-field-container always-editable col-sm-3 pl-3">
 								<label class="checkmark-container">
-									<input id="guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="guide_only" aria-labelledby="guide-only-filter-label">
+									<input id="guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter guide-only-filter" type="checkbox" name="guide_only" aria-labelledby="guide-only-filter-label">
 									<span class="checkmark data-input-checkmark"></span>
 								</label>
 								<label id="guide-only-filter-label" class="field-label checkbox-label" for="guide-only-filter">Commercial guide</label>
 							</div>	
 							<div class="field-container checkbox-field-container always-editable col-sm-3 pl-3">
 								<label class="checkmark-container">
-									<input id="7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter" type="checkbox" name="7_day_only" aria-labelledby="7-day-only-filter">
+									<input id="7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter 7-day-only-filter" type="checkbox" name="7_day_only" aria-labelledby="7-day-only-filter">
 									<span class="checkmark data-input-checkmark"></span>
 								</label>
 								<label id="7-day-only-filter-label" class="field-label checkbox-label" for="7-day-only-filter">7-day only</label>
 							</div>
 							<div class="col-sm-6 px-0 d-flex justify-content-end">
-								<span id="climber-search-result-count" class="pr-5 hidden" aria-hidden="true"></span>
-								<div id="climber-search-option-loading-indicator" class="loading-indicator-dot-container pr-5 hidden" aria-hidden="true">
+								<span id="climber-search-result-count" class="climber-search-result-count pr-5 hidden" aria-hidden="true"></span>
+								<div id="climber-search-option-loading-indicator" class="climber-search-option-loading-indicator loading-indicator-dot-container pr-5 hidden" aria-hidden="true">
 									<div class="loading-indicator-dot dot1"></div>
 									<div class="loading-indicator-dot dot2"></div>
 									<div class="loading-indicator-dot dot3"></div>
@@ -435,6 +435,77 @@ class ClimberForm {
 								</div>
 							</div> <!-- tab content -->
 						</li> 
+
+						<li id="merge-climber-list-item" class="hidden" aria-hidden="true">
+							<input id="merge-climber-tab" class="tab-button" type="radio" name="tabs">
+							<label for="merge-climber-tab" class="tab-label" role="tab" aria-selected="false" aria-controls="merge-climber-tab-content" tabindex="0">
+								Merge Climbers
+							</label>
+							<div id="merge-climber-tab-content" class="tab-content" role="tabpanel" aria-labelledby="merge-climber-tab" aria-hidden="true">
+								<div id="merge-climber-tab-content-header">
+									<h6 class="w-100">Search for a climber profile to merge with <span class="merge-climber-selected-name"></span>. After merging climber profiles, <em>all expeditions associated with the climber selected below will be transferred to <span class="merge-climber-selected-name"></span></em> and <span class="merge-climber-selected-name"></span>'s information will be retained.</h6>
+									<div class="climber-fuzzy-search-select-container" aria-hidden="true">
+										<div class="fuzzy-search-bar-container col-6">
+											<textarea id="merge-climber-search-bar" class="fuzzy-search-bar climber-search-select-filter no-click-trigger-on-enter" placeholder="Type to search for climbers" title="Type to filter climbers" autocomplete="__never"></textarea>
+											<img class="search-bar-icon" src="imgs/search_icon_50px.svg">
+										</div>	
+										<div class="climber-select-container collapse">
+											<select id="merge-climber-select" class="fuzzy-search-bar climber-select default ml-1">
+												<option value="">Search climbers to filter results</option>
+											</select>
+										</div>	
+									</div>	
+									<div class="climber-fuzzy-search-select-container" aria-hidden="true">
+										<div class="field-container checkbox-field-container always-editable col-md-6 pl-3">
+											<label class="checkmark-container">
+												<input id="merge-guide-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter guide-only-filter merge-climber-filter" type="checkbox" name="guide_only" aria-labelledby="guide-only-filter-label">
+												<span class="checkmark data-input-checkmark"></span>
+											</label>
+											<label id="merge-guide-only-filter-label" class="field-label checkbox-label" for="merge-guide-only-filter">Commercial guide</label>
+										</div>	
+										<!--<div class="field-container checkbox-field-container always-editable col-sm-3 pl-3">
+											<label class="checkmark-container">
+												<input id="merge-7-day-only-filter" class="input-field input-checkbox ignore-on-change climber-search-filter 7-day-only-filter merge-climber-filter" type="checkbox" name="7_day_only" aria-labelledby="merge-7-day-only-filter-label">
+												<span class="checkmark data-input-checkmark"></span>
+											</label>
+											<label id="merge-7-day-only-filter-label" class="field-label checkbox-label" for="merge-7-day-only-filter">7-day only</label>
+										</div>-->
+										<div class="col-sm-6 px-0 d-flex justify-content-end">
+											<span class="climber-search-result-count pr-5 hidden" aria-hidden="true"></span>
+											<div id="climber-search-option-loading-indicator" class="climber-search-option-loading-indicator loading-indicator-dot-container pr-5 hidden" aria-hidden="true">
+												<div class="loading-indicator-dot dot1"></div>
+												<div class="loading-indicator-dot dot2"></div>
+												<div class="loading-indicator-dot dot3"></div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="merge-climber-details-container collapse mt-3">
+									<div class="w-100 d-flex justify-content-between">
+										<h4 class="col pl-0 merge-climber-name selected-merge-climber-text"></h4>
+										<label class="col text-right result-details-summary-value merge-climber-entry-metadata-label"></label>
+									</div>
+									<p class="merge-climber-address selected-merge-climber-text mb-2"></p>
+									<div class="w-100 d-flex"> 
+										<label class="merge-climber-phone-label mr-5" class="merge-info-icon-label">
+											<i class="fa fa-solid fas fa-phone"></i>
+											<span class="ml-2"></span>
+										</label> 
+										<label class="merge-climber-email-label" class="merge-info-icon-label">
+											<i class="fa fa-solid fas fa-envelope"></i>
+											<span class="ml-2"></span>
+										</label>
+									</div>
+									<label class="merge-climber-dob-label"></label>
+									<h5 class="mt-3">Previous Expeditions</h5>
+									<ul class="merge-climber-history-list">
+									</ul>
+									<div class="w-100 d-flex justify-content-center mt-3">
+										<button id="merge-climber-button" class="generic-button" role="button">Merge climbers</button>
+									</div>
+								</div>
+							</div>
+						</li>
 					</ul>
 				</div> <!--climber-form-content-->
 				
@@ -671,7 +742,7 @@ class ClimberForm {
 		if (!dob || !age) return;
 
 		const birthdate = new Date(dob + ' 00:00');
-		const calculatedAge = Math.floor((new Date() - birthdate) / climberDB.constants.millisecondsPerDay / 365);
+		const calculatedAge = Math.floor((new Date() - birthdate) / this.constants.millisecondsPerDay / 365);
 		const enteredAge = $ageField.val();
 
 		if (calculatedAge != enteredAge) {
@@ -1363,6 +1434,11 @@ class ClimberForm {
 		}
 		// If edits are being turned off, reset switch
 		if (!allowEdits) $('#disable-required-switch-container input[type=checkbox]').prop('checked', false).change();
+
+		// toggle merge-climber-tab visibility
+		const $mergeTabButton = $('#merge-climber-list-item').ariaHide(!allowEdits)
+			.find('.tab-button');
+		if ($mergeTabButton.is(':checked')) $('#climber-info-tab').click();
 	}
 
 
@@ -1425,6 +1501,9 @@ class ClimberDBClimbers extends ClimberDB {
 		});
 
 		$('.climber-search-filter').change(e => {
+			// prevent 'Merge Climber' search from triggering a global climber search
+			if ($(e.target).is('.merge-climber-filter')) return;
+
 			const $input = $('#climber-search-bar');
 			const searchString = $input.val();
 			// If the search string is empty, search without a search string
@@ -1499,6 +1578,22 @@ class ClimberDBClimbers extends ClimberDB {
 			const $el = $(e.target);
 			$el.data('current-value', $el.val());
 		});
+
+		$('#merge-climber-search-bar').keyup(() => {
+			this.onMergeClimberSearchKeyup();
+		}).keydown(e => {
+			// If the user hit the enter to key, trying to submit, just ignore it becauae the search 
+			//	will happen regardless and the enter key will add a carriage return
+			if (e.key === 'Enter') return false;
+		});
+		// guide and 7-day filters
+		$('#merge-climber-tab-content .climber-search-filter').change(() => {
+			this.onMergeClimberSearchKeyup();
+		});
+
+		$('#merge-climber-select').change(e => {
+			this.onMergeClimberSelectChange(e);
+		})
 	}
 
 
@@ -1749,6 +1844,10 @@ class ClimberDBClimbers extends ClimberDB {
 		// Make sure required fields are required
 		$('#disable-required-switch-container input[type=checkbox]').prop('checked', false).change();
 
+		$('.merge-climber-selected-name').text(
+			$('.query-result-list-item.selected .result-label-climber-name').text()
+		)
+
 		if (updateURLHistory) this.updateURLHistory(climberID);
 
 		return $item;
@@ -1825,7 +1924,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 			$list.append(`
 				<li id="item-${climber.id}" class="query-result-list-item ${climber.id == currentSelectedID ? 'selected' : ''}" role="row" data-climber-id=${climber.id} tabindex=${liTabIndex}>
-					<label class="result-summary-label col" role="gridcell">${climber.full_name}</label>
+					<label class="result-summary-label result-label-climber-name col" role="gridcell">${climber.full_name}</label>
 					<label class="result-summary-label col" role="gridcell">${localeString || '<em>no locale entered</em>'}</label>
 					<label class="result-summary-label col" role="gridcell">${climber.expedition_name || '<em>None</em>'}</label>
 				</li>
@@ -2054,6 +2153,145 @@ class ClimberDBClimbers extends ClimberDB {
 		if (climberInfo.expedition_name) message += ' and all information about their climbs will be delete including transaction history, medical issues, and whether or not they summited.'
 		showModal(message, `Delete climber?`, 'confirm', footerButtons);
 	}
+
+
+	/*
+	Helper function called by either keyup event on modal climber search bar or select refresh button
+	This allows access to the deferred result of fillFuzzySearchSelectOptions
+	*/
+	refreshClimberSelectOptions(searchString) {
+		const $searchContainer = $('#merge-climber-search-select-container');
+		return this.fillFuzzySearchSelectOptions(searchString, $searchContainer);
+	}
+
+
+	/*
+	Event hander for the search bar in the 'Merge Climbers' tab
+	*/
+	onMergeClimberSearchKeyup() {
+		const $searchContainer = $('#merge-climber-tab-content-header');
+		this.onFuzzySearchSelectKeyup($searchContainer);
+	}
+
+
+	/*
+	Event handler for when the user selects a climber to potentially merge with the
+	selected climber
+	*/
+	onMergeClimberSelectChange(e) {
+		const $tabContent = $('#merge-climber-tab-content');
+		
+		const $select = $(e.target);
+		const climberID = $select.val();
+
+		// Show/hide the climber-to-merge info depending on whether the user
+		//	actually selected a climber or the default placeholder option
+		const climberIsSelected = climberID !== '';
+		$select.toggleClass('default', climberIsSelected);
+		const $detailsContainer = $tabContent.find('.merge-climber-details-container')
+			.collapse(climberIsSelected ? 'show' : 'hide');
+
+		// if the user selected the default placeholder option, exit
+		if (!climberID) return;
+
+		// Reset text
+		$detailsContainer.find('.selected-merge-climber-text').text('')
+		$detailsContainer.find('.merge-climber-history-list').empty();
+
+		// Query the climber's info
+		this.queryDB(`SELECT * FROM climber_info_view WHERE id=${parseInt(climberID)}`)
+			.done(queryResultString => {
+				const result = $.parseJSON(queryResultString);
+				if (this.queryReturnedError(queryResultString)) {
+					showModal(`An error occurred while retreiving climbering info: ${queryResultString}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
+				} else {
+					if (result.length) {
+						const climberInfo = result[0];
+						const {
+							first_name,
+							middle_name,
+							last_name,
+							address, 
+							city, 
+							state_code, 
+							country_code, 
+							postal_code,
+							phone,
+							email_address,
+							dob,
+							age,
+							entered_by,
+							entry_time
+						} = {...climberInfo}
+
+						// Fill in name
+						$detailsContainer.find('.merge-climber-name').text(
+							this.climberForm.getFullName(first_name, last_name, middle_name)
+						)
+						$detailsContainer.find('.merge-climber-entry-metadata-label').text(
+							`Entered by ${entered_by} on ${entry_time}`
+						)
+						// Completeness of address is highly variable so format defensively
+						const addressText = (address || '').trim() ? address + '<br>' : '';
+						const cityText = (city || '').trim() ? city : '';
+						const state = Object.keys(this.stateCodes[state_code] || {}).length ? 
+							(cityText ? ', ' : '') + this.stateCodes[state_code].short_name : 
+							'';
+						const country = this.climberForm.countryCodes[country_code] ? (cityText || state ? ', ' : '') + this.climberForm.countryCodes[country_code] : '';
+						const postalCode = postal_code ? ' ' + postal_code : '';
+						$detailsContainer.find('.merge-climber-address').html(
+							addressText + 
+							cityText + state + country + postalCode
+						)
+
+						// Fill phone and email
+						$detailsContainer.find('.merge-climber-phone-label')
+							.ariaHide(!phone)
+							.find('span')
+								.text(phone)
+						$detailsContainer.find('.merge-climber-email-label')
+							.ariaHide(!email_address)
+							.find('span')
+								.text(email_address)
+						
+						// Fill in D.O.B. and/or age
+						var dobText = '', 
+							ageText = '';
+						const yearsPlural = age > 1 ? 's' : '';
+						if (dob) {
+							dobText = 'D.O.B.: ' + dob;
+							if (age) ageText = ` (${age} year${yearsPlural} old)`;
+						} else {
+							if (age) ageText = `${age} year${yearsPlural} old`;
+						}
+						$detailsContainer.find('.merge-climber-dob-label').text(dobText + ageText)
+
+						// get climber hsitory
+						const $historyList = $detailsContainer.find('.merge-climber-history-list');
+						this.queryDB(`SELECT * FROM climber_history_view WHERE climber_id=${climberID}`)
+							.done(resultString => {
+								if (this.queryReturnedError(resultString)) {
+									showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
+								} else {
+									for (const row of $.parseJSON(resultString)) {
+										const formattedDeparture = (new Date(row.actual_departure_date + ' 12:00')).toLocaleDateString(); //add a time otherwise the date will be a day before
+										const actualReturnDate = new Date(row.actual_return_date + ' 12:00');
+										const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
+										$historyList.append(`<li><label>${this.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}</label></li>`);
+									}
+								}
+							})
+							.fail((xhr, status, error) => {
+								showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
+							});
+					} else {
+						console.log('No climber found with ID ' + ClimberID);
+					}
+				}
+			})
+
+	}
+
 
 	init() {
 

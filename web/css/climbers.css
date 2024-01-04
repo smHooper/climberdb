@@ -498,7 +498,42 @@ section.card {
 	opacity: 1;
 }
 
-
+#merge-climber-tab-content-header,
+.climber-fuzzy-search-select-container,
+.merge-climber-details-container {
+	display: flex;
+	flex-wrap: wrap;
+	width: 100%;
+	/*column-gap: 20px;*/
+}
+.merge-climber-details-container.collapse:not(.show) {
+	display: none;
+}
+.climber-fuzzy-search-select-container {
+	width: 100%;
+}
+.climber-select-container.collapse.show {
+	flex: 1 1 auto;
+	display: flex;
+}
+.merge-climber-name {
+	color: var(--ui-primary-text-color);
+}
+.merge-climber-history-list {
+	list-style: none;
+	padding-inline-start: 0;
+}
+.merge-climber-history-list li label {
+	height: 40px;
+	line-height: 40px;
+	margin-bottom: 10px;
+	padding: 0 10px;
+	border-radius: 20px;
+	background-color: #d9d9d9;
+}
+.result-details-summary-container.collapse {
+	display: none;
+}
 
 .query-result-pane.collapsed {
 	width: 0;

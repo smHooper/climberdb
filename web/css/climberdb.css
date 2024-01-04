@@ -1539,6 +1539,61 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
   z-index: 1; /* place in front when background of input is transulcent */
 }
 
+.climber-form .fuzzy-search-bar {
+  font-size: 16px;
+  height: 40px;
+  width: 100%;
+  flex: 1 1 auto;
+  margin-top: 20px;
+  text-indent: 40px;
+  margin-left: -40px;
+  line-height: 40px;
+}
+.climber-form .fuzzy-search-bar-container > .search-bar-icon {
+  height: 40px;
+  width: 40px;
+  top: 20px;
+  padding: 5px;
+}
+.climber-form select.fuzzy-search-bar {
+  text-indent: 5px;
+}
+
+/*climber option loading indicator dot animation for climber fuzzy search/select pattern*/
+.loading-indicator-dot-container {
+  width: 100%;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+ .loading-indicator-dot {
+  background: #00679b;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin: 10px;
+}
+.loading-indicator-dot.dot1 {
+  animation: loading-indicator-dot-blink 1.6s -0.32s linear infinite;
+}
+.loading-indicator-dot.dot2 {
+    animation: loading-indicator-dot-blink 1.6s -0.16s linear infinite;
+}
+.loading-indicator-dot.dot3 {
+    animation: loading-indicator-dot-blink 1.6s linear infinite;
+}
+@keyframes loading-indicator-dot-blink {
+  0%, 80%, 100% { 
+    -webkit-transform: scale(0);
+    transform: scale(0);
+    opacity: 0.2;
+  } 40% { 
+    -webkit-transform: scale(2.0);
+    transform: scale(2.0);
+    opacity: 1;
+  }
+}
 /*@keyframes collapse-sidebar-button {
   0% {
     height: 3px;
