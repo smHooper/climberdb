@@ -1497,7 +1497,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 		// When a .input-field changes, register the change in the .edits object
 		// 	add event handler here so that expeditions (which also adds a ClimberForm()) page doesn't register events twice
-		$('.climber-form .input-field').change(e => {
+		$('.climber-form .input-field:not(.ignore-on-change)').change(e => {
 			this.climberForm.onInputChange(e);
 		});
 
