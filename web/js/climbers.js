@@ -443,7 +443,19 @@ class ClimberForm {
 							</label>
 							<div id="merge-climber-tab-content" class="tab-content" role="tabpanel" aria-labelledby="merge-climber-tab" aria-hidden="true">
 								<div id="merge-climber-tab-content-header">
-									<h6 class="w-100">Search for a climber profile to merge with <span class="merge-climber-selected-name"></span>. After merging climber profiles, <em>all expeditions associated with the climber selected below will be transferred to <span class="merge-climber-selected-name"></span></em> and <span class="merge-climber-selected-name"></span>'s information will be retained.</h6>
+									<div id="merge-climber-instructions-container">
+										<p id="merge-climber-instructions-text" class="w-100">Search for a climber profile to merge with 
+											<span class="merge-climber-selected-name"></span>. After merging climber profiles, 
+												<em>all expeditions associated with the climber selected below will be transferred to 
+													<span class="merge-climber-selected-name"></span>
+												</em> and 
+												<span class="merge-climber-selected-name"></span>'s information will be retained.
+												<button id="merge-climber-instructions-less-button" class="text-only-button merge-climber-instructions-button"> Less...</button>
+											</span>
+										</p>
+										<div id="merge-climber-instructions-screen"></div>
+									</div>
+									<button id="merge-climber-instructions-more-button" class="text-only-button merge-climber-instructions-button" role="button" aria-hidden="false">More...</button> 
 									<div class="climber-fuzzy-search-select-container" aria-hidden="true">
 										<div class="fuzzy-search-bar-container col-6">
 											<textarea id="merge-climber-search-bar" class="fuzzy-search-bar climber-search-select-filter no-click-trigger-on-enter" placeholder="Type to search for climbers" title="Type to filter climbers" autocomplete="__never"></textarea>
@@ -1573,10 +1585,18 @@ class ClimberDBClimbers extends ClimberDB {
 
 		$('#modal-save-climber-button').click(e => {this.onSaveModalClimberClick(e)});
 		$('.delete-climber-button').click(e => {this.onDeleteClimberClick(e)})
-
+		
 		$('.record-current-value').focus(e => {
 			const $el = $(e.target);
 			$el.data('current-value', $el.val());
+		});
+
+		// Show/hide the merge climber instructions in full
+		$('.merge-climber-instructions-button').click(e => {
+			const $button = $(e.target).ariaHide(true);
+			$('#merge-climber-instructions-container').toggleClass('show');
+			const $otherButton = $('.merge-climber-instructions-button').not($button)
+				.ariaHide(false);
 		});
 
 		$('#merge-climber-search-bar').keyup(() => {

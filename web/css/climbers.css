@@ -231,7 +231,7 @@
 	flex-direction: column;
 }
 .climber-form-content {
-	background: rgb(230, 230, 230);
+	background: var(--ui-bg-light-gray);
 	border-radius: 20px;
 	flex: 1 1 100%;
 	width: 100%;
@@ -460,7 +460,7 @@ section.card {
 	row-gap: 15px;
 	flex-wrap: wrap;
 	align-content: flex-start;
-	background-color: rgb(230,230,230);
+	background-color: var(--ui-bg-light-gray);
 	box-shadow: 0 5px 8px 2px rgb(0 0 0 / 30%)
 }
 .tab-field-list-container {
@@ -512,6 +512,13 @@ section.card {
 .climber-fuzzy-search-select-container {
 	width: 100%;
 }
+.fuzzy-search-bar-container {
+	height: 70px;
+}
+.climber-form .fuzzy-search-bar,
+.climber-form .fuzzy-search-bar-container > .search-bar-icon {
+	margin-top: 10px;
+}
 .climber-select-container.collapse.show {
 	flex: 1 1 auto;
 	display: flex;
@@ -533,6 +540,34 @@ section.card {
 }
 .result-details-summary-container.collapse {
 	display: none;
+}
+#merge-climber-instructions-container {
+	position: relative;
+	width: 100%;
+	height: 48px; /*2x default line-height*/
+	overflow: hidden;
+	transition: height 0.3s;
+}
+.merge-climber-instructions-button {
+	font-weight: bold;
+	padding-left: 0;
+}
+#merge-climber-instructions-screen {
+	height: 100%;
+	width: 100%;
+	background: linear-gradient(180deg, transparent 20px, var(--ui-bg-light-gray) 44px);
+	position: absolute;
+	z-index: 100;
+	top: 0;
+}
+#merge-climber-instructions-container.show {
+	height: unset;
+}
+#merge-climber-instructions-container.show #merge-climber-instructions-screen {
+	height: 0;
+}
+#expanded-merge-explanation.collape {
+	display: inline; /*continue paragraph*/
 }
 
 .query-result-pane.collapsed {

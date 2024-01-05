@@ -5,6 +5,7 @@
   --ui-desaturated-color: #4d819b;
   --ui-primary-highlight-color: #f28100;
   --ui-secondary-highlight-color: #faaf00;
+  --ui-bg-light-gray: #e6e6e6;
   --climberdb-header-menu-height: 60px;
   --fuzzy-search-bar-height: 60px;
   --climberdb-data-table-row-height: 60px;
@@ -429,7 +430,7 @@ ul.tabs input[type="radio"]:checked ~ .tab-content {
   row-gap: 15px;
   flex-wrap: wrap;
   align-content: flex-start;
-  background-color: rgb(230,230,230);
+  background-color: var(--ui-bg-light-gray);
   box-shadow: 0 5px 8px 2px rgb(0 0 0 / 30%);
 }
 /* --- tabs --- */
@@ -1544,7 +1545,6 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
   height: 40px;
   width: 100%;
   flex: 1 1 auto;
-  margin-top: 20px;
   text-indent: 40px;
   margin-left: -40px;
   line-height: 40px;
@@ -1552,8 +1552,11 @@ input.fuzzy-search-bar:not(:placeholder-shown) {
 .climber-form .fuzzy-search-bar-container > .search-bar-icon {
   height: 40px;
   width: 40px;
-  top: 20px;
   padding: 5px;
+}
+.climber-form .fuzzy-search-bar,
+.climber-form .fuzzy-search-bar-container > .search-bar-icon {
+  margin-top: 20px;
 }
 .climber-form select.fuzzy-search-bar {
   text-indent: 5px;
