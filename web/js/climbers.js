@@ -1593,6 +1593,10 @@ class ClimberDBClimbers extends ClimberDB {
 
 		$('#merge-climber-select').change(e => {
 			this.onMergeClimberSelectChange(e);
+		});
+
+		$('#merge-climber-button').click(() => {
+			this.onMergeClimberButtonClick();
 		})
 	}
 
@@ -1604,6 +1608,9 @@ class ClimberDBClimbers extends ClimberDB {
 		if ($climberForm === null) $climberForm = $('.climber-form');
 
 		$climberForm.addClass('climberdb-modal');
+
+		// hide the merge climber tab
+		$('#merge-climber-list-item').ariaHide(true);
 
 		$('.result-details-pane')
 			.removeClass('uneditable')
@@ -2100,26 +2107,26 @@ class ClimberDBClimbers extends ClimberDB {
 			.done(queryResultString => {
 				if (!this.queryReturnedError(queryResultString)) {
 					const $item = $(`#item-${climberID}`);
+					const deletedClimberIsSelected = $item.is('.selected');
 					const $nextItem = $item.next().length ? $item.next() : $item.prev();
 					$item.fadeOut(500, () => {$item.remove()});
 					
-					if ($nextItem.length) {
-						this.selectResultItem($nextItem);
-						$nextItem[0].scrollIntoView();
+					if (deletedClimberIsSelected) {
+						if ($nextItem.length) {
+							this.selectResultItem($nextItem);
+							$nextItem[0].scrollIntoView();
 
-						// Adjust record set
-						const $minSpan = $('#min-record-index-span');
-						const $maxSpan = $('#max-record-index-span');
-						const $totalSpan = $('#total-records-span');
-						$maxSpan.text($maxSpan.text() - 1);
-						$totalSpan.text($totalSpan - 1);	
-					} else { // This was the last climber so get the next result set
-						$('.empty-result-message').ariaHide(false);
-						this.getResultSet();
+							// Adjust record set
+							const $minSpan = $('#min-record-index-span');
+							const $maxSpan = $('#max-record-index-span');
+							const $totalSpan = $('#total-records-span');
+							$maxSpan.text($maxSpan.text() - 1);
+							$totalSpan.text($totalSpan - 1);	
+						} else { // This was the last climber so get the next result set
+							$('.empty-result-message').ariaHide(false);
+							this.getResultSet();
+						}
 					}
-					
-		
-
 				}
 			})
 	}
@@ -2187,7 +2194,7 @@ class ClimberDBClimbers extends ClimberDB {
 		// Show/hide the climber-to-merge info depending on whether the user
 		//	actually selected a climber or the default placeholder option
 		const climberIsSelected = climberID !== '';
-		$select.toggleClass('default', climberIsSelected);
+		$select.toggleClass('default', !climberIsSelected);
 		const $detailsContainer = $tabContent.find('.merge-climber-details-container')
 			.collapse(climberIsSelected ? 'show' : 'hide');
 
@@ -2290,6 +2297,108 @@ class ClimberDBClimbers extends ClimberDB {
 				}
 			})
 
+	}
+
+
+
+	/*
+	Confirm that the user wants to merge the selected climber profiles
+	*/
+	onMergeClimberButtonClick() {
+
+		const $selectedClimberItem = $('.query-result-list-item.selected');
+		const selectedClimberID = $selectedClimberItem.data('climber-id');
+		const selectedClimberName = $selectedClimberItem.find('.result-label-climber-name').text();
+
+		const $mergeClimberSelect = $('#merge-climber-tab-content .climber-select');
+		const mergeClimberID = $mergeClimberSelect.val();
+		const $mergeClimberOption = $mergeClimberSelect.find(`option[value=${mergeClimberID}]`)
+		const mergeClimberName = $mergeClimberOption.text();
+		// Check that the user has actually selected a climber. This shouldn't be necessary beceause
+		//	 the button should only be visible if a climber *is* selected, but just in case...
+		if (!mergeClimberID) {
+			showModal(`You must select a climber to merge with ${selectedClimberName}`, 'Invalid Operation');
+		}
+
+		// Same buttons for either deleting an empty climber profile or merging
+		const footerButtons = `
+			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+			<button class="generic-button modal-button danger-button confirm-button close-modal" data-dismiss="modal">Yes</button>
+		`
+
+		// If the merged climber doesn't have any history to merge, ask the user if they 
+		//	just want to delete it
+		if (!$('.merge-climber-history-list li').length) {
+			const message = `<strong>${mergeClimberName}</strong>, the climber you selected to` +
+				` merge with <strong>${selectedClimberName}</strong>,` + 
+				' does not have any climbing history to merge. Would you like to simply delete' +
+				' this climber profile instead? Deleting this profile is a permanent action that' + 
+				' cannot be undone';
+			const onConfirmClickHandler = () => {
+				$('#alert-modal .confirm-button').click(() => {
+					showLoadingIndicator('mergeClimbers');
+					this.deleteClimber(mergeClimberID)
+						.done(response => {
+							if (!this.queryReturnedError(response)) {
+								// Update .climber-select
+								this.onMergeClimberSearchKeyup();
+								$('.merge-climber-details-container').collapse('hide');
+							}
+					});
+				});
+			}
+			showModal(message, 'Premanently Delete Climber Profile?', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+			return;
+		}
+
+
+		const message = `Are you sure you want to transfer all of <strong>${mergeClimberName}'s</strong>` +
+			` climber history to <strong>${selectedClimberName}'s</strong> profile? This action is` + 
+			' permanent and cannot be undone.'
+;
+		const onConfirmClickHandler = () => { 
+			$('#alert-modal .confirm-button').click(() => {
+				showLoadingIndicator('mergeClimbers');
+				$.post({
+					url: 'flask/merge_climbers',
+					data: {
+						selected_climber_id: selectedClimberID,
+						merge_climber_id: mergeClimberID
+					}
+				}).done(response => {
+					if (this.pythonReturnedError(response)) {
+						showModal('An error occurred while trying to merge climber profiles: ' + response, 'Unexpected Error');
+					} else if ('update_result' in response) {
+						const nExpeditions = response.update_result.length;
+						const message = 'The two climber profiles were successfully merged.' + 
+						` ${nExpeditions} expedition${nExpeditions > 1 ? 's were' : ' was'} transfered from <strong>${mergeClimberName}'s</strong>` + 
+						` profile to <strong>${selectedClimberName}'s</strong>.`;
+						// Between dismissing the confirmation modal and showing this one, wires are getting 
+						//	crossed so pause for a half second before showing this one
+						setTimeout(()=>{showModal(message, 'Climber Profiles Succesfully Merged')}, 500);
+						
+						// Reload the currently selected climber by either 
+						const maxIndex = this.currentRecordSetIndex * this.recordsPerSet;
+						const minIndex = maxIndex - this.recordsPerSet + 1;
+						this.queryClimbers({
+							searchString: $('#climber-search-bar').val() || selectedClimberName, 
+							minIndex: minIndex, 
+							autoSelectID: selectedClimberID
+						});
+						// Update .climber-select
+						this.onMergeClimberSearchKeyup();
+						// Hide the details because the selected climber to merge should no longer exist
+						$('.merge-climber-details-container').collapse('hide');
+					} else {
+						showModal('An unkown error occurred while trying to merge climber profiles.', 'Unexpected Error');
+					}
+				}).fail((xhr, status, error) => {
+					showModal('An error occurred while trying to merge climber profiles: ' + error, 'Unexpected Error');
+				}).always(() => {hideLoadingIndicator()})
+			})
+		}
+		
+		showModal(message, 'Confirm Climber Profile Merge', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
 	}
 
 

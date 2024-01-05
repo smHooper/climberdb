@@ -642,7 +642,56 @@ def delete_attachment():
 		return 'true'
 	else:
 		return 'false'
+
+
+@app.route('/flask/merge_climbers', methods=['POST'])
+def merge_climbers():
+	"""
+	Transfer all expedition_member records from one climber profile to another. There are many 
+	duplicate climber records for the same person, so this endponit allows users to merge them 
+	by replacing the climber_id of expedition_members records for one climber with another.
+	The climber record that no longer has any associated expedition_member records can then 
+	be safely deleted
+
+	Request parameters:
+	selected_climber_id - the numeric ID of the climber record that the user intends to maintained
+	merge_climber_id - the numeric ID of the climber record that the user intends to merge with 
+		the maintained climber record
+
+	"""
+	data = dict(request.form)
 	
+	if not 'selected_climber_id' in data:
+		raise ValueError('selected_climber_id was not specified')
+	if not 'merge_climber_id' in data:
+		raise ValueError('selected_climber_id was not specified')
+	
+	engine = get_engine()
+	with engine.connect() as conn:
+		# First, update the expedition_member records for the climber to merge. To prevent duplicate 
+		#	expedition member entries when someone tries to merge two climbers that are on at least
+		#	one expedition together, filter out expeditions they both belong to. In practice, this 
+		# 	shouldn't ever be the case but it is possible
+		update_result = conn.execute(
+			sqlatext(f'''
+				UPDATE expedition_members 
+				SET climber_id=:selected_climber_id 
+				WHERE 
+					climber_id=:merge_climber_id AND 
+					expedition_id NOT IN (
+						SELECT expedition_id FROM expedition_members WHERE climber_id=:selected_climber_id
+					)
+				RETURNING id'''),
+			data
+		)
+		# expedition_member records have now been transferred so the climber record to merge
+		#	can now be safely deleted
+		delete_result = conn.execute(
+			sqlatext(f'''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
+			data
+		)
+
+	return {'update_result': [r._asdict() for r in update_result.fetchall()]}
 
 #---------------- DB I/O ---------------------#
 
