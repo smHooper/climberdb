@@ -370,7 +370,7 @@ ul.tabs {
   position: relative;
   z-index: 2;
   box-shadow: 0 5px 8px 2px rgb(0 0 0 / 30%);
-  background-color: rgb(230, 230, 230);
+  background-color: var(--ui-bg-light-gray);
   padding: 15px;
 }
 ul.tabs > li {

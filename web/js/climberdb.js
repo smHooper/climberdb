@@ -1460,7 +1460,7 @@ class ClimberDB {
 	Member' modal and on the climbers page for merging climber profiles. The $searchContainer
 	is the wrapper containing all search/select elements
 	*/
-	fillClimberFuzzySearchSelectOptions(searchString, $searchContainer) {
+	fillClimberFuzzySearchSelectOptions(searchString, $searchContainer, {excludeID=null}={}) {
 		// Show the select bar
 		$searchContainer.find('.climber-select')
 			.closest('.collapse')
@@ -1499,7 +1499,7 @@ class ClimberDB {
 					}
 					const $select = $searchContainer.find('.climber-select').empty();
 					result = result.data;
-					const resultCount = result.length;
+					var resultCount = result.length;
 					if (resultCount === 0) {
 						$select.append('<option value="">No climbers match your search</option>')
 
@@ -1510,6 +1510,10 @@ class ClimberDB {
 						// Still show placeholder option because a climber should not be selected automatically
 						$select.append('<option value="">Select climber to view</option>')
 						for (const row of result) {
+							if (row.id == excludeID) {
+								resultCount --;
+								continue;
+							}
 							$select.append(`<option value="${row.id}">${row.full_name}</option>`);
 						}
 						// Because the result is retrieved asynchonously and when a user types no search is done, 
@@ -1535,12 +1539,12 @@ class ClimberDB {
 	combination. This pattern is used in both the expeditions page for the 'Add
 	Member' modal and on the climbers page for merging climber profiles.
 	*/
-	onFuzzySearchSelectKeyup($searchContainer) {
+	onFuzzySearchSelectKeyup($searchContainer, {excludeID=null}={}) {
 		const $input = $searchContainer.find('.climber-search-select-filter');
 		const searchString = $input.val();
 		// If a search string was entered or the guide filter was checked, search
 		if (searchString.length >= 3 || $searchContainer.find('.guide-only-filter').prop('checked')) { 
-			this.fillClimberFuzzySearchSelectOptions(searchString, $searchContainer);
+			return this.fillClimberFuzzySearchSelectOptions(searchString, $searchContainer, {excludeID: excludeID});
 		} 
 		// Otherwise, hide the select
 		else {
