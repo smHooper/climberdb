@@ -1453,6 +1453,108 @@ class ClimberDB {
 	}
 
 
+	/*
+	For fuzzy search bar/select combos for searching and selecting a climber, this helper 
+	function takes the user input searchString and fills the .climber-select element with 
+	the resulting options. This pattern is used in both the expeditions page for the 'Add
+	Member' modal and on the climbers page for merging climber profiles. The $searchContainer
+	is the wrapper containing all search/select elements
+	*/
+	fillClimberFuzzySearchSelectOptions(searchString, $searchContainer) {
+		// Show the select bar
+		$searchContainer.find('.climber-select')
+			.closest('.collapse')
+				.collapse('show');
+
+		const $loadingIndicator = $searchContainer.find('.climber-search-option-loading-indicator')
+			.ariaHide(false);
+
+		let whereClause = '';
+		if ($searchContainer.find('.7-day-only-filter').prop('checked')) 
+			whereClause += ' WHERE climber_info_view.id IN (SELECT climber_id FROM seven_day_rule_view) ';
+		const $guideOnlyCheckbox = $searchContainer.find('.guide-only-filter');
+		if ($guideOnlyCheckbox.prop('checked')) 
+			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
+		
+		const queryFields = 'id, full_name';
+		const sql = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields, whereClause: whereClause});
+
+		const $climberCount = $('.climber-search-result-count').text('')
+			.ariaHide(true);
+
+		return this.queryDB(sql, {returnTimestamp: true})
+			.done(queryResultString => {
+				if (this.queryReturnedError(queryResultString)) {
+
+				} else {
+					var result = $.parseJSON(queryResultString);
+					// Check if this result is older than the currently displayed result. This can happen if the user is 
+					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
+					//	since we don't want the older result to overwrite the newer one
+					const queryTime = result.queryTime;
+					if (queryTime < this.climberForm.lastSearchQuery) {
+						return;
+					} else {
+						this.climberForm.lastSearchQuery = queryTime;
+					}
+					const $select = $searchContainer.find('.climber-select').empty();
+					result = result.data;
+					const resultCount = result.length;
+					if (resultCount === 0) {
+						$select.append('<option value="">No climbers match your search</option>')
+
+						// Because results are asynchonous, make sure result count is hidden
+						$climberCount.text('')
+							.ariaHide(true);
+					} else {
+						// Still show placeholder option because a climber should not be selected automatically
+						$select.append('<option value="">Select climber to view</option>')
+						for (const row of result) {
+							$select.append(`<option value="${row.id}">${row.full_name}</option>`);
+						}
+						// Because the result is retrieved asynchonously and when a user types no search is done, 
+						//	
+						if ($searchContainer.find('.climber-search-select-filter').val().length >= 3 || $guideOnlyCheckbox.prop('checked')) {
+							$climberCount.text(
+									`${resultCount} climber${resultCount > 1 ? 's' : ''} found`
+								)
+								.ariaHide(false);
+						}
+					}
+				}
+			})
+			.fail((xhr, status, error) => {
+				console.log('fillFuzzySearchSelectOptions query failed: ' + sql);
+			})
+			.always(() => {$loadingIndicator.ariaHide(true)});
+	}
+
+
+	/*
+	Generic event handler for keyup events on the fuzzy search bar of a fuzzy search/select
+	combination. This pattern is used in both the expeditions page for the 'Add
+	Member' modal and on the climbers page for merging climber profiles.
+	*/
+	onFuzzySearchSelectKeyup($searchContainer) {
+		const $input = $searchContainer.find('.climber-search-select-filter');
+		const searchString = $input.val();
+		// If a search string was entered or the guide filter was checked, search
+		if (searchString.length >= 3 || $searchContainer.find('.guide-only-filter').prop('checked')) { 
+			this.fillClimberFuzzySearchSelectOptions(searchString, $searchContainer);
+		} 
+		// Otherwise, hide the select
+		else {
+			$searchContainer.find('.climber-select')
+				.empty()
+				.closest('.collapse')
+				.collapse('hide');
+			$('.climber-search-result-count').text('');
+			$input.focus();
+		}
+	}
+
+
+
 	beforeUnloadEventHandler(e) {
 		if ($('.input-field.dirty:not(.filled-by-default)').length) {
 			const message = 'You have unsaved edits. Are you sure you want to leave this page?';

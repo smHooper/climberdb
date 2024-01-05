@@ -2775,70 +2775,6 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*
-	Populate the modal climber select options
-	*/
-	fillClimberFormSelectOptions(searchString) {
-
-		let whereClause = '';
-		if ($('#7-day-only-filter').prop('checked')) 
-			whereClause += ' WHERE climber_info_view.id IN (SELECT climber_id FROM seven_day_rule_view) ';
-		if ($('#guide-only-filter').prop('checked')) 
-			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
-		
-		const queryFields = 'id, full_name';
-		const sql = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields, whereClause: whereClause});
-
-		$('#climber-search-result-count').text('')
-			.ariaHide(true);
-
-		return this.queryDB(sql, {returnTimestamp: true})
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-
-				} else {
-					var result = $.parseJSON(queryResultString);
-					// Check if this result is older than the currently displayed result. This can happen if the user is 
-					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
-					//	since we don't want the older result to overwrite the newer one
-					const queryTime = result.queryTime;
-					if (queryTime < this.climberForm.lastSearchQuery) {
-						return;
-					} else {
-						this.climberForm.lastSearchQuery = queryTime;
-					}
-					const $select = $('#modal-climber-select').empty();
-					result = result.data;
-					const resultCount = result.length;
-					if (resultCount === 0) {
-						$select.append('<option value="">No climbers match your search</option>')
-
-						// Because results are asynchonous, make sure result count is hidden
-						$('#climber-search-result-count').text('')
-							.ariaHide(true);
-					} else {
-						// Still show placeholder option because a climber should not be selected automatically
-						$select.append('<option value="">Select climber to view</option>')
-						for (const row of result) {
-							$select.append(`<option value="${row.id}">${row.full_name}</option>`);
-						}
-						// Because the result is retrieved asynchonously and when a user types no search is done, 
-						//	
-						if ($('#modal-climber-search-bar').val().length >= 3 || $('#guide-only-filter').prop('checked')) {
-							$('#climber-search-result-count').text(
-									`${resultCount} climber${resultCount > 1 ? 's' : ''} found`
-								)
-								.ariaHide(false);
-						}
-					}
-				}
-			})
-			.fail((xhr, status, error) => {
-				console.log('fillClimberFormSelectOptions query failed: ' + sql);
-			})
-	}
-
-
-	/*
 	Event handler for a .close button on the modal climber form
 	*/
 	onCloseClimberFormModalClick(e) {
@@ -2865,37 +2801,22 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	/*
 	Helper function called by either keyup event on modal climber search bar or select refresh button
-	This allows access to the deferred result of fillClimberFormSelectOptions
+	This allows access to the deferred result of fillFuzzySearchSelectOptions
 	*/
 	refreshClimberSelectOptions(searchString) {
-
-		$('#modal-climber-select').closest('.collapse').collapse('show');
-
-		const $loadingIndicator = $('#climber-search-option-loading-indicator').ariaHide(false);
-		return this.fillClimberFormSelectOptions(searchString)
-			.always(() => {$loadingIndicator.ariaHide(true)});
+		const $searchContainer = $('.expedition-modal-climber-form-header');
+		return this.fillClimberFuzzySearchSelectOptions(searchString, $searchContainer);
 	}
+
 
 	/*
 	Event hander for the search bar on the modal "add expedition member" form
 	*/
 	onClimberFormSearchKeyup() {
-		const $input = $('#modal-climber-search-bar');
-		const searchString = $input.val();
-		// If a search string was entered or the guide filter was checked, search
-		if (searchString.length >= 3 || $('#guide-only-filter').prop('checked')) { 
-			this.refreshClimberSelectOptions(searchString);
-		} 
-		// Otherwise, hide the select
-		else {
-			$('#modal-climber-select')
-				.empty()
-				.closest('.collapse')
-				.collapse('hide');
-			$('#climber-search-result-count').text('');
-			$input.focus();
-		}
+		const $searchContainer = $('.expedition-modal-climber-form-header');
+		this.onFuzzySearchSelectKeyup($searchContainer);
 	}
+
 
 	onRefreshModalClimberSelectClick() {
 
