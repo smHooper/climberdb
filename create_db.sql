@@ -298,7 +298,10 @@ CREATE VIEW climber_info_view AS
 	    climbers.country_code,
 	    climbers.postal_code,
 	    climbers.dob,
-	    COALESCE(climbers.age, (now()::date - climbers.dob) / 365) AS age,
+	    CASE  
+	    	WHEN climbers.dob IS NULL AND climbers.age IS NOT NULL THEN extract(years FROM age(now(), climbers.entry_time)) + climbers.age  
+	    	ELSE extract(years FROM age(now(), climbers.dob)) 
+	    END AS age,
 	    climbers.email_address,
 	    climbers.phone,
 	    climbers.sex_code,
