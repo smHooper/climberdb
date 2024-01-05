@@ -2183,21 +2183,14 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	/*
-	Helper function called by either keyup event on modal climber search bar or select refresh button
-	This allows access to the deferred result of fillFuzzySearchSelectOptions
-	*/
-	refreshClimberSelectOptions(searchString) {
-		const $searchContainer = $('#merge-climber-search-select-container');
-		return this.fillFuzzySearchSelectOptions(searchString, $searchContainer);
-	}
-
-
-	/*
 	Event hander for the search bar in the 'Merge Climbers' tab
 	*/
 	onMergeClimberSearchKeyup() {
 		const $searchContainer = $('#merge-climber-tab-content-header');
-		this.onFuzzySearchSelectKeyup($searchContainer);
+
+		// Exclude the currently selected climber
+		const selectedClimberID = $('.query-result-list-item.selected').data('climber-id');
+		this.onFuzzySearchSelectKeyup($searchContainer, {excludeID: selectedClimberID});
 	}
 
 
