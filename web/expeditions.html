@@ -791,6 +791,8 @@
 
 	<!--alert/message modal -->
 	<div class="modal fade" id="alert-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
+	
+	<!--exports modal -->
 	<div class="modal fade" id="exports-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered" role="document">
 			<div class="modal-content">
@@ -849,7 +851,7 @@
 		</div>
 	</div>
 
-	<!--modal for exporting special user permits -->
+	<!--modal for exporting special use permits -->
 	<div class="modal centered-modal fade" id="export-permit-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true">
 		<div class="modal-dialog modal-dialog-centered" role="document">
 			<div class="modal-content">
@@ -863,7 +865,7 @@
 					<p>Select which expedition members you'd like to export Special Use Permits for</p>
 					<div class="data-list-item data-list-item-header">
 						<div class="data-list-col data-list-header-label center-checkbox-col col-3 justify-content-center">
-							<button class="text-only-button check-all-sup-export w-100" title="Mark all climbers for permit export">Deselect all</button>
+							<button id="check-all-sup-export-button" class="text-only-button check-all-sup-export w-100" title="Mark all climbers for permit export">uncheck all</button>
 						</div>
 						<div class="data-list-col data-list-header-label col climber-name-column"></div>
 					</div>

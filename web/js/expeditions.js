@@ -103,7 +103,15 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$('#export-permit-button').click(e => {
 			this.onExportPermitButtonClick();
-		})
+		});
+
+		$(document).on('change', '.export-permit-checkbox', e => {
+			this.onExportPermitCheckboxChange(e);
+		});
+
+		$('#check-all-sup-export-button').click(() => {
+			this.onCheckAllPermitCheckboxesClick()
+		});
 
 		$('#print-cache-tag-button').click(() => {
 			this.onPrintCacheTagButtonClick();
@@ -2423,6 +2431,9 @@ class ClimberDBExpeditions extends ClimberDB {
 	Show the Export Permit modal and fill the list of expedition members 
 	*/
 	showExportPermitModal() {
+		// hide the exports modal
+		$('#exports-modal').modal('hide');
+
 		const $exportList = $('#export-permit-list').empty();
 
 		for (const card of $('#expedition-members-accordion .card:not(.cancelled, .cloneable)')) {
@@ -2646,6 +2657,35 @@ class ClimberDBExpeditions extends ClimberDB {
         	this.hideLoadingIndicator()
         });
 
+	}
+
+	/*
+	When a user unchecks a checkbox to exclude a climber from the SUP export,
+	hide the export-type select because it's only relevant for exporting
+	SUPs for multiple climbers
+	*/
+	onExportPermitCheckboxChange(e) {
+		const shouldShow = $('.export-permit-checkbox:checked').length > 1
+		$('#input-permit_export_type').closest('.collapse').collapse(
+			shouldShow ? 'show' : 'hide'
+		);
+		if (e.originalEvent) {
+			const $checkboxes = $('#export-permit-modal').find('.export-permit-checkbox');
+			$('#check-all-sup-export-button').text(
+				$checkboxes.not(':checked').length === 0 ? 'uncheck all' : 'check all'
+			);
+		}
+	}
+
+
+	onCheckAllPermitCheckboxesClick() {
+		const $button = $('#check-all-sup-export-button');
+		const $checkboxes = $('#export-permit-modal').find('.export-permit-checkbox');
+		const shouldAllBeChecked = $checkboxes.not(':checked').length !== 0;
+		// if any aren't checked, check them all. Otherwise uncheck them all
+		$checkboxes.prop('checked', shouldAllBeChecked);
+		$button.text(shouldAllBeChecked ? 'uncheck all' : 'check all');
+		$checkboxes.first().change();
 	}
 
 
