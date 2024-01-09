@@ -513,6 +513,30 @@ CREATE VIEW expedition_info_view AS
 		attachments.id;
 
 
+CREATE VIEW special_use_permit_view AS
+	SELECT
+		expedition_members.id AS expedition_member_id,
+		climbers.first_name || ' ' || climbers.last_name AS climber_name,
+		expeditions.expedition_name,
+		climbers.address,
+		climbers.city,
+		state_codes.name AS state,
+		country_codes.name AS country,
+		climbers.postal_code,
+		climbers.phone,
+		climbers.email_address,
+		expedition_members.permit_number,
+		to_char(expeditions.actual_departure_date, 'Mon FMDD, YYYY') AS actual_departure_date
+	FROM expedition_members
+		JOIN expeditions ON expedition_members.expedition_id = expeditions.id 
+		JOIN climbers ON expedition_members.climber_id = climbers.id 
+		JOIN state_codes ON climbers.state_code = state_codes.code 
+		JOIN country_codes ON climbers.country_code = country_codes.code
+	ORDER BY 
+		climbers.last_name, climbers.first_name;
+
+
+
 CREATE VIEW seven_day_rule_view AS 
 	SELECT DISTINCT climber_id FROM 
 	climber_history_view 
