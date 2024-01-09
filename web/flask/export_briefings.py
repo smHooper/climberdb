@@ -40,6 +40,10 @@ def create_sheet(workbook: Workbook, date_str: str, briefings: list[Dict], time_
 	sheet = workbook.create_sheet(date_str)
 	_time_label_width = 7
 
+	# If there are no briefings scheduled, leave it blank and exit
+	if len(briefings) == 0:
+		return
+
 	# Set the "background" cell borders to show a faint horizontal line at the top of each hour
 	#	do this before adding briefing appointments to the schedule so the borders of the 
 	#	appointments will overwrite the "background" lines

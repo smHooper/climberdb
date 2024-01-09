@@ -328,7 +328,7 @@ class ClimberDBBriefings extends ClimberDB {
 		// First, loop through the briefings and determine the number of briefings per time slot
 		//	Sort the briefings in descending order of duration first so that long briefings display
 		//	first (further left), which is more visually coherent
-		const sortedBriefings = Object.values(climberDB.briefings[dateString])
+		const sortedBriefings = Object.values(this.briefings[dateString] || [])
 			.sort((a, b) => {
 				const aDuration =  new Date(a.briefing_end) - new Date(a.briefing_start);
 				const bDuration = new Date(b.briefing_end) - new Date(b.briefing_start);
