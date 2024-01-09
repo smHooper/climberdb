@@ -823,11 +823,11 @@ used to show climber form in "add climber" mode)*/
 	display: none;
 }
 
-.route-member-list .center-checkbox-col {
+.center-checkbox-col {
 	display: flex;
 	justify-content: center;
 }
-.route-member-list .center-checkbox-col .checkmark-container {
+.center-checkbox-col .checkmark-container {
 	width: 25px; /*give it a width so it gets properly centered*/ 
 }
 .uneditable .route-member-list .input-field {
@@ -878,4 +878,10 @@ Default to not showing unless the screen is at least 1500px wides
 		grid-row: 1 / span 2;
 		grid-column: 2 / span 1;
 	}
+}
+
+.export-sup-climber-name-label {
+	margin-bottom: 0;
+	height: 33px;
+	line-height: 33px;
 }

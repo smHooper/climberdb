@@ -99,6 +99,10 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$('#create-pdf-button').click(e => {
 			this.onCreatePDFButtonClick();
+		});
+
+		$('#export-permit-button').click(e => {
+			this.onExportPermitButtonClick();
 		})
 
 		$('#print-cache-tag-button').click(() => {
@@ -2416,12 +2420,41 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*
+	Show the Export Permit modal and fill the list of expedition members 
+	*/
+	showExportPermitModal() {
+		const $exportList = $('#export-permit-list').empty();
+
+		for (const card of $('#expedition-members-accordion .card:not(.cancelled, .cloneable)')) {
+			const $card = $(card);
+			const climberName = $card.find('.expedition-member-card-link-label').text();
+			const expeditionMemberID = $card.data('table-id');
+			$exportList.append(`
+				<li class="data-list-item">
+					<div class="center-checkbox-col col-3">
+						<label class="checkmark-container">
+							<input id="input-export-sup-${expeditionMemberID}" class="input-field input-checkbox export-permit-checkbox" type="checkbox"  title="Export Special Use Permit" checked="checked" data-expedition-member-id=${expeditionMemberID}>
+							<span class="checkmark data-input-checkmark"></span>
+						</label>
+					</div>
+					<div class="col">
+						<label class="export-sup-climber-name-label">${climberName}</label>
+					</div>
+				</li>
+			`)
+		}
+
+		$('#export-permit-modal').modal();
+	}
+
+	/*
 	Check conditions before calling makePDF
 	*/
 	onCreatePDFButtonClick() {
 		const exportType = $('#input-export_type').val();
 		const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.cancelled)').length;
 		const nRoutes = $('#routes-accordion .card:not(.cloneable)').length;
+		const groupStatus = $('#input-group_status').val();
 		if (nMembers === 0) {
 			showModal(
 				'There are no active members of this expedition. You must add at least one member or' +
@@ -2440,6 +2473,18 @@ class ClimberDBExpeditions extends ClimberDB {
 			return;
 		} else if ((exportType === 'registration_card') && (nRoutes === 0)) {
 			showModal('You must add at least one route before you can export the expedition\'s registration card', 'No Routes Entered');
+			return;
+		} else if (exportType === 'special_use_permit') {
+			if (this.constants.groupStatusCodes.confirmed <= groupStatus && groupStatus <= this.constants.groupStatusCodes.offMountain) {
+				this.showExportPermitModal();
+			} else {
+				showModal(
+					'At least one (non-canceled) expedition member has not yet been confirmed. The' + 
+						' expedition must have a group status of "Confirmed", "On Mountain", or "Off' +
+						' Mountain" to export Special User Permits.',
+					'Expedition Not Confirmed'
+				);
+			}
 			return;
 		}	
 		this.makePDF();
@@ -2603,6 +2648,46 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	}
 
+
+	/*
+	Event handler for export sup button click
+	*/
+	onExportPermitButtonClick() {
+		const expeditionMemberIDs = $('.export-permit-checkbox:checked').map((_, el) => $(el).data('expedition-member-id')).get();
+		var permitData = {};
+		for (const id of expeditionMemberIDs) {
+			const $card = $(`#expedition-members-accordion .card[data-table-id=${id}]`);
+			const feeRequired = !$card.find('input[name=is_guiding]').prop('checked');
+			const feePaid = feeRequired && !$card.find('.result-details-header-badge.climbing-fee-icon').is('.transparent') ? 
+				'/Yes' : // values in PDF annotation language
+				'/Off';
+			permitData[id] = {
+				application_fee_not_required: feeRequired ? '/Off' : '/Yes',
+				permit_fee: this.config.climbing_permit_fee,
+				application_fee_paid: feePaid,
+				permit_expiration: 'July 31, ' + new Date().getFullYear()
+			}
+		}
+
+		showLoadingIndicator('onExportPermitButtonClick')
+		$.post({
+			url: 'flask/reports/special_use_permit',
+			data: {
+				permit_data: JSON.stringify(permitData),
+				export_type: $('#input-permit_export_type').val(),
+				expedition_id: this.expeditionInfo.expeditions.id,
+				expedition_name: this.expeditionInfo.expeditions.expedition_name
+			}
+		}).done(responseData => {
+			if (this.pythonReturnedError(responseData)) {
+				showModal('The Special User Permit(s) could not be exported because of an unexpected error: ' + responseData, 'Unexpected Error');
+				return;
+			}
+			window.open(responseData, '_blank');
+		}).fail((xhr, status, error) => {
+			showModal('The Special User Permit(s) could not be exported because of an unexpected error: ' + error, 'Unexpected Error');
+		}).always(() => {hideLoadingIndicator()})
+	}
 
 	/*
 	Update the source Excel file for Label Matrix server-side
