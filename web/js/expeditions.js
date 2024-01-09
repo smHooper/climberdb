@@ -2694,6 +2694,13 @@ class ClimberDBExpeditions extends ClimberDB {
 	*/
 	onExportPermitButtonClick() {
 		const expeditionMemberIDs = $('.export-permit-checkbox:checked').map((_, el) => $(el).data('expedition-member-id')).get();
+		
+		// warn user and exit if no checkboxes are selected
+		if (expeditionMemberIDs.length === 0) {
+			showModal('You must select at least one expedition member to export a Special Use Permit for', 'Invalid Operation');
+			return;
+		}	
+		
 		var permitData = {};
 		for (const id of expeditionMemberIDs) {
 			const $card = $(`#expedition-members-accordion .card[data-table-id=${id}]`);
