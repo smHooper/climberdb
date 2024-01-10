@@ -102,7 +102,6 @@ def create_sheet(workbook: Workbook, date_str: str, briefings: list[Dict], time_
 			cell.font = Font(bold=True, color='FFFFFF')
 		sheet.merge_cells(start_row=start_row, start_column=start_column, end_row=start_row, end_column=end_column)
 
-
 		# Merge the rest if the briefing is more than one row
 		if not is_single_row:
 			info_top_row_index = start_row + 1
@@ -123,7 +122,7 @@ def create_sheet(workbook: Workbook, date_str: str, briefings: list[Dict], time_
 
 	# Set row width
 	n_columns = sheet.max_column - 1
-	if n_columns > 1: # there's more than just the time labels
+	if n_columns: # there's more than just the time labels
 		schedule_width_px = PRINT_WIDTH - _time_label_width # subtract for time label column
 		column_width = schedule_width_px // n_columns
 		print(column_width)
@@ -178,7 +177,7 @@ def briefings_to_excel(data: Dict, output_dir: str) -> str:
 		create_sheet(workbook, date_str, briefings[date_str], time_slots)
 
 	# Write the Excel file
-	briefing_dates = data['briefings'].keys()
+	briefing_dates = briefings.keys()
 	filename = f'''briefing_schedule_{min(briefing_dates)}_to_{max(briefing_dates)}.xlsx'''
 	excel_path = os.path.join(output_dir, filename)
 	workbook.save(excel_path)
