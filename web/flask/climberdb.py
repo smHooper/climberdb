@@ -6,18 +6,18 @@ import secrets
 import string
 import shutil
 
-import sqlalchemy
 import bcrypt
-import pandas as pd
 import smtplib
-
+from pandas import DataFrame, ExcelWriter, read_sql
+from zipfile import ZipFile, ZIP_DEFLATED
+from pypdf import PdfReader, PdfWriter
 from datetime import datetime
 from uuid import uuid4
 
 from flask import Flask, render_template, request, json, url_for
 from flask_mail import Mail, Message
 
-from sqlalchemy import text as sqlatext
+from sqlalchemy import create_engine, text as sqlatext
 
 from export_briefings import briefings_to_excel
 
@@ -58,7 +58,7 @@ if not app.config.from_file(CONFIG_FILE, load=json.load):
 
 
 def get_engine():
-	return sqlalchemy.create_engine(
+	return create_engine(
 		'postgresql://{username}:{password}@{host}:{port}/{db_name}'
 			.format(**app.config['DB_PARAMS'])
 	)
@@ -186,7 +186,7 @@ def get_user_info():
 
 	
 	engine = get_engine()
-	user_info = pd.read_sql(sql, engine)
+	user_info = read_sql(sql, engine)
 	if len(user_info) == 0:
 		return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
 	else:
@@ -437,20 +437,113 @@ def get_briefing_schedule():
 	return 'exports/' + excel_filename
 
 
+@app.route('/flask/reports/special_use_permit', methods=['POST'])
+def export_special_use_permit():
+	"""
+	Endpoint to export Special Use Permit(s) for one or more expedition members.
+	
+	Request data parameters include:
+	permit_data: per exp. member info that's easier to get client-side
+	export_type: value is either 'merged' or 'multiple' which indicates whether a single
+		merged PDF should be created or a zip file of multiple individual PDFs should be
+		returned
+	expedition_id: The expedition database ID. This is only required so thatPDFs
+		for can include the ID in the filename in case this multiple files for 
+		climbers/expeditions with the same name exist in the exports directory
+
+	response: path the PDF or zip file
+	"""
+
+	# permit_data is data per exp. member that's easier to get client-side
+	permit_data = json.loads(request.form['permit_data'])
+	export_type = request.form['export_type'] # mutliple PDFs or a single merged PDF
+	expedition_id = request.form['expedition_id']
+	expedition_name = request.form['expedition_name']
+
+	# Query data from DB
+	expedition_member_ids = permit_data.keys()
+	engine = get_engine()
+	cursor = engine.execute(f'''
+		SELECT * FROM special_use_permit_view 
+		WHERE expedition_member_id IN ({','.join(expedition_member_ids)})
+	''')
+	
+	sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
+	pdf_path = os.path.join(os.path.dirname(__file__), 'assets', sup_permit_filename)
+
+	output_pdfs = []	
+	for row in cursor:
+		member_id = str(row.expedition_member_id)
+		form_prefix = f'id_{member_id}'
+
+		# Combine the client-side and DB data
+		member_data = dict(**permit_data[member_id], **row)
+		
+		reader = PdfReader(pdf_path)
+		writer = PdfWriter()
+
+		# Get the index of the first page of this permit. This is the 0th page of the permit
+		#	so it will always be the number of pages before pages for this permit are added
+		data_page_index = len(writer.pages)
+		
+		# Add pages for this permit. clone_document_from_reader is the only method that 
+		#	copies the form and all other PDF structural components such that 
+		writer.clone_document_from_reader(reader)
+
+		writer.update_page_form_field_values(writer.pages[data_page_index], member_data)
+		
+		# If each permit is a separate PDF or if there's only one to write, write this one to disk
+		climber_name = re.sub(r'\W+', '_', member_data['climber_name']).lower()
+		pdf_filename = f'special_use_permit_{expedition_id}_{climber_name}.pdf'
+		output_pdf = os.path.join(get_content_dir('exports'), pdf_filename)
+		with open(output_pdf, 'wb') as f:
+			writer.write(f)
+		
+		# If there's only one PDF to create, just return that path
+		if len(expedition_member_ids) == 1:
+			return 'exports/' + pdf_filename
+		else:
+			output_pdfs.append(output_pdf)
+
+	output_basename = f'special_use_permit_{expedition_id}_' + re.sub(r'\W+', '_', expedition_name)	
+	
+	# write a single merged PDF
+	if export_type == 'merged':
+		letters = [chr(item) for item in range(ord("a"), ord("z") + 1)] # a-z as list
+		writer = PdfWriter()
+		for i, pdf_path in enumerate(output_pdfs):
+			reader = PdfReader(pdf_path)
+			reader.add_form_topname(letters[i])
+			writer.append(reader)
+			del reader
+
+		output_filename = output_basename + '.pdf'
+		output_path = os.path.join(get_content_dir('exports'), output_filename)
+		with open(output_path, 'wb') as f:
+			writer.write(f)
+	# it's a zipped collection of individual PDFs
+	else: 
+		output_filename = output_basename + '.zip'
+		output_path = os.path.join(get_content_dir('exports'), output_filename)
+		with ZipFile(output_path, 'w', ZIP_DEFLATED) as z:
+			for pdf_path in output_pdfs:
+				z.write(pdf_path, arcname=os.path.basename(pdf_path))
+
+	return 'exports/' + output_filename
 
 
 # Default 
 def write_query_to_excel(query_data, query_name, excel_path, excel_start_row=0, write_columns=True):
 
 	# Write to the excel file
-	with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+	with ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
 		query_data.to_excel(writer, startrow=excel_start_row, header=write_columns, index=False)
 
 
 # Handle guide_company_client_status and guide_company_briefings queries
 def write_guided_company_query_to_excel(client_status, briefings, excel_path, title_text):
 
-	with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+	with ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
 		workbook = writer.book
 
 		if len(client_status):
@@ -500,14 +593,14 @@ def export_query():
 		# If not, just write the file without using a template and return
 		else:
 			# maybe set up a default file
-			query_data = pd.DataFrame(data['query_data']).reindex(columns=data['columns'])
+			query_data = DataFrame(data['query_data']).reindex(columns=data['columns'])
 			query_data.to_excel(excel_path, index=False)
 			return 'exports/' + excel_filename
 
 		if query_name == 'guide_company_client_status' or query_name == 'guide_company_briefings':
 			query_data = data['query_data']
-			client_status = pd.DataFrame(query_data['client_status']).reindex(columns=data['client_status_columns'])
-			briefings = pd.DataFrame(query_data['briefings']).reindex(columns=data['briefing_columns'])
+			client_status = DataFrame(query_data['client_status']).reindex(columns=data['client_status_columns'])
+			briefings = DataFrame(query_data['briefings']).reindex(columns=data['briefing_columns'])
 			write_guided_company_query_to_excel(
 				client_status, 
 				briefings, 
@@ -515,7 +608,7 @@ def export_query():
 				data['title_text']
 			)
 		else:
-			query_data = pd.DataFrame(data['query_data']).reindex(data['columns'])
+			query_data = DataFrame(data['query_data']).reindex(data['columns'])
 			write_query_to_excel(
 				query_data, 
 				query_name, 
@@ -555,7 +648,7 @@ def export_query():
 @app.route('/flask/cache_tags/write_label_matrix', methods=['POST'])
 def write_to_label_matrix():
 	
-	data = pd.DataFrame([dict(request.form)])
+	data = DataFrame([dict(request.form)])
 	label_matrix_source = app.config['LABEL_MATRIX_SOURCE']
 	source_path = os.path.join(os.path.dirname(__file__), 'assets', label_matrix_source)
 	data.to_csv(source_path, index=False)
