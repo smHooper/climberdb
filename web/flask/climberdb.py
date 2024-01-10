@@ -441,6 +441,7 @@ def get_briefing_schedule():
 def export_special_use_permit():
 	"""
 	Endpoint to export Special Use Permit(s) for one or more expedition members.
+	
 	Request data parameters include:
 	permit_data: per exp. member info that's easier to get client-side
 	export_type: value is either 'merged' or 'multiple' which indicates whether a single
@@ -470,27 +471,16 @@ def export_special_use_permit():
 	sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
 	pdf_path = os.path.join(os.path.dirname(__file__), 'assets', sup_permit_filename)
 
-	writer = PdfWriter()
-	output_pdfs = []
-	
+	output_pdfs = []	
 	for row in cursor:
 		member_id = str(row.expedition_member_id)
 		form_prefix = f'id_{member_id}'
 
 		# Combine the client-side and DB data
-		#member_data = {f'{form_prefix}.{k}': v for k, v in dict(**permit_data[member_id], **row).items()}
 		member_data = dict(**permit_data[member_id], **row)
 		
 		reader = PdfReader(pdf_path)
-		
-		
-		# if the user wants a PDF file per member, create a new PdfWriter()
-		#if export_type == 'multiple':
 		writer = PdfWriter()
-		
-		# PyPDF 3.15+ throws an error that there's no '/AcroForm' object without calling
-		#	.set_need_appearances_writer()
-		#writer.set_need_appearances_writer()
 
 		# Get the index of the first page of this permit. This is the 0th page of the permit
 		#	so it will always be the number of pages before pages for this permit are added
@@ -504,18 +494,16 @@ def export_special_use_permit():
 		
 		# If each permit is a separate PDF or if there's only one to write, write this one to disk
 		climber_name = re.sub(r'\W+', '_', member_data['climber_name']).lower()
-		output_pdf = os.path.join(get_content_dir('exports'), f'special_use_permit_{expedition_id}_{climber_name}.pdf')
+		pdf_filename = f'special_use_permit_{expedition_id}_{climber_name}.pdf'
+		output_pdf = os.path.join(get_content_dir('exports'), pdf_filename)
 		with open(output_pdf, 'wb') as f:
 			writer.write(f)
 		
 		# If there's only one PDF to create, just return that path
 		if len(expedition_member_ids) == 1:
-			return output_pdf
+			return 'exports/' + pdf_filename
 		else:
 			output_pdfs.append(output_pdf)
-
-	if len(output_pdfs) == 1:
-		return 'exports/' + os.path.basename(output_pdfs[0])
 
 	output_basename = f'special_use_permit_{expedition_id}_' + re.sub(r'\W+', '_', expedition_name)	
 	
@@ -528,7 +516,6 @@ def export_special_use_permit():
 			reader.add_form_topname(letters[i])
 			writer.append(reader)
 			del reader
-		#writer.set_need_appearances_writer()
 
 		output_filename = output_basename + '.pdf'
 		output_path = os.path.join(get_content_dir('exports'), output_filename)
