@@ -2444,7 +2444,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				<li class="data-list-item">
 					<div class="center-checkbox-col col-3">
 						<label class="checkmark-container">
-							<input id="input-export-sup-${expeditionMemberID}" class="input-field input-checkbox export-permit-checkbox" type="checkbox"  title="Export Special Use Permit" checked="checked" data-expedition-member-id=${expeditionMemberID}>
+							<input id="input-export-sup-${expeditionMemberID}" class="input-field input-checkbox export-permit-checkbox ignore-changes" type="checkbox"  title="Export Special Use Permit" checked="checked" data-expedition-member-id=${expeditionMemberID}>
 							<span class="checkmark data-input-checkmark"></span>
 						</label>
 					</div>
@@ -2697,10 +2697,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		// warn user and exit if no checkboxes are selected
 		if (expeditionMemberIDs.length === 0) {
-			showModal('You must select at least one expedition member to export a Special Use Permit for', 'Invalid Operation');
+			showModal('You must select at least one expedition member to export a Special Use Permit for.', 'Invalid Operation');
 			return;
 		}	
-		
+
 		var permitData = {};
 		for (const id of expeditionMemberIDs) {
 			const $card = $(`#expedition-members-accordion .card[data-table-id=${id}]`);
