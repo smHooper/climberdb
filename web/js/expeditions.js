@@ -2456,6 +2456,11 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		$('#export-permit-modal').modal();
+		
+		// Set defaults 
+		$('#input-permit_export_type').val('multiple')
+			.closest('.collapse').collapse('show');
+		$('#check-all-sup-export-button').text('uncheck all');
 	}
 
 	/*
