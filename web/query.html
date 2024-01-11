@@ -258,7 +258,7 @@
 								<div class="show-query-parameter-button" role="button" data-field-name="summited">Summited (yes/no)</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="summit_date">Summit date</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="sex_code">Gender</div>
-								<div class="show-query-parameter-button" role="button" data-field-name="is_guiding">Is guiding (Yes/No)</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="is_guiding_yes_no">Is guiding (Yes/No)</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="country_code">Country</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="state_code">State</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="year">Year</div>
@@ -348,15 +348,15 @@
 								<label class="field-label" for="count_climbers-summit_date_operator">Summit date</label>
 							</div>
 							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
-								<select id="count_climbers-is_guiding" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field" name="is_guiding" required>
+								<select id="count_climbers-is_guiding_yes_no" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field" name="is_guiding_yes_no"required>
 									<option value="">Is guiding (yes/no)</option>
-									<option value="true">Yes</option>
-									<option value="false">No</option>
+									<option value="'Yes'">Yes</option>
+									<option value="'No'">No</option>
 								</select>
 								<button class="icon-button hide-query-parameter-button">
 									<i class="fas fa-lg fa-times"></i>
 								</button>
-								<label class="field-label" for="count_climbers-is_guiding">Is guiding (yes/no)</label>
+								<label class="field-label" for="count_climbers-is_guiding_yes_no">Is guiding (yes/no)</label>
 							</div>
 							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 								<select id="count_climbers-sex_code" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="sex_code" placeholder="Gender" required></select>
