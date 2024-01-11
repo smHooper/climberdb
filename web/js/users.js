@@ -204,21 +204,25 @@ class ClimberDBUsers extends ClimberDB {
 				<td class="no-border">
 					<button class="icon-button edit-button slide-up-on-focus has-motion" title="Toggle editing" tabindex=0>
 						<i class="fa fa-edit fa-lg"></i>
+						<label class="icon-button-label ">edit</label>
 					</button>
 				</td>
 				<td class="no-border">
 					<button class="icon-button save-button slide-up-on-focus has-motion" title="Save edits" tabindex=-1>
 						<i class="fa fa-save fa-lg"></i>
+						<label class="icon-button-label ">save</label>
 					</button>
 				</td>
 				<td class="no-border">
 					<button class="icon-button reset-password-button slide-up-on-focus has-motion" title="Reset password" tabindex=-1>
 						<i class="fa fa-key fa-lg"></i>
+						<label class="icon-button-label ">reset password</label>
 					</button>
 				</td>
 				<td class="no-border">
 					<button class="icon-button delete-button slide-up-on-focus has-motion" title="Disable user" tabindex=-1>
 						<i class="fa fa-trash fa-lg"></i>
+						<label class="icon-button-label ">delete</label>
 					</button>
 				</td>
 			</tr>

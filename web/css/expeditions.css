@@ -66,7 +66,7 @@
 	width: 100%;
 	justify-content: center;
 	margin: 0;
-	top: calc(var(--climberdb-header-menu-height) + 10px);
+	top: calc(var(--climberdb-header-menu-height) + 5px);
 }
 .main-content-modal-card-screen .expedition-edit-button {
 	color: #39abc7; /*make buttons a litte more visible against the dark background*/
@@ -682,6 +682,9 @@
 .transaction-type-column {
 	display: flex;
 }
+.list-item-delete-button-container {
+	margin-top: -12px;
+}
 .expedition-modal .transaction-type-column,
 .expedition-modal .payment-method-column,
 .expedition-modal .transaction-date-column, 
@@ -707,7 +710,7 @@
 }
 .route-summit-date-column,
 .route-highest-elevation-column {
-	max-width: 250px;
+	max-width: 150px;
 }
 
 *.data-list-col {

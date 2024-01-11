@@ -393,7 +393,9 @@ class ClimberDBQuery extends ClimberDB {
 			const $i = $(e.target).closest('button').find('i');
 			// Delay changing icon until transition is finished
 			setTimeout(() => {
-				$i.toggleClass('fa-arrow-right fa-arrow-from-left', !$i.is('.fa-arrow-right'))
+				const isCollapsed = !$i.is('.fa-arrow-right')
+				$i.toggleClass('fa-arrow-right fa-arrow-from-left', isCollapsed)
+				$i.siblings('.icon-button-label').text(isCollapsed ? 'show' : 'hide')
 			}, 200);
 		})
 

@@ -138,19 +138,21 @@ label {
 /*toggle visibility of expand/contract buttons*/
 .briefing-details-sidebar:not(.expanded) .contract-briefing-details-button,
 .briefing-details-sidebar.expanded .expand-briefing-details-button {
-	opacity: 0;
-	pointer-events: none;
+/*	opacity: 0;
+	pointer-events: none;*/
+	display: none;
 }
 
 .briefing-details-sidebar-header-container {
 	display: flex;
 }
 .briefing-details-sidebar-header-container .icon-button {
-	width: 40px;
+	width: 70px;
 }
 .briefing-details-sidebar-header {
 	max-width: calc(100% - 80px);
 	text-align: center;
+	text-wrap: balance;
 	flex: 0 0 auto;
 }
 
@@ -306,6 +308,7 @@ label {
 	margin-left: 10px;
 }
 .appointment-details-button-container button > .fas,
+.appointment-details-button-container button label,
 .appointment-details-header-container button.close {
 	color: white;
 	opacity: 1;

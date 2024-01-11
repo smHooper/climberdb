@@ -110,18 +110,23 @@
 					<div class="edit-button-container has-motion">
 						<button id="save-expedition-button" class="expedition-edit-button icon-button save-edits-button hidden" type="button" aria-label="Save edits" title="Save edits" aria-hidden="true">
 							<i class="fas fa-2x fa-save"></i>
+							<label class="icon-button-label">save</label>
 						</button>
 						<button id="delete-expedition-button" class="expedition-edit-button icon-button delete-expedition-button hidden" type="button" aria-label="Delete expedition" title="Delete expedition" aria-hidden="true">
 							<i class="fas fa-2x fa-trash"></i>
+							<label class="icon-button-label">delete</label>
 						</button>
 						<button id="edit-expedition-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Edit expedition" title="Edit expedition">
 							<i class="fas fa-2x fa-edit"></i>
+							<label class="icon-button-label">edit</label>
 						</button>
 						<button id="open-reports-modal-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Open exports menu" title="Open exports menu">
 							<i class="fas fa-2x fa-file-export"></i>
+							<label class="icon-button-label">export</label>
 						</button>
 						<button id="print-cache-tag-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Print cache tag" title="Print cache tag">
 							<i class="fas fa-2x fa-flag fa-flag-alt"></i>
+							<label class="icon-button-label">cache tag</label>
 						</button>
 					</div>
 					<button id="add-new-expedition-button" class="generic-button" title="New Expedition">New expedition</button>
@@ -505,9 +510,10 @@
 																	</div>
 																	<div class="col d-flex transaction-notes-column">
 																		<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
-																		<div class="col pl-1">
+																		<div class="col pl-1 list-item-delete-button-container">
 																			<button class="icon-button delete-button delete-transaction-button show-on-parent-hover" title="Delete transaction">
 																				<i class="fas fa-trash fa-lg"></i>
+																				<label class="icon-button-label">delete</label>
 																			</button>
 																		</div>
 																	</div>
@@ -620,7 +626,7 @@
 							<div class="expedition-data-content-body">
 								<div id="routes-accordion" class="accordion" data-table-name="expedition_member_routes" data-item-display-name="expedition route">
 									<div id="cloneable-card-routes" class="card expedition-card cloneable hidden" >
-										<div class="card-header" id="cardHeader-routes-cloneable">
+										<div class="card-header show-children-on-hover" id="cardHeader-routes-cloneable">
 											<div class="col-3 pr-0 d-flex">
 												<select id="mountain-code-header-input" class="input-field card-link-label route-code-header-input mountain-code-header-input expedition-member-card-link-label" name="mountain_code">
 													<option value="">Select mountain</option>
@@ -677,9 +683,10 @@
 																<input id="input-highest_elevation" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest elevation in feet"> 
 															</div>
 														</div>
-														<div class="col">
+														<div class="col list-item-delete-button-container">
 															<button class="icon-button delete-button delete-route-member-button show-on-parent-hover" title="Delete expedition member route">
 																<i class="fas fa-trash fa-lg"></i>
+																<label class="icon-button-label">delete</label>
 															</button>
 														</div>
 													</li>
@@ -728,9 +735,10 @@
 										<div class="cmc-col col-4">
 											<input id="input-return_date" class="input-field" name="return_date" type="date" data-table-name="cmc_checkout" title="CMC Return Date"> 
 										</div>
-										<div class="col-1">
+										<div class="col-1 list-item-delete-button-container">
 											<button class="icon-button delete-button delete-cmc-button show-on-parent-hover" title="Delete CMC">
 												<i class="fas fa-trash fa-lg"></i>
+												<label class="icon-button-label">delete</label>
 											</button>
 										</div>
 									</li>
@@ -766,9 +774,10 @@
 										<div class="cmc-col col-3">
 											<select id="input-owner" class="input-field no-option-fill default" name="expedition_member_id" data-table-name="communication_devices" title="Device owner"></select>
 										</div>
-										<div class="col-1">
+										<div class="col-1 list-item-delete-button-container">
 											<button class="icon-button delete-button delete-comms-button show-on-parent-hover" title="Delete comms">
 												<i class="fas fa-trash fa-lg"></i>
+												<label class="icon-button-label">delete</label>
 											</button>
 										</div>
 									</li>

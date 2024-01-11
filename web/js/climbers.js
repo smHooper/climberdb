@@ -19,12 +19,15 @@ class ClimberForm {
 						<div class="editing-buttons-container">
 							<button id="save-button" class="query-result-edit-button icon-button save-edits-button hidden" type="button" aria-label="Save edits" title="Save edits">
 								<i class="fas fa-save"></i>
+								<label class="icon-button-label">save</label>
 							</button>
 							<button id="delete-button" class="query-result-edit-button icon-button delete-climber-button hidden" type="button" aria-label="Delete selected climber" title="Delete climber">
 								<i class="fas fa-trash"></i>
+								<label class="icon-button-label">delete</label>
 							</button>
 							<button id="edit-button" class="query-result-edit-button icon-button toggle-editing-button" type="button" aria-label="Edit selected climber" title="Edit climber">
 								<i class="fas fa-edit"></i>
+								<label class="icon-button-label">edit</label>
 							</button>
 						</div>
 						<div class="close-button-container">
@@ -56,6 +59,7 @@ class ClimberForm {
 								</select>
 								<button id="refresh-modal-climber-select" class="icon-button" title="Refresh climber search results">
 									<i class="fas fa-sync-alt fa-solid fa-arrows-rotate fa-2x"></i>
+									<label class="icon-button-label">reload</label>
 								</button>
 							</div>	
 						</div>	
