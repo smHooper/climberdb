@@ -635,6 +635,7 @@ CREATE VIEW all_climbs_view AS
 		route_codes.name AS route_name,
 		mountain_codes.name AS mountain_name,
 		is_guiding,
+		CASE WHEN is_guiding THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
 		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
 		actual_return_date - actual_departure_date AS trip_length_days,
 		extract(year FROM planned_departure_date) AS year,
