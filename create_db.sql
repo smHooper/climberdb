@@ -231,12 +231,14 @@ CREATE TABLE IF NOT EXISTS communication_devices (
 );
 
 CREATE TABLE IF NOT EXISTS users ( 
-	id SERIAL PRIMARY KEY, ad_username VARCHAR(50), 
-	first_name VARCHAR(50), last_name VARCHAR(50), 
+	id SERIAL PRIMARY KEY, 
+	ad_username VARCHAR(50) UNIQUE, 
+	first_name VARCHAR(50), 
+	last_name VARCHAR(50), 
+	email_address VARCHAR(50) UNIQUE,
 	user_role_code INTEGER REFERENCES user_role_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	user_status_code INTEGER REFERENCES user_status_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT, 
-	UNIQUE (first_name, last_name), 
-	UNIQUE (ad_username) 
+	UNIQUE (first_name, last_name)
 );
 
 CREATE DOMAIN config_data_type AS VARCHAR(25) CHECK (

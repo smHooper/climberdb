@@ -100,8 +100,11 @@ class ClimberDBIndex extends ClimberDB {
 			return;
 		}
 
+		const $buttonContainer = $('#reset-password-button').parent();
+		this.toggleDotLoadingIndicator($buttonContainer, {hide: false});
+
 		return $.post({
-			url: 'flask/notifications/resetPassword',
+			url: 'flask/notifications/reset_password',
 			data: {
 				username: this.userInfo.ad_username,
 				user_id: this.userInfo.id
@@ -119,7 +122,7 @@ class ClimberDBIndex extends ClimberDB {
 			}
 		}).fail((xhr, status, error) => { 
 			showModal(`Password reset email failed to send with the error: ${error}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')
-		})
+		}).always(() => {this.toggleDotLoadingIndicator($buttonContainer, {hide: true})})
 	}
 
 
@@ -211,6 +214,17 @@ class ClimberDBIndex extends ClimberDB {
 
 
 	/*
+	Helper function to toggle the 3 dot loading indicator
+	*/
+	toggleDotLoadingIndicator($parent, {hide=true}={}) {
+		$parent.find('.loading-indicator-dot-container')
+			.ariaHide(hide)
+			.siblings()
+				.ariaHide(!hide);
+	}
+
+
+	/*
 	Set the user's password, either when activating or resetting it
 	*/
 	setPassword({verifyDifferentPassword=true}={}) {
@@ -248,18 +262,22 @@ class ClimberDBIndex extends ClimberDB {
 			return;
 		} 
 		
+		const $buttonContainer = $('#set-password-button').parent();
+		this.toggleDotLoadingIndicator($buttonContainer, {hide: false})
 		const passwordIsSame = (verifyDifferentPassword ? this.verifyPassword(password) : $.Deferred().resolve(false))
 		passwordIsSame.then(isSame => {
 			if (isSame) {
 				$('#same-password-message').ariaHide(false);
 				$passwordInput.addClass('invalid')
 					.focus();
+				this.toggleDotLoadingIndicator($buttonContainer, {hide: true});
 				return false;
 			}
 			if (!confirmationPassword.length || (password !== confirmationPassword)) {
 				$('#incorrect-confirm-password-message').ariaHide(false);
 				$confirmInput.addClass('invalid')
 					.focus();
+				this.toggleDotLoadingIndicator($buttonContainer, {hide: true});
 				return false;
 			}
 
@@ -281,7 +299,7 @@ class ClimberDBIndex extends ClimberDB {
 				}
 			}).fail((xhr, error, status) => {
 				showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-			})
+			}).always(() => {this.toggleDotLoadingIndicator($buttonContainer, {hide: true});})
 		})
 	}
 
@@ -295,6 +313,8 @@ class ClimberDBIndex extends ClimberDB {
 				this.showInvalidPasswordMessage('#empty-password-message');
 				return;
 			}
+			const $buttonContainer = $('#set-password-button').parent();
+			this.toggleDotLoadingIndicator($buttonContainer, {hide: false});
 			this.verifyPassword(password).done(isValid => {
 				// If the password entered for verification is valid, try to set the new password
 				if (isValid) {
@@ -303,13 +323,15 @@ class ClimberDBIndex extends ClimberDB {
 						$('#same-password-message').ariaHide(false);
 						$('#new-password-input').addClass('invalid')
 							.focus();
+						this.toggleDotLoadingIndicator($buttonContainer, {hide: true});
 						return false;
 					}
 					this.setPassword({verifyDifferentPassword: false});
 				
-				// Otherwise just set the new password 
+				// Otherwise let the user know the password is invalid 
 				} else {
 					this.showInvalidPasswordMessage('#incorrect-password-message');
+					this.toggleDotLoadingIndicator($buttonContainer, {hide: true});
 				}
 			});
 		} else {
@@ -367,6 +389,7 @@ class ClimberDBIndex extends ClimberDB {
 						$('#set-password-button')
 							.text('reset password')
 							.data('target', urlParams.referer || '');
+						this.toggleFormElements('.reset-password-element')
 					}
 
 					if ('changePassword' in urlParams) {
