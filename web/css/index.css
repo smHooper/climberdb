@@ -222,3 +222,10 @@ body {
 #password-criteria-list.validated li.valid::before {
   content: '\2713';
 }
+
+.loading-indicator-dot-container {
+  justify-content: center;
+}
+.loading-indicator-dot {
+  background-color: var(--ui-secondary-highlight-color);
+}
