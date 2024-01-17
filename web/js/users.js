@@ -189,6 +189,11 @@ class ClimberDBUsers extends ClimberDB {
 				</td>
 				<td>
 					<span>
+						<input class="input-field user-table-input" type="email" name="email_address" title="Email Address" placeholder="Email address" value="${data.email_address}" autocomplete="__never" tabindex=-1>
+					</span>
+				</td>
+				<td>
+					<span>
 						<select class="input-field user-table-input" name="user_role_code" title="User role" tabindex=-1>
 							${this.userRoleOptions}
 						</select>
@@ -337,14 +342,15 @@ class ClimberDBUsers extends ClimberDB {
 						.removeClass('new-user')
 						.addClass('uneditable');
 
-					const username = $tr.find('.input-field[name="ad_username"]').val();
-					const firstName = $tr.find('.input-field[name="first_name"]').val();
+					const username = userInfo.ad_username;//$tr.find('.input-field[name="ad_username"]').val();
+					const firstName = userInfo.first_name;//$tr.find('.input-field[name="first_name"]').val();
+					const email = userInfo.email_address;//$tr.find('.input-field[name="email_address"]').val();
 					const activationURL = `${window.location.origin}/index.html?activation=true&id=${userID}`
 						.replace(':9006', ':9007'); // make sure the URL is for the prod. site
 
 					// Send an activation email to the user 
 					return $.post({
-						url: 'flask/notifications/accountActivation',
+						url: 'flask/notifications/account_activation',
 						data: {
 							username: username,
 							user_id: userID
@@ -355,7 +361,7 @@ class ClimberDBUsers extends ClimberDB {
 						if (pythonError !== false) {
 							showModal(`Account activation email failed to send with the error:\n${pythonError.trim()}.\nYou can send the activation link directly to ${firstName}: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
 						} else {
-							showModal(`An activation email was successfully sent to ${username}@nps.gov with the activation link <a href="${activationURL}">${activationURL}</a>. The account will not be active until ${firstName} completes the activation process.`, 'Activation Email Sent')
+							showModal(`An activation email was successfully sent to ${email} with the activation link <a href="${activationURL}">${activationURL}</a>. The account will not be active until ${firstName} completes the activation process.`, 'Activation Email Sent')
 						}
 					}).fail((xhr, status, error) => { 
 						showModal(`Account activation email failed to send with the error: ${error}. You can send the activation link directly to the user whose account you just created: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
@@ -429,9 +435,9 @@ class ClimberDBUsers extends ClimberDB {
 	/*
 	Helper method to send a password reset email. This really just makes the modal html code more legible
 	*/
-	sendPasswordResetEmail(username, userID) {
+	sendPasswordResetEmail(username, userID, email_address) {
 		return $.post({
-			url: 'flask/notifications/resetPassword',
+			url: 'flask/notifications/reset_password',
 			data: {
 				username: username,
 				user_id: userID
@@ -442,7 +448,7 @@ class ClimberDBUsers extends ClimberDB {
 			if (pythonError !== false) {
 				showModal(`Password reset email failed to send with the error:\n${pythonError.trim()}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')
 			} else {
-				showModal(`A password reset email was sent to ${username}@nps.gov. The user's account will be inactive until they change their password.`, 'Password reset email sent');
+				showModal(`A password reset email was sent to ${email_address}. The user's account will be inactive until they change their password.`, 'Password reset email sent');
 				$(`tr[data-table-id=${userID}]`).addClass('inactive')
 					.find('.input-field[name=user_status_code]')
 						// set status to "inactive" in the UI but don't worry about saving because it's already doen server-side
@@ -469,13 +475,17 @@ class ClimberDBUsers extends ClimberDB {
 		const firstName = $tr.find('.input-field[name="first_name"]').val();
 		const lastName = $tr.find('.input-field[name="last_name"]').val();
 		const username = $tr.find('.input-field[name="ad_username"]').val();
+		const email_address = $tr.find('.input-field[name="email_address"]').val();
 		const userID = $tr.data('table-id');
 
 		const footerButtons = `
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-			<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="climberDB.sendPasswordResetEmail('${username}', '${userID}')">Yes</button>
+			<button class="generic-button modal-button primary-button close-modal confirm-button" data-dismiss="modal">Yes</button>
 		`;
-		showModal(`Are you sure want to reset ${firstName}'s password? If you click 'Yes', ${firstName} will receive an email at ${username}@nps.gov with a link to reset their password, but their account will be suspended until they reset it.`, 'Send password reset email?', 'confirm', footerButtons);
+		const onConfirmClick = () => {$('#alert-modal .confirm-button').click(() => {
+			this.sendPasswordResetEmail(username, userID, email_address)
+		})}
+		showModal(`Are you sure want to reset ${firstName}'s password? If you click 'Yes', ${firstName} will receive an email at ${email_address} with a link to reset their password, but their account will be suspended until they reset it.`, 'Send password reset email?', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClick});
 	}
 
 
@@ -504,6 +514,7 @@ class ClimberDBUsers extends ClimberDB {
 				ad_username, 
 				first_name, 
 				last_name, 
+				email_address,
 				user_role_code,
 				user_status_code 
 			FROM users 

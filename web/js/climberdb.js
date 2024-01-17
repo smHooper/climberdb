@@ -239,7 +239,7 @@ class ClimberDB {
 		
 		const urlParams = this.parseURLQueryString();
 		return $.ajax({
-			url: 'flask/userInfo',
+			url: 'flask/user_info',
 			method: 'POST',
 			data: urlParams.testClientSecret ? {client_secret: urlParams.testClientSecret} : {},
 			cache: false

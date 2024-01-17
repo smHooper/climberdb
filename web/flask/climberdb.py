@@ -158,8 +158,36 @@ def test():
 
 
 # -------------- User Management ---------------- #
+def query_user_info(username):
+	"""
+	Helper function to get DB user info using AD username 
+	"""
+	sql = '''
+		SELECT id, 
+			:username AS ad_username, 
+			user_role_code, 
+			user_status_code, 
+			first_name, 
+			last_name, 
+			email_address 
+		FROM users 
+		WHERE ad_username=:username 
+	'''
+	
+	# If this is the dev environment, make sure the user is a super user
+	if not '\\prod\\' in os.path.abspath(__file__):
+		sql += ' AND user_role_code=4' 
+
+	engine = get_engine()
+	result = engine.execute(sqlatext(sql), {'username': username})
+	if result.rowcount == 0:
+		return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
+	else:
+		return result.first()._asdict()
+
+
 # Get username and role
-@app.route('/flask/userInfo', methods=['POST'])
+@app.route('/flask/user_info', methods=['POST'])
 def get_user_info():
 	
 	username = ''
@@ -178,20 +206,7 @@ def get_user_info():
 		else:
 			return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
 
-	sql = f'''SELECT id, '{username}' AS ad_username, user_role_code, user_status_code, first_name, last_name FROM users WHERE ad_username='{username}' '''
-	
-	# If this is a production, make sure the user is a super user
-	if not '\\prod\\' in os.path.abspath(__file__):
-		sql += ' AND user_role_code=4' 
-
-	
-	engine = get_engine()
-	user_info = read_sql(sql, engine)
-	if len(user_info) == 0:
-		return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
-	else:
-		# Rather than {column: {row_index: val}}, transform result to {row_index: {column: value}}
-		return user_info.T.to_dict()[0]
+	return query_user_info(username)
 
 
 # Set user password
@@ -269,10 +284,39 @@ def get_email_logo_base64():
 #  	return 'true';
 
 # new account creation
+
+def send_password_email(request_data, html):
+	"""
+	Helper function to send password reset or account activation email
+	"""
+	username = request_data['username']
+	user_info = query_user_info(username)
+	if 'email_address' not in user_info:
+		raise RuntimeError(f''' '{username}' is not a valid username''')
+	else:
+		email_address = user_info['email_address']
+		if not email_address:
+			raise RuntimeError(f'''No email address found for user '{username}' ''')
+
+	mailer = Mail(app)
+	msg = Message(
+		subject=request_data['heading_title'],
+		recipients=[email_address],
+		html=html,
+		reply_to=app.config['db_admin_email']
+	)
+	mailer.send(msg)
+
+
 # This endpoint sends an activation notification to a user whose account was just created by an admin
-@app.route('/flask/notifications/accountActivation', methods=['POST'])
+@app.route('/flask/notifications/account_activation', methods=['POST'])
 def send_account_request():
 	data = dict(request.form)
+
+	if not 'user_id' in data:
+		raise ValueError('BAD REQUEST. No user_id given')
+	if not 'username' in data:
+		raise ValueError('BAD REQUEST. No username given')
 
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
 	data['button_url'] = f'''{request.url_root.strip('/')}/index.html?activation=true&id={data['user_id']}'''
@@ -281,22 +325,21 @@ def send_account_request():
 
 	html = render_template('email_notification_activation.html', **data)
 
-	mailer = Mail(app)
-	msg = Message(
-		subject=data['heading_title'],
-		recipients=[data['username'] + '@nps.gov'],
-		html=html,
-		reply_to=app.config['db_admin_email']
-	)
-	mailer.send(msg)
+	send_password_email(data, html)
 
 	return 'true';
 
+
 # reset password
 # This endpoint sends a password reset email to a user
-@app.route('/flask/notifications/resetPassword', methods=['POST'])
+@app.route('/flask/notifications/reset_password', methods=['POST'])
 def send_reset_password_request():
 	data = dict(request.form)
+
+	if not 'user_id' in data:
+		raise ValueError('BAD REQUEST. No user_id given')
+	if not 'username' in data:
+		raise ValueError('BAD REQUEST. No username given')
 
 	user_id = data['user_id']
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
@@ -305,19 +348,12 @@ def send_reset_password_request():
 	data['heading_title'] = 'Reset Denali Climbing Permit Portal account password'
 
 	html = render_template('email_notification_reset_password.html', **data)
-		
-	mailer = Mail(app)
-	msg = Message(
-		subject=data['heading_title'],
-		recipients=[data['username'] + '@nps.gov'],
-		html=html,
-		reply_to=app.config['db_admin_email']
-	)
-	mailer.send(msg)
+	
+	send_password_email(data, html)
 
 	engine = get_engine()
 	try:
-		engine.execute(f'UPDATE users SET user_status_code=1 WHERE id={user_id}')
+		engine.execute(sqlatext('UPDATE users SET user_status_code=1 WHERE id=:user_id'), {'user_id': user_id})
 	except Exception as e:
 		raise RuntimeError(f'Failed to update user status with error: {e}')
 
