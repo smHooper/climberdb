@@ -184,6 +184,10 @@
 	color: #219ebc;/*#e77a00;*/
 	transition: .3s all;
 	pointer-events: all;
+	height: 50px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
 }
 .query-result-edit-button-container > .query-result-edit-button:hover {
 	color: #f28100;
