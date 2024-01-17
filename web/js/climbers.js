@@ -17,6 +17,10 @@ class ClimberForm {
 				<div class="climber-form-content">
 					<div class="header-button-container">
 						<div class="editing-buttons-container">
+							<button id="edit-button" class="query-result-edit-button icon-button toggle-editing-button" type="button" aria-label="Edit selected climber" title="Edit climber">
+								<i class="fas fa-edit"></i>
+								<label class="icon-button-label">edit</label>
+							</button>
 							<button id="save-button" class="query-result-edit-button icon-button save-edits-button hidden" type="button" aria-label="Save edits" title="Save edits">
 								<i class="fas fa-save"></i>
 								<label class="icon-button-label">save</label>
@@ -24,10 +28,6 @@ class ClimberForm {
 							<button id="delete-button" class="query-result-edit-button icon-button delete-climber-button hidden" type="button" aria-label="Delete selected climber" title="Delete climber">
 								<i class="fas fa-trash"></i>
 								<label class="icon-button-label">delete</label>
-							</button>
-							<button id="edit-button" class="query-result-edit-button icon-button toggle-editing-button" type="button" aria-label="Edit selected climber" title="Edit climber">
-								<i class="fas fa-edit"></i>
-								<label class="icon-button-label">edit</label>
 							</button>
 						</div>
 						<div class="close-button-container">
@@ -171,9 +171,14 @@ class ClimberForm {
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6 collapse">
-										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State" title="State" type="text" autocomplete="__never" required="" data-dependent-target="#input-country" data-dependent-value=236></select>
+										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" required="" data-dependent-target="#input-country" data-dependent-value="236,40"></select>
 										<span class="required-indicator">*</span>
-										<label class="field-label" for="input-state">State</label>
+										<label class="field-label" for="input-state">State/province</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>		
+									<div class="field-container col-sm-6 collapse">
+										<input id="input-other_state_name" class="input-field" type="text" name="other_state_name" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" data-dependent-target="#input-country" data-dependent-value="!236,40">
+										<label class="field-label" for="input-other_state_name">State/province</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 								</div>
@@ -407,8 +412,13 @@ class ClimberForm {
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 													<div class="field-container col-sm-6 collapse">
-														<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State" title="State" type="text" autocomplete="__never" data-dependent-target="#input-country_contact" data-dependent-value=236></select>
-														<label class="field-label" for="input-state">State</label>
+														<select id="input-state_contact" class="input-field default" name="state_code" data-table-name="emergency_contacts" placeholder="State/province" title="State/province" data-dependent-target="#input-country_contact" data-dependent-value="236,40"></select>
+														<label class="field-label" for="input-state_contact">State</label>
+														<span class="null-input-indicator">&lt; null &gt;</span>
+													</div>	
+													<div class="field-container col-sm-6 collapse">
+														<input id="input-other_state_contact" class="input-field default" name="other_state_name" data-table-name="emergency_contacts" placeholder="State/province" title="State" type="text" autocomplete="__never" data-dependent-target="#input-country_contact" data-dependent-value="!236,40">
+														<label class="field-label" for="input-other_state_contact">State/province</label>
 														<span class="null-input-indicator">&lt; null &gt;</span>
 													</div>	
 												</div>
@@ -695,11 +705,17 @@ class ClimberForm {
 						.val(details['place name'])
 						.change();
 					
-					// If the country is the US, update the state
-					if (countryAbbreviation == 'US') {
+					// If the country is the US or Canada, update the state
+					if (['US', 'CA'].includes(countryAbbreviation)) {
 						const stateCode = this.stateCodes[details['state abbreviation']] || '';
 						$container.find('.input-field[name=state_code]')
 							.val(stateCode)
+							.change();
+					// If it's somewhere else, make sure 'state' is in the response JSON. If so,
+					//	set the international state name field
+					} else if ('state' in details) {
+						$container.find('.input-field[name=other_state_name]')
+							.val(details.state)
 							.change();
 					}
 				}

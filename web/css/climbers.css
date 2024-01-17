@@ -174,9 +174,9 @@
 #add-new-climber-button {
 	position: absolute;
 }
-
 .editing-buttons-container {
 	font-size: 2rem;
+	display: flex;
 }
 .query-result-edit-button-container > .query-result-edit-button,
 .editing-buttons-container > .query-result-edit-button {
@@ -184,6 +184,13 @@
 	color: #219ebc;/*#e77a00;*/
 	transition: .3s all;
 	pointer-events: all;
+	height: 50px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+.query-result-edit-button > .icon-button-label {
+	margin-top: unset;
 }
 .query-result-edit-button-container > .query-result-edit-button:hover {
 	color: #f28100;
