@@ -283,10 +283,9 @@ class ClimberDBQuery extends ClimberDB {
 					expedition_id,
 					expedition_name AS "Group Name",
 					planned_return_date AS "Planned Return",
-					COUNT(climbers.id) AS "Climber Count"
+					COUNT(climber_id) AS "Climber Count"
 				FROM expeditions
 					JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
-					JOIN climbers ON climbers.id = expedition_members.climber_id
 				WHERE 
 					extract(year FROM planned_return_date) = extract(year FROM now()) AND
 					planned_return_date < now()::date AND
@@ -309,7 +308,7 @@ class ClimberDBQuery extends ClimberDB {
 				}
 
 			},
-			pro_pins : {
+			pro_pins: {
 				sql: `
 				SELECT 
 					first_name || ' ' || last_name AS "Climber Name",
@@ -341,9 +340,35 @@ class ClimberDBQuery extends ClimberDB {
 					'Reason': 'justify-content-start'
 				}
 			},
-			
-
-			medical_issues: {},
+			expedition_by_name_id: {
+				sql: `
+					SELECT
+						expedition_id,
+						expedition_name AS "Group Name",
+						planned_return_date AS "Planned Return",
+						COUNT(climber_id) AS "Climber Count"
+					FROM expeditions
+						JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
+					{where_clauses}
+					GROUP BY
+						expedition_id,
+						expedition_name,
+						planned_return_date
+					ORDER BY 
+						expedition_name
+				`,
+				columns: [
+					'Group Name',
+					'Climber Count',
+					'Planned Return'
+				],
+				hrefs: {
+					'Group Name': 'expeditions.html?id={expedition_id}'
+				},
+				cssColumnClasses: {
+					'Group Name': 'justify-content-start'
+				}
+			},
 			user_nights: {
 				sql: `
 					SELECT 
@@ -514,6 +539,12 @@ class ClimberDBQuery extends ClimberDB {
 		$('#count-summits-per-day-query-button').click(e => {
 			this.onSummitsPerDayClick()
 		});
+		$('.query-parameters-container[data-query-name="expedition_by_name_id"] .update-expedition-id-option').change(() => {
+			this.updateExpeditionIDOptions();
+		});
+		// Set to this year's expeditions
+		$('#expedition_by_name_id-year').val(new Date().getFullYear());
+		this.updateExpeditionIDOptions();
 
 		//$(window).resize(e => {onWindowResize(e)})
 		
@@ -1189,6 +1220,74 @@ class ClimberDBQuery extends ClimberDB {
 			})
 	}
 
+	getExpeditionByNameIDWhere() {
+		const year = $('#expedition_by_name_id-year').val();
+		const expeditionSearchOperator = $('#expedition_by_name_id-search_by').val();
+		const expeditionSearchString = $('#expedition_by_name_id-search_string').val();
+		
+		var where = [];
+		if (year) {
+			where.push('extract(year FROM planned_departure_date) = ' + year);
+		}
+		if (expeditionSearchString.length) {
+			const searchString = 
+				expeditionSearchOperator === 'equals' ? expeditionSearchString : 
+				expeditionSearchOperator === 'starts' ? expeditionSearchString + '%' :
+				expeditionSearchOperator === 'ends'   ? '%' + expeditionSearchString :
+				'%' + expeditionSearchString + '%'; // contains
+			where.push(`expedition_name LIKE '${searchString}'`); 
+		}
+
+		return where;
+	}
+
+
+	updateExpeditionIDOptions() {
+		const $loadingIndicator = $('#expedition-id-loading-indicator')
+			.ariaHide(false)
+			.siblings()
+				.ariaHide(true);
+
+		const where = this.getExpeditionByNameIDWhere();
+		
+		const sql = `SELECT id FROM expeditions ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id`;
+		this.queryDB(sql)
+			.done(response => {
+				if (this.queryReturnedError(response)) {
+					print('Error querying expedition IDs: '  + response)
+				} else {
+					const $select = $('#expedition_by_name_id-expedition_id');
+					$select.find('option').remove();
+					for (const {id} of $.parseJSON(response)) {
+						$select.append(`<option value=${id}>${id}</option>`)
+					}
+				}
+			})
+			.always(() => {
+				const $loadingIndicator = $('#expedition-id-loading-indicator')
+					.ariaHide(true)
+					.siblings()
+						.ariaHide(false);
+			})
+	}
+
+
+	queryExpeditionByNameOrID() {
+		const expeditionIDs = $('#expedition_by_name_id-expedition_id').val();
+		const whereClauses = this.getExpeditionByNameIDWhere();
+		const where = 
+			expeditionIDs.length ? ` WHERE expedition_id in (${expeditionIDs.join(',')})` :
+			whereClauses.length ? ' WHERE ' + whereClauses.join(' AND ') :
+			'';
+		if (where.length == 0) {
+			showModal('You must enter an expedition name search string or select a year or expedition ID', 'No Query Parameters')
+			return;
+		}
+
+		const sql = this.queries.expedition_by_name_id.sql.replace('{where_clauses}', where);
+		this.submitQuery(sql, 'expedition_by_name_id');
+	}
+
 
 	fieldToSelectAlias([field, alias]) {
 		return field.endsWith('_code') ? `${field}s.name AS "${alias}"` : `${field} AS "${alias}"`;
@@ -1404,6 +1503,8 @@ class ClimberDBQuery extends ClimberDB {
 			this.queryGuidedClientStatus();
 		} else if (queryName === 'count_climbers') {
 			this.queryCountClimbers();
+		} else if (queryName === 'expedition_by_name_id') {
+			this.queryExpeditionByNameOrID();
 		} else {
 			this.runQuery(queryName);
 		}

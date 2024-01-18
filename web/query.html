@@ -47,6 +47,7 @@
 						<li class="query-option not-expandable" role="button" data-query-name="count_per_guide_company" data-tags="guide, guiding, expeditions, climbers">Expeditions/Climbers Per Guide Company</li>
 						<li class="query-option" role="button" data-query-name="flagged_climbers" data-tags="climber, route">Flagged Expedition Members</li>
 						<li class="query-option" role="button" data-query-name="overdue_expeditions" data-tags="expeditions, sar, search, overdue">Find Overdue Expeditions</li>
+						<li class="query-option" role="button" data-query-name="expedition_by_name_id" data-tags="expeditions, number, id, expedition id, name, expedition name">Expedition By Name/ID</li>
 						<li class="query-option" role="button" data-query-name="user_nights" data-tags="climber, nights, stats, mountain">Users/User nights</li>
 						<li class="query-option" role="button" data-query-name="all_female_expeditions" data-tags="expeditions, women, female">All-Female Expeditions</li>
 						<li class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, route">Query Climbers/Climbs</li>
@@ -144,6 +145,38 @@
 							</div>	
 						</div>
 
+						<div class="query-parameters-container hidden" data-query-name="expedition_by_name_id">
+							<h4 class="w-100 mb-3">Expedition By Name/ID Query Parameters</h4>		
+							<div class="field-container col-sm col-md-6">
+								<div class="field-container d-flex">
+									<select id="expedition_by_name_id-search_by" class="input-field no-option-fill query-option-operator update-expedition-id-option" title="Expedition search string operator" aria-labelledby="expedition_by_name_id-search_label">
+										<option value="contains">contains</option>
+										<option value="equals">equals</option>
+										<option value="starts">starts with</option>
+										<option value="ends">ends with</option>
+									</select>
+									<input id="expedition_by_name_id-search_string" class="input-field single-value-field update-expedition-id-option mr-3" name="search_string" aria-labelledby="expedition_by_name_id-search_label">
+								</div>
+								<label id="expedition_by_name_id-search_label" class="field-label">Expedition name</label>
+							</div>
+							<div class="field-container col-sm col-md-2">
+								<select id="expedition_by_name_id-year" class="input-field default no-option-fill year-select-field update-expedition-id-option keep-default-option" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="expedition_id-year">Year</label>
+							</div>	
+							<div class="field-container col-sm col-md-4">
+								<select id="expedition_by_name_id-expedition_id" class="input-field default no-option-fill climberdb-select2 is-empty" name="expedition_id" title="Expedition ID" multiple="multiple" placeholder="Type to search expedition IDs">
+								</select>
+								<label class="field-label" for="expedition_by_name_id-expedition_id">Expedition ID</label>
+								<div id="expedition-id-loading-indicator" class="loading-indicator-dot-container justify-content-center hidden" aria-hidden="true">
+									<div class="loading-indicator-dot dot1"></div>
+									<div class="loading-indicator-dot dot2"></div>
+									<div class="loading-indicator-dot dot3"></div>
+								</div>
+							</div>	
+						</div>
+
 						<div class="query-parameters-container hidden" data-query-name="user_nights">
 							<h4 class="w-100 mb-3">Users/User Nights Query Parameters</h4>	
 							<div class="field-container col-sm-6 col-md-4 col-lg-3">
@@ -202,7 +235,7 @@
 								<label class="field-label" for="count_per_guide_company-count_field">Count climbers, exp. members, or climbs?</label>
 							</div>
 							<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
-								<select id="count_climbers-group_by_fields" class="input-field no-option-fill climberdb-select2 is-empty is-empty" multiple="multiple" name="group_by_fields" placeholder="Group rows by" placeholder="Group rows by" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
+								<select id="count_climbers-group_by_fields" class="input-field no-option-fill climberdb-select2 is-empty" multiple="multiple" name="group_by_fields" placeholder="Group rows by" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
 									<option value="group_status_code">Group status</option>
 									<option value="reservation_status_code">Expedition member status</option>
 									<option value="special_group_type_code">Special group type</option>
