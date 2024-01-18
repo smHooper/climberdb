@@ -1220,6 +1220,10 @@ class ClimberDBQuery extends ClimberDB {
 			})
 	}
 
+	/*
+	Get WHERE clause(s) from query parameters to update. Used to update the expedition ID 
+	select options and for running the actual query
+	*/
 	getExpeditionByNameIDWhere() {
 		const year = $('#expedition_by_name_id-year').val();
 		const expeditionSearchOperator = $('#expedition_by_name_id-search_by').val();
@@ -1242,7 +1246,12 @@ class ClimberDBQuery extends ClimberDB {
 	}
 
 
+	/*
+	When the user changes a query parameter (either expedition name search operator/string 
+	or year), update the expedition ID select options
+	*/
 	updateExpeditionIDOptions() {
+		// Show loading indicator and hide everything else in this field container
 		const $loadingIndicator = $('#expedition-id-loading-indicator')
 			.ariaHide(false)
 			.siblings()
@@ -1257,13 +1266,23 @@ class ClimberDBQuery extends ClimberDB {
 					print('Error querying expedition IDs: '  + response)
 				} else {
 					const $select = $('#expedition_by_name_id-expedition_id');
+					// capture current selection so it can be reselected if those IDs still 
+					//	exist as options
+					const currentSelection = $select.val();
+					
+					// clear previous options
 					$select.find('option').remove();
 					for (const {id} of $.parseJSON(response)) {
 						$select.append(`<option value=${id}>${id}</option>`)
 					}
+					
+					// reset previous selection. Only IDs that exist with after the new 
+					//	query will be selected
+					$select.val(currentSelection).change();
 				}
 			})
 			.always(() => {
+				// Hide the loading indicator and show everything else
 				const $loadingIndicator = $('#expedition-id-loading-indicator')
 					.ariaHide(true)
 					.siblings()
@@ -1272,6 +1291,11 @@ class ClimberDBQuery extends ClimberDB {
 	}
 
 
+	/*
+	The Expedition By Name/ID query requires special handling of the WHERE 
+	clause(s) because the search string and operator combo can't be used with 
+	a direct .replace()
+	*/
 	queryExpeditionByNameOrID() {
 		const expeditionIDs = $('#expedition_by_name_id-expedition_id').val();
 		const whereClauses = this.getExpeditionByNameIDWhere();
