@@ -319,3 +319,20 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 		align-self: flex-end;
 	}
 }
+
+/*.field-container.double-input-criterion-container {
+	margin-right: 15px;
+}
+.input-field.double-input-criterion {
+	max-width: unset;
+}
+.input-field.double-input-criterion.col-4 {
+	flex: 0 0 33%;
+}
+.input-field.double-input-criterion.col {
+	flex-basis: 0;
+	-ms-flex-positive: 1;
+	flex-grow: 1;
+	max-width: 100%;
+	margin-left: 10px;
+}*/
