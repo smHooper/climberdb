@@ -542,9 +542,6 @@ class ClimberDBQuery extends ClimberDB {
 		$('.query-parameters-container[data-query-name="expedition_by_name_id"] .update-expedition-id-option').change(() => {
 			this.updateExpeditionIDOptions();
 		});
-		// Set to this year's expeditions
-		$('#expedition_by_name_id-year').val(new Date().getFullYear());
-		this.updateExpeditionIDOptions();
 
 		//$(window).resize(e => {onWindowResize(e)})
 		
