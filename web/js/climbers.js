@@ -689,8 +689,11 @@ class ClimberForm {
 
 	onPostalCodeFieldChange(e) {
 		const $container = $(e.target).closest('.field-container-row').parent();
-		const postalCode = $container.find('.input-field[name=postal_code]').val();
 		const countryCode = $container.find('.input-field[name=country_code]').val();
+		var postalCode = $container.find('.input-field[name=postal_code]').val();
+		// Canadian postal codes look-ups only work with the first 3 characters
+		if (countryCode == 40) postalCode = postalCode.slice(0, 3);
+		
 		if (!(countryCode && postalCode)) return;
 
 		const countryAbbreviation = this.countryCodes[countryCode]
