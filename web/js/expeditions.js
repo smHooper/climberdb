@@ -31,6 +31,12 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.historyBuffer = []; // for keeping track of browser navigation via back and forward buttons
 		this.currentHistoryIndex = 0;
 		this.attachments = {};
+		this.attachmentTypes = {
+			specialUseApplication: 1,
+			psarForm: 2,
+			payGovForm: 4,
+			other: 3
+		}
 
 		return this;
 	}
@@ -343,28 +349,15 @@ class ClimberDBExpeditions extends ClimberDB {
 			$newItem.attr('data-parent-table-id', $card.data('table-id'));
 		});
 
-		$(document).on('click', '.add-attachment-button', e => {
-			this.onAddAttachmentItemButtonClick(e);
-		});
-
-		$(document).on('click', '.delete-attchment-button', e => {
-			this.onDeleteAttachmentButtonClick(e);
-		})
-
 		// When the leader input checkbox changes, set the transparent class appropriately
 		$(document).on('change', '.leader-checkbox-container .input-checkbox', e => {
-			const $checkbox = $(e.target).closest('.input-checkbox');
-			const isChecked = $checkbox.prop('checked');
+			this.onLeaderCheckboxChange(e);
+		});
 
-			// If this chekcbox is being checked, hide all others
-			if (isChecked) {
-				$(`.card:not(.cloneable) .leader-checkbox-container .input-checkbox:not(#${$checkbox.attr('id')})`)
-					.prop('checked', false)
-					.change()
-					.closest('.leader-checkbox-container').addClass('transparent');
-			}
-			$checkbox.closest('.leader-checkbox-container').toggleClass('transparent', !isChecked);
-		})
+		// Ask the user if they want to add an attachment
+		$(document).on('change', '.file-submission-checkbox', e => {
+			this.onFileSubmissionCheckboxChange(e);
+		});
 
 		$(document).on('click', '.change-expedition-button', e => {
 			this.showChangeExpeditionModal($(e.target).closest('.card'));
@@ -425,6 +418,14 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$(document).on('click', '.delete-transaction-button', e => {
 			this.onDeleteTransactionButtonClick(e);
+		})
+
+		$(document).on('click', '.add-attachment-button', e => {
+			this.onAddAttachmentItemButtonClick(e);
+		});
+
+		$(document).on('click', '.delete-attchment-button', e => {
+			this.onDeleteAttachmentButtonClick(e);
 		})
 
 		$(document).on('change', '.attachment-input', e => {
@@ -2383,6 +2384,82 @@ class ClimberDBExpeditions extends ClimberDB {
 	} 
 
 	/*
+	Make sure only one expedition member is marked as checked
+	*/
+	onLeaderCheckboxChange(e) {
+		const $checkbox = $(e.target).closest('.input-checkbox');
+		const isChecked = $checkbox.prop('checked');
+
+		// If this chekcbox is being checked, hide all others
+		if (isChecked) {
+			$(`.card:not(.cloneable) .leader-checkbox-container .input-checkbox:not(#${$checkbox.attr('id')})`)
+				.prop('checked', false)
+				.change()
+				.closest('.leader-checkbox-container').addClass('transparent');
+		}
+		$checkbox.closest('.leader-checkbox-container').toggleClass('transparent', !isChecked);
+	}
+
+
+	/*
+	If the user is checking the SUP App. checkbox and there isn't already a SUP 
+	App attachment, ask if they want to add one
+	*/
+	onFileSubmissionCheckboxChange(e) {
+		const $checkbox = $(e.target);
+		const $card = $checkbox.closest('.expedition-card');
+		
+		// If the user unchecked the box or this is a new expedition member, do nothing
+		if (!$checkbox.prop('checked') || $card.is('.new-card')) {
+			return;
+		}
+		
+		var attachmentTypeCode, attachmentTypeName;
+		if ($checkbox.attr('name') === 'application_complete') {
+			attachmentTypeCode = this.attachmentTypes.specialUseApplication;
+			attachmentTypeName = 'Special Use Permit Application';
+		} else {
+			attachmentTypeCode = this.attachmentTypes.psarForm;
+			attachmentTypeName = 'PSAR Form';
+		}
+
+		const nAttachments = $card.find('.input-field[name="attachment_type_code"]')
+			.filter((_, el) => el.value == attachmentTypeCode)
+			.length
+		if (nAttachments === 0) {
+			const message = `A ${attachmentTypeName} file has not yet been` +
+				' added for this expedition member. Would you like to upload one now?';
+			const footerButtons = `
+				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+				<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal">Yes</button>
+			`;
+			const onConfirmClick = () => {
+				$('#alert-modal .confirm-button').click(() => {
+					const $dataList = $card.find('.attachments-tab-pane .data-list');
+					const $listItem = this.addAttachmentListItem($dataList);
+					const $typeSelect = $listItem.find('.input-field[name="attachment_type_code"]')
+						.val(attachmentTypeCode)
+						.change();
+
+					// Show the attachments tab
+					$card.find('.show-attachment-tab-button').click();
+					// Don't use bootstrap API because animation gets cancelled
+					$card.children('.card-collapse').addClass('show');
+					$listItem.find('.file-input-label').click();
+				})
+			}
+			showModal(
+				message, 
+				`Add ${attachmentTypeName}?`, 
+				'confirm', 
+				footerButtons, 
+				{eventHandlerCallable: onConfirmClick}
+			)
+		}
+	}
+
+
+	/*
 
 	*/
 	moveExpeditionMember() {
@@ -4133,6 +4210,19 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*
+	Helper method used when 'add attachment' button is clicked and when the 
+	'SUP App' checkbox is checked (.onSpecialUseApplicationCheckboxChange())
+	*/
+	addAttachmentListItem($dataList) {
+		const $newItem = this.addNewListItem($dataList, {newItemClass: 'new-list-item'});
+		const $card = $newItem.closest('.card');
+		$newItem.attr('data-parent-table-id', $card.data('table-id'));
+
+		return $newItem;
+	}
+
+
+	/*
 	Add new attachment unless this expedition member has yet to be saved
 	*/
 	onAddAttachmentItemButtonClick(e) {
@@ -4145,9 +4235,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			showModal('You must save this expedition member before you can add an attachment.', 'Invalid Operation');
 			return;
 		}
-		const $newItem = this.addNewListItem($button.closest('.attachments-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
-		const $card = $newItem.closest('.card');
-		$newItem.attr('data-parent-table-id', $card.data('table-id'));
+		this.addAttachmentListItem($button.closest('.attachments-tab-pane').find('.data-list'));
 	}
 
 
@@ -4242,6 +4330,19 @@ class ClimberDBExpeditions extends ClimberDB {
 				};
 				
 				const $listItem = $barContainer.closest('.data-list-item');
+				const attachmentType = $listItem.find('.input-field[name="attachment_type_code"]').val();
+				if (attachmentType == _this.attachmentTypes.specialUseApplication) {
+					$listItem.closest('.expedition-card')
+						.find('.input-checkbox[name="application_complete"]')
+							.prop('checked', true)
+							.change()
+				}
+				if (attachmentType == _this.attachmentTypes.psarForm) {
+					$listItem.closest('.expedition-card')
+						.find('.input-checkbox[name="psar_complete"]')
+							.prop('checked', true)
+							.change()
+				}
 				
 				_this.setAttachmentFileInput($listItem, filename)
 
