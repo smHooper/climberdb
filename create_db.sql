@@ -576,7 +576,11 @@ CREATE VIEW briefings_view AS
 CREATE VIEW briefings_expedition_info_view AS 
 	SELECT 
 	 	gb.expedition_id,
-		CASE WHEN no_members THEN 0 ELSE gb.n_members END AS n_members,
+		CASE 
+			WHEN expeditions.expected_expedition_size > 0 THEN expeditions.expected_expedition_size
+			WHEN no_members THEN 0 
+			ELSE gb.n_members 
+		END AS n_members,
 		expeditions.expedition_name,
 		expeditions.planned_departure_date,
 		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code,
