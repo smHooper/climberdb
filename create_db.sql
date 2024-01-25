@@ -558,7 +558,7 @@ CREATE VIEW briefings_view AS
 	  briefings.briefing_start::date AS briefing_date,
 	  regexp_replace(to_char(briefings.briefing_start, 'HH24:MI'::text), '^0'::text, ''::text) AS briefing_start_time,
 	  regexp_replace(to_char(briefings.briefing_end, 'HH24:MI'::text), '^0'::text, ''::text) AS briefing_end_time,
-	  t.n_members,
+	  coalesce(expeditions.expected_expedition_size, t.n_members) AS n_members,
 	  t.expedition_name,
 	  users.first_name AS ranger_first_name,
 	  users.last_name AS ranger_last_name,
@@ -570,12 +570,17 @@ CREATE VIEW briefings_view AS
 	         FROM expedition_members
 	           JOIN expeditions ON expeditions.id = expedition_members.expedition_id
 	        GROUP BY expedition_members.expedition_id, expeditions.expedition_name) t ON briefings.expedition_id = t.expedition_id
-	  LEFT JOIN users ON users.id = briefings.briefing_ranger_user_id;
+	   	JOIN expeditions ON t.expedition_id = expeditions.id
+	  	LEFT JOIN users ON users.id = briefings.briefing_ranger_user_id;
 
 CREATE VIEW briefings_expedition_info_view AS 
 	SELECT 
 	 	gb.expedition_id,
-		CASE WHEN no_members THEN 0 ELSE gb.n_members END AS n_members,
+		CASE 
+			WHEN expeditions.expected_expedition_size > 0 THEN expeditions.expected_expedition_size
+			WHEN no_members THEN 0 
+			ELSE gb.n_members 
+		END AS n_members,
 		expeditions.expedition_name,
 		expeditions.planned_departure_date,
 		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code,
