@@ -1,15 +1,16 @@
 import os
-from typing import Optional, Union, Collection
 import PIL.Image
 import PIL.ImageOps
+import re
+import requests
 import string
+from typing import Optional, Union, Collection
 import zpl
 import zebra
 import urllib.parse
 import numpy as np
 import math
-import re
-import requests
+
 import webbrowser
 import tempfile
 
@@ -36,14 +37,18 @@ class CacheTag:
             air_taxi: str,
             return_date: str,
             label_height: Optional[int]=3,
-            label_width: Optional[int]=5.75,
-            label_margin: Optional[Union[int, float]]=1/8
+            label_width: Optional[int]=6.0625,
+            label_margin_x: Optional[Union[int, float]]=0.71875,
+            label_margin_y: Optional[Union[int, float]]=1/16,
+            center_margin: Optional[Union[int, float]]=1/4,
         ):
 
         self.zebra = zebra.Zebra()
         self.printers = self.zebra.getqueues()
         self.label = zpl.Label(label_height * MILLIMETERS_PER_INCH, label_width * MILLIMETERS_PER_INCH, dpmm=PRINTER_RESOLUTION)
-        self.label_margin = label_margin
+        self.label_margin_x = label_margin_x
+        self.label_margin_y = label_margin_y
+        self.center_margin = center_margin
 
         # Expedition info
         self.expedition_name = expedition_name
@@ -52,7 +57,6 @@ class CacheTag:
         self.air_taxi = air_taxi
         self.return_date = return_date
 
-        # Getting this from Labelary API, so just call it once
         self.arrowhead_zpl_str = ''
 
 
@@ -213,71 +217,44 @@ class CacheTag:
             # Resize image
             img = img.resize((round(width_mm * dpmm), round(height_mm * dpmm)), PIL.Image.NEAREST)
 
-            # Labelary API does the inversion, no need for it here. ZPL expects white to 00 and black to be FF
-            #img = PIL.ImageOps.invert(img.convert('L')).convert('1')
-
             img_zpl = self.img_to_zpl(img)
 
         self.label.code += img_zpl
-
-        # img_array = np.array(img)
-        #
-        # # Calcaulte the number of bytes in the image. This is used as a parameter to the GF function. Since each pixel
-        # #   is 1 bit, divide the number of pixels by 8 to get bytes
-        # #n_bytes = math.ceil(math.ceil(width_mm * dpmm / 8.0) * height_mm * dpmm)#math.ceil(img_array.size / 8)
-        # img_height, img_width = img_array.shape
-        # n_bytes = img_height * img_width * 2
-        # n_bytes_per_row = math.ceil(img_width / 8)
-        # zpl_str = f'^GFA,{n_bytes},{n_bytes},{n_bytes_per_row},'
-        #
-        # for row_number, row in enumerate(img_array):
-        #     # ZPl expects each pixel to be represented by a 0 or 1, so convert each hexidecimal byte represantation
-        #     #   to 0 or 1
-        #     byte_str = row.tobytes().hex().upper()
-        #     import pdb; pdb.set_trace()
-        #
-        #     # If this is the first row, it should start with a comma (which would normally indicate that the row is all
-        #     #   0s from the comma onward
-        #     if row_number == 0 and len(set(byte_str)) == 1:
-        #         self._hex_line_to_zpl(byte_str, img_width)
-        #
-        #     # Check if the previous row is identical to this one. If so, a colon repeats the row in ZPL data
-        #     #   compression scheme
-        #     if row_number > 0 and (img_array[row_number - 1] == row).all():
-        #         zpl_str += ':'
-        #         continue
-        #
-        #     zpl_str += self._hex_data_to_zpl(byte_str)
-        #
-        # self.label.code += zpl_str
-
         self.label.endorigin()
 
         return height_mm
 
 
-    def build_label_image(self, origin_x: Optional[int]=0, origin_y: Optional[int]=0) -> None:
+    def build_label_image(
+            self,
+            left_margin_mm: int,
+            right_margin_mm: int,
+            origin_x: Optional[int]=0,
+            origin_y: Optional[int]=0
+        ) -> None:
         """
         Helper function to produce one of 2 images on the label at the specified origin
 
-        :param orign_x: The right-most coordinate in mm of the image within the label
+        :param left_margin_mm: Margin on the left side of the label
+        :param right_margin_mm: Margin on the right side of the label
+        :param orign_x: The left-most coordinate in mm of the image within the label
         :param origin_y: The top-most coordinate in mm of the image within the label
         """
         arrowhead_img = PIL.Image.open(NPS_LOGO_PATH)
         half_width_mm = self.label.width / 2
-        margin_mm = self.label_margin * MILLIMETERS_PER_INCH
+        top_margin_mm = self.label_margin_y * MILLIMETERS_PER_INCH
         resolution = self.label.dpmm
-        print_area_width = half_width_mm - (margin_mm * 2)
-        margin_left = origin_x + margin_mm
-        secondary_font_size = 4
+        print_area_width = half_width_mm - left_margin_mm - right_margin_mm
+        margin_left = origin_x + left_margin_mm
+        secondary_font_size = 3
 
         # Keep track of where we are on the Y axis
-        current_y_mm = origin_y + margin_mm
+        current_y_mm = origin_y + top_margin_mm
 
         # Add SUP title text
-        title_text_font_size = 5
-        self.add_text('Climbing Special Use Cache Tag', margin_left, current_y_mm, print_area_width, max_lines=1, font_size_mm=title_text_font_size)
-        current_y_mm += title_text_font_size + 2
+        title_text_font_size = 4
+        self.add_text('Climbing Special Use Permit Cache Tag', margin_left, current_y_mm, print_area_width, max_lines=2, font_size_mm=title_text_font_size, justification='C')
+        current_y_mm += title_text_font_size * 2 + 2
 
         # Add arrowhead
         #self.label.origin(margin_left, current_y_mm)
@@ -286,41 +263,45 @@ class CacheTag:
         #self.label.endorigin()
 
         # Add DNPP text
-        dena_text_left = origin_x + logo_width + 10
+        dena_text_left = margin_left + logo_width + 2
         dena_text_width = print_area_width - logo_width
         dena_text_top = current_y_mm
-        self.add_text('Denali National Park and Preserve', dena_text_left, dena_text_top, dena_text_width, max_lines=2, font_size_mm=secondary_font_size)
+        self.add_text('Denali National Park', dena_text_left, dena_text_top, dena_text_width, max_lines=1, font_size_mm=secondary_font_size)
+        self.add_text('and Preserve', dena_text_left, dena_text_top + secondary_font_size, dena_text_width, max_lines=1, font_size_mm=secondary_font_size)
 
         # Permit number text
-        permit_font_size = 7
-        permit_text_top = current_y_mm + logo_height - permit_font_size
-        self.add_text(f'Group #: {self.expedition_id}', dena_text_left, permit_text_top, dena_text_width, max_lines=1, font_size_mm=permit_font_size)
+        id_font_size = 8
+        id_label_text_top = current_y_mm + logo_height - secondary_font_size - id_font_size
+        self.add_text('Expedition #:', dena_text_left, id_label_text_top, dena_text_width, max_lines=1, font_size_mm=secondary_font_size)
+
+        id_text_top = id_label_text_top + secondary_font_size + 1
+        self.add_text(self.expedition_id, dena_text_left, id_text_top, dena_text_width, max_lines=1, font_size_mm=id_font_size)
 
         # Add rule below logo
         current_y_mm += logo_height + 0.5
         underline_height_mm = 1
         underline_height_dots = underline_height_mm * resolution
-        self.label.origin(origin_x + margin_mm, current_y_mm)
-        self.label.draw_box((half_width_mm - (margin_mm * 2)) * resolution, underline_height_dots, underline_height_dots)
+        self.label.origin(margin_left, current_y_mm)
+        self.label.draw_box((half_width_mm - left_margin_mm - right_margin_mm) * resolution, underline_height_dots, underline_height_dots)
         self.label.endorigin()
         current_y_mm += underline_height_mm
 
         # For each attribute, the name and value text should be horizontally aligned in the same way, so locally
-        #   define a little helper function to that
+        #   define a little helper function to do that
         current_y_mm += 5
         def add_expedition_info(name, value, current_y_mm):
-            attribute_name_left  = origin_x + margin_mm
-            attribute_name_width = print_area_width/3
-            attribute_value_left = origin_x + attribute_name_width + 5
-            attribute_value_width= print_area_width - attribute_name_width - 5
+            attribute_name_left  = margin_left
+            attribute_name_width = print_area_width / 4
+            attribute_value_left = margin_left + attribute_name_width + 2
+            attribute_value_width= print_area_width - attribute_name_width - 2
             self.add_text(name, attribute_name_left, current_y_mm, attribute_name_width, font_size_mm=secondary_font_size)
-            self.add_text(value, attribute_value_left, current_y_mm, attribute_value_width, font_size_mm=secondary_font_size, max_lines=2)
+            self.add_text(value, attribute_value_left, current_y_mm, attribute_value_width, font_size_mm=secondary_font_size, max_lines=3)
             return current_y_mm  + 10
 
         current_y_mm = add_expedition_info('Expedition:', self.expedition_name, current_y_mm)
         current_y_mm = add_expedition_info('Leader:', self.expedition_leader, current_y_mm)
         current_y_mm = add_expedition_info('Air taxi:', self.air_taxi, current_y_mm)
-        current_y_mm = add_expedition_info('Return date:', self.return_date, current_y_mm)
+        current_y_mm = add_expedition_info('Return:', self.return_date, current_y_mm)
 
 
     def close_zpl(self):
@@ -338,8 +319,10 @@ class CacheTag:
         """
         label_width = self.label.width
 
-        self.build_label_image()
-        self.build_label_image(origin_x=label_width/2)
+        left_margin = int(self.label_margin_x * MILLIMETERS_PER_INCH)
+        right_margin = int((self.center_margin / 2) * MILLIMETERS_PER_INCH)
+        self.build_label_image(left_margin, right_margin)
+        self.build_label_image(right_margin, left_margin, origin_x=label_width/2)
 
         self.close_zpl()
 
@@ -380,7 +363,7 @@ class CacheTag:
 
 
 def test_tag():
-    tag = CacheTag('Some Expedition', 'Sam Hooper', '5970', 'Talkeetna Air Taxi', '5/23/2023')
+    tag = CacheTag('Some Long Expedition Name on 2 Lines', 'Sam Hooper', '5970', 'Talkeetna Air Taxi', '5/23/2023')
     tag.build_cache_tag_label()
     tag.label.preview()
 
