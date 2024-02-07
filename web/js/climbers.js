@@ -705,7 +705,7 @@ class ClimberForm {
 					// Update city. Look within the container since both climber and emerg. 
 					//	contact info have fields with the same name attr.
 					$container.find('.input-field[name=city]')
-						.val(details['place name'])
+						.val(details['place name'].split('(')[0].trim())
 						.change();
 					
 					// If the country is the US or Canada, update the state
