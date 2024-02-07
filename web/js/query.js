@@ -385,7 +385,10 @@ class ClimberDBQuery extends ClimberDB {
 							WHERE 
 								actual_departure_date IS NOT NULL AND 
 								coalesce(special_group_type_code, -1) <> 3 AND 
-								actual_departure_date BETWEEN '{year}-{month}-1' AND ('{year}-{month}-1'::date + interval '1 month')::date - 1
+								(
+									actual_departure_date BETWEEN '{year}-{month}-1' AND ('{year}-{month}-1'::date + interval '1 month')::date - 1 OR
+									actual_return_date BETWEEN '{year}-{month}-1' AND ('{year}-{month}-1'::date + interval '1 month')::date - 1
+								)
 						) _ 
 					GROUP BY mountain_name;
 				`,
