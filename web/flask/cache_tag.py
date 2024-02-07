@@ -8,13 +8,14 @@ from socket import AF_INET as SOCKET_AF_INET
 from socket import SOCK_STREAM as SOCKET_SOCK_STREAM
 from socket import socket as Socket
 import string
-from typing import Optional, Union, Collection
-import zpl
-import zebra
-import urllib.parse
-
-import webbrowser
 import tempfile
+from typing import Optional, Union
+import urllib.parse
+import zpl
+#import zebra
+
+
+#import webbrowser
 
 MILLIMETERS_PER_INCH = 25.4
 PRINTER_RESOLUTION = 8 # dots per mm
@@ -45,8 +46,8 @@ class CacheTag:
             center_margin: Optional[Union[int, float]]=1/4,
         ):
 
-        self.zebra = zebra.Zebra()
-        self.printers = self.zebra.getqueues()
+        #self.zebra = zebra.Zebra()
+        #self.printers = self.zebra.getqueues()
         self.label = zpl.Label(label_height * MILLIMETERS_PER_INCH, label_width * MILLIMETERS_PER_INCH, dpmm=PRINTER_RESOLUTION)
         self.label_margin_x = label_margin_x
         self.label_margin_y = label_margin_y
@@ -358,23 +359,23 @@ class CacheTag:
 
         return img.tobytes()
 
-    def get_preview_url(self) -> str:
-        """
-        Generate a Labelary REST API URL (http://labelary.com/) to preview a ZPL label
-        """
-        label = self.label
-        label_height = label.height/MILLIMETERS_PER_INCH
-        label_width = label.width/MILLIMETERS_PER_INCH
-        zpl_str = urllib.parse.quote(label.dumpZPL())
+    # def get_preview_url(self) -> str:
+    #     """
+    #     Generate a Labelary REST API URL (http://labelary.com/) to preview a ZPL label
+    #     """
+    #     label = self.label
+    #     label_height = label.height/MILLIMETERS_PER_INCH
+    #     label_width = label.width/MILLIMETERS_PER_INCH
+    #     zpl_str = urllib.parse.quote(label.dumpZPL())
+    #
+    #     return f'''http://api.labelary.com/v1/printers/{label.dpmm}dpmm/labels/{label_width}x{label_height}/0'''
 
-        return f'''http://api.labelary.com/v1/printers/{label.dpmm}dpmm/labels/{label_width}x{label_height}/0'''
 
-
-    def preview_in_browser(self) -> None:
-
-        browser = webbrowser.get()
-        url = self.get_preview_url()
-        browser.open_new(url)
+    # def preview_in_browser(self) -> None:
+    #
+    #     browser = webbrowser.get()
+    #     url = self.get_preview_url()
+    #     browser.open_new(url)
 
 
 def test_tag():
@@ -383,3 +384,14 @@ def test_tag():
     #tag.label.preview()
 
     return tag
+
+
+def print_zpl(host, port, zpl_string:str) -> None:
+
+    with Socket(SOCKET_AF_INET, SOCKET_SOCK_STREAM) as s:
+        try:
+            s.connect((host, port))
+            s.send(zpl_string.encode())
+            s.close()  # closing connection
+        except Exception as e:
+            raise RuntimeError(e)
