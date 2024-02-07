@@ -38,11 +38,12 @@ class CacheTag:
             expedition_id: str,
             air_taxi: str,
             return_date: str,
-            label_height: Optional[int]=6.0625,
+            label_height: Optional[int]=6.875,
             label_width: Optional[int]=3.0625,
             label_margin_x: Optional[Union[int, float]] = 1 / 16,
-            label_margin_y: Optional[Union[int, float]]=0.71875,
+            label_margin_y: Optional[Union[int, float]]=1,
             center_margin: Optional[Union[int, float]]=1/4,
+            ssl_cert: Optional[Union[str, bool]]=True
         ):
 
         #self.zebra = zebra.Zebra()
@@ -51,6 +52,7 @@ class CacheTag:
         self.label_margin_x = label_margin_x
         self.label_margin_y = label_margin_y
         self.center_margin = center_margin
+        self.ssl_cert = ssl_cert
 
         # Expedition info
         self.expedition_name = expedition_name
@@ -155,7 +157,7 @@ class CacheTag:
         return zpl_str
 
 
-    def img_to_zpl(self, img: PIL.Image, ssl_cert: Union[str, bool]):
+    def img_to_zpl(self, img: PIL.Image):
         """
         Hit the Labelary API to convert an image to ZPL2 code
 
@@ -176,7 +178,7 @@ class CacheTag:
 
         files = {'file': ('delete.jpg', img_data, 'img/jpeg', {'Expires': '10'})}
         headers = {'accept': 'application/json'}
-        response = requests.post(f'{LABELARY_API_URL}/v1/graphics', headers=headers, files=files, verify=ssl_cert)
+        response = requests.post(f'{LABELARY_API_URL}/v1/graphics', headers=headers, files=files, verify=self.ssl_cert)
         response.raise_for_status()
         response_json = response.json()
         total_bytes = response_json['totalBytes']
@@ -195,8 +197,7 @@ class CacheTag:
             upper_left_x: Union[int, float],
             upper_left_y: Union[int, float],
             height_mm: Union[int, float],
-            width_mm: Optional[int]=0,
-            ssl_cert: Union[str, bool]=True
+            width_mm: Optional[int]=0
         ) -> float:
         """
         Convert an image to ZPL alternative data compression scheme. See https://support.zebra.com/cpws/docs/zpl/1994_46469lr1.pdf
@@ -226,7 +227,7 @@ class CacheTag:
             # Resize image
             img = img.resize((round(width_mm * dpmm), round(height_mm * dpmm)), PIL.Image.NEAREST)
 
-            img_zpl = self.img_to_zpl(img, ssl_cert)
+            img_zpl = self.img_to_zpl(img)
 
         self.label.code += img_zpl
         self.label.endorigin()
@@ -255,6 +256,7 @@ class CacheTag:
         resolution = self.label.dpmm
         print_upper_left_y = origin_y + top_margin_mm
         print_area_height = half_height_mm - top_margin_mm - bottom_margin_mm
+        import pdb; pdb.set_trace()
         secondary_font_size = 3
 
         # Keep track of where we are on the short (X) axis
@@ -340,7 +342,7 @@ class CacheTag:
         self.close_zpl()
 
 
-    def render_label(self, ssl_cert: Union[str, bool]=True) -> bytes:
+    def render_label(self) -> bytes:
         """
         Generate PNG image data from the Labelary REST API to preview a ZPL label
 
@@ -353,12 +355,12 @@ class CacheTag:
         label_width = int(round(label.width/MILLIMETERS_PER_INCH))
         zpl_str = label.dumpZPL()
         url = f'''{LABELARY_API_URL}/v1/printers/{int(label.dpmm)}dpmm/labels/{label_width}x{label_height}/0/'''
-        response = requests.post(url, data=zpl_str, verify=ssl_cert)
+        response = requests.post(url, data=zpl_str, verify=self.ssl_cert)
         response.raise_for_status()
 
         return response.content
 
-    def get_preview_bytes(self, ssl_cert: Union[str, bool]) -> bytes:
+    def get_preview_bytes(self) -> bytes:
         """
         Return bytes representing the ZPL2 code converted to an image (and rotated for easier viewing)
 
@@ -367,29 +369,21 @@ class CacheTag:
 
         :return: byte string of the cache tag rotated the visually correct way
         """
-        unrotated_bytes = self.render_label(ssl_cert)
+        unrotated_bytes = self.render_label()
         img = PIL.Image.open(BytesIO(unrotated_bytes))\
             .rotate(-90, expand=True)
 
         return img.tobytes()
 
-    # def get_preview_url(self) -> str:
-    #     """
-    #     Generate a Labelary REST API URL (http://labelary.com/) to preview a ZPL label
-    #     """
-    #     label = self.label
-    #     label_height = label.height/MILLIMETERS_PER_INCH
-    #     label_width = label.width/MILLIMETERS_PER_INCH
-    #     zpl_str = urllib.parse.quote(label.dumpZPL())
-    #
-    #     return f'''http://api.labelary.com/v1/printers/{label.dpmm}dpmm/labels/{label_width}x{label_height}/0'''
 
-
-    # def preview_in_browser(self) -> None:
-    #
-    #     browser = webbrowser.get()
-    #     url = self.get_preview_url()
-    #     browser.open_new(url)
+    def print_label(self, host:str, port:int) -> None:
+        """
+        Convenience method to print label
+        :param host: printer host name or IP address
+        :param port: port to connect to on the printer
+        :return: None
+        """
+        print_zpl(host, port, self.label.code)
 
 
 def test_tag():
