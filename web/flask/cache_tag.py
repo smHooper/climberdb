@@ -20,7 +20,6 @@ import zpl
 MILLIMETERS_PER_INCH = 25.4
 PRINTER_RESOLUTION = 8 # dots per mm
 NPS_LOGO_PATH = 'static/arrowhead_cache_tag.jpg'
-DOI_CRT_PATH = r'\\inpdenaterm01\doi_root_ca_file\DOIRootCA.crt'
 HEX_REGEX = '|'.join([f'^{c}+' for c in string.digits + string.ascii_uppercase[:6]])
 BYTES_REGEX = '^0+|^1+'
 ZPL_COMPRESSION_DICT = (
@@ -156,11 +155,13 @@ class CacheTag:
         return zpl_str
 
 
-    def img_to_zpl(self, img):
+    def img_to_zpl(self, img: PIL.Image, ssl_cert: Union[str, bool]):
         """
         Hit the Labelary API to convert an image to ZPL2 code
 
         :param img: PIL image
+        :param ssl_cert: path to an SSL .crt file for sending web requests (or other valid value for verify parameter
+        of requests.post())
         :return:
         """
         # Write the image to a temporary file to be able to read in the file's binary data.
@@ -175,7 +176,7 @@ class CacheTag:
 
         files = {'file': ('delete.jpg', img_data, 'img/jpeg', {'Expires': '10'})}
         headers = {'accept': 'application/json'}
-        response = requests.post(f'{LABELARY_API_URL}/v1/graphics', headers=headers, files=files, verify=DOI_CRT_PATH)
+        response = requests.post(f'{LABELARY_API_URL}/v1/graphics', headers=headers, files=files, verify=ssl_cert)
         response.raise_for_status()
         response_json = response.json()
         total_bytes = response_json['totalBytes']
@@ -194,7 +195,8 @@ class CacheTag:
             upper_left_x: Union[int, float],
             upper_left_y: Union[int, float],
             height_mm: Union[int, float],
-            width_mm: Optional[int]=0
+            width_mm: Optional[int]=0,
+            ssl_cert: Union[str, bool]=True
         ) -> float:
         """
         Convert an image to ZPL alternative data compression scheme. See https://support.zebra.com/cpws/docs/zpl/1994_46469lr1.pdf
@@ -203,6 +205,8 @@ class CacheTag:
         :param upper_left_y:
         :param width_mm:
         :param height_mm:
+        :param ssl_cert: path to an SSL .crt file for sending web requests (or other valid value for verify parameter
+        of requests.post())
         :return: img height in millimeters
         """
         # Add new origin for the image
@@ -222,7 +226,7 @@ class CacheTag:
             # Resize image
             img = img.resize((round(width_mm * dpmm), round(height_mm * dpmm)), PIL.Image.NEAREST)
 
-            img_zpl = self.img_to_zpl(img)
+            img_zpl = self.img_to_zpl(img, ssl_cert)
 
         self.label.code += img_zpl
         self.label.endorigin()
@@ -336,9 +340,12 @@ class CacheTag:
         self.close_zpl()
 
 
-    def render_label(self) -> bytes:
+    def render_label(self, ssl_cert: Union[str, bool]=True) -> bytes:
         """
         Generate PNG image data from the Labelary REST API to preview a ZPL label
+
+        :param ssl_cert: path to an SSL .crt file for sending web requests (or other valid value for verify parameter
+        of requests.post())
         :return: byte string of PNG data
         """
         label = self.label
@@ -346,14 +353,21 @@ class CacheTag:
         label_width = int(round(label.width/MILLIMETERS_PER_INCH))
         zpl_str = label.dumpZPL()
         url = f'''{LABELARY_API_URL}/v1/printers/{int(label.dpmm)}dpmm/labels/{label_width}x{label_height}/0/'''
-        response = requests.post(url, data=zpl_str, verify=DOI_CRT_PATH)
+        response = requests.post(url, data=zpl_str, verify=ssl_cert)
         response.raise_for_status()
 
         return response.content
 
-    def get_preview_bytes(self) -> bytes:
+    def get_preview_bytes(self, ssl_cert: Union[str, bool]) -> bytes:
+        """
+        Return bytes representing the ZPL2 code converted to an image (and rotated for easier viewing)
 
-        unrotated_bytes = self.render_label()
+        :param ssl_cert: path to an SSL .crt file for sending web requests (or other valid value for verify parameter
+        of requests.post())
+
+        :return: byte string of the cache tag rotated the visually correct way
+        """
+        unrotated_bytes = self.render_label(ssl_cert)
         img = PIL.Image.open(BytesIO(unrotated_bytes))\
             .rotate(-90, expand=True)
 
@@ -386,12 +400,20 @@ def test_tag():
     return tag
 
 
-def print_zpl(host, port, zpl_string:str) -> None:
+def print_zpl(host: str, port: int, zpl_string:str) -> None:
+    """
+    Print a label by sending ZPL2 code directly to printer
 
+    :param host: printer host name or IP address
+    :param port: port to connect to on the printer
+    :param zpl_string: ZPL2 code
+
+    :return: None
+    """
     with Socket(SOCKET_AF_INET, SOCKET_SOCK_STREAM) as s:
         try:
             s.connect((host, port))
             s.send(zpl_string.encode())
-            s.close()  # closing connection
+            s.close()
         except Exception as e:
             raise RuntimeError(e)
