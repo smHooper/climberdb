@@ -220,10 +220,11 @@ if (isset($_POST['action'])) {
 				$resultArray = array();
 				for ($i = 0; $i < count($_POST['queryString']); $i++) {
 					$result = runQueryWithinTransaction($conn, $_POST['queryString'][$i]);
+					//$resultString = json_encode($result);
 					if (strpos(json_encode($result), 'ERROR') !== false) {
 						// roll back the previous queries
 						pg_query($conn, 'ROLLBACK');
-						echo $result, " from the query $i ", $_POST['queryString'][$i];
+						echo $result[0], " from the query $i ", $_POST['queryString'][$i];
 						exit();
 					}
 
@@ -270,7 +271,7 @@ if (isset($_POST['action'])) {
 					if (strpos(json_encode($result), 'ERROR') !== false) {
 						// roll back the previous queries
 						pg_query($conn, 'ROLLBACK');
-						echo $result, " from the query $i ", $_POST['queryString'][$i], ' with params ', json_encode($params);
+						echo $result[0], " from the query $i ", $_POST['queryString'][$i], ' with params ', json_encode($params);
 						exit();
 					}
 
