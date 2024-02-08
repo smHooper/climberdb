@@ -19,13 +19,15 @@ import zpl
 
 MILLIMETERS_PER_INCH = 25.4
 PRINTER_RESOLUTION = 8 # dots per mm
-NPS_LOGO_PATH = 'static/arrowhead_cache_tag.jpg'
+NPS_LOGO_PATH = os.path.join(os.path.dirname(__file__), 'static/arrowhead_cache_tag.jpg')
 HEX_REGEX = '|'.join([f'^{c}+' for c in string.digits + string.ascii_uppercase[:6]])
 BYTES_REGEX = '^0+|^1+'
+# Dictionary for replacing binary image data with compressed ZPL 
+#   https://docs.zebra.com/content/tcm/us/en/printers/software/zpl-pg/advanced-techniques/alternative-data-compression-scheme-for-~dg-and-~db-commands.html
 ZPL_COMPRESSION_DICT = (
     {i + 1: character for i, character in enumerate(string.ascii_uppercase[6:-1])} |
     {20 + i * 20: character for i, character in enumerate(string.ascii_lowercase[6:])}
-)
+) 
 LABELARY_API_URL = 'https://api.labelary.com'
 
 
@@ -256,7 +258,6 @@ class CacheTag:
         resolution = self.label.dpmm
         print_upper_left_y = origin_y + top_margin_mm
         print_area_height = half_height_mm - top_margin_mm - bottom_margin_mm
-        import pdb; pdb.set_trace()
         secondary_font_size = 3
 
         # Keep track of where we are on the short (X) axis
@@ -360,7 +361,7 @@ class CacheTag:
 
         return response.content
 
-    def get_preview_bytes(self) -> bytes:
+    def get_preview(self, return_bytes=False) -> Union[bytes, PIL.Image.Image]:
         """
         Return bytes representing the ZPL2 code converted to an image (and rotated for easier viewing)
 
@@ -373,7 +374,7 @@ class CacheTag:
         img = PIL.Image.open(BytesIO(unrotated_bytes))\
             .rotate(-90, expand=True)
 
-        return img.tobytes()
+        return img.tobytes() if return_bytes else img
 
 
     def print_label(self, host:str, port:int) -> None:
@@ -386,8 +387,8 @@ class CacheTag:
         print_zpl(host, port, self.label.code)
 
 
-def test_tag():
-    tag = CacheTag('Some Long Expedition Name on 2 Lines', 'Sam Hooper', '5970', 'Talkeetna Air Taxi', '5/23/2023')
+def test_tag(ssl_cert=True):
+    tag = CacheTag('Some Long Expedition Name on 2 Lines', 'Sam Hooper', '5970', 'Talkeetna Air Taxi', '5/23/2023', ssl_cert=ssl_cert)
     tag.build_cache_tag_label()
     #tag.label.preview()
 

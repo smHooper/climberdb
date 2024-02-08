@@ -124,7 +124,7 @@
 							<i class="fas fa-2x fa-file-export"></i>
 							<label class="icon-button-label">export</label>
 						</button>
-						<button id="print-cache-tag-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Print cache tag" title="Print cache tag">
+						<button id="show-cache-tag-modal-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Print cache tag" title="Print cache tag">
 							<i class="fas fa-2x fa-flag fa-flag-alt"></i>
 							<label class="icon-button-label">cache tag</label>
 						</button>
@@ -913,6 +913,39 @@
 		    </div>
 			<img class="modal-img hidden" src="#" id="modal-img-preview" alt="preview of uploaded image">
 			<object type="application/pdf" data="" width="100%" height="100%">Sorry, your browser doesn't support viewing a PDF</object>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+
+	<!-- cache tag preview modal -->
+	<div class="modal fade print-preview-modal" id="cache-tag-modal" tabindex="-1" role="dialog" aria-hidden="true">
+	  <div class="modal-dialog" role="document">
+	    <div class="modal-content">
+	      <div class="modal-body modal-img-body" >
+	      	<div class="modal-header-container">
+		      	<div class="modal-img-body-header">
+		      		<h3 class="modal-title">Cache Tag Print Preview</h3>
+			        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+			        	<span aria-hidden="true">&times;</span>
+			        </button>
+		      	</div>
+		    </div>
+		    <div class="d-flex">
+			    <div class="cache-tag-preview-container col-md-6 col-lg-8">
+					<img class="modal-img" src="#" id="modal-cache-tag-preview" alt="preview of cache tag">
+				</div>
+				<div class="cache-tag-print-settings-container col-sm col-md-6 col-lg-4">
+					<div class="field-container">
+						<label class="field-label" for="input-label_print_quantity">How many labels would you like to print?</label>
+						<input id="input-label_print_quantity" class="input-field no-option-fill short-field ignore-changes" type="number" defaultvalue=5>
+					</div>
+					<div class="w-100 d-flex justify-content-center mt-5">
+						<button id="print-cache-tag-button" class="generic-button modal-button wide mx-2" title="Print cache tag">Print</button>
+						<button class="generic-button secondary-button modal-button close-modal wide mx-2" data-dismiss="modal">Cancel</button>
+					</div>
+				</div>
+			</div>
 	      </div>
 	    </div>
 	  </div>

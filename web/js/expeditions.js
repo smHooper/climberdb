@@ -119,9 +119,13 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.onCheckAllPermitCheckboxesClick()
 		});
 
-		$('#print-cache-tag-button').click(() => {
-			this.onPrintCacheTagButtonClick();
+		$('#show-cache-tag-modal-button').click(() => {
+			this.onShowCacheTagModalButtonClick();
 		});
+
+		$('#print-cache-tag-button').click(e => {
+			this.onPrintCacheTagButtonClick(e);
+		})
 
 		$(document).on('change', '.input-field:not(.route-code-header-input)', e => {
 			if ($(e.target).closest('.cloneable').length) return;
@@ -1783,7 +1787,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					// Hide the save button again since there aren't any edits
 					$('#save-expedition-button').ariaHide(true);
 					// but open the reports modal button since there's something to show
-					$('#open-reports-modal-button, #print-cache-tag-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
+					$('#open-reports-modal-button, #show-cache-tag-modal-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
 
 				}
 			}).fail((xhr, status, error) => {
@@ -2841,7 +2845,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		$.post({
-			url: 'flask/cache_tags/write_label_matrix',
+			url: 'flask/cache_tag/write_label_matrix',
 			data: labelData,
 			cache: false
 		}).done((response) => {
@@ -2857,15 +2861,20 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*
-	onclick event handler for print-cache-tag-button. Right now, it just updates an Excel file that the Label Matrix software points to
+	onclick event handler for show-cache-tag-modal-button. Right now, it just updates an Excel file that the Label Matrix software points to
 	*/
-	onPrintCacheTagButtonClick() {
+	onShowCacheTagModalButtonClick() {
 
 		if (!this.showDenyEditPermissionsMessage()) return;
 
 		// Only allow printing cache tags if the group is either confirmed, on mountain, or off mountain
 		const groupStatusCode = parseInt($('#input-group_status').val());
-		if (![3, 4, 5].includes(groupStatusCode)) {
+		const allowableGroupStatuses = [
+				this.constants.groupStatusCodes.confirmed,
+				this.constants.groupStatusCodes.onMountain,
+				this.constants.groupStatusCodes.offMountain
+			];
+		if (!allowableGroupStatuses.includes(groupStatusCode)) {
 			showModal(`The group status for this expedition is not 'Confirmed', 'On Mountain', or 'Off Mountain', so cache tags can't be printed.`, 'Invalid Group Status');
 			return;
 		}
@@ -2876,10 +2885,89 @@ class ClimberDBExpeditions extends ClimberDB {
 			showModal(`You have unsaved edits. Either click the <strong>Save</strong> button to keep your edits or click the <strong>Edit</strong> button and choose <strong>Discard</strong> to undo your edits. Then you can print cache tags.`, 'Unsaved Edits')
 			return;
 		} 
-		// Or if not, just print
+		// Or if not, show the user a preview of the image
 		else {
-			this.writeToLabelMatrix();
+			// get cache tag data
+			let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === 't')
+			if (!tripLeaderInfo.length) {
+				showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
+				return;
+			} else {
+				tripLeaderInfo = tripLeaderInfo[0];
+			}
+
+			const airTaxiCode = this.expeditionInfo.expeditions.air_taxi_code;
+			const airTaxiName = $('#input-air_taxi option').filter((_, el) => el.value == airTaxiCode).text();
+			const labelData = {
+				expedition_name: this.expeditionInfo.expeditions.expedition_name,
+				leader_name: tripLeaderInfo.first_name + ' ' + tripLeaderInfo.last_name,
+				air_taxi_name: airTaxiName,
+				planned_return_date: this.expeditionInfo.expeditions.planned_return_date,
+				expedition_id: this.expeditionInfo.expeditions.id
+			}
+
+			showLoadingIndicator('onShowCacheTagModalButtonClick');
+
+			// get preview and ZPL to print the cache tag
+			$.post({
+				url: '/flask/cache_tag/preview',
+				data: labelData
+			}).done(responseData => {
+				if (this.pythonReturnedError(responseData)) {
+					showModal('An error occurred while generating the cache tag preview: ' + responseData, 'Unexpected Error')
+				} else {
+					// Set modal <img> src
+					$('#modal-cache-tag-preview').attr('src', responseData.preview_src);
+					$('#print-cache-tag-button').data('zpl', responseData.zpl);
+					
+					// Show the modal
+					$('#cache-tag-modal').modal();
+				}
+			}).fail((xhr, status, error) => {
+				showModal('An error occurred while generating the cache tag preview: ' + error, 'Unexpected Error')
+			}).always(() => {hideLoadingIndicator()});
 		}
+	}
+
+
+	/*
+	Print cache tag when user clicks the button
+	*/
+	onPrintCacheTagButtonClick(e) {
+		// Check that the number of labels to print is filled in
+		const nLabels = $('#input-label_print_quantity').val();
+		if (!nLabels) {
+			showModal('You must enter a number of cache tag labels to print', 'Enter Print Quantity');
+			return;
+		}
+
+		const zpl = $(e.target).data('zpl');
+		if (!zpl.length) {
+			showModal('An unexpected error occurred and the label data could not be sent to the printer. Try closing and reopening the <strong>Cache Tag Print Preview</strong> dialog', 'Unexpected Printing Error')
+		}
+		showLoadingIndicator('onPrintCacheTagButtonClick');
+
+		$.post({
+			url: '/flask/cache_tag/print',
+			data: {
+				zpl: zpl,
+				n_labels: nLabels
+			}
+		}).done(responseData => {
+			if (this.pythonReturnedError(responseData)) {
+				showModal('An unexpected error occurred while printing cache tags: ' + responseData, 'Unexpected Error')
+			} else {
+				// dismiss the print preview modal
+				$('#cache-tag-modal').modal('hide');
+				
+				showModal(
+					nLabels > 1 ? `All ${nLabels} cache tags printed successfully.` : 'Your cache tag printed successfully', 
+					'Check Your Printer!'
+				);
+			}
+		}).fail((xhr, status, error) => {
+				showModal('An unexpected error occurred while printing cache tags: ' + error, 'Unexpected Error')
+		}).always(() => {hideLoadingIndicator()})
 	}
 
 
@@ -3697,7 +3785,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		// Show edit toggle button
-		$('#edit-expedition-button, #open-reports-modal-button, #print-cache-tag-button').ariaHide(false);
+		$('#edit-expedition-button, #open-reports-modal-button, #show-cache-tag-modal-button').ariaHide(false);
 
 		// .change() events trigger onInputChange() so undo that stuff
 		$('.input-field.dirty').removeClass('dirty');
@@ -3759,7 +3847,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#input-group_status').val(1);//=pending
 
 		// Hide edit/export buttons
-		$('.expedition-edit-button:not(#print-cache-tag-button)').ariaHide(hideEditButtons);
+		$('.expedition-edit-button:not(#show-cache-tag-modal-button)').ariaHide(hideEditButtons);
 
 		// Not sure why, but a few selects in the climber form get .change triggered so turn the .dirty class off
 		$('#add-climber-form-modal-container .input-field.dirty').removeClass('dirty');
@@ -4793,9 +4881,13 @@ class ClimberDBExpeditions extends ClimberDB {
 				$('.expedition-content, .hide-when-content-hidden').ariaHide(true);
 			}
 
+			// Initialize select2s after select options have been filled
 			$('.select2-no-tag').select2({
 				width: '100%'
 			});
+
+			// Set default number of cache tag labels to print
+			$('#input-label_print_quantity').val(this.config.cache_tag_label_print_number);
 		}).always(() => {
 			hideLoadingIndicator()
 		});

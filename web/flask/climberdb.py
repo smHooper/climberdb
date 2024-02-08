@@ -20,6 +20,7 @@ from flask_mail import Mail, Message
 from sqlalchemy import create_engine, text as sqlatext
 
 from export_briefings import briefings_to_excel
+from cache_tag import CacheTag, print_zpl
 
 # Asynchronously load weasyprint because it takes forever and it should only block when it's needed (exporting PDFs)
 import threading
@@ -681,13 +682,53 @@ def export_query():
 
 #-------------- cache tags -------------------#
 # Write data to Label Matrix source Excel file
-@app.route('/flask/cache_tags/write_label_matrix', methods=['POST'])
+@app.route('/flask/cache_tag/write_label_matrix', methods=['POST'])
 def write_to_label_matrix():
 	
 	data = DataFrame([dict(request.form)])
 	label_matrix_source = app.config['LABEL_MATRIX_SOURCE']
 	source_path = os.path.join(os.path.dirname(__file__), 'assets', label_matrix_source)
 	data.to_csv(source_path, index=False)
+
+	return 'true'
+
+
+@app.route('/flask/cache_tag/preview', methods=['POST'])
+def preview_cache_tag():
+	"""
+	Create a cache tag label, save it as an image, and return the image path 
+	and ZPL string to create it back to the client
+	"""
+
+	data = dict(request.form)
+
+	expedition_id = data['expedition_id']
+	tag = CacheTag(
+		data['expedition_name'], 
+		data['leader_name'], 
+		expedition_id, 
+		data['air_taxi_name'], 
+		data['planned_return_date'],
+		ssl_cert=app.config['SSL_CERT_PATH']
+	)
+	tag.build_cache_tag_label()
+	
+	preview_img = tag.get_preview()
+	exports_dir = get_content_dir('exports')
+	preview_filename = f'cache_tag_preview_{expedition_id}.jpg'
+	preview_img.save(os.path.join(exports_dir, preview_filename))
+
+	return {'preview_src': 'exports/' + preview_filename, 'zpl': tag.label.code}
+
+
+@app.route('/flask/cache_tag/print', methods=['POST'])
+def print_cache_tag():
+	"""
+	Send ZPL to printer to produce the requested number of labels
+	"""
+	zpl = request.form['zpl']
+	for i in range(int(request.form['n_labels'])):
+		print_zpl(app.config['CACHE_TAG_PRINTER_HOST'], app.config['CACHE_TAG_PRINTER_PORT'], zpl)
 
 	return 'true'
 
