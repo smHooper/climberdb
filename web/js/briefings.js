@@ -1531,6 +1531,7 @@ class ClimberDBBriefings extends ClimberDB {
 				thisExportInfo.push({
 					expedition_name: briefingInfo.expedition_name,
 					briefing_text: briefingText,
+					comment: briefingInfo.briefing_notes || '',
 					// CSS Grid layout indices are inclusive at start and exclusive at end whereas 
 					//	openpyxl range indices are all inclusive, so subtract 1 from the end indices
 					cell_indices: [startRow, startColumn, endRow - 1, endColumn - 1]

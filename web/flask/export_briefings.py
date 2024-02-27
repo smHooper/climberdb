@@ -3,12 +3,13 @@ Create an Excel file of briefing appointment schedules for each day in a given
 range. Breifing appointment details come from the climberdb frontend.
 """
 
-from typing import Dict
-import os
 from openpyxl import Workbook
+from openpyxl.comments import Comment
+from openpyxl.styles import Border, Side, PatternFill, Font, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.units import DEFAULT_LEFT_MARGIN, DEFAULT_COLUMN_WIDTH
-from openpyxl.styles import Border, Side, PatternFill, Font, Alignment
+import os
+from typing import Dict
 
 # from openpyxl source code (https://openpyxl.readthedocs.io/en/stable/_modules/openpyxl/utils/units.html):  
 #	- "In Excel there are 72 points to an inch"
@@ -101,6 +102,9 @@ def create_sheet(workbook: Workbook, date_str: str, briefings: list[Dict], time_
 			cell.fill = fill
 			cell.font = Font(bold=True, color='FFFFFF')
 		sheet.merge_cells(start_row=start_row, start_column=start_column, end_row=start_row, end_column=end_column)
+
+		if briefing_info['comment']:
+			cell.comment = Comment(str(briefing_info['comment']), 'Briefing Export')
 
 		# Merge the rest if the briefing is more than one row
 		if not is_single_row:

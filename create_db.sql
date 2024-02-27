@@ -196,7 +196,8 @@ CREATE TABLE IF NOT EXISTS briefings (
 	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	briefing_start TIMESTAMP,
 	briefing_end TIMESTAMP,
-	briefing_ranger_user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT
+	briefing_ranger_user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+	briefing_notes TEXT
 );
 
 CREATE TABLE IF NOT EXISTS cmc_inventory (
@@ -555,6 +556,7 @@ CREATE VIEW briefings_view AS
 	  briefings.briefing_start,
 	  briefings.briefing_ranger_user_id,
 	  briefings.briefing_end,
+	  briefings.briefing_notes,
 	  briefings.briefing_start::date AS briefing_date,
 	  regexp_replace(to_char(briefings.briefing_start, 'HH24:MI'::text), '^0'::text, ''::text) AS briefing_start_time,
 	  regexp_replace(to_char(briefings.briefing_end, 'HH24:MI'::text), '^0'::text, ''::text) AS briefing_end_time,
