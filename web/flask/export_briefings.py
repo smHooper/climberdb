@@ -3,12 +3,13 @@ Create an Excel file of briefing appointment schedules for each day in a given
 range. Breifing appointment details come from the climberdb frontend.
 """
 
-from typing import Dict
-import os
 from openpyxl import Workbook
+from openpyxl.comments import Comment
+from openpyxl.styles import Border, Side, PatternFill, Font, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.units import DEFAULT_LEFT_MARGIN, DEFAULT_COLUMN_WIDTH
-from openpyxl.styles import Border, Side, PatternFill, Font, Alignment
+import os
+from typing import Dict
 
 # from openpyxl source code (https://openpyxl.readthedocs.io/en/stable/_modules/openpyxl/utils/units.html):  
 #	- "In Excel there are 72 points to an inch"
@@ -102,10 +103,14 @@ def create_sheet(workbook: Workbook, date_str: str, briefings: list[Dict], time_
 			cell.font = Font(bold=True, color='FFFFFF')
 		sheet.merge_cells(start_row=start_row, start_column=start_column, end_row=start_row, end_column=end_column)
 
+		comment = Comment(str(briefing_info.get('comment')), 'Briefing Export')
+		if briefing_info['comment']:
+			cell.comment = comment
+
 		# Merge the rest if the briefing is more than one row
 		if not is_single_row:
 			info_top_row_index = start_row + 1
-			sheet.cell(row=info_top_row_index, column=start_column, value=briefing_info['briefing_text'])
+			upper_left_cell = sheet.cell(row=info_top_row_index, column=start_column, value=briefing_info['briefing_text'])
 			
 			# Setting border style on the merged cells doesn't work, so set the style on each cell, then merge
 			for row in sheet.iter_rows(min_row=info_top_row_index, min_col=start_column, max_row=end_row, max_col=end_column):
@@ -119,6 +124,9 @@ def create_sheet(workbook: Workbook, date_str: str, briefings: list[Dict], time_
 				sheet.merge_cells(start_row=info_top_row_index, start_column=start_column, end_row=end_row, end_column=end_column)
 			except:
 				continue
+
+			if briefing_info['comment']:
+				upper_left_cell.comment = comment
 
 	# Set row width
 	n_columns = sheet.max_column - 1

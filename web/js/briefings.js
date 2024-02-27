@@ -80,7 +80,7 @@ class ClimberDBBriefings extends ClimberDB {
 	/*
 	Helper method to select a given date
 	*/
-	selectCalendarCell(date=new Date()) {
+	selectCalendarCellByDate(date=new Date()) {
 		$(`.calendar-cell[data-date="${getFormattedTimestamp(date)}"]`).click();
 	}
 
@@ -161,10 +161,10 @@ class ClimberDBBriefings extends ClimberDB {
 			if ($('.input-field.dirty, .briefing-appointment-container.new-briefing').length) {
 				// Only close the drawer if the user saves or discards, not cancels
 				this.confirmSaveEdits({
-					afterActionCallbackStr: `
-						climberDB.closeAppointmentDetailsDrawer();
-						climberDB.getPreviousNextMonth(${nextButtonWasClicked}
-					`
+					afterActionCallback: () => {
+						this.closeAppointmentDetailsDrawer();
+						this.getPreviousNextMonth(nextButtonWasClicked);
+					}
 				});
 			} else {
 				// No edits to worry about so just close the drawer (if it's open) and go to the next month
@@ -199,7 +199,11 @@ class ClimberDBBriefings extends ClimberDB {
 			if ($('.input-field.dirty, .briefing-appointment-container.new-briefing').length) {
 				// Only close the drawer if the user saves or discards, not cancels
 				this.confirmSaveEdits({
-					afterActionCallbackStr: `climberDB.toggleEditing(false); $('.appointment-details-drawer').removeClass('show'); $('.briefing-appointment-container.selected').removeClass('selected')`,
+					afterActionCallback: () => {
+						this.toggleEditing(false); 
+						$('.appointment-details-drawer').removeClass('show'); 
+						$('.briefing-appointment-container.selected').removeClass('selected')
+					}
 				});
 			} else {
 				this.closeAppointmentDetailsDrawer();
@@ -270,9 +274,9 @@ class ClimberDBBriefings extends ClimberDB {
 		// Select the current date if the month is the current one. Otherwise, select the first of the month
 		const today = new Date((new Date()).toDateString());
 		if (newMonth === today.getMonth()) {
-			this.selectCalendarCell(today);
+			this.selectCalendarCellByDate(today);
 		} else {
-			this.selectCalendarCell(newDate);
+			this.selectCalendarCellByDate(newDate);
 		}
 
 		// Fill appointments on calendar
@@ -428,14 +432,10 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	/*
-	Select the date when a calendar cell is clicked and fill any appointments on the sidebar schedule
+	Helper method to select a cell after a user click. This is necessary to handle 
+	potentially unsaved edits
 	*/
-	onCalendarCellClick(e) {
-		
-		// if the cell is already selected, do nothing
-		const $cell = $(e.target).closest('.calendar-cell');
-		if ($cell.is('.selected')) return;
-
+	selectCalendarCellByClick($cell) {
 		// Clear old date's appointments
 		$('.schedule-ui-container .briefing-appointment-container').remove();
 
@@ -457,20 +457,42 @@ class ClimberDBBriefings extends ClimberDB {
 				this.addBriefingToSchedule(info, {appointmentTimes: appointmentTimes})
 			}
 			this.setBriefingAppointmentColumns({appointmentTimes: appointmentTimes, dateString: dateString});
-	
 		}
-		
+
+		// Make sure the briefing details drawer is closed
+		this.closeAppointmentDetailsDrawer();
 	}
 
 
-	/*Show the brieing appointment details when clicked*/
-	onBriefingAppointmentClick(e) {
+	/*
+	Select the date when a calendar cell is clicked and fill any appointments on the sidebar schedule
+	*/
+	onCalendarCellClick(e) {
+		
+		// if the cell is already selected, do nothing
+		const $cell = $(e.target).closest('.calendar-cell');
+		if ($cell.is('.selected')) return;
+
+		// If there are any unsaved edits, ask the user what they want to do
+		if ($('.input-field.dirty').length) {
+			const callback = () => {
+				this.selectCalendarCellByClick($cell);
+			}
+			this.confirmSaveEdits({afterActionCallback: callback})
+		} else {
+			this.selectCalendarCellByClick($cell);
+		}
+	}
+
+
+	/*
+	*/
+	selectBriefingAppointment($appointmentContainer) {
 		$('.briefing-appointment-container.selected').removeClass('selected');
 
-		const $container = $(e.target).closest('.briefing-appointment-container')
-			.addClass('selected');
+		$appointmentContainer.addClass('selected');
 		const selectedDate = $('.calendar-cell.selected').data('date');
-		const briefingID = $container.data('briefing-id');
+		const briefingID = $appointmentContainer.data('briefing-id');
 		const $routeList = $('#appointment-details-route-list').empty();
 		var info; 
 		if (briefingID) {
@@ -491,12 +513,11 @@ class ClimberDBBriefings extends ClimberDB {
 			this.clearInputFields({parent: '.appointment-details-drawer', triggerChange: false});
 		}
 
-
 		$('.appointment-details-drawer').addClass('show');
 
 		// Scroll to the selected container, but delay for a half second so that the 
 		//	.show transition can start first
-		setTimeout(() => {$container[0].scrollIntoView()}, 50);
+		setTimeout(() => {$appointmentContainer[0].scrollIntoView()}, 50);
 
 		// clear data-current-value properties
 		for (const input of $('.input-field')) {
@@ -505,6 +526,28 @@ class ClimberDBBriefings extends ClimberDB {
 
 		// Capture original values of the briefing so they can be reverted
 		this.currentBriefing = {...info};
+	}
+
+
+	/*Show the briefing appointment details when clicked*/
+	onBriefingAppointmentClick(e) {
+
+		const $appointmentContainer = $(e.target).closest('.briefing-appointment-container');
+
+		// If there are any unsaved edits, ask the user what they want to do
+		if ($('.input-field.dirty').length) {
+			const callback = () => {
+				this.selectBriefingAppointment($appointmentContainer);
+				// Make sure edits aren't allowed after switching to the selected appointment
+				// 	This should be called here _and_ below within the if/else block so that if the
+				//	user clicks the "cancel" button, editing will still be open
+				this.toggleEditing({allowEdits: false}); 
+			}
+			this.confirmSaveEdits({afterActionCallback: callback})
+		} else {
+			this.selectBriefingAppointment($appointmentContainer);
+			this.toggleEditing({allowEdits: false});
+		}
 	}
 
 
@@ -700,29 +743,43 @@ class ClimberDBBriefings extends ClimberDB {
 	/*
 	Prompt user to confirm or discard edits via modal
 	*/
-	confirmSaveEdits({afterActionCallbackStr='', afterSaveCallbackStr='', afterDiscardCallbackStr=''}={}) {
-		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute for Save and Discard buttons
-		//@param afterSaveCallbackStr: string of code to be appended to html onclick attribute for Save and Discard buttons
-		//@param afterDiscardCallbackStr: string of code to be appended to html onclick attribute for Save and Discard buttons
+	confirmSaveEdits({afterActionCallback=()=>{}}={}) {
+		//@param afterActionCallback: a callable function to be called after either the Save or Discard button is clicked
 
-		const onConfirmClick = `
-			showLoadingIndicator('saveEdits');
-			climberDB.saveEdits() 
-		`;
+		// const onConfirmClick = `
+		// 	showLoadingIndicator('saveEdits');
+		// 	climberDB.saveEdits() 
+		// `;
 		
+		// const footerButtons = `
+		// 	<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
+		// 	<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.discardEdits();${afterActionCallbackStr};${afterDiscardCallbackStr}">Discard</button>
+		// 	<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick};${afterActionCallbackStr};${afterSaveCallbackStr}">Save</button>
+		// `;		
 		const footerButtons = `
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.discardEdits();${afterActionCallbackStr};${afterDiscardCallbackStr}">Discard</button>
-			<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick};${afterActionCallbackStr};${afterSaveCallbackStr}">Save</button>
+			<button class="generic-button modal-button danger-button discard-button close-modal" data-dismiss="modal">Discard</button>
+			<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal">Save</button>
 		`;
-		// climberDB is a global instance of ClimberDB or its subclasses that should be instantiated in each page
-		// 	this is a little un-kosher because the ClimberForm() instance is probably a property of climberDB, but
-		//	the only alternative is to make showModal a global function 
+		const eventHandler = () => {
+			$('#alert-modal .discard-button').click(() => {
+				this.discardEdits();
+				afterActionCallback.call()
+			});
+			$('#alert-modal .confirm-button').click(() => {
+				this.saveEdits().done(() => {
+					afterActionCallback.call()
+				});
+			})
+		}
 		showModal(
 			'You have unsaved edits to this briefing. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this briefing.',
 			'Save edits?',
-			'alert',
-			footerButtons
+			'confirm',
+			footerButtons,
+			{
+				eventHandlerCallable: eventHandler
+			}
 		);
 	}
 
@@ -753,7 +810,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 		const $dirtyInputs = $('.input-field.dirty');
 		if ($dirtyInputs.length || $('.briefing-appointment-container.selected.new-briefing').length) {
-			this.confirmSaveEdits({afterActionCallbackStr: 'climberDB.toggleEditing()'});
+			this.confirmSaveEdits({afterActionCallback: () => {this.toggleEditing()}});
 		} else {
 			this.toggleEditing();
 		}
@@ -1418,7 +1475,7 @@ class ClimberDBBriefings extends ClimberDB {
 					// Select today
 					//const today = new Date((new Date()).toDateString()); // need to trim time to midnight
 					const today = window.location.search.length ? this.getBriefingDateFromURL() : new Date();
-					this.selectCalendarCell(today);//year === today.getFullYear() ? today : new Date($('.calendar-cell:not(.disabled)').first().data('date')));
+					this.selectCalendarCellByDate(today);//year === today.getFullYear() ? today : new Date($('.calendar-cell:not(.disabled)').first().data('date')));
 
 					const briefingID = this.urlQueryParams.id;
 					if (briefingID) {
@@ -1531,6 +1588,7 @@ class ClimberDBBriefings extends ClimberDB {
 				thisExportInfo.push({
 					expedition_name: briefingInfo.expedition_name,
 					briefing_text: briefingText,
+					comment: briefingInfo.briefing_notes || '',
 					// CSS Grid layout indices are inclusive at start and exclusive at end whereas 
 					//	openpyxl range indices are all inclusive, so subtract 1 from the end indices
 					cell_indices: [startRow, startColumn, endRow - 1, endColumn - 1]
