@@ -375,6 +375,13 @@ class ClimberDB {
 						</li>
 
 						<li class="nav-item">
+							<a href="backcountry.html">
+								<img class="sidebar-nav-item-icon" src="imgs/bc_icon_50px.svg">
+								<span class="sidebar-nav-item-label">backcountry</span>
+							</a>
+						</li>
+
+						<li class="nav-item">
 							<a href="query.html">
 								<img class="sidebar-nav-item-icon" src="imgs/query_icon_50px.svg">
 								<span class="sidebar-nav-item-label">query data</span>
@@ -729,9 +736,9 @@ class ClimberDB {
 			
 			// If this depends on another input AND that input has a .cloneable parent, update the 
 			//	dependent target attribute with the card id so the right input will find its dependents
-			const $dependentTarget = $($el.data('dependent-target'));
+			const $dependentTarget = $($el.attr('data-dependent-target'));
 			if ($dependentTarget.length && $dependentTarget.closest('.cloneable').length)
-				$el.data('dependent-target', `${$el.data('dependent-target')}-${cardIndex}`);
+				$el.attr('data-dependent-target', `${$el.attr('data-dependent-target')}-${cardIndex}`);
 
 			$el.removeClass('error')
 				.attr('id', newID)
@@ -865,11 +872,11 @@ class ClimberDB {
 
 		// Get all the elements with a data-dependent-target 
 		const $dependentElements = $(`
-				.collapse.field-container .input-field, 
-				.collapse.field-container-row .input-field,
-				.collapse.accordion, 
-				.collapse.add-item-container .add-item-button
-			`).filter((_, el) => $(el).data('dependent-target') === selectID);
+				.collapse.field-container .input-field[data-dependent-target="{target}"], 
+				.collapse.field-container-row .input-field[data-dependent-target="{target}"],
+				.collapse.accordion[data-dependent-target="{target}"], 
+				.collapse.add-item-container .add-item-button[data-dependent-target="{target}"]
+			`.replace(/\{target\}/g, selectID));
 		//const dependentIDs = $select.data('dependent-target');
 		//var dependentValues = $select.data('dependent-value');
 		for (const el of $dependentElements) {

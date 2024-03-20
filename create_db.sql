@@ -2,6 +2,8 @@ CREATE DATABASE climbing_permits;
 
 --Create lookup tables
 CREATE TABLE IF NOT EXISTS attachment_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS backcountry_location_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS backcountry_location_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER, latitude NUMERIC(10, 7), longitude NUMERIC(10, 7));
 CREATE TABLE IF NOT EXISTS country_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS cmc_status_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS communication_device_type_codes (id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
@@ -225,6 +227,21 @@ CREATE TABLE IF NOT EXISTS communication_devices (
 	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	communication_device_type_code INTEGER REFERENCES communication_device_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	number_or_address VARCHAR(255),
+	entered_by VARCHAR(50),
+	entry_time TIMESTAMP,
+	last_modified_by VARCHAR(50),
+	last_modified_time TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS itinerary_locations (
+	id SERIAL PRIMARY KEY,
+	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	backcountry_location_type_code INTEGER REFERENCES backcountry_location_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	backcountry_location_code INTEGER REFERENCES backcountry_location_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	start_date DATE,
+	end_date DATE,
+	latitude NUMERIC(10, 7),
+	longitude NUMERIC(10, 7), 	
 	entered_by VARCHAR(50),
 	entry_time TIMESTAMP,
 	last_modified_by VARCHAR(50),

@@ -1,0 +1,88 @@
+.backcountry-content {
+	display: flex;
+	flex-wrap: wrap;
+	background: var(--ui-bg-light-gray);
+	border-radius: 20px;
+	padding: 20px;
+}
+.backcountry-data-column {
+	display: flex;
+	flex-wrap: wrap;
+	align-content: flex-start;
+}
+@media (min-width: 992px) {
+	.backcountry-data-column.col-lg-6 {
+		flex: 0 0 calc(50% - 10px); /*for some stupid reason 50% doesn't work*/
+	}
+}
+#expedition-data-container .expedition-data-header-container,
+.expedition-data-content-body {
+	height: unset;
+}
+
+.uneditable .input-field.expedition-data-header:placeholder-shown {
+	display: block;
+}
+.map-container {
+	height: 100%;
+	height: 500px;
+	margin-bottom: 15px;
+}
+.leaflet-marker-icon.blink {
+	animation: icon-blink 1.5s ease-in-out infinite;
+}
+@keyframes icon-blink {
+	0% { opacity: 0.25; }
+	50% { opacity: 1; }
+	100% { opacity: 0.25; }
+}
+.leaflet-tooltip-point-label {
+	background-color: #00000000; /*make bg transparent*/
+	font-weight: bold;
+	font-size: 20px;
+	color: white;
+	border: none;
+	/* add drop shadow for the text*/
+	text-shadow: 3px 3px 5px #000000CC;
+	box-shadow: none;
+}
+.leaflet-tooltip-point-label:before { /*hide the tooltip arrow*/
+  display: none !important;
+}
+
+.backcountry-location-list-item {
+	background: var(--ui-secondary-highlight-color);
+	border-radius: 15px;
+	box-shadow: 1px 1px 8px 3px #00000055;
+	display: flex;
+	flex-wrap: wrap;
+	padding: 10px;
+}
+.card.expedition-card .card-header {
+	background-color: var(--ui-secondary-highlight-color);
+}
+.card.expedition-card .card-header,
+.card.expedition-card .card-link-label {
+	color: var(--ui-primary-text-color);
+}
+/*adjust grid layout when the screen is less than 992 pixels wide*/
+@media (min-width: 1500px) {
+	.expedition-content {
+		grid-template-columns: repeat(2, 1fr);
+		grid-template-rows: repeat(3, 500px);
+	}
+	/* Only show modal only content if the screen is large enough */
+	.expedition-modal .modal-only {
+		display: block;
+	}
+	/*show the expedition members taking up the first 2 rows on the right*/
+	#expedition-data-container {
+		grid-row: 1 / span 1;
+		grid-column: 1 / span 2;
+	}
+	/*show the expedition members taking up the first 2 rows on the right*/
+	#expedition-member-data-container {
+		grid-row: unset;
+		grid-column: unset;
+	}
+}
