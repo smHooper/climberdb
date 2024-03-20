@@ -714,31 +714,34 @@
 }
 
 /*------ cache tag preview modal ------------*/
-.print-preview-modal-modal .modal-content {
+.print-preview-modal.show > .modal-dialog {
+	max-width: 100%;
+}
+.print-preview-modal .modal-content {
 	height: 50%;
 	min-height: 400px;
 	width: 60%;
   justify-content: center;
   align-items: center;
 }
-.print-preview-modal-modal .modal-header-container {
+.print-preview-modal .modal-header-container {
 	border-bottom: 1px solid #d6dde4;
 	height: unset;
 }
-.print-preview-modal-modal .modal-img-body {
+.print-preview-modal .modal-img-body {
 	align-items: flex-start;
 }
-.print-preview-modal-modal .modal-img-body-header {
+.print-preview-modal .modal-img-body-header {
 	width: 100%;
 	margin-top: 0.5rem;
 	display: flex;
 	justify-content: flex-end;
 }
-.print-preview-modal-modal .modal-img-body-header .close {
+.print-preview-modal .modal-img-body-header .close {
 	color: unset;
 	width: 40px;
 }
-.print-preview-modal-modal .modal-title {
+.print-preview-modal .modal-title {
 	flex: 1 1 auto;
 	max-width: 100%;
 	text-align: center;
@@ -753,7 +756,7 @@
 	width: 100%;
 	box-shadow: 1px 2px 14px 3px #00000033;
 }
-.print-preview-modal-modal .modal-footer {
+.print-preview-modal .modal-footer {
 	border-top: none;
 }
 .generic-button.wide {

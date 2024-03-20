@@ -998,6 +998,7 @@ textarea.input-field:valid + .required-indicator {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
 }
 /*------- -------*/
 
