@@ -1070,7 +1070,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		if ($card.is('.new-card')) {
 			if (tableName === 'expedition_members') {
 				const climberID = $card.data('climber-id');
-				$(`#routes-accordion .route-member-list .data-list-item[data-climber-id="${climberID}"`).fadeRemove(500);
+				$(`#routes-accordion .route-member-list .data-list-item[data-climber-id="${climberID}"`).fadeRemove();
 				setTimeout(() => {this.updateExpeditionMemberCount()}, 550);
 			}
 			$card.fadeRemove();
@@ -1099,7 +1099,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							const climberID = $card.data('climber-id');
 							$('#routes-accordion .route-member-list .data-list-item[data-climber-id=' + climberID + ']').remove();
 
-							 $('#${$card.attr('id')}').fadeRemove(500);
+							 $('#${$card.attr('id')}').fadeRemove();
 
 							 // Wait just over a half second for the card to be removed
 							 setTimeout(() => {climberDB.updateExpeditionMemberCount(); climberDB.updateCommsDeviceOwnerOptions()}, 550);
@@ -1112,9 +1112,6 @@ class ClimberDBExpeditions extends ClimberDB {
 					`Are you sure you want to delete this expedition member` +
 					` and all related transactions and routes for this member? This action` +
 					` is permanent and cannot be undone.`;
-
-
-
 			} else if (tableName === 'expedition_member_routes') {
 				// get DB IDs for all member route records that are saved in the DB
 				const memberRouteIDs = $card.find('.route-member-list .data-list-item:not(.cloneable):not(.new-list-item)')

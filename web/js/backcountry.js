@@ -7,12 +7,12 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		this.maps = {
 			main: {
 				map: null,
-				layers: {}
+				layers: []
 			},
-			modal: {
-				map: null,
-				layers: {}
-			}
+			// modal: {
+			// 	map: null,
+			// 	layers: {}
+			// }
 		};
 		this.locationCoordinates = {}; // stores lat/lon of named locations
 		this.markerIcons = { // maps location type to an icon image
@@ -20,6 +20,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			2: '../imgs/camp_icon_50px.png',
 			3: '../imgs/plane_icon_50px.png'
 		}
+		this.campCardClass = 'camp-location-card'
 		return this;
 	}
 
@@ -128,6 +129,20 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 
 
 	/*
+	Set the associated coordinate fields when a marker on the map is moved
+	*/
+	onMarkerDragend(locationIndex) {
+
+		const $card = $('#locations-accordion .card:not(.cloneable)').eq(locationIndex);
+		const $latitudeField = $card.find('.input-field[name=latitude]');
+		const $longitudeField = $card.find('.input-field[name=longitude]');
+		const latlng = mapObject.layers[locationIndex].getLatLng();
+		const [latDDD, lonDDD] = this.getRoundedDDD(latlng.lat, latlng.lng);
+		$latitudeField.val(latDDD).change();
+		$longitudeField.val(lonDDD).change();
+	}
+
+	/*
 	Helper method to add a new location marker to a map
 
 	@param locationIndex: the sequential index of this location (from the card order)
@@ -142,15 +157,21 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			iconSize: [35, 35],
 			className: 'blink' // make it blink until the lat/lon is actually set
 		});
-		mapObject.layers[locationIndex] = L.marker(coordinates, {icon: icon})
+		
+		const layer = L.marker(coordinates, {icon: icon, draggable: true})
 			.addTo(mapObject.map)
-			.bindTooltip('', {permanent: true, className: 'leaflet-tooltip-point-label'});
+			.bindTooltip('', {permanent: true, className: 'leaflet-tooltip-point-label'})
+			.on('dragend', () => {
+				//set coordinate fields when 
+				this.onMarkerDragend(locationIndex)
+			});
+		mapObject.layers.push(layer);
 	}
 
 
 	onAddLocationButtonClick() {
 		const $newCard = this.addNewCard($('#locations-accordion'), {accordionName: 'locations', newCardClass: 'new-card'});
-		const index = $newCard.index();
+		const index = $newCard.index('#locations-accordion .card:not(.cloneable)');
 
 		// Add a default marker
 		const map = this.maps.main.map;
@@ -177,6 +198,8 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	Update the location of a marker on the map when the lat or lon changes
 	*/
 	onCoordinateFieldChange(e) {
+		// Skip manually triggered .change() calls
+		// if (!e.originalEvent) return;
 
 		const $input = $(e.target)
 		const $card = $input.closest('.card');
@@ -189,7 +212,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		}
 
 		const locationType = $card.find('.input-field[name=location_type_code]').val();
-		const index = $card.index();
+		const index = $card.index('#locations-accordion .card:not(.cloneable)');
 		const layer = this.maps.main.layers[index];
 		if (!layer) {
 			// The location hasn't been added yet (this shouldn't really be possible)
@@ -209,27 +232,34 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	*/
 	onLocationTypeChange(e) {
 		const $input = $(e.target);
-		const $card = $input.closest('.card');
-		const index = $card.index();
+		const locationTypeName = $input.find('option:selected').text();
+		const locationIsCamp = locationTypeName === 'Camp';
+
+		const $card = $input.closest('.card')
+			.toggleClass('camp-location-card', locationIsCamp);
+		const cardIndex = $card.index('#locations-accordion .card:not(.cloneable)');
 
 		// Set the card header
-		const locationTypeName = $input.find('option:selected').text();
-		const locationLabel = locationTypeName + (locationTypeName === 'Camp' ? ' ' + index : '');
+		const campIndex = $card.index('.' + this.campCardClass) + 1;
+		const locationLabel = locationTypeName + (locationIsCamp ? ' ' + campIndex : '');
 		$card.find('.card-link-label').text(locationLabel);
 
 		// Set the icon
 		const locationTypeCode = $input.val();
-		const layer = this.maps.main.layers[index];
-		const isBlinking = $(layer._icon).hasClass('blink');
-		const newIcon = L.icon({
-			iconUrl: this.markerIcons[locationTypeCode || 2], //default to camp icon
-			iconSize: [35, 35],
-			className: isBlinking ? 'blink' : '' // make it blink until the lat/lon is actually set
-		});
-		layer.setIcon(newIcon);
+		for (const mapObject of Object.values(this.maps)) {
+			const layer = mapObject.layers[cardIndex];
+			const isBlinking = $(layer._icon).hasClass('blink');
+			const newIcon = L.icon({
+				iconUrl: this.markerIcons[locationTypeCode || 2], //default to camp icon
+				iconSize: [35, 35],
+				className: isBlinking ? 'blink' : '' // make it blink until the lat/lon is actually set
+			});
+			layer.setIcon(newIcon);
 
-		layer.setTooltipContent(locationLabel);
+			layer.setTooltipContent(locationLabel);
+		}
 	}
+
 
 	/*
 	Update the coordinate fields when the location name field changes
@@ -270,6 +300,70 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		}
 	}
 
+	/*
+	When a camp location is deleted, readjust all other camp labels 
+	with the appropriate sequential index
+	*/
+	resetCampMarkerLabels() {
+		for (const el of $('.' + this.campCardClass)) {
+			const $card = $(el);
+			// Index of the card/layer for all locations
+			const cardIndex = $card.index('#locations-accordion .card:not(.cloneable)');
+			// Index for all camps
+			const campIndex = $card.index('.' + this.campCardClass) + 1;
+
+			const label = 'Camp ' + campIndex;
+			// Set card label
+			$card.find('.card-link-label').text(label);
+
+			// Set map marker label
+			for (const mapObject of Object.values(this.maps)) {
+				const layer = mapObject.layers[cardIndex];
+				layer.setTooltipContent(label);
+			}
+		}
+	}
+
+
+	/*
+	Remove layer from map
+	*/
+	removeLocationFromMap(locationIndex) {
+		// Remove the marker from both maps
+		for (const mapObject of Object.values(this.maps)) {
+			mapObject.map.removeLayer(mapObject.layers[locationIndex]);
+			mapObject.layers.splice(locationIndex, 1);
+		}
+
+	}
+
+
+	/*
+	The expedition.js suprclass's version of this method can handle all card types
+	except locations, so override with a special handler for those
+	*/
+	onDeleteCardButtonClick(e) {
+
+		// 
+		const $card = $(e.target).closest('.card');
+		const isLocationCard = $card.closest('.accordion').is('#locations-accordion');
+		if (isLocationCard) {
+			if ($card.is('.new-card')) {
+				const index = $card.index('#locations-accordion .card:not(.cloneable)');
+				$card.fadeRemove({
+					onRemove: () => {
+						this.removeLocationFromMap(index);
+						this.resetCampMarkerLabels();
+					}
+				});
+			} else {
+
+			}
+		} else {
+			// Pass to the superclass's method for everything else
+			super.onDeleteCardButtonClick(e);
+		}
+	}
 
 	configureMainContent() {
 		super.configureMainContent();

@@ -1718,8 +1718,11 @@ class ClimberDB {
  	/*
  	Helper function to remove a DOM element with a fade
  	*/
- 	$.fn.fadeRemove = function(fadeTime=500) {
- 		 return this.fadeOut(fadeTime, () => {this.remove()});
+ 	$.fn.fadeRemove = function({fadeTime=500, onRemove=()=>{}}) {
+ 		 return this.fadeOut(fadeTime, () => {
+ 		 	this.remove();
+ 		 	onRemove.call();
+ 		 });
  	}
 }( jQuery ));
 
