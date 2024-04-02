@@ -582,115 +582,6 @@
 
 							</div>
 						</div>
-						<div id="comms-data-container" class="d-flex flex-wrap w-100 mt-5">
-							<div class="expedition-data-header-container">
-								<h3 id="expedition-data-header" class="expedition-data-header">Comms Devices</h3>
-								<button class="generic-button add-data-button add-comms-button" data-target="#comms-list" title="Add comms">Add comms</button>
-							</div>
-							<div class="expedition-data-content-body">
-								<div class="data-list-item data-list-item-header">
-									<label class="data-list-col data-list-header-label col-3">Device type</label>
-									<label class="data-list-col data-list-header-label col-4">Number/address</label>
-									<label class="data-list-col data-list-header-label col-3">Device owner</label>
-									<label class="data-list-col data-list-header-label col-1"></label>
-								</div>
-								<ul id="comms-list" class="data-list cmc-list">
-									<li class="data-list-item show-children-on-hover cloneable hidden">
-										<div class="cmc-col col-3">
-											<select id="input-communication_device_type" class="input-field default" name="communication_device_type_code" data-table-name="communication_devices" title="Device Type" placeholder="Device type" required="required"></select>
-											<span class="required-indicator">*</span>
-										</div>
-										<div class="cmc-col col-4">
-											<input id="input-number_or_address" class="input-field" name="number_or_address" data-table-name="communication_devices" title="Device number/address" autocomplete="__never"> 
-										</div>
-										<div class="cmc-col col-3">
-											<select id="input-owner" class="input-field no-option-fill default" name="expedition_member_id" data-table-name="communication_devices" title="Device owner"></select>
-										</div>
-										<div class="col-1 list-item-delete-button-container">
-											<button class="icon-button delete-button delete-comms-button show-on-parent-hover" title="Delete comms">
-												<i class="fas fa-trash fa-lg"></i>
-												<label class="icon-button-label">delete</label>
-											</button>
-										</div>
-									</li>
-								</ul>
-							</div>
-						</div>
-					</div>
-					<div class="backcountry-data-column col-lg-6">
-						<!-- locations -->
-						<div id="locations-data-container" class="d-flex flex-wrap w-100">
-							<div id="main-map" class="col map-container"></div>
-							<div class="expedition-data-header-container">
-								<h3 id="expedition-data-header" class="expedition-data-header">Itinerary locations</h3>
-								<button id="add-location-button" class="generic-button add-data-button" data-target="#locations-accordion" title="Add location">Add location</button>
-							</div>
-							<div class="expedition-data-content-body">
-								<div id="locations-accordion" class="accordion" data-table-name="backcountry_locations" data-item-display-name="location">
-									<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
-										<div class="card-header show-children-on-hover justify-content-between" id="cardHeader-location-cloneable">
-											<a class="card-link collapsed col-10 pl-0" data-toggle="collapse" href="#collapse-location-cloneable" data-target="collapse-location-cloneable">
-												<h6 class="card-link-label col px-0">New location</h6>
-											</a>
-											<div class="member-card-header-chevron-container col-2 pr-0">
-												<button class="delete-card-button icon-button show-on-parent-hover" title="Delete location">
-													<i class="fa fa-trash"></i>
-												</button>
-												<i class="fa fa-chevron-down pull-right"></i>
-											</div>
-										</div>
-										<div id="collapse-location-cloneable" class="collapse card-collapse" aria-labelledby="cardHeader-location-cloneable" data-parent="#locations-accordion">
-											<div class="card-body">
-												<div class="d-flex col-11 flex-wrap">
-													<div class="field-container col-3 px-1">
-														<select id="input-location_type" class="input-field default" name="backcountry_location_type_code" placeholder="Location type" data-table-name="itinerary_locations"></select>
-														<span class="required-indicator">*</span>
-														<label class="field-label" for="input-location_type">Location type</label>
-													</div>
-													<div class="field-container col-3 px-1">
-														<select id="input-location_name" class="input-field default" name="backcountry_location_code" placeholder="Location name" data-table-name="itinerary_locations"></select>
-														<span class="required-indicator">*</span>
-														<label class="field-label" for="input-location_name">Location name</label>
-													</div>
-													<div class="field-container col-3 px-1">
-														<input id="input-location_start" class="input-field" name="start_date" type="date" placeholder="Location start date" data-table-name="itinerary_locations">
-														<label class="field-label" for="input-location_start">Start date</label>
-													</div>
-													<div class="field-container col-3 px-1 collapse">
-														<input id="input-location_end" class="input-field" name="end_date" type="date" placeholder="Location end date" data-table-name="itinerary_locations" data-dependent-target="#input-location_type" data-dependent-value="2">
-														<label class="field-label" for="input-location_end">End date</label>
-													</div>
-													<div class="w-100"></div>
-													<div class="d-flex w-100">
-														<div class="field-container col-3 px-1">
-															<input id="input-location_latitude" class="input-field location-coordinate-field" name="latitude" type="number" step="0.0000001" placeholder="Latitude" data-table-name="itinerary_locations"></select>
-															<span class="required-indicator">*</span>
-															<label class="field-label" for="input-location_type">Latitude</label>
-														</div>
-														<div class="field-container col-3 px-1">
-															<input id="input-location_name" class="input-field location-coordinate-field" name="longitude" type="number" step="0.0000001" placeholder="Longitude" data-table-name="itinerary_locations">
-															<span class="required-indicator">*</span>
-															<label class="field-label" for="input-location_name">Longitude</label>
-														</div>
-													</div>
-												</div>
-
-											</div>
-										</div>
-									</div> <!-- card -->
-								</div> <!-- locations-accordion -->		
-<!-- 								<ul id="locations-list" class="data-list ">
-									<li class="data-list-item backcountry-location-list-item show-children-on-hover cloneable" aria-hidden="true">
-										<div class="col pl-1 list-item-delete-button-container">
-											<button class="icon-button delete-button delete-transaction-button show-on-parent-hover" title="Delete transaction">
-												<i class="fas fa-trash fa-lg"></i>
-												<label class="icon-button-label">delete</label>
-											</button>
-										</div>
-									</li>
-								</ul> -->
-							</div>
-						</div>
 						<!-- routes -->
 						<div id="routes-data-container" class="d-flex flex-wrap w-100 mt-5">
 								<div class="expedition-data-header-container">
@@ -788,6 +679,83 @@
 									</div> <!-- routes-accordion -->	
 								</div>
 						</div>
+					</div>
+					<div class="backcountry-data-column col-lg-6">
+						<!-- locations -->
+						<div id="locations-data-container" class="d-flex flex-wrap w-100">
+							<div id="main-map" class="col map-container"></div>
+							<div class="expedition-data-header-container">
+								<h3 id="expedition-data-header" class="expedition-data-header">Itinerary locations</h3>
+								<button id="add-location-button" class="generic-button add-data-button" data-target="#locations-accordion" title="Add location">Add location</button>
+							</div>
+							<div class="expedition-data-content-body">
+								<div id="locations-accordion" class="accordion" data-table-name="backcountry_locations" data-item-display-name="location">
+									<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
+										<div class="card-header show-children-on-hover justify-content-between" id="cardHeader-location-cloneable">
+											<a class="card-link collapsed col-10 pl-0" data-toggle="collapse" href="#collapse-location-cloneable" data-target="collapse-location-cloneable">
+												<h6 class="card-link-label col px-0">New location</h6>
+											</a>
+											<div class="member-card-header-chevron-container col-2 pr-0">
+												<button class="delete-card-button icon-button show-on-parent-hover" title="Delete location">
+													<i class="fa fa-trash"></i>
+												</button>
+												<i class="fa fa-chevron-down pull-right"></i>
+											</div>
+										</div>
+										<div id="collapse-location-cloneable" class="collapse card-collapse" aria-labelledby="cardHeader-location-cloneable" data-parent="#locations-accordion">
+											<div class="card-body">
+												<div class="d-flex col-11 flex-wrap">
+													<div class="field-container col-3 px-1">
+														<select id="input-location_type" class="input-field default" name="backcountry_location_type_code" placeholder="Location type" data-table-name="itinerary_locations"></select>
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-location_type">Location type</label>
+													</div>
+													<div class="field-container col-3 px-1">
+														<select id="input-location_name" class="input-field default" name="backcountry_location_code" placeholder="Location name" data-table-name="itinerary_locations"></select>
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-location_name">Location name</label>
+													</div>
+													<div class="field-container col-3 px-1">
+														<input id="input-location_start" class="input-field" name="start_date" type="date" placeholder="Location start date" data-table-name="itinerary_locations">
+														<label class="field-label" for="input-location_start">Start date</label>
+													</div>
+													<div class="field-container col-3 px-1 collapse">
+														<input id="input-location_end" class="input-field" name="end_date" type="date" placeholder="Location end date" data-table-name="itinerary_locations" data-dependent-target="#input-location_type" data-dependent-value="2">
+														<label class="field-label" for="input-location_end">End date</label>
+													</div>
+													<div class="w-100"></div>
+													<div class="d-flex w-100">
+														<div class="field-container col-3 px-1">
+															<input id="input-location_latitude" class="input-field location-coordinate-field" name="latitude" type="number" step="0.0000001" placeholder="Latitude" data-table-name="itinerary_locations"></select>
+															<span class="required-indicator">*</span>
+															<label class="field-label" for="input-location_type">Latitude</label>
+														</div>
+														<div class="field-container col-3 px-1">
+															<input id="input-location_name" class="input-field location-coordinate-field" name="longitude" type="number" step="0.0000001" placeholder="Longitude" data-table-name="itinerary_locations">
+															<span class="required-indicator">*</span>
+															<label class="field-label" for="input-location_name">Longitude</label>
+														</div>
+													</div>
+												</div>
+
+											</div>
+										</div>
+									</div> <!-- card -->
+								</div> <!-- locations-accordion -->		
+<!-- 								<ul id="locations-list" class="data-list ">
+									<li class="data-list-item backcountry-location-list-item show-children-on-hover cloneable" aria-hidden="true">
+										<div class="col pl-1 list-item-delete-button-container">
+											<button class="icon-button delete-button delete-transaction-button show-on-parent-hover" title="Delete transaction">
+												<i class="fas fa-trash fa-lg"></i>
+												<label class="icon-button-label">delete</label>
+											</button>
+										</div>
+									</li>
+								</ul> -->
+							</div>
+						</div>
+						
+						<!-- CMCs -->
 						<div id="cmcs-data-container" class="d-flex flex-wrap w-100 mt-5">
 							<div class="expedition-data-header-container">
 								<h3 id="expedition-data-header" class="expedition-data-header">CMCs</h3>
@@ -824,6 +792,42 @@
 							</div>
 							<div class="expedition-data-content-footer w-100">
 								
+							</div>
+						</div>
+
+						<!-- comms -->
+						<div id="comms-data-container" class="d-flex flex-wrap w-100 mt-5">
+							<div class="expedition-data-header-container">
+								<h3 id="expedition-data-header" class="expedition-data-header">Comms Devices</h3>
+								<button class="generic-button add-data-button add-comms-button" data-target="#comms-list" title="Add comms">Add comms</button>
+							</div>
+							<div class="expedition-data-content-body">
+								<div class="data-list-item data-list-item-header">
+									<label class="data-list-col data-list-header-label col-3">Device type</label>
+									<label class="data-list-col data-list-header-label col-4">Number/address</label>
+									<label class="data-list-col data-list-header-label col-3">Device owner</label>
+									<label class="data-list-col data-list-header-label col-1"></label>
+								</div>
+								<ul id="comms-list" class="data-list cmc-list">
+									<li class="data-list-item show-children-on-hover cloneable hidden">
+										<div class="cmc-col col-3">
+											<select id="input-communication_device_type" class="input-field default" name="communication_device_type_code" data-table-name="communication_devices" title="Device Type" placeholder="Device type" required="required"></select>
+											<span class="required-indicator">*</span>
+										</div>
+										<div class="cmc-col col-4">
+											<input id="input-number_or_address" class="input-field" name="number_or_address" data-table-name="communication_devices" title="Device number/address" autocomplete="__never"> 
+										</div>
+										<div class="cmc-col col-3">
+											<select id="input-owner" class="input-field no-option-fill default" name="expedition_member_id" data-table-name="communication_devices" title="Device owner"></select>
+										</div>
+										<div class="col-1 list-item-delete-button-container">
+											<button class="icon-button delete-button delete-comms-button show-on-parent-hover" title="Delete comms">
+												<i class="fas fa-trash fa-lg"></i>
+												<label class="icon-button-label">delete</label>
+											</button>
+										</div>
+									</li>
+								</ul>
 							</div>
 						</div>
 					</div>
