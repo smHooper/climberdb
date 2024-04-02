@@ -3165,7 +3165,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		const climberID = $select.val();
 		const climberIsSelected = climberID !== '';
 		$select.toggleClass('default', climberIsSelected);
-		if (!climberIsSelected) return;	
 		
 		const collapseCommand = climberIsSelected ? 'show' : 'hide';
 		$('#modal-save-to-expedition-button').collapse(collapseCommand);
