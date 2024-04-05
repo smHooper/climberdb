@@ -4,6 +4,7 @@ web/attachments/*
 scratch.sql
 web/flask/assets/label_matrix_source.csv
 web/flask/assets/sup_permit_blank.pdf
+web/flask/logs/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
