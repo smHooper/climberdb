@@ -242,7 +242,7 @@
 						<!-- party members -->
 						<div id="members-data-container" class="d-flex flex-wrap w-100 mt-5">
 							<div class="expedition-data-header-container">
-								<h3 id="expedition-data-header" class="expedition-data-header">Expedition members</h3>
+								<h3 id="expedition-data-header" class="expedition-data-header">Backcountry Party Members</h3>
 								<button id="show-modal-climber-form-button" class="generic-button add-data-button" data-target="#expedition-members-accordion" title="Add expedition member">Add member</button>
 							</div>
 							<div class="expedition-data-content-body">
@@ -284,9 +284,6 @@
 													<li class="nav-item" role="presentation">
 														<a id="expedition-info-tab-button" class="nav-link active" data-toggle="tab" href="#expedition-info-tab-pane" type="button" role="tab" aria-controls="expedition-info-tab-pane" aria-selected="true" title="Show expedition member info">Member info</a>
 													</li>
-													<li class="nav-item show-transaction-tab-button" role="presentation">
-														<a id="transactions-tab-button" class="nav-link" data-toggle="tab" href="#transactions-tab-pane" type="button" role="tab" aria-controls="transactions-tab-pane" aria-selected="false" title="Show expedition member transactions">Transactions</a>
-													</li>
 													<li class="nav-item" role="presentation">
 														<a id="attachments-tab-button" class="nav-link show-attachment-tab-button" data-toggle="tab" href="#attachments-tab-pane" type="button" role="tab" aria-controls="attachments-tab-pane" aria-selected="false" title="Show expedition member attachments">Attachments</a>
 													</li>
@@ -300,8 +297,8 @@
 														</div>
 														<div class="field-container-row">
 															<div class="field-container col-sm-6">
-																<select id="input-reservation_status" class="input-field default reservation-status-field revertable" name="reservation_status_code" data-table-name="expedition_members" data-lookup-table="group_status_codes" placeholder="Reservation status" title="Reservation status" data-default-value="1" value="1"></select>
-																<label class="field-label" for="input-reservation_status">Expedition member status</label>
+																<select id="input-reservation_status" class="input-field default reservation-status-field revertable no-option-fill" name="reservation_status_code" data-table-name="expedition_members" placeholder="Party member status" title="Reservation status" data-default-value="1" value="1"></select>
+																<label class="field-label" for="input-reservation_status">Party member status</label>
 																<span class="null-input-indicator">&lt; null &gt;</span>
 															</div>	
 															<div class="field-container checkbox-field-container col-sm-6">
@@ -443,71 +440,6 @@
 																<label class="field-label" for="input-climber_comments">Climber's comments</label>
 																<textarea id="input-climber_comments" class="input-field" name="climber_comments" data-table-name="expedition_members" placeholder="Enter comments from the climber" title="Climber comments" type="text" autocomplete="__never"></textarea>
 																<span class="null-input-indicator">&lt; null &gt;</span>
-															</div>
-														</div>
-													</div>
-													<div id="transactions-tab-pane" class="tab-pane transactions-tab-pane fade" role="tabpanel" aria-labelledby="transactions-tab-button">
-														<div class="transactions-header-container">
-															
-															<h5 class="expedition-data-sub-header"></h5>
-															<button class="generic-button add-data-button add-transaction-button" role="button" type="button" title="Add transaction">Add transaction</button>
-														</div>
-														<div class="transactions-container-body">
-															<div class="data-list-item data-list-item-header">
-																<label class="data-list-col data-list-header-label col-3 transaction-type-column">Type</label>
-																<label class="data-list-col data-list-header-label col-2 payment-method-column">Payment method</label>
-																<label class="data-list-col data-list-header-label col col-13-percent transaction-value-column">Value</label>
-																<label class="data-list-col data-list-header-label col-2 transaction-date-column">Date</label>
-																<label class="data-list-col data-list-header-label col transaction-notes-column">Transaction notes</label>
-																<label class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit by</label>
-																<label class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit date</label>
-															</div>
-															<ul id="transactions-list" class="data-list">
-																<li class="data-list-item show-children-on-hover cloneable hidden">
-																	<div class="col-3 d-flex transaction-type-column">
-																		<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
-																		<span class="required-indicator">*</span>
-																	</div>
-																	<div class="col-2 payment-method-column">
-																		<div class="w-100 d-flex collapse">
-																			<select id="input-payment_method" class="input-field keep-default-option default" name="payment_method_code" data-table-name="transactions" placeholder="Payment method" title="Payment method" required=""></select>
-																			<span class="required-indicator">*</span>
-																		</div>
-																	</div>
-																	<div class="col col-13-percent transaction-value-column">
-																		<span class="unit-symbol">$</span>
-																		<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
-																	</div>
-																	<div class="col-2 d-flex transaction-date-column">
-																		<input id="input-transaction_date" class="input-field" type="date" name="transaction_date" data-table-name="transactions"> 
-																	</div>
-																	<div class="col d-flex transaction-notes-column">
-																		<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
-																		<div class="col pl-1 list-item-delete-button-container">
-																			<button class="icon-button delete-button delete-transaction-button show-on-parent-hover" title="Delete transaction">
-																				<i class="fas fa-trash fa-lg"></i>
-																				<label class="icon-button-label">delete</label>
-																			</button>
-																		</div>
-																	</div>
-																	<div class="data-list-metadata-column modal-only hidden" aria-hidden="true">
-																		<span id="text-last_modified_by" class="input-field entry-metadata-field last-modified-by-field"></span>
-																	</div>
-																	<div class="data-list-metadata-column modal-only hidden" aria-hidden="true">
-																		<span id="text-last_modified_time" class="input-field entry-metadata-field last-modified-time-field"></span>
-																	</div>
-																</li>
-															</ul>
-															<div class="data-list-item data-list-footer">
-																<label class="data-list-col data-list-header-label col-3 transaction-type-column"></label>
-																<label class="data-list-col data-list-header-label col-2 text-right pr-2 payment-method-column">Balance</label>
-																<label class="data-list-col data-list-header-label col col-13-percent total-col transaction-value-column">
-																	<span>$</span><span class="total-span"></span>
-																</label>
-																<label class="data-list-col data-list-header-label col-2 transaction-date-column"></label>
-																<label class="data-list-col data-list-header-label col transaction-notes-column"></label>
-																<label class="data-list-col data-list-header-label data-list-metadata-column modal-only hidden"></label>
-																<label class="data-list-col data-list-header-label data-list-metadata-column modal-only hidden"></label>
 															</div>
 														</div>
 													</div>
@@ -685,7 +617,7 @@
 						<div id="locations-data-container" class="d-flex flex-wrap w-100">
 							<div id="main-map" class="col map-container"></div>
 							<div class="expedition-data-header-container">
-								<h3 id="expedition-data-header" class="expedition-data-header">Itinerary locations</h3>
+								<h3 id="expedition-data-header" class="expedition-data-header">Itinerary Locations</h3>
 								<button id="add-location-button" class="generic-button add-data-button" data-target="#locations-accordion" title="Add location">Add location</button>
 							</div>
 							<div class="expedition-data-content-body">
@@ -754,7 +686,7 @@
 								</ul> -->
 							</div>
 						</div>
-						
+
 						<!-- CMCs -->
 						<div id="cmcs-data-container" class="d-flex flex-wrap w-100 mt-5">
 							<div class="expedition-data-header-container">
