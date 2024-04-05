@@ -755,7 +755,7 @@ class ClimberDB {
 			}
 		}
 
-		for (const el of $newCard.find('label.generic-button')) {
+		for (const el of $newCard.find('label.generic-button, .field-label.checkbox-label')) {
 			const $el = $(el);
 			if ($el.prop('for')) {
 				$el.prop('for', `${$el.prop('for')}-${cardIndex}`);
@@ -1723,7 +1723,7 @@ class ClimberDB {
  	/*
  	Helper function to remove a DOM element with a fade
  	*/
- 	$.fn.fadeRemove = function({fadeTime=500, onRemove=()=>{}}) {
+ 	$.fn.fadeRemove = function({fadeTime=500, onRemove=()=>{}}={}) {
  		 return this.fadeOut(fadeTime, () => {
  		 	this.remove();
  		 	onRemove.call();
