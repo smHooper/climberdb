@@ -407,7 +407,23 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 						}
 					}
 				})
-		)
+		);
+		$.when(...initDeferreds).then(() => {
+			lookupDeferreds.push(
+				this.queryDB('SELECT code, name FROM group_status_codes WHERE is_bc_status ORDER BY sort_order')
+					.done(result => {
+						const $groupStatusSelect = $('.input-field[name=reservation_status_code]')
+						$groupStatusSelect.append(
+							'<option value="">Party member status</option>'
+						);
+						for (const {code, name} of $.parseJSON(result)) {
+							$groupStatusSelect.append(
+								$(`<option value="${code}">${name}</option>`)
+							);
+						}
+				})
+			)
+		})
 
 	}
 

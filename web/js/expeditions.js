@@ -3587,8 +3587,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			const today = getFormattedTimestamp()
 
 			// Set deault values for new members
-			$newCard.find('.input-field[name="reservation_status_code"]')
-				.val(1)//pending
+			const $reservationStatus = $newCard.find('.input-field[name="reservation_status_code"]')
+				//default-value property already set (pending for expeditions, on mountain for bc)
 				.change();
 			$newCard.find('.input-field[name="datetime_reserved"]')
 				.val(today)

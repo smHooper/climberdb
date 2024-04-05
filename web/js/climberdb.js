@@ -746,7 +746,12 @@ class ClimberDB {
 					.attr('for', newID);
 			if (dataTable in updateIDs)  $el.attr('data-table-id', updateIDs[dataTable]);
 			if ($el.is('select')) {
-				$el.val('').addClass('default');
+				const defaultValue = $el.data('default-value');
+				if (defaultValue) {
+					$el.val(defaultValue);
+				} else {	
+					$el.val('').addClass('default');
+				}
 			}
 		}
 
