@@ -14,8 +14,12 @@ from pypdf import PdfReader, PdfWriter
 from datetime import datetime
 from uuid import uuid4
 
-from flask import Flask, render_template, request, json, url_for
+from flask import Flask, has_request_context, json, render_template, request, url_for
 from flask_mail import Mail, Message
+from flask.logging import default_handler
+
+import logging
+from logging.config import dictConfig as loggingDictConfig
 
 from sqlalchemy import create_engine, text as sqlatext
 
@@ -41,15 +45,72 @@ def wait_for_weasyprint():
 	weasyprint_thread.join()
 
 
-CONFIG_FILE = '//inpdenaterm01/climberdb/config/climberdb_config.json'
+# Enable logging
+log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+if not os.path.isdir(log_dir):
+	os.mkdir(log_dir)
+# Configure a logger that will create a new file each day
+#	Only 100 logs will be saved before they oldest one is deleted
+loggingDictConfig(
+	{
+		"version": 1,
+		"formatters": {
+			"default": {
+				"datefmt": "%B %d, %Y %H:%M:%S %Z",
+			},
+		},
+		"handlers": {
+			"time-rotate": {
+				"class": "logging.handlers.TimedRotatingFileHandler",
+				"filename": os.path.join(log_dir, 'flask.log'),
+				"when": "D",
+				"interval": 1,
+				"backupCount": 100,
+				"formatter": "default",
+			},
+		},
+		"root": {
+			"level": "DEBUG",
+			"handlers": ["time-rotate"],
+		},
+	}
+)
+# Configure a custom formatter to include request information
+class RequestFormatter(logging.Formatter):
+	def format(self, record):
+		if has_request_context():
+			record.url = request.url
+			record.remote_addr = request.remote_addr
+			record.request_data = (
+				'**ommitted**' if request.url.endswith('checkPassword') else 
+				json.dumps(request.form)
+			)
+		else:
+			record.url = None
+			record.remote_addr = None
+			record.request_data = None
+		return super().format(record)
 
+line_separator = '-' * 150 
+formatter = RequestFormatter(line_separator + 
+    '\n[%(asctime)s] %(remote_addr)s requested %(url)s\n' 
+    'with POST data %(request_data)s\n'
+    '%(levelname)s in %(module)s message:\n %(message)s\n' +
+    line_separator
+)
+logging.root.handlers[0].setFormatter(formatter)
+
+
+CONFIG_FILE = '//inpdenaterm01/climberdb/config/climberdb_config.json'
 
 app = Flask(__name__)
 
 # Error handling
 @app.errorhandler(500)
 def internal_server_error(error):
+	app.logger.error(traceback.format_exc())
 	return 'ERROR: Internal Server Error.\n' + traceback.format_exc()
+
 
 # Load config
 if not os.path.isfile(CONFIG_FILE):
@@ -500,9 +561,10 @@ def export_special_use_permit():
 	# Query data from DB
 	expedition_member_ids = permit_data.keys()
 	engine = get_engine()
+	expedition_member_id_string = ','.join(expedition_member_ids)
 	cursor = engine.execute(f'''
 		SELECT * FROM special_use_permit_view 
-		WHERE expedition_member_id IN ({','.join(expedition_member_ids)})
+		WHERE expedition_member_id IN ({expedition_member_id_string})
 	''')
 	
 	sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
@@ -541,6 +603,9 @@ def export_special_use_permit():
 			return 'exports/' + pdf_filename
 		else:
 			output_pdfs.append(output_pdf)
+
+	if len(output_pdfs) == 0:
+		raise RuntimeError('PDFs could not be created because no expediton_member_ids matached ' + expedition_member_id_string)
 
 	output_basename = f'special_use_permit_{expedition_id}_' + re.sub(r'\W+', '_', expedition_name)	
 	
