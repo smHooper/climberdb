@@ -114,6 +114,10 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	needs_special_use_permit BOOLEAN, 
 	special_group_type_code INTEGER REFERENCES special_group_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	expected_expedition_size INTEGER,
+	is_backcountry BOOLEAN,
+	is_acclimatizing BOOLEAN,
+	bump_flights TEXT,
+	itinerary_description TEXT,
 	last_modified_by VARCHAR(50),
 	last_modified_time TIMESTAMP
 );
@@ -238,10 +242,11 @@ CREATE TABLE IF NOT EXISTS itinerary_locations (
 	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	backcountry_location_type_code INTEGER REFERENCES backcountry_location_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	backcountry_location_code INTEGER REFERENCES backcountry_location_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
-	start_date DATE,
-	end_date DATE,
+	location_start_date DATE,
+	location_end_date DATE,
 	latitude NUMERIC(10, 7),
-	longitude NUMERIC(10, 7), 	
+	longitude NUMERIC(10, 7), 
+	display_order INTEGER,	
 	entered_by VARCHAR(50),
 	entry_time TIMESTAMP,
 	last_modified_by VARCHAR(50),
@@ -453,8 +458,18 @@ CREATE VIEW expedition_info_view AS
 		expeditions.expected_expedition_size,
 		expeditions.needs_special_use_permit,
 		expeditions.special_group_type_code,
+		expeditions.is_acclimatizing,
+		expeditions.bump_flights,
+		expeditions.itinerary_description,
 		expeditions.last_modified_by,
 		expeditions.last_modified_time,
+		itinerary_locations.id AS itinerary_location_id,
+		itinerary_locations.backcountry_location_type_code,
+		itinerary_locations.backcountry_location_code,
+		itinerary_locations.location_start_date,
+		itinerary_locations.location_end_date,
+		itinerary_locations.latitude,
+		itinerary_locations.longitude,
 		expedition_members.id AS expedition_member_id,
 		expedition_members.climber_id,
 		expedition_members.permit_number,
@@ -513,6 +528,7 @@ CREATE VIEW expedition_info_view AS
 	FROM expeditions
 	LEFT JOIN (expedition_members
 	JOIN climbers ON expedition_members.climber_id = climbers.id) ON expeditions.id = expedition_members.expedition_id
+	LEFT JOIN itinerary_locations ON expeditions.id = itinerary_locations.expedition_id
 	LEFT JOIN briefings ON expeditions.id = briefings.expedition_id
 	LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 	LEFT JOIN transactions ON expedition_members.id = transactions.expedition_member_id
@@ -530,6 +546,7 @@ CREATE VIEW expedition_info_view AS
 		climbers.first_name, 
 		transactions.transaction_date, 
 		transactions.id,
+		itinerary_locations.display_order,
 		attachments.id;
 
 
