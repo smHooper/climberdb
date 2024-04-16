@@ -51,7 +51,7 @@
 				<div class="main-content-header">
 					<input id="expedition-id-input" class="hidden" aria-hidden="True">
 					<div class="fuzzy-search-bar-container">
-						<textarea id="backcountry-search-bar" class="fuzzy-search-bar expedition-search-bar no-click-trigger-on-enter" placeholder="Type to search backcountry parties" title="Backcountry search bar" autocomplete="__never"></textarea>
+						<textarea id="expedition-search-bar" class="fuzzy-search-bar expedition-search-bar no-click-trigger-on-enter" placeholder="Type to search backcountry parties" title="Backcountry search bar" autocomplete="__never"></textarea>
 						<img class="search-bar-icon" src="imgs/search_icon_50px.svg" alt="Search bar icon">
 						<button class="show-query-options-button icon-button" title="Expedition filter options">
 							<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg" alt="Show search filter options">
@@ -62,7 +62,7 @@
 							<div class="fuzzy-search-bar-drawer-content">
 								<div class="query-option-container col-4">
 									<div class="query-option-condition-header">
-										<label class="query-option-label" for="query-option-planned_departure">Planned departure</label>
+										<label class="query-option-label" for="query-option-departure">Departure</label>
 									</div>
 									<div class="query-option-condition-container">
 										<select class="query-option-operator datetime-query-option" value="equals">
@@ -71,11 +71,11 @@
 											<option value=">=">is after</option>
 											<option value="BETWEEN">is between</option>
 										</select>
-										<input id="query-option-planned_departure" class="query-option-input-field single-value-field datetime-query-option" type="date" data-field-name="planned_departure_date">
+										<input id="query-option-departure" class="query-option-input-field single-value-field datetime-query-option" type="date" data-field-name="actual_departure_date">
 										<div class="query-option-double-value-container hidden">
-											<input class="query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" aria-hidden="true">
+											<input class="query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="actual_departure_date" aria-hidden="true">
 											<span>and</span>
-											<input class="query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" aria-hidden="true">
+											<input class="query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="actual_departure_date" aria-hidden="true">
 										</div>
 									</div>
 								</div>

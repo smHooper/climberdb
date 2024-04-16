@@ -534,7 +534,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('.add-cmc-button').click(e => {
 			const $button = $(e.target);
 			const $ul = $($button.data('target'));
-			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item', parentDBID: $('#input-planned_departure_date').data('table-id')});
+			const parentTableID = $('#input-planned_departure_date').data('table-id') || $('#input-actual_departure_date').data('table-id');
+			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item', parentDBID: parentTableID });
 			const $checkoutDate = $listItem.find('.input-field[name="checkout_date"]');//.filter((_, el) => el.name === 'checkout_date');
 			$checkoutDate.val($('.input-field[name=actual_departure_date]').val() || getFormattedTimestamp())
 				.change();
@@ -793,7 +794,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const turnEditingOn = $('.expedition-content.uneditable').length;
 		
 		// If the group is from a previous year, warn the user
-		const plannedDeparture = $('#input-planned_departure_date').val();
+		const plannedDeparture = $('#input-planned_departure_date').val() || $('#input-actual_departure_date').val();
 		if (turnEditingOn && plannedDeparture) {
 			const departureDate = new Date(plannedDeparture + ' 00:00')
 			const departureYear = departureDate.getFullYear();
@@ -2043,7 +2044,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.fillExpeditionSearchSelect({
 			$searchBar: $searchBar, 
 			queryStrings: {
-				planned_departure_date: `planned_departure_date >= '${new Date().getFullYear()}-01-01'`,
+				planned_departure_date: `coalesce(planned_departure_date, actual_departure_date) >= '${new Date().getFullYear()}-01-01'`,
 				expedition_id: `expedition_id <> ${expeditionID}`
 			}
 		})
@@ -2408,7 +2409,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				}
 			})
 		// Warn the user if this expedition is from a previous year
-		this.queryDB(`SELECT planned_departure_date FROM expeditions WHERE id=${expeditionID}`)
+		this.queryDB(`SELECT coalesce(planned_departure_date, actual_departure_date) AS planned_departure_date FROM expeditions WHERE id=${expeditionID}`)
 			.done(queryResultString => {
 				if (!this.queryReturnedError(queryResultString)) {
 					const result = $.parseJSON(queryResultString);
@@ -3046,7 +3047,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	they haven't saved, ask them to confirm those edits before showing the form*/
 	onAddExpeditionMemberButtonClick() {
 		
-		const departureDateString = $('#input-planned_departure_date').val();
+		const departureDateString = $('#input-planned_departure_date').val() || $('#input-actual_departure_date').val();
 		const departureDate = new Date(departureDateString + ' 00:00');
 		const now = new Date();
 		const isPrivate = $('#input-guide_company').val() === '';
@@ -3367,7 +3368,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			orderBy = 'expedition_name'
 		}
 		if (Object.keys(queryStrings).length === 0) {
-			queryStrings = {planned_departure_date: `planned_departure_date >= '${new Date().getFullYear()}-1-1'`}
+			queryStrings = {planned_departure_date: `coalesce(planned_departure_date, actual_departure_date) >= '${new Date().getFullYear()}-1-1'`}
 		};
 		if (!('expedition_id' in queryStrings)) {
 			// Exclude the current expedition. If this is a new expedition and table-id isn't set, 
