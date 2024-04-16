@@ -9,6 +9,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		super();
 		this.expeditionInfo = {
 			expeditions: {}, // each field is a property
+			itinerary_locations: {data: {}, order: []},
 			expedition_members: {data: {}, order: []}, 
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
@@ -95,7 +96,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$('#open-reports-modal-button').click(e => {
 			// Check if there are unsaved edits and ask the user to confirm
-			if ($('.input-field.dirty:not(#input-export_type)').length) {
+			if ($('.input-field.dirty:not(#input-export_type, .filled-by-default)').length) {
 				const afterActionCallbackStr = `$('#exports-modal').modal();`
 				this.confirmSaveEdits({afterActionCallbackStr: afterActionCallbackStr});
 			} else {
@@ -744,7 +745,12 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		if ($input.is('.ignore-changes') || $input.closest('.uneditable').length) return;
 
-		$input.toggleClass('dirty', this.inputValueDidChange($input));
+		const valueDidChange = this.inputValueDidChange($input);
+		$input.toggleClass('dirty', valueDidChange)
+		
+		// If the class was marked as invalid when the user tried to save, remove the error class
+		if (valueDidChange) $input.removeClass('error');
+
 		$('#save-expedition-button').ariaHide(!$('.input-field.dirty').length);
 
 	}
@@ -1293,7 +1299,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	Helper function to convert unordered parameters 
 	into pre-prepared SQL statement and params
 	*/
-	valuesToSQL(values, tableName, timestamp, userName, {updateID=null, foreignIDs={}}={}) {
+	valuesToSQL(values, tableName, timestamp, username, {updateID=null, foreignIDs={}}={}) {
 
 		
 		var sortedFields = Object.keys(values).sort();
@@ -1309,7 +1315,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const columnInfo = this.tableInfo.tables[tableName].columns;
 		if ('last_modified_by' in columnInfo) {
 			sortedFields = sortedFields.concat(['last_modified_by', 'last_modified_time']);
-			parameters = parameters.concat([userName, timestamp]);
+			parameters = parameters.concat([username, timestamp]);
 		}
 
 		var sql;
@@ -1317,7 +1323,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// Add entry meta fields if the table has them
 			if ('entered_by' in columnInfo) {
 				sortedFields = sortedFields.concat(['entered_by', 'entry_time']);
-				parameters = parameters.concat([userName, timestamp]);
+				parameters = parameters.concat([username, timestamp]);
 			}
 
 			// For tables that are related to other fields by a foreign key, make sure those foreign keys make it into the INSERT
@@ -1368,7 +1374,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/* Thin wrapper for valuesToSQL that includes getting values from inputs*/
-	inputsToSQL(parentElement, tableName, timestamp, userName, {updateID=null, foreignIDs={}, insertArray=null}={}) {
+	inputsToSQL(parentElement, tableName, timestamp, username, {updateID=null, foreignIDs={}, insertArray=null}={}) {
 		const $inputs = $(parentElement).find('.input-field.dirty');
 		const fieldValues = Object.fromEntries(
 			$inputs
@@ -1380,7 +1386,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				fieldValues, 
 				tableName, 
 				timestamp, 
-				userName, 
+				username, 
 				{
 					updateID: updateID || null, 
 					foreignIDs: foreignIDs
@@ -1413,7 +1419,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 			// Set the card's/list item's class and inputs' attributes so changes will register as updates
-			const $container = $(container).closest('.data-list-item, .card');
+			const $container = $(container).closest('.data-list-item, .card, .data-container');
 			const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
 			if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
 			const $inputs = $container.closest('.data-list-item, .card')
@@ -1434,12 +1440,11 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	saveEdits() {
+	/*
+	Helper function to use in this.saveEdits() and ClimberDBBackcountry.saveEdits()
+	*/
+	validateEdits() {
 
-		var sqlStatements = [],
-			sqlParameters = [],
-			attachmentDeferreds = [];
-		
 		const $editParents = $(`
 				.data-list-item:not(.cloneable), 
 				.card:not(.cloneable) .tab-pane,
@@ -1447,8 +1452,17 @@ class ClimberDBExpeditions extends ClimberDB {
 				#expedition-data-container
 			`)
 			.has('.input-field.dirty, .input-field:required:invalid');
-		if (!this.validateFields($editParents)) {
-			const errorFieldList = $('.input-field.error').map((_, el) => {
+		
+		if (!$editParents.length) {
+			showModal('You have not made any edits to save yet.', 'No edits to save');
+			hideLoadingIndicator();
+			return;
+		}
+
+		var errorFieldList;
+		const isValid = this.validateFields($editParents);
+		if (!isValid) {
+			errorFieldList = $('.input-field.error').map((_, el) => {
 				const $el = $(el);
 				let fieldName = '';
 				if ($el.is('select')) {
@@ -1465,27 +1479,19 @@ class ClimberDBExpeditions extends ClimberDB {
 				500
 			);
 			hideLoadingIndicator();
-			return;
 		};
 
-		if (!$editParents.length) {
-			showModal('You have not made any edits to save yet.', 'No edits to save');
-			hideLoadingIndicator();
-			return;
-		}
+		return isValid;
+	}
 
-		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
-		const userName = this.userInfo.ad_username;
-		const lastModified = [userName, now];
-		
-		// collect info about inserts so attributes can be changes such that future edits are treated as updates
-		var inserts = [], //{container: container, tableName: tableName}
-			attachmentInserts = []; 
-		
+
+	processAttachments() {
 		// Save new attachments before writing other changes to the DB because files need
 		//	to be saved to the server
 		var attachmentData = {},
-			attachmentItems = {};
+			attachmentItems = {},
+			attachmentInserts = [];
+
 		// package the file up in a FormData instance because the file isn't within 
 		//	a <form> element
 		const formData = new FormData(); 
@@ -1505,9 +1511,9 @@ class ClimberDBExpeditions extends ClimberDB {
 				mime_type: attachmentFile.type,
 				file_size_kb: Math.ceil(attachmentFile.size / 1000),
 				entry_time: now,
-				entered_by: userName,
+				entered_by: username,
 				last_modified_time: now,
-				last_modified_by: userName
+				last_modified_by: username
 			}
 			// Capture the filename/list-item relationship so .data() attributes can be set later
 			// attachmentItems[filename] = $li;
@@ -1521,7 +1527,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			` and try again. If this problem persists, ` + 
 			` <a href="mailto:${this.config.db_admin_email}">contact the` + 
 			` database adminstrator</a>.`;
-		const attachmentDeferred =
+		const attachmentsDeferred =
 			$.post({
 				url: 'flask/attachments/add_expedition_member_files',
 				data: formData,
@@ -1550,8 +1556,126 @@ class ClimberDBExpeditions extends ClimberDB {
 				hideLoadingIndicator()
 			})
 
+		return attachmentsDeferred			
+	}
+
+
+	// Make a convenience function to get SQL for expedition members because the method 
+	//	for doing so differs depending on whether the permit number needs to be filled 
+	//	for each individual expedition member in the for loop below. This needs to 
+	//	include transactions and route memebers so the SQL statements are in order. That is,
+	//	transactions and routes for an expedition member can't be INSERTed before the member
+	getExpeditionMemberSQL($card, expeditionID, insertArray, now, username) {
+		
+		const climberID = $card.data('climber-id');
+
+		var sqlStatements = [],
+			sqlParameters = [];
+
+		// members
+		if ($card.find('.card-header .input-field.dirty, .expedition-info-tab-pane .input-field.dirty').length) {
+			const [sql, parameters] = this.inputsToSQL(
+				$card.find('.expedition-info-tab-pane, .card-header'),
+				'expedition_members', 
+				now, 
+				username, 
+				{
+					updateID: $card.data('table-id') || null, 
+					foreignIDs: {
+						expeditions: expeditionID, 
+						climbers: climberID
+					},
+					insertArray: insertArray
+				}
+			);
+			sqlStatements.push(sql);
+			sqlParameters.push(parameters);
+		}
+
+		// transactions
+		const $transactionItems = $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)')
+			.has('.input-field.dirty');
+		for (const li of $transactionItems) {
+			const dbID = $(li).data('table-id');
+			const [sql, parameters] = this.inputsToSQL(
+				li, 
+				'transactions', 
+				now, 
+				username, 
+				{
+					updateID: dbID || null,
+					foreignIDs: {expedition_members: $(li).data('parent-table-id')},
+					insertArray: insertArray
+				}
+			);
+			sqlStatements.push(sql);
+			sqlParameters.push(parameters);
+		}
+
+		// attachment updates
+		const $attachmentItems = $card.find('.attachments-tab-pane .data-list > li.data-list-item:not(.cloneable, .new-list-item)')
+			.has('.input-field.dirty');
+		for (const li of $attachmentItems) {
+			const dbID = $(li).data('table-id');
+			const [sql, parameters] = this.inputsToSQL(
+				li, 
+				'attachments', 
+				now, 
+				username, 
+				{
+					updateID: dbID || null,
+					foreignIDs: {expedition_members: $(li).data('parent-table-id')},
+					insertArray: insertArray
+				}
+			);
+			sqlStatements.push(sql);
+			sqlParameters.push(parameters);
+		}
+
+		// Insert any routes with the corresponding expedition member so that the currval() clause will work 
+		//	when a new expedition member has been added
+		const memberRouteItems = $(`#routes-accordion .card:not(.cloneable) li.data-list-item[data-climber-id=${climberID}]`)
+			.has('.input-field.dirty');
+		for (const li of memberRouteItems) {
+			const dbID = $(li).data('table-id');
+			const [sql, parameters] = this.inputsToSQL(
+				li, 
+				'expedition_member_routes', 
+				now, 
+				username, 
+				{
+					updateID: dbID || null,
+					foreignIDs: {expedition_members: $(li).data('expedition-member-id')},
+					insertArray: insertArray
+				}
+			);
+			sqlStatements.push(sql);
+			sqlParameters.push(parameters);
+
+		}
+
+		return [sqlStatements, sqlParameters]
+	}
+
+
+	saveEdits() {
+		
+		var sqlStatements = [],
+			sqlParameters = [];
+
+		if (!this.validateEdits()) return; // Error message already shown in validateEdits()
+
+		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
+		const username = this.userInfo.ad_username;
+		
+		// collect info about inserts so attributes can be changes such that future edits are treated as updates
+		var inserts = [], //{container: container, tableName: tableName}
+			attachmentInserts = []; 
+		
+		const attachmentsDeferred = this.processAttachments();
+
 		// determine if this is a new expedition or not
-		const expeditionID = $('#input-planned_departure_date').data('table-id') || null;
+		const expeditionID = $('#input-expedition_name').data('table-id') || null;
 		const isNewExpedition = expeditionID === undefined;
 
 		// get expedition table edits
@@ -1566,7 +1690,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			if (!expeditionID) $('#input-group_status').addClass('dirty');
 
 			let fieldValues = Object.fromEntries(expeditionFields.map((f, i) => [f, expeditionValues[i]]));
-			let [sql, parameters] = this.valuesToSQL(fieldValues, 'expeditions', now, userName, {updateID: expeditionID || null});
+			let [sql, parameters] = this.valuesToSQL(fieldValues, 'expeditions', now, username, {updateID: expeditionID || null});
 			sqlStatements.push(sql);
 			sqlParameters.push(parameters);
 
@@ -1594,95 +1718,6 @@ class ClimberDBExpeditions extends ClimberDB {
 				print('Failed to get next permit number with error: ' + error)
 			});
 
-		// Make a convenience function to get SQL for expedition members because the method 
-		//	for doing so differs depending on whether the permit number needs to be filled 
-		//	for each individual expedition member in the for loop below. This needs to 
-		//	include transactions and route memebers so the SQL statements are in order. That is,
-		//	transactions and routes for an expedition member can't be INSERTed before the member
-		const getExpeditionMemberSQL = ($card) => {
-			const climberID = $card.data('climber-id');
-			// members
-			if ($card.find('.card-header .input-field.dirty, .expedition-info-tab-pane .input-field.dirty').length) {
-				const [sql, parameters] = this.inputsToSQL(
-					$card.find('.expedition-info-tab-pane, .card-header'),
-					'expedition_members', 
-					now, 
-					userName, 
-					{
-						updateID: $card.data('table-id') || null, 
-						foreignIDs: {
-							expeditions: expeditionID, 
-							climbers: climberID
-						},
-						insertArray: inserts
-					}
-				);
-				sqlStatements.push(sql);
-				sqlParameters.push(parameters);
-			}
-
-			// transactions
-			const $transactionItems = $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)')
-				.has('.input-field.dirty');
-			for (const li of $transactionItems) {
-				const dbID = $(li).data('table-id');
-				const [sql, parameters] = this.inputsToSQL(
-					li, 
-					'transactions', 
-					now, 
-					userName, 
-					{
-						updateID: dbID || null,
-						foreignIDs: {expedition_members: $(li).data('parent-table-id')},
-						insertArray: inserts
-					}
-				);
-				sqlStatements.push(sql);
-				sqlParameters.push(parameters);
-			}
-
-			// attachment updates
-			const $attachmentItems = $card.find('.attachments-tab-pane .data-list > li.data-list-item:not(.cloneable, .new-list-item)')
-				.has('.input-field.dirty');
-			for (const li of $attachmentItems) {
-				const dbID = $(li).data('table-id');
-				const [sql, parameters] = this.inputsToSQL(
-					li, 
-					'attachments', 
-					now, 
-					userName, 
-					{
-						updateID: dbID || null,
-						foreignIDs: {expedition_members: $(li).data('parent-table-id')},
-						insertArray: inserts
-					}
-				);
-				sqlStatements.push(sql);
-				sqlParameters.push(parameters);
-			}
-
-			// Insert any routes with the corresponding expedition member so that the currval() clause will work 
-			//	when a new expedition member has been added
-			const memberRouteItems = $(`#routes-accordion .card:not(.cloneable) li.data-list-item[data-climber-id=${climberID}]`)
-				.has('.input-field.dirty');
-			for (const li of memberRouteItems) {
-				const dbID = $(li).data('table-id');
-				const [sql, parameters] = this.inputsToSQL(
-					li, 
-					'expedition_member_routes', 
-					now, 
-					userName, 
-					{
-						updateID: dbID || null,
-						foreignIDs: {expedition_members: $(li).data('expedition-member-id')},
-						insertArray: inserts
-					}
-				);
-				sqlStatements.push(sql);
-				sqlParameters.push(parameters);
-
-			}
-		}
 
 		// Transactions and routes might have edits without expedition members having any, so loop 
 		//	through each expedition member card, regardless of whether it has any dirty inputs
@@ -1699,12 +1734,16 @@ class ClimberDBExpeditions extends ClimberDB {
 					$permitNumberField.val(thisPermitNumber)
 							.change();
 					permitCount ++; //increment for next permit
-					getExpeditionMemberSQL($card);
+					const [statements, params] = this.getExpeditionMemberSQL($card, expeditionID, inserts, now, username);
+					sqlStatements = [...sqlStatements, ...statements]
+					sqlParameters = [...sqlParameters, ...params]
 				})
 			} 
 			// Otherwise, if there are other edits, just get the SQL immediately
 			else {
-				getExpeditionMemberSQL($card);
+				const [statements, params] = this.getExpeditionMemberSQL($card, expeditionID, inserts, now, username);
+				sqlStatements = [...sqlStatements, ...statements];
+				sqlParameters = [...sqlParameters, ...params];
 			}
 
 		}
@@ -1716,7 +1755,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				li, 
 				'cmc_checkout', 
 				now, 
-				userName, 
+				username, 
 				{
 					updateID: dbID || null,
 					foreignIDs: {expeditions: expeditionID},
@@ -1736,7 +1775,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				li, 
 				'communication_devices', 
 				now, 
-				userName, 
+				username, 
 				{
 					updateID: dbID || null,
 					foreignIDs: {expeditions: expeditionID},
@@ -1751,7 +1790,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	answered first. If it wasn't necessary, the permitCountDeferred was
 		//	resolved immediately and the request to save the data will fire 
 		//	immediately as well
-		return $.when(permitCountDeferred, attachmentDeferred).then((permitCountResponse, attachmentResponse) => {
+		return $.when(permitCountDeferred, attachmentsDeferred).then((permitCountResponse, attachmentResponse) => {
 			// If the only changes were new attachments, exit
 			if (!$('.dirty').length) {
 				hideLoadingIndicator();
@@ -1791,7 +1830,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
 				// roll back in-memory data
 			}).always(() => {
-			 	climberDB.hideLoadingIndicator();
+			 	this.hideLoadingIndicator();
 			});
 		})
 	}
@@ -2245,7 +2284,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const expeditionInfo =  this.expeditionInfo;
 			
 			if ($memberCards.length === 0) {
-				showModal(`You have not added any (non-canceled) expedition members yet, so this expedition's status can't be changed to ${status}.`, 'No Expedition Members');
+				showModal(`You have not added any (non-canceled) expedition members yet, so this expedition's status can't be changed to <strong>${status}</strong>.`, 'No Expedition Members');
 				this.revertInputValue($select, {triggerChange: true})
 				return;
 			} else if ($memberCards.length === 1) {
@@ -3337,6 +3376,11 @@ class ClimberDBExpeditions extends ClimberDB {
 			queryStrings.expedition_id = `expedition_id <> ${currentExpeditionID}`;
 		}
 
+		// IF this is the expedition page, 
+		queryStrings.is_backcountry = window.location.pathname.match('backcountry.html') ? 
+			'is_backcountry' : 
+			'NOT is_backcountry';
+
 		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
 
 		const sql = `
@@ -3685,15 +3729,22 @@ class ClimberDBExpeditions extends ClimberDB {
 		// add expedition member cards
 		const members = this.expeditionInfo.expedition_members;
 		for (const memberID of members.order) {
-			//const thisMember = members.data[memberID];
 			this.addExpeditionMemberCard({expeditionMemberID: memberID});
-			//$card.find('.show-transaction-tab-button').ariaHide(Object.keys(transactions).length === 0);
 		}
 		// Set the one checked leader checkbox to be visible all the time
 		$('#expedition-members-accordion')
 			.find('.leader-checkbox-container')
 				.has('.input-checkbox:checked')
 				.removeClass('transparent');
+
+		// Add itinerary locations for the backcountry page
+		const locations = this.expeditionInfo.itinerary_locations;
+		for (const locationID of locations.order) {
+			const $newCard = this.addNewCard('#locations-accordion', {updateIDs: {itinerary_locations: locationID}})
+			for (const el of $newCard.find('.input-field')) {
+				this.setInputFieldValue(el, locations.data[locationID], {dbID: locationID, triggerChange: false})
+			}
+		}
 
 		// routes
 		const routes = this.expeditionInfo.expedition_member_routes;
@@ -3821,6 +3872,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Clear in-memory data
 		this.expeditionInfo = {
 			expeditions: {...defaultExpeditionValues}, // each field is a property
+			itinerary_locations: {data: {}, order: []},
 			expedition_members: {data: {}, order: []}, 
 			expedition_member_routes: {data: {}, order: []},
 			transactions: {}, // props are exp. member IDs
@@ -3840,7 +3892,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		//$('#input-expedition_name').val('New Expedition Name');
-		$('#input-group_status').val(1);//=pending
+		const $groupStatusField = $('#input-group_status');
+		$groupStatusField.val($groupStatusField.data('default-value'));//=pending
 
 		// Hide edit/export buttons
 		$('.expedition-edit-button:not(#show-cache-tag-modal-button)').ariaHide(hideEditButtons);
@@ -3849,7 +3902,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#add-climber-form-modal-container .input-field.dirty').removeClass('dirty');
 
 		// reset briefing link
-		this.resetBriefingLink()
+		this.resetBriefingLink();
 	}
 
 
@@ -3859,7 +3912,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			SELECT 
 				*
 			FROM expedition_info_view 
-			WHERE expedition_id=${expeditionID} 
+			WHERE expedition_id=${expeditionID}
 		`
 		showLoadingIndicator('queryExpedition');
 
@@ -3911,6 +3964,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 					// Get data for right-side tables
 					let members = this.expeditionInfo.expedition_members;
+					let locations = this.expeditionInfo.itinerary_locations;
 					let transactions = this.expeditionInfo.transactions;
 					let attachments = this.expeditionInfo.attachments;
 					let routes = this.expeditionInfo.expedition_member_routes;
@@ -3934,6 +3988,15 @@ class ClimberDBExpeditions extends ClimberDB {
 								firstName: row.first_name,
 								lastName: row.last_name,
 								isCommercialGuide: row.is_guide
+							}
+						}
+						const locationID = row.itinerary_location_id;
+						if (!(locationID in locations.data) && locationID != null) {
+							locations.data[locationID] = {};
+							locations.order.push(locationID);
+							for (const fieldName in this.tableInfo.tables.itinerary_locations.columns) {
+								const queryField = this.entryMetaFields.includes(fieldName) ? 'itinerary_locations_' + fieldName : fieldName;
+								locations.data[locationID][fieldName] = row[queryField];
 							}
 						}
 						const transactionID = row.transaction_id;

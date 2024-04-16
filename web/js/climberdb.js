@@ -688,9 +688,7 @@ class ClimberDB {
 		}
 
 		// Close any open cards
-		$accordion.find('.card:not(.cloneable) .collapse.show').removeClass('show');/*.each(
-			function() {$(this)rem}
-		);*/
+		$accordion.find('.card:not(.cloneable) .collapse.show').removeClass('show');
 
 		// Get ID suffix for all children elements. Suffix is the 
 		//	<element_identifier>-<section_index>-<card_index>.
@@ -964,7 +962,7 @@ class ClimberDB {
 	Helper function to reset the values/classes of all inputs within a given parent to their defaults
 	*/
 	clearInputFields({parent='body', triggerChange=true}={}) {
-		for (const el of $(parent).find('.input-field:not(.no-option-fill)')) {
+		for (const el of $(parent).find('.input-field')) {
 			const $el = $(el);
 			
 			// Skip any input-fields with a cloneable parent can't filter these out in .find() 

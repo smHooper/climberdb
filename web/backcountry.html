@@ -141,10 +141,11 @@
 				<div class="expedition-content backcountry-content uneditable">
 					<!-- expedition info --> 
 					<div class="backcountry-data-column col-lg-6">
-						<div id="expedition-data-container" class="d-flex flex-wrap w-100">
+						<div id="expedition-data-container" class="data-container d-flex flex-wrap w-100">
 							<div class="expedition-data-header-container">
 								<div class="expedition-data-header-content">	
 									<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Group Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="__never" required="">
+									<select id="input-group_status" class="input-field no-option-fill filled-by-default needs-filled-by-default revertable group-status-option-field ml-3" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="__never" data-default-value=4 tabindex=-1></select>
 								</div>
 								<div class="expedition-data-header-content">							
 									<div class="result-details-summary-item col-6">
@@ -199,7 +200,7 @@
 								<div class="field-container-row">
 
 									<div class="field-container col-sm-6 col-lg-3">
-										<select id="input-air_taxi" class="input-field default filled-by-default needs-filled-by-default" name="air_taxi_code" data-table-name="expeditions" placeholder="Air taxi" title="Air taxi" type="text"></select>
+										<select id="input-air_taxi" class="input-field default filled-by-default needs-filled-by-default" name="air_taxi_code" data-table-name="expeditions" placeholder="Air taxi" title="Air taxi" type="text" data-default-value=-1></select>
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-air_taxi">Air taxi</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -211,10 +212,10 @@
 									</div>
 									<div class="field-container checkbox-field-container col-md-6">	
 										<label class="checkmark-container">
-											<input id="input-is_acclimitizing" class="input-field input-checkbox" type="checkbox" name="is_acclimitizing" data-table-name="expeditions">
+											<input id="input-is_acclimitizing" class="input-field input-checkbox" type="checkbox" name="is_acclimatizing" data-table-name="expeditions">
 											<span class="checkmark data-input-checkmark"></span>
 										</label>
-										<label class="field-label checkbox-label" for="input-needs_special_use_permit">Acclimitization trip for Denali/Foraker</label>
+										<label class="field-label checkbox-label" for="input-needs_special_use_permit">Acclimatization trip for Denali/Foraker</label>
 									</div>
 								</div>
 								<div class="field-container-row">	
@@ -249,7 +250,7 @@
 								<div id="expedition-members-accordion" class="accordion" data-table-name="expedition_members" data-item-display-name="expedition member">
 									<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
 										<div class="card-header show-children-on-hover justify-content-between" id="cardHeader-expedition-members-cloneable">
-											<a class="card-link collapsed col-6 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
+											<a class="card-link collapsed col-9 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
 												<div class="card-link-content col-7 pl-0">
 													<h6 class="card-link-label expedition-member-card-link-label col px-0"></h6>
 												</div>
@@ -297,16 +298,25 @@
 														</div>
 														<div class="field-container-row">
 															<div class="field-container col-sm-6">
-																<select id="input-reservation_status" class="input-field default filled-by-default needs-filled-by-default reservation-status-field revertable no-option-fill" name="reservation_status_code" data-table-name="expedition_members" placeholder="Party member status" title="Reservation status" data-default-value="4"></select>
+																<select id="input-reservation_status" class="input-field default filled-by-default needs-filled-by-default reservation-status-field revertable no-option-fill group-status-option-field" name="reservation_status_code" data-table-name="expedition_members" placeholder="Party member status" title="Reservation status" data-default-value="4"></select>
 																<label class="field-label" for="input-reservation_status">Party member status</label>
 																<span class="null-input-indicator">&lt; null &gt;</span>
 															</div>	
+														</div>
+														<div class="field-container-row">
 															<div class="field-container checkbox-field-container col-sm-6">
 																<label class="checkmark-container">
 																	<input id="input-flagged" class="input-field input-checkbox" type="checkbox" name="flagged" data-table-name="expedition_members" title="Flag this expedition member">
 																	<span class="checkmark data-input-checkmark"></span>
 																</label>
 																<label class="field-label checkbox-label" for="input-flagged">Flag this expedition member</label>
+															</div>
+															<div class="field-container checkbox-field-container col-sm-6">
+																<label class="checkmark-container">
+																	<input id="input-is_illegal_guide" class="input-field input-checkbox" type="checkbox" name="is_illegal_guide" data-table-name="expedition_members" title="Illegal guide">
+																	<span class="checkmark data-input-checkmark"></span>
+																</label>
+																<label class="field-label checkbox-label" for="input-is_illegal_guide">Confirmed illegal guide</label>
 															</div>
 														</div>
 														<div class="field-container-row">
@@ -318,20 +328,6 @@
 															</div>	
 															<div class="field-container col-sm-6 hidden">
 																<input id="input-flagged_by" class="input-field" name="flagged_by" data-table-name="expedition_members" title="Flagged by" type="text">
-															</div>
-														</div>
-														<div class="field-container-row">
-															<div class="field-container col-sm-6">
-																<input id="input-permit_number" class="input-field" name="permit_number" data-table-name="expedition_members" placeholder="Permit number" title="Permit number" type="text" autocomplete="__never">
-																<label class="field-label" for="input-permit_number">Permit number</label>
-																<span class="null-input-indicator">&lt; null &gt;</span>
-															</div>	
-															<div class="field-container checkbox-field-container col-sm-6">
-																<label class="checkmark-container">
-																	<input id="input-is_illegal_guide" class="input-field input-checkbox" type="checkbox" name="is_illegal_guide" data-table-name="expedition_members" title="Illegal guide">
-																	<span class="checkmark data-input-checkmark"></span>
-																</label>
-																<label class="field-label checkbox-label" for="input-is_illegal_guide">Confirmed illegal guide</label>
 															</div>
 														</div>
 														<div class="field-container-row collapse">
@@ -628,6 +624,9 @@
 												<h6 class="card-link-label col px-0">New location</h6>
 											</a>
 											<div class="member-card-header-chevron-container col-2 pr-0">
+												<button class="zoom-to-location-button icon-button show-on-parent-hover" title="Zoom to location">
+													<i class="fa-solid fa-2xl fa-magnifying-glass-location"></i>
+												</button>
 												<button class="delete-card-button icon-button show-on-parent-hover" title="Delete location">
 													<i class="fa fa-trash"></i>
 												</button>
@@ -648,25 +647,29 @@
 														<label class="field-label" for="input-location_name">Location name</label>
 													</div>
 													<div class="field-container col-3 px-1">
-														<input id="input-location_start" class="input-field" name="start_date" type="date" placeholder="Location start date" data-table-name="itinerary_locations">
+														<input id="input-location_start" class="input-field" name="location_start_date" type="date" placeholder="Location start date" data-table-name="itinerary_locations">
 														<label class="field-label" for="input-location_start">Start date</label>
 													</div>
 													<div class="field-container col-3 px-1 collapse">
-														<input id="input-location_end" class="input-field" name="end_date" type="date" placeholder="Location end date" data-table-name="itinerary_locations" data-dependent-target="#input-location_type" data-dependent-value="2">
+														<input id="input-location_end" class="input-field" name="location_end_date" type="date" placeholder="Location end date" data-table-name="itinerary_locations" data-dependent-target="#input-location_type" data-dependent-value="2">
 														<label class="field-label" for="input-location_end">End date</label>
 													</div>
 													<div class="w-100"></div>
 													<div class="d-flex w-100">
 														<div class="field-container col-3 px-1">
-															<input id="input-location_latitude" class="input-field location-coordinate-field" name="latitude" type="number" step="0.0000001" placeholder="Latitude" data-table-name="itinerary_locations"></select>
+															<input id="input-location_latitude" class="input-field location-coordinate-field revertable" name="latitude" type="number" step="0.0000001" placeholder="Latitude" data-table-name="itinerary_locations"></select>
 															<span class="required-indicator">*</span>
 															<label class="field-label" for="input-location_type">Latitude</label>
 														</div>
 														<div class="field-container col-3 px-1">
-															<input id="input-location_name" class="input-field location-coordinate-field" name="longitude" type="number" step="0.0000001" placeholder="Longitude" data-table-name="itinerary_locations">
+															<input id="input-location_name" class="input-field location-coordinate-field revertable" name="longitude" type="number" step="0.0000001" placeholder="Longitude" data-table-name="itinerary_locations">
 															<span class="required-indicator">*</span>
 															<label class="field-label" for="input-location_name">Longitude</label>
 														</div>
+													</div>
+													<div class="field-container hidden" aria-hidden="true"> 
+														<!-- this field is permanently hidden because it only needs to exist so that the database can record the card order-->
+														<input id="input-location_display_order" class="input-field" name="display_order" type="number" placeholder="Display order" data-table-name="itinerary_locations"></select>
 													</div>
 												</div>
 
