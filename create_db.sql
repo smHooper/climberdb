@@ -395,7 +395,8 @@ CREATE VIEW climber_history_view AS
 		expeditions.equipment_loss,
 		expeditions.actual_departure_date, 
 		expeditions.actual_return_date,
-		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code  
+		expeditions.is_backcountry,
+		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code 
 	FROM expedition_member_routes 
 		JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id 
 		JOIN expeditions ON expedition_members.expedition_id=expeditions.id 
@@ -456,6 +457,7 @@ CREATE VIEW expedition_info_view AS
 		expeditions.equipment_loss,
 		COALESCE(expedition_status_view.expedition_status, expeditions.group_status_code, 1) AS group_status_code,
 		expeditions.expected_expedition_size,
+		expeditions.is_backcountry,
 		expeditions.needs_special_use_permit,
 		expeditions.special_group_type_code,
 		expeditions.is_acclimatizing,
@@ -573,13 +575,14 @@ CREATE VIEW special_use_permit_view AS
 		climbers.last_name, climbers.first_name;
 
 
-
+--TODO: once BC routes/area are added to route table, check that BC groups don't get included in 7-day rule
 CREATE VIEW seven_day_rule_view AS 
 	SELECT DISTINCT climber_id FROM 
 	climber_history_view 
 	WHERE 
 		actual_return_date < now() AND
 		highest_elevation_ft > (SELECT value FROM config WHERE property='minimum_elevation_for_7_day')::int AND 
+		NOT is_backcountry AND 
 		reservation_status_code <> 6 -- not cancelled
 	;
 
