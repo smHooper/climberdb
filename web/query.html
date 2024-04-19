@@ -54,6 +54,7 @@
 						<li id="climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="total, climber, mountain">Total climbers per mountain</li>
 						<li id="guided-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="guide, climber, mountain">Guided climbers per mountain</li>
 						<li id="independent-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="independent, climber, mountain">Independent climbers per mountain</li>
+						<li id="climbers-per-day-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="climber, user nights, day">Climbers per day</li>
 						<li id="nps-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="nps, climber, mountain">NPS climbers per mountain</li>
 						<li id="female-climbers-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="female, women, climber, mountain">Female climbers per mountain</li>
 						<li id="total-summits-per-mountain-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="total, summit, mountain">Total summits per mountain</li>
@@ -253,6 +254,8 @@
 									<option value="actual_return_date">Actual return</option>
 									<option value="month">Planned departure month</option>
 									<option value="to_char(summit_date, 'Month')">Summit month</option>
+									<option value="day::date">Day</option>
+									<option value="to_char(day, 'MM-DD')">Day of year</option>
 									<option value="year">Year</option>
 								</select>
 								<label class="field-label" for="count_climbers-group_by_fields">Group rows by</label>
@@ -275,10 +278,22 @@
 									<option value="planned_return_date">Planned return</option>
 									<option value="actual_departure_date">Actual departure</option>
 									<option value="actual_return_date">Actual return</option>
+									<option value="day::date">Day</option>
+									<option value="to_char(day, 'MM-DD')">Day of year</option>
 									<option value="month">Month</option>
 									<option value="year">Year</option>
 								</select>
 								<label class="field-label" for="count_climbers-pivot_field">Split columns by</label>
+							</div>
+							<div class="field-container col-sm col-md-4 col-lg-3 collapse">
+								<div class="field-container col-6"> 
+									<input id="count_climbers-day_search_start" class="input-field" type="date" name="day_search_start" title="Search start date" data-dependent-target="#count_climbers-group_by_fields" data-dependent-value="day::date|to_char(day, 'MM-DD')" required> <!--comma will truncate the actual <option> value-->
+									<label class="field-label" for="count_climbers-day_search_start">Search start date</label>
+								</div>
+								<div class="field-container col-6"> 
+									<input id="count_climbers-day_search_end" class="input-field" type="date" name="day_search_end" title="Search start date" required>
+									<label class="field-label" for="count_climbers-day_search_end">Search end date</label>
+								</div>
 							</div>
 							<h5 class="w-100 mt-3">Query Parameters</h5>
 							<div class="query-parameter-option-container" role="list">
