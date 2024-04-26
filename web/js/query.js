@@ -506,6 +506,9 @@ class ClimberDBQuery extends ClimberDB {
 		$('#independent-climbers-per-mountain-query-button').click(e => {
 			this.onIndependentClimbersPerMountainButtonClick()
 		});
+		$('#climbers-per-day-query-button').click(e => {
+			this.onClimbersPerDayButtonClick();
+		});
 		$('#nps-climbers-per-mountain-query-button').click(e => {
 			this.onNPSClimbersPerMountainButtonClick()
 		});
@@ -703,8 +706,10 @@ class ClimberDBQuery extends ClimberDB {
 
 		// Unhide all parameter show/hide buttons to reset to default
 		$container.find('.show-query-parameter-button').ariaHide(false);
-		$container.find('.show-query-parameter-button[data-field-name="year"]').click();
-		$('#count_climbers-year').val([year.toString()]).change();
+		if (year) {
+			$container.find('.show-query-parameter-button[data-field-name="year"]').click();
+			$('#count_climbers-year').val([year.toString()]).change();
+		}
 	}
 
 	/*
@@ -738,6 +743,15 @@ class ClimberDBQuery extends ClimberDB {
 		$container.find('.show-query-parameter-button[data-field-name="guide_company_code"]').click();
 		// Select just independent groups
 		$('#count_climbers-guide_company').val([-1]).change();
+	}
+
+	onClimbersPerDayButtonClick() {
+		this.setCountClimbersOrClimbsParameters({countBy: 'members', year: null, groupByFields: ["to_char(day, 'MM-DD')"]});
+
+		// Set group status to 'on mountain' and 'done'
+		const $container = $('.query-parameters-container[data-query-name="count_climbers"]');
+		$container.find('.show-query-parameter-button[data-field-name="group_status_code"]').click();
+		$('#count_climbers-group_status').val([4, 5]).change();
 	}
 
 	onNPSClimbersPerMountainButtonClick() {
@@ -934,6 +948,14 @@ class ClimberDBQuery extends ClimberDB {
 				` choose a different "${targetLabelText}" value or change the "${otherLabelText}" value.`;
 			showModal(message, `Invalid ${targetLabelText} value`);
 		}
+
+		// If either Day or Day of year was selected, show the actual departure/return fields
+		// if ((targetValue || []).some(value => value.match(/day|^to_char\(day/))) {
+		// 	$(`
+		// 		.show-query-parameter-button[data-field-name=actual_departure_date], 
+		// 		.show-query-parameter-button[data-field-name=actual_return_date] 
+		// 	`).click();
+		// }
 	}
 
 
@@ -1414,7 +1436,7 @@ class ClimberDBQuery extends ClimberDB {
 			for (const field in groupByFields) {
 				if (field.endsWith('_code')) {
 					joins += `LEFT JOIN ${field}s ON ${field}=${field}s.code `
-				}
+				} 
 			}
 			if (pivotField && pivotField.endsWith('_code')) joins += `LEFT JOIN ${pivotField}s ON ${pivotField}=${pivotField}s.code `;
 
@@ -1427,6 +1449,13 @@ class ClimberDBQuery extends ClimberDB {
 				`"${pivotAlias}", "${groupByAliases.join('", "')}"` : 
 				`"${groupByAliases.join('", "')}"`;
 			groupByClause = `GROUP BY ${groupByAliasString} ORDER BY ${groupByAliasString}`;
+
+			const pivotAndGroupByAliases = groupByAliases.concat([pivotAlias])
+			if (['Day', 'Day of year'].some(alias => pivotAndGroupByAliases.includes(alias))) {
+				const startSearchDate = $('#count_climbers-day_search_start').val();
+				const endSearchDate = $('#count_climbers-day_search_end').val();
+				joins += ` INNER JOIN (SELECT generate_series('${startSearchDate}', '${endSearchDate}', interval '1 day') AS day) days ON day BETWEEN actual_departure_date AND actual_return_date`
+			}
 
 			// The columns of the result will change with each query, so set it here
 			this.queries.count_climbers.columns = groupByAliases.concat(['Count']);

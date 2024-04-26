@@ -893,21 +893,18 @@ class ClimberDB {
 				dependentValues = dependentValues
 					.toString()
 					.replace('!', '')
-					.split(',').map((s) => {return s.trim()});
+					.split('|').map((s) => {return s.trim()});
 				
-				var selectVal = ($select.is('.input-checkbox') ? $select.prop('checked') : $select.val() || '').toString().trim();
+				var selectVal = $select.is('.input-checkbox') ? $select.prop('checked').toString() : // checkbox
+					$select.is('select') && $select.prop('multiple') ? $select.val() || [] : // select with multiple values
+					($select.val() || '').toString().trim(); // select with single value
 
-				var show = dependentValues.includes(selectVal) || 
+				var show = dependentValues.some(v => Array.isArray(selectVal) ? selectVal.includes(v) : selectVal == v) || 
 					(dependentValues[0] === '<blank>' && selectVal == '');
 				if (notEqualTo) show = !show;
 
-				if (show) {
-					$thisContainer.collapse('show');
-					this.toggleDependentFields($thisField)
-				} else {
-					$thisContainer.collapse('hide');
-					this.toggleDependentFields($thisField);
-				}
+				$thisContainer.collapse(show ? 'show' : 'hide');
+				if ($thisField.is('select, .input-checkbox')) this.toggleDependentFields($thisField);
 			}
 		}
 		setTimeout(10);
