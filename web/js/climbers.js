@@ -171,13 +171,13 @@ class ClimberForm {
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6 collapse">
-										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" required="" data-dependent-target="#input-country" data-dependent-value="236,40"></select>
+										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" required="" data-dependent-target="#input-country" data-dependent-value="236|40"></select>
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-state">State/province</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>		
 									<div class="field-container col-sm-6 collapse">
-										<input id="input-other_state_name" class="input-field" type="text" name="other_state_name" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" data-dependent-target="#input-country" data-dependent-value="!236,40">
+										<input id="input-other_state_name" class="input-field" type="text" name="other_state_name" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" data-dependent-target="#input-country" data-dependent-value="!236|40">
 										<label class="field-label" for="input-other_state_name">State/province</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
@@ -698,7 +698,7 @@ class ClimberForm {
 
 		const countryAbbreviation = this.countryCodes[countryCode]
 
-		$.get(`http://api.zippopotam.us/${countryAbbreviation}/${postalCode}`).done(response => {
+		$.get(`https://api.zippopotam.us/${countryAbbreviation}/${postalCode}`).done(response => {
 			if ('places' in response) {
 				const details = response.places[0];
 				if ('place name' in details) {
