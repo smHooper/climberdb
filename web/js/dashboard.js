@@ -378,7 +378,9 @@ class ClimberDBDashboard extends ClimberDB {
 				group_status_codes.name AS group_status,
 				planned_departure_date
 			FROM expedition_info_view JOIN group_status_codes ON group_status_code = group_status_codes.code
-			WHERE planned_departure_date > '${year}-1-1' 
+			WHERE 
+				planned_departure_date > '${year}-1-1' AND 
+				NOT is_backcountry
 			ORDER BY expedition_name;
 		`;
 		return this.queryDB(sql)
