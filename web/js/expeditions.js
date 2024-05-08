@@ -3952,6 +3952,19 @@ class ClimberDBExpeditions extends ClimberDB {
 							{hideEditButtons: showOnLoadWarnings} 
 						);  
 
+						// Prevent the user from loading backcountry expeditions on the Expeditions page and vice versa
+						const pageName = window.location.pathname;
+						const isBackcountry = expeditionResult[0].is_backcountry;
+						if (pageName.match('expedition') && isBackcountry === 't') {
+							const message = `You're trying to view a Backcountry group on the Expedition page. View this group on <a href="backcountry.html?id=${expeditionID}">the Backcountry page</a> instead.`;
+							showModal(message, 'Invalid Expedition');
+							return;
+						} else if (pageName.match('backcountry') && isBackcountry === 'f') {
+							const message = `You're trying to view a Denali or Foraker expedition on the Backcountry page. View this group on <a href="expeditions.html?id=${expeditionID}">the Expeditons page</a> instead.`;
+							showModal(message, 'Invalid Backcountry Group');
+							return;
+						}
+						
 						const firstRow = expeditionResult[0];//there should only be one
 						for (const fieldName in this.tableInfo.tables.expeditions.columns) {
 							const queryField = this.entryMetaFields.includes(fieldName) ? 'expeditions_' + fieldName : fieldName;
