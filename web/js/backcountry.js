@@ -680,25 +680,24 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	init() {
 		
 		this.showLoadingIndicator('init');
-		var initDeferreds = super.init();
-
-		let lookupDeferreds = [];
-		lookupDeferreds.push(
-			this.queryDB('TABLE backcountry_location_codes')
-				.done(result => {
-					// No need to check for errors
-					for (const {code, name, latitude, longitude} of $.parseJSON(result)) {
-						this.locationCoordinates[code] = {
-							name: name,
-							latitude: latitude, 
-							longitude: longitude
-						}
-					}
-				})
-		);
-		$.when(...initDeferreds).then(() => {
+		super.init().then(() => {
+			let lookupDeferreds = [];
 			lookupDeferreds.push(
-				this.queryDB('SELECT code, name FROM group_status_codes WHERE is_bc_status ORDER BY sort_order')
+				this.queryDB(`TABLE ${this.dbSchema}.backcountry_location_codes`)
+					.done(result => {
+						// No need to check for errors
+						for (const {code, name, latitude, longitude} of $.parseJSON(result)) {
+							this.locationCoordinates[code] = {
+								name: name,
+								latitude: latitude, 
+								longitude: longitude
+							}
+						}
+					})
+			);
+
+			lookupDeferreds.push(
+				this.queryDB(`SELECT code, name FROM ${this.dbSchema}.group_status_codes WHERE is_bc_status ORDER BY sort_order`)
 					.done(result => {
 						const $selects = $('.group-status-option-field')
 						

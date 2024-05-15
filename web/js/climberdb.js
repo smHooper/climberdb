@@ -233,6 +233,8 @@ class ClimberDB {
 		}
 		this.urlChannels = {}; // for checking if a URL is already open in another tab/window
 		this.nonEditingUserRoles = [2, 5]; // for checking if user has edit privs
+		this.environment = '';
+		this.dbSchema = '';
 	}
 
 	getUserInfo() {
@@ -303,7 +305,7 @@ class ClimberDB {
 
 
 	loadConfigValues() {
-		this.queryDB('SELECT property, data_type, value FROM config')
+		this.queryDB(`SELECT property, data_type, value FROM ${this.dbSchema}.config`)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
 					print('Problem querying config values');
@@ -603,7 +605,7 @@ class ClimberDB {
 			const id = el.id;
 			if (lookupTableName != 'undefineds') {//if neither data-lookup-table or name is defined, lookupTableName === 'undefineds' 
 				if (placeholder) $('#' + id).append(`<option class="" value="">${placeholder}</option>`);
-				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${lookupTableName} ${$el.is('.include-disabled-options') ? '' : 'WHERE sort_order IS NOT NULL'} ORDER BY sort_order`);
+				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${this.dbSchema}.${lookupTableName} ${$el.is('.include-disabled-options') ? '' : 'WHERE sort_order IS NOT NULL'} ORDER BY sort_order`);
 				
 			}
 		});
@@ -1230,7 +1232,7 @@ class ClimberDB {
 
 
 	getTableInfo() {
-		return this.queryDB('SELECT * FROM table_info_matview').done(resultString => {
+		return this.queryDB(`SELECT * FROM table_info_matview`).done(resultString => {
 			// the only way this query could fail is if I changed DBMS, 
 			//	so I won't bother to check that the result is valid
 			var insertOrder = this.tableInfo.insertOrder;
@@ -1372,7 +1374,7 @@ class ClimberDB {
 										regexp_replace(last_name, '\\W', '', 'g') AS re_last_name,
 										regexp_replace(full_name, '\\W', '', 'g') AS re_full_name,
 										${queryFields}
-									FROM climber_info_view
+									FROM ${this.dbSchema}.climber_info_view
 								)
 								SELECT ${queryFields}, 1 AS sort_order FROM climber_names WHERE 
 									re_first_name ILIKE '${searchString}%' 
@@ -1418,14 +1420,14 @@ class ClimberDB {
 							) t 
 						GROUP BY full_name, id
 					) gb 
-				JOIN climber_info_view ON gb.id = climber_info_view.id 
+				JOIN ${this.dbSchema}.climber_info_view ON gb.id = climber_info_view.id 
 				${whereClause}
 				ORDER BY first_sort_order::text || full_name
 			` :
 			`
 				SELECT 
 					* 
-				FROM climber_info_view 
+				FROM ${this.dbSchema}.climber_info_view 
 				${whereClause}
 			`
 			;
@@ -1478,7 +1480,7 @@ class ClimberDB {
 
 		let whereClause = '';
 		if ($searchContainer.find('.7-day-only-filter').prop('checked')) 
-			whereClause += ' WHERE climber_info_view.id IN (SELECT climber_id FROM seven_day_rule_view) ';
+			whereClause += ` WHERE ${this.dbSchema}.climber_info_view.id IN (SELECT climber_id FROM ${this.dbSchema}.seven_day_rule_view) `;
 		const $guideOnlyCheckbox = $searchContainer.find('.guide-only-filter');
 		if ($guideOnlyCheckbox.prop('checked')) 
 			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
@@ -1638,6 +1640,14 @@ class ClimberDB {
 
 		this.loginInfo = $.parseJSON(window.localStorage.getItem('login') || '{}');
 
+		const envDeferred = $.get('/flask/environment')
+			.done(response => {
+				if (!this.pythonReturnedError(response)) {
+					this.environment = response;
+					this.dbSchema = response === 'dev' ? response : 'public';
+				}
+			})
+
 		if (addMenu) {
 			this.configureMenu();
 
@@ -1668,9 +1678,10 @@ class ClimberDB {
 				.addClass('selected');
 		
 		const userDeferred = this.getUserInfo()
-			.done(response => {
-				const result = response;
-				const username = result.ad_username;
+		//const finalDeferred = $.when(envDeferred, userDeferred)
+		return $.when(envDeferred, userDeferred)
+			.done((_, [userInfoResult, userInfoStatus, userInfoXHR]) => {
+				const username = userInfoResult.ad_username;
 				if (addMenu && username !== 'test') {
 					if (this.loginInfo.username !== username || this.loginInfo.expiration < new Date().getTime()) {
 						$('#climberdb-main-content').empty();
@@ -1682,8 +1693,9 @@ class ClimberDB {
 				if (window.location.pathname !== '/index.html' && this.userInfo.user_status_code != 2) {
 					window.location = 'index.html'
 				}
+			
+				return $.when(this.getTableInfo(), this.loadConfigValues());
 			});
-		return [userDeferred, this.getTableInfo(), this.loadConfigValues()];
 	}
 };
 

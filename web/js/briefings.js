@@ -625,12 +625,12 @@ class ClimberDBBriefings extends ClimberDB {
 			// get parametized fields
 			let parametized = fields.map(f => '$' + (fields.indexOf(f) + 1))
 				.join(', ');
-			sql = `INSERT INTO briefings (${fields.join(', ')}) VALUES (${parametized}) RETURNING id;`;
+			sql = `INSERT INTO ${this.dbSchema}.briefings (${fields.join(', ')}) VALUES (${parametized}) RETURNING id;`;
 		} else {
 			const briefingID = $selectedAppointment.data('briefing-id');
 			let parametized = fields.map(f => `${f}=$${fields.indexOf(f) + 1}`)
 				.join(', ');
-			sql = `UPDATE briefings SET ${parametized} WHERE id=${briefingID} RETURNING id;`;
+			sql = `UPDATE ${this.dbSchema}.briefings SET ${parametized} WHERE id=${briefingID} RETURNING id;`;
 		}
 
 		return $.ajax({ 
@@ -844,7 +844,7 @@ class ClimberDBBriefings extends ClimberDB {
 		}
 		// Otherwise, delete it from the DB
 		else {
-			this.queryDB(`DELETE FROM briefings WHERE id=${briefingID} RETURNING id, briefing_start::date AS briefing_date`)
+			this.queryDB(`DELETE FROM ${this.dbSchema}.briefings WHERE id=${briefingID} RETURNING id, briefing_start::date AS briefing_date`)
 				.done(queryResultString => {
 					if (this.queryReturnedError(queryResultString)) {
 						showModal(`An error occurred while deleting the briefing: ${queryResultString}. Try again and if this problem persists, contact IT for assistance.`, 'Unexpected Error')
@@ -1447,7 +1447,7 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	queryBriefings(year=(new Date()).getFullYear()) {
 		const sql = `
-			SELECT * FROM briefings_view 
+			SELECT * FROM ${this.dbSchema}.briefings_view 
 			WHERE extract(year FROM briefing_start) >= ${year}
 		`;
 
@@ -1509,7 +1509,7 @@ class ClimberDBBriefings extends ClimberDB {
 			this.getExpeditionInfo(year)
 			,
 			// Get rangers 
-			this.queryDB(`SELECT id, first_name || ' ' || last_name As full_name FROM users WHERE user_role_code=${this.constants.userRoleCodes.ranger} AND user_status_code=2`)
+			this.queryDB(`SELECT id, first_name || ' ' || last_name As full_name FROM ${this.dbSchema}.users WHERE user_role_code=${this.constants.userRoleCodes.ranger} AND user_status_code=2`)
 				.done(queryResultString => {
 					const $input = $('#input-ranger');
 					for (const row of $.parseJSON(queryResultString)) {
@@ -1533,7 +1533,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	getExpeditionInfo(year=(new Date().getFullYear())) {
-		const sql = `SELECT * FROM briefings_expedition_info_view WHERE planned_departure_date > '${year}-1-1' AND group_status_code <> 6 ORDER BY expedition_name`;
+		const sql = `SELECT * FROM ${this.dbSchema}.briefings_expedition_info_view WHERE planned_departure_date > '${year}-1-1' AND group_status_code <> 6 ORDER BY expedition_name`;
 		return this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
@@ -1630,15 +1630,17 @@ class ClimberDBBriefings extends ClimberDB {
 
 	init() {
 		// Call super.init()
-		var deferreds = super.init();
+		var initDeferreds = super.init();
 		
 		// Do synchronous stuff
 		this.configureMainContent();
 
-		deferreds = deferreds.concat(this.fillBriefingDetailSelects());
-
-		$.when(...deferreds).then(() => {
-			this.queryBriefings();
+		
+		initDeferreds.then(() => {
+			$.when(...this.fillBriefingDetailSelects())
+				.then(() => {
+					this.queryBriefings();
+				});
 		});
 	}
 }

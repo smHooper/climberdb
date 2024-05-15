@@ -307,10 +307,10 @@ class ClimberDBUsers extends ClimberDB {
 		var sql;
 		if (isInsert) {
 			// insert
-			sql = `INSERT INTO users (${fields.join(',')}) VALUES (${fields.map(f => '$' + (fields.indexOf(f) + 1))}) RETURNING id`;
+			sql = `INSERT INTO ${this.dbSchema}.users (${fields.join(',')}) VALUES (${fields.map(f => '$' + (fields.indexOf(f) + 1))}) RETURNING id`;
 		} else {
 			// update
-			sql = `UPDATE users SET ${fields.map(f => `${f}=$${fields.indexOf(f) + 1}`)} WHERE id=${userID}`;
+			sql = `UPDATE ${this.dbSchema}.users SET ${fields.map(f => `${f}=$${fields.indexOf(f) + 1}`)} WHERE id=${userID}`;
 		}
 
 		return $.post({ 
@@ -517,7 +517,7 @@ class ClimberDBUsers extends ClimberDB {
 				email_address,
 				user_role_code,
 				user_status_code 
-			FROM users 
+			FROM ${this.dbSchema}.users 
 			ORDER BY 
 				user_status_code DESC,
 				first_name, 
@@ -545,7 +545,7 @@ class ClimberDBUsers extends ClimberDB {
 	init() {
 		// Call super.init()
 		this.showLoadingIndicator('init');
-		var initDeferreds = $.when(...super.init())
+		return super.init()
 			.then(() => { 
 				return this.checkUserRole()
 			})
@@ -561,7 +561,5 @@ class ClimberDBUsers extends ClimberDB {
 			.always(() => {
 				hideLoadingIndicator();
 			});
-
-		return initDeferreds;
 	}
 }

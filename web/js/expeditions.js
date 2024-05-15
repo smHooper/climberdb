@@ -1085,36 +1085,37 @@ class ClimberDBExpeditions extends ClimberDB {
 			// confirm delete
 
 			var message = '',
-				onConfirmClick = '';
+				onConfirmClickHandler = () => {};
 
 			if  (tableName === 'expedition_members') { 
-				onConfirmClick = `
-					climberDB.queryDB('DELETE FROM expedition_members WHERE id=${dbID}')
-						.done(() => {
-							const $card = $('#${$card.attr('id')}');
-							delete climberDB.expeditionInfo.expedition_members.data[${dbID}];
-							// remove member from in-memory .order
-							climberDB.expeditionInfo.expedition_members.order = climberDB.expeditionInfo.expedition_members.order.filter(id => id != ${dbID});
-							delete climberDB.expeditionInfo.transactions[${dbID}];
-							const memberRoutes = climberDB.expeditionInfo.expedition_member_routes.data;
-							for (const routeCode in memberRoutes) {
-								const thisRoute = memberRoutes[routeCode];
-								delete thisRoute[${dbID}];
-							}
+				onConfirmClickHandler = () => {
+					$('#alert-modal .confirm-button').click(() => {
+						this.queryDB(`DELETE FROM ${this.dbSchema}.expedition_members WHERE id=${dbID}`)
+							.done(() => {
+								delete this.expeditionInfo.expedition_members.data[dbID];
+								// remove member from in-memory .order
+								this.expeditionInfo.expedition_members.order = this.expeditionInfo.expedition_members.order.filter(id => id != dbID);
+								delete this.expeditionInfo.transactions[dbID];
+								const memberRoutes = this.expeditionInfo.expedition_member_routes.data;
+								for (const routeCode in memberRoutes) {
+									const thisRoute = memberRoutes[routeCode];
+									delete thisRoute[dbID];
+								}
 
-							// remove expedition member from all route cards
-							const climberID = $card.data('climber-id');
-							$('#routes-accordion .route-member-list .data-list-item[data-climber-id=' + climberID + ']').remove();
+								// remove expedition member from all route cards
+								const climberID = $card.data('climber-id');
+								$(`#routes-accordion .route-member-list .data-list-item[data-climber-id=${climberID}]`).remove();
 
-							 $('#${$card.attr('id')}').fadeRemove();
+								 $card.fadeRemove();
 
-							 // Wait just over a half second for the card to be removed
-							 setTimeout(() => {climberDB.updateExpeditionMemberCount(); climberDB.updateCommsDeviceOwnerOptions()}, 550);
-						})
-						.fail((xhr, status, error) => {
-							console.log('delete failed because ' + error)
-						});
-				`;
+								 // Wait just over a half second for the card to be removed
+								 setTimeout(() => {this.updateExpeditionMemberCount(); this.updateCommsDeviceOwnerOptions()}, 550);
+							})
+							.fail((xhr, status, error) => {
+								console.log('delete failed because ' + error)
+							});
+					})
+				}
 				message = 
 					`Are you sure you want to delete this expedition member` +
 					` and all related transactions and routes for this member? This action` +
@@ -1127,29 +1128,30 @@ class ClimberDBExpeditions extends ClimberDB {
 					.join(', ');
 				const $routeCodeInput = $card.find('.route-code-header-input:not(.mountain-code-header-input)');
 				const routeCode = $routeCodeInput.val();
-				onConfirmClick = `
-					const sql = 'DELETE FROM expedition_member_routes WHERE id IN (${memberRouteIDs})';
-					climberDB.queryDB(sql)
-						.done(queryResultString => {
-							if (climberDB.queryReturnedError(queryResultString)) {
-								showModal(
-									'And error occurred while attempting to delete this route: ' + queryResultString.trim() + 
-										'. Try again and contact your database adminstrator if the problem continues.', 
-									'Database Error'
-								);
-							} else {
-								const routeCode = ${routeCode};
-								const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
-								if (routeDeleted) {
-									// remove the route from in-memory .order
-									climberDB.expeditionInfo.expedition_member_routes.order = climberDB.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
+				onConfirmClickHandler = () => {
+					$('#alert-modal .confirm-button').click(() => {
+						const sql = `DELETE FROM ${this.dbSchema}.expedition_member_routes WHERE id IN (${memberRouteIDs})`;
+						this.queryDB(sql)
+							.done(queryResultString => {
+								if (this.queryReturnedError(queryResultString)) {
+									showModal(
+										'And error occurred while attempting to delete this route: ' + queryResultString.trim() + 
+											'. Try again and contact your database adminstrator if the problem continues.', 
+										'Database Error'
+									);
+								} else {
+									const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
+									if (routeDeleted) {
+										// remove the route from in-memory .order
+										this.expeditionInfo.expedition_member_routes.order = this.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
+									}
+									$card.fadeRemove();
 								}
-								$('#${$card.attr('id')}').fadeRemove();
-							}
-						}).fail((xhr, status, error) => {
+							}).fail((xhr, status, error) => {
 
-						})
-				`;
+							})
+					})
+				}
 				const routeName = $routeCodeInput.find(`option[value=${routeCode}]`).text();
 				message = `Are you sure you want to delete the ${routeName} route? This action` +
 					` is permanent and cannot be undone.`;
@@ -1157,9 +1159,9 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			const footerButtons = `
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
+				<button class="generic-button modal-button danger-button close-modal confirm-button" data-dismiss="modal">OK</button>
 			`;
-			showModal(message, `Delete ${displayName}?`, 'confirm', footerButtons);
+			showModal(message, `Delete ${displayName}?`, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
 		}
 	}
 
@@ -1359,13 +1361,13 @@ class ClimberDBExpeditions extends ClimberDB {
 			let parametized = sortedFields.map(f => '$' + (sortedFields.indexOf(f) + 1))
 				.slice(0, sortedFields.length - currvalCount) // drop the currvalClause parametized values because they don't need to be parametized
 				.join(', ');
-			sql = `INSERT INTO ${tableName} (${sortedFields.join(', ')}) VALUES (${parametized}${currvalClauseString}) RETURNING id${foreignColumnReturnString}`;
+			sql = `INSERT INTO ${this.dbSchema}.${tableName} (${sortedFields.join(', ')}) VALUES (${parametized}${currvalClauseString}) RETURNING id${foreignColumnReturnString}`;
 		} else {
 			// Just make the parametized SQL for an UPDATE
 			let parametized = sortedFields.map(f => `${f}=$${sortedFields.indexOf(f) + 1}`)
 				.slice(0, sortedFields.length)
 				.join(', ');
-			sql = `UPDATE ${tableName} SET ${parametized} WHERE id=${updateID}`;
+			sql = `UPDATE ${this.dbSchema}.${tableName} SET ${parametized} WHERE id=${updateID}`;
 		}
 		
 
@@ -1958,7 +1960,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			return $.Deferred().resolve(true);
 		} else {
 			showLoadingIndicator('deleteExpedition');
-			const sql = `DELETE FROM expeditions WHERE id=${expeditionID} RETURNING id`;
+			const sql = `DELETE FROM ${this.dbSchema}.expeditions WHERE id=${expeditionID} RETURNING id`;
 			return this.queryDB(sql).done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
 					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
@@ -2350,7 +2352,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					'<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>'
 				const eventHandler = () => {
 					$('#alert-modal .confirm-button').click(() => {
-						this.queryDB(`DELETE FROM briefings WHERE id=${briefingInfo.id} RETURNING id`)
+						this.queryDB(`DELETE FROM ${this.dbSchema}.briefings WHERE id=${briefingInfo.id} RETURNING id`)
 							.done(queryResultString => {
 								if (this.queryReturnedError(queryResultString)) {
 									showModal('Failed to delete briefing because ' + queryResultString, 'Unexpected Error')
@@ -2384,7 +2386,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const expeditionID = $option.data('expedition-id');
 		const expeditionMemberID = $('#confirm-change-expedition-button').data('expedition-member-id');
 		const climberID = this.expeditionInfo.expedition_members.data[expeditionMemberID].climber_id;
-		this.queryDB(`SELECT * FROM expedition_members WHERE expedition_id=${expeditionID} AND climber_id=${climberID}`)
+		this.queryDB(`SELECT * FROM ${this.dbSchema}.expedition_members WHERE expedition_id=${expeditionID} AND climber_id=${climberID}`)
 			.done(queryResultString => {
 				if (!this.queryReturnedError(queryResultString)) {
 					const result = $.parseJSON(queryResultString);
@@ -2409,7 +2411,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				}
 			})
 		// Warn the user if this expedition is from a previous year
-		this.queryDB(`SELECT coalesce(planned_departure_date, actual_departure_date) AS planned_departure_date FROM expeditions WHERE id=${expeditionID}`)
+		this.queryDB(`SELECT coalesce(planned_departure_date, actual_departure_date) AS planned_departure_date FROM ${this.dbSchema}.expeditions WHERE id=${expeditionID}`)
 			.done(queryResultString => {
 				if (!this.queryReturnedError(queryResultString)) {
 					const result = $.parseJSON(queryResultString);
@@ -2511,7 +2513,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			.data('expedition-id');
 		const expeditionMemberID = $('#confirm-change-expedition-button').data('expedition-member-id');
 
-		const sql = `UPDATE expedition_members SET expedition_id=${selectedExpeditionID} WHERE id=${expeditionMemberID} RETURNING expedition_id`;
+		const sql = `UPDATE ${this.dbSchema}.expedition_members SET expedition_id=${selectedExpeditionID} WHERE id=${expeditionMemberID} RETURNING expedition_id`;
 		this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
@@ -3213,7 +3215,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Hide all badges
 		$('.climber-form .result-details-header-badge').ariaHide(true);
 		
-		this.queryDB(`SELECT * FROM climber_info_view WHERE id=${parseInt(climberID)}`)
+		this.queryDB(`SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=${parseInt(climberID)}`)
 			.done(queryResultString => {
 				const result = $.parseJSON(queryResultString);
 				if (this.queryReturnedError(queryResultString)) {
@@ -3390,7 +3392,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				expedition_name,
 				group_status_code  
 				${similarity ? `, ${similarity} AS search_score` : ''} 
-			FROM expedition_info_view 
+			FROM ${this.dbSchema}.expedition_info_view 
 			${whereClause} 
 			ORDER BY ${orderBy}`;
 		return this.queryDB(sql, {returnTimestamp: true})
@@ -3912,7 +3914,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const sql = `
 			SELECT 
 				*
-			FROM expedition_info_view 
+			FROM ${this.dbSchema}.expedition_info_view 
 			WHERE expedition_id=${expeditionID}
 		`
 		showLoadingIndicator('queryExpedition');
@@ -3925,7 +3927,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	Querying them separately eliminates this issue
 		return $.when(
 			this.queryDB(sql),
-			this.queryDB(`SELECT * FROM communication_devices WHERE expedition_id=${expeditionID} ORDER BY entry_time, id`)
+			this.queryDB(`SELECT * FROM ${this.dbSchema}.communication_devices WHERE expedition_id=${expeditionID} ORDER BY entry_time, id`)
 		).done( (expeditionInfoResult, commsResult) => {
 				if (this.queryReturnedError(expeditionInfoResult)) {
 					showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: ${expeditionInfoResult.trim()}.`, 'Unexpected error');
@@ -3964,7 +3966,7 @@ class ClimberDBExpeditions extends ClimberDB {
 							showModal(message, 'Invalid Backcountry Group');
 							return;
 						}
-						
+
 						const firstRow = expeditionResult[0];//there should only be one
 						for (const fieldName in this.tableInfo.tables.expeditions.columns) {
 							const queryField = this.entryMetaFields.includes(fieldName) ? 'expeditions_' + fieldName : fieldName;
@@ -4135,7 +4137,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			return $.Deferred().resolve(true);
 		}
 		this.showLoadingIndicator('deleteListItem');
-		var sql = `DELETE FROM ${tableName} WHERE id=${parseInt(tableID)} RETURNING id, '${tableName}' AS table_name`;
+		var sql = `DELETE FROM ${this.dbSchema}.${tableName} WHERE id=${parseInt(tableID)} RETURNING id, '${tableName}' AS table_name`;
 		return this.queryDB(sql)
 			.always(() => {
 				this.hideLoadingIndicator();
@@ -4744,8 +4746,8 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	getCMCInfo() {
 		const sql = `
-			SELECT DISTINCT cmc_inventory.* FROM cmc_inventory 
-			LEFT JOIN cmc_checkout ON cmc_inventory.id=cmc_id 
+			SELECT DISTINCT cmc_inventory.* FROM ${this.dbSchema}.cmc_inventory 
+			LEFT JOIN ${this.dbSchema}.cmc_checkout ON cmc_inventory.id=cmc_id 
 			WHERE return_date IS NOT NULL 
 			ORDER BY cmc_inventory.id
 		;`
@@ -4884,55 +4886,54 @@ class ClimberDBExpeditions extends ClimberDB {
 	init() {
 		// Call super.init()
 		this.showLoadingIndicator('init');
-		var initDeferreds = super.init();
+		var initDeferred = super.init();
 
 		// Do additional synchronous initialization stuff
 		this.configureMainContent();
 
-		// Get route codes first if they haven't been queried yet.
-		const lookupDeferreds = [this.getCMCInfo()];
-		if (Object.keys(this.routeCodes).length === 0) {
+		initDeferred.then(() => {
+
+			// Get route codes first if they haven't been queried yet.
+			const lookupDeferreds = [this.getCMCInfo()];
+			if (Object.keys(this.routeCodes).length === 0) {
+				lookupDeferreds.push(
+					this.queryDB(`SELECT * FROM ${this.dbSchema}.route_codes WHERE sort_order IS NOT NULL`)
+						.done(queryResultString => {
+							const $select = $('.route-code-header-input:not(.mountain-code-header-input)');
+							if (!this.queryReturnedError(queryResultString)) {
+								for (const route of $.parseJSON(queryResultString)) {
+									this.routeCodes[route.code] = {...route};
+									$select.append($(`<option value="${route.code}">${route.name}</option>`));
+								}
+							}
+						})
+				)
+			} 
 			lookupDeferreds.push(
-				this.queryDB('SELECT * FROM route_codes WHERE sort_order IS NOT NULL')
+				this.queryDB(`SELECT * FROM ${this.dbSchema}.mountain_codes`)
 					.done(queryResultString => {
-						const $select = $('.route-code-header-input:not(.mountain-code-header-input)');
+						for (const row of $.parseJSON(queryResultString)) {
+							this.mountainCodes[row.code] = {...row};
+						}
+					})
+			);
+			lookupDeferreds.push(
+				this.queryDB(`SELECT code, default_fee, is_credit, is_payment FROM ${this.dbSchema}.transaction_type_view`)
+					.done(queryResultString => {
 						if (!this.queryReturnedError(queryResultString)) {
-							for (const route of $.parseJSON(queryResultString)) {
-								this.routeCodes[route.code] = {...route};
-								$select.append($(`<option value="${route.code}">${route.name}</option>`));
+							for (const row of $.parseJSON(queryResultString)) {
+								this.defaultTransactionFees[row.code] = {
+									default_fee: row.default_fee,
+									is_credit: row.is_credit,
+									is_payment: row.is_payment
+								};
 							}
 						}
 					})
-			)
-		} 
-		lookupDeferreds.push(
-			this.queryDB('SELECT * FROM mountain_codes')
-				.done(queryResultString => {
-					for (const row of $.parseJSON(queryResultString)) {
-						this.mountainCodes[row.code] = {...row};
-					}
-				})
-		);
-		lookupDeferreds.push(
-			this.queryDB('SELECT code, default_fee, is_credit, is_payment FROM transaction_type_view')
-				.done(queryResultString => {
-					if (!this.queryReturnedError(queryResultString)) {
-						for (const row of $.parseJSON(queryResultString)) {
-							this.defaultTransactionFees[row.code] = {
-								default_fee: row.default_fee,
-								is_credit: row.is_credit,
-								is_payment: row.is_payment
-							};
-						}
-					}
-				})
-		);
+			);
 
-		$.when(
-			this.fillAllSelectOptions(), 
-			...initDeferreds, 
-			...lookupDeferreds
-		).then(() => {
+			return $.when(...this.fillAllSelectOptions(), lookupDeferreds);
+		}).then(() => {
 			const params = this.parseURLQueryString();
 			// if the URL specifies a specific expedition (id) to load, do so
 			if ('id' in params) {
@@ -4965,6 +4966,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			hideLoadingIndicator()
 		});
 
-		return initDeferreds;
+		return initDeferred;
 	}
 }

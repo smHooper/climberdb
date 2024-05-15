@@ -71,7 +71,7 @@ class ClimberDBDashboard extends ClimberDB {
 			 	(
 				 	SELECT DISTINCT 
 						climber_id
-					FROM registered_climbs_view
+					FROM ${this.dbSchema}.registered_climbs_view
 					WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31'
 				) t
 			;
@@ -98,7 +98,6 @@ class ClimberDBDashboard extends ClimberDB {
 				coalesce(mountain_name, 'Either') AS mountain_name,
 				value
 			FROM (
-				-- 
 				SELECT 
 					mountain_name,
 					count(climber_id) AS value
@@ -112,7 +111,7 @@ class ClimberDBDashboard extends ClimberDB {
 							route_code,
 							mountain_name,
 							reservation_status_code
-						FROM registered_climbs_view
+						FROM ${this.dbSchema}.registered_climbs_view
 						WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' 
 							{where}
 						ORDER BY climber_id, mountain_name
@@ -209,7 +208,7 @@ class ClimberDBDashboard extends ClimberDB {
 							route_code,
 							mountain_name,
 							reservation_status_code
-						FROM registered_climbs_view
+						FROM ${this.dbSchema}.registered_climbs_view
 						WHERE 
 							planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
 							reservation_status_code = 5 AND
@@ -297,12 +296,12 @@ class ClimberDBDashboard extends ClimberDB {
 				to_char(planned_departure_date, 'Mon DD') AS departure, 
 				to_char(planned_return_date, 'Mon DD') AS return, 
 				gb.* 
-			FROM expeditions 
+			FROM ${this.dbSchema}.expeditions 
 			JOIN (
 				SELECT 
 					expedition_id, 
 					replace(string_agg(flagged_reason, ';'), ';;', ';') AS flagged_comments 
-				FROM expedition_members 
+				FROM ${this.dbSchema}.expedition_members 
 				WHERE flagged 
 				GROUP BY expedition_id
 			) gb ON expeditions.id=expedition_id
@@ -327,7 +326,7 @@ class ClimberDBDashboard extends ClimberDB {
 		const sql = `
 			SELECT * FROM (
 				SELECT DISTINCT ON (climber_id) *
-				FROM solo_climbs_view 
+				FROM ${this.dbSchema}.solo_climbs_view 
 				WHERE 
 				departure_date >= '${year}-1-1' AND 
 				group_status_code IN (3, 4)
@@ -377,7 +376,7 @@ class ClimberDBDashboard extends ClimberDB {
 				group_status_code,
 				group_status_codes.name AS group_status,
 				planned_departure_date
-			FROM expedition_info_view JOIN group_status_codes ON group_status_code = group_status_codes.code
+			FROM ${this.dbSchema}.expedition_info_view JOIN ${this.dbSchema}.group_status_codes ON group_status_code = group_status_codes.code
 			WHERE 
 				planned_departure_date > '${year}-1-1' AND 
 				NOT is_backcountry
@@ -440,7 +439,7 @@ class ClimberDBDashboard extends ClimberDB {
 				(
 					SELECT 
 						generate_series(min(briefing_start), max(briefing_start + '1d'::interval), '1d')::date AS briefing_date 
-					FROM briefings 
+					FROM ${this.dbSchema}.briefings 
 					WHERE extract(year FROM briefing_start) >= extract(year FROM now()) 
 				) series 
 			LEFT JOIN 
@@ -448,7 +447,7 @@ class ClimberDBDashboard extends ClimberDB {
 					SELECT 
 						briefing_start::date AS briefing_date, 
 						count(*) AS n_briefings 
-					FROM briefings 
+					FROM ${this.dbSchema}.briefings 
 					WHERE extract(year FROM briefing_start) >= extract(year FROM now())
 					GROUP BY briefing_date
 				) n 
@@ -612,15 +611,16 @@ class ClimberDBDashboard extends ClimberDB {
 		
 		this.configureMainContent();
 		
-		$.when(
-			initDeferreds,
-			this.configureDailyMountainStats(),
-			this.configureGroupStatusGraph(),
-			this.configureDailyBriefingsChart(),
-			this.configureFlaggedGroups(),
-			this.configureSoloClimbers(),
-			this.configureMisingPaymentOrSUP()
-		).always(() => {
+		initDeferreds.then(() => {
+			return $.when(
+				this.configureDailyMountainStats(),
+				this.configureGroupStatusGraph(),
+				this.configureDailyBriefingsChart(),
+				this.configureFlaggedGroups(),
+				this.configureSoloClimbers(),
+				this.configureMisingPaymentOrSUP()
+			)
+		}).always(() => {
 			hideLoadingIndicator();
 		});
 
