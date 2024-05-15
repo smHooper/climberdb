@@ -106,7 +106,7 @@ class ClimberDBConfig extends ClimberDB {
 
 	loadConfig() {
 
-		const sql = `TABLE config ORDER BY sort_order`;
+		const sql = `SELECT * FROM config WHERE is_editable ORDER BY sort_order`;
 		return this.queryDB(sql).done(queryResultString => {
 			// No need to check result
 			const result = $.parseJSON(queryResultString);

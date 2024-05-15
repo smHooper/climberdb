@@ -256,7 +256,9 @@ CREATE TABLE IF NOT EXISTS config (
 	property VARCHAR(50) UNIQUE,
 	display_name VARCHAR(255) UNIQUE,
 	data_type config_data_type,
-	value VARCHAR(255)
+	value VARCHAR(255),
+	is_editable BOOLEAN DEFAULT true,
+	is_array BOOLEAN DEFAULT false
 );
 
 

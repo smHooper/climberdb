@@ -518,6 +518,7 @@ class ClimberDBUsers extends ClimberDB {
 				user_role_code,
 				user_status_code 
 			FROM users 
+			WHERE user_role_code NOT IN (${this.config.no_login_user_roles.join(',')})
 			ORDER BY 
 				user_status_code DESC,
 				first_name, 
