@@ -304,7 +304,7 @@ class ClimberDB {
 
 
 	loadConfigValues() {
-		$.post({
+		return $.post({
 			url: '/flask/config'
 		}).done(response => {
 			if (this.pythonReturnedError(response)) {
