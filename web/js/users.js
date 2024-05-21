@@ -340,6 +340,8 @@ class ClimberDBUsers extends ClimberDB {
 		$tr.find('select.input-field')
 			.change()
 			.attr('tabindex', 0);
+
+		return $tr;
 	}
 
 
@@ -360,7 +362,10 @@ class ClimberDBUsers extends ClimberDB {
 			// If the user is currently editing a row (but hasn't made any unsaved changes), 
 			//	turn off editing before adding the new row
 			this.disableAllEditing();
-			this.addNewUserRow($table);
+			const $tr = this.addNewUserRow($table);
+
+			// Scroll to the new row if necessary
+			$tr[0].scrollIntoView();
 		}
 
 	}
