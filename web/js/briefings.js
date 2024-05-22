@@ -1504,13 +1504,22 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	fillBriefingDetailSelects(year=(new Date()).getFullYear()) {
 
+		const rangerRoleCodes = `${this.constants.userRoleCodes.ranger}, ${this.constants.userRoleCodes.noLoginRanger}`
 		var deferreds = [
 			// Fill expeditions
 			this.getExpeditionInfo(year)
 			,
 			// Get rangers 
-			this.queryDB(`SELECT id, first_name || ' ' || last_name As full_name FROM users WHERE user_role_code=${this.constants.userRoleCodes.ranger} AND user_status_code=2`)
-				.done(queryResultString => {
+			this.queryDB(`
+				SELECT 
+					id, 
+					first_name || ' ' || last_name As full_name 
+				FROM users 
+				WHERE 
+					user_role_code IN (${rangerRoleCodes}) AND 
+					user_status_code=2
+				ORDER BY first_name, last_name
+			`).done(queryResultString => {
 					const $input = $('#input-ranger');
 					for (const row of $.parseJSON(queryResultString)) {
 						$input.append(`<option class="" value="${row.id}">${row.full_name}</option>`);

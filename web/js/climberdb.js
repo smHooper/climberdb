@@ -223,7 +223,8 @@ class ClimberDB {
 				ranger: 2,
 				admin: 3,
 				superUser: 4,
-				readOnly: 5
+				readOnly: 5,
+				noLoginRanger: 6
 			},
 			userStatusCodes: {
 				active: 2,
@@ -303,21 +304,17 @@ class ClimberDB {
 
 
 	loadConfigValues() {
-		this.queryDB('SELECT property, data_type, value FROM config')
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					print('Problem querying config values');
-				} else {
-					for (const {property, data_type, value, ...rest} of $.parseJSON(queryResultString)) {
-						this.config[property] = 
-							data_type === 'integer' ? parseInt(value) : 
-							data_type === 'float' ? parseFloat(value) : 
-							data_type === 'boolean' ? value.toLowerCase().startsWith('t') :
-							value; // it's a string
-					}
-				}
-			})
+		return $.post({
+			url: '/flask/config'
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal('Invalid Configuration', 'There was a problem retrieving the app configuration: ' + response);
+			} else {
+				this.config = {...response}
+			}
+		})
 	}
+
 
 	configureMenu() {
 		$('body').prepend(`
