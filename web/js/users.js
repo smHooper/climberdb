@@ -514,17 +514,19 @@ class ClimberDBUsers extends ClimberDB {
 	onDeleteButtonClick(e) {
 		const $userRow = $(e.target).closest('tr');
 		const $table = $userRow.closest('.climberdb-data-table');
-		if ($table.is('#main-data-table')) {
+		if ($userRow.is('.new-user')) { 
+			// if it's a new user that hasn't been saved yet, 
+			//	just remove it
+			$userRow.fadeRemove();
+		} else if ($table.is('#main-data-table')) {
+			// Main data table users are only disabled, not deleted because user 
+			//	IDs need to persist (mostly for ref. integrity in the briefings table)
 			$userRow.find('.input-field[name=user_status_code]')
 				.val(-1)
 				.change();
 				this.saveEdits();
-		} else if ($userRow.is('.new-user')) { 
-			// new user in the no-login table
-			// just delete it
-			$userRow.fadeRemove();
 		} else {
-			// already saved user in no-login table
+			// an already saved user in no-login table
 			// update status to disabled in case there are any briefing records with this user assigned to it
 			this.queryDB(`UPDATE users SET user_status_code=-1 WHERE id=${parseInt($userRow.data('table-id'))} RETURNING id`)
 				.done(response => {
