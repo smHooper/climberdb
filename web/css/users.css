@@ -2,6 +2,11 @@
 
 .main-content-wrapper {
 	background-image: linear-gradient(0deg, var(--sunrise-linear-gradient-colors));
+	justify-content: center;
+	display: flex;
+	flex-wrap: wrap;
+	padding-top: 0;
+	padding-left: 30px;
 }
 .sidebar-nav-group .nav-item.selected > a::after {
 	border-right: 15px solid #8bc0b3;
@@ -9,11 +14,11 @@
 
 .climberdb-data-table-wrapper {
 	display: flex;
+	flex-wrap: wrap;
 	justify-content: center;
 	position: relative;
-	padding-top: 30px;
+	/* padding-left: 100px;*/
 }
-
 
 .climberdb-data-table tbody > tr:not(.uneditable) td:not(.no-border) {
   background-color: rgba(255, 182, 0, 0.65);
@@ -22,10 +27,11 @@
   background-color: transparent;
 }
 .climberdb-data-table-wrapper table { 
-border-collapse: separate;
-border-radius: 10px;
-border-spacing: 0px;
-transform: translateX(105px); /*offset for the usually hidden edit buttons*/
+	border-collapse: separate;
+	border-radius: 10px;
+	border-spacing: 0px;
+/*	transform: translateX(105px); /*offset for the usually hidden edit buttons*/
+	width: 100%;
 }
 
 /*----- input field -------*/
@@ -69,4 +75,26 @@ tr.inactive .input-field {
   background-color: #219ebc40;
 }
 
+.no-login-role-column select{
+	min-width: 200px;
+}
 
+.add-user-button-wrapper {
+/*	d-flex justify-content-center pt-2*/
+	display: flex;
+	justify-content: center;
+	padding-top: 16px;
+	width: 100%;
+}
+/*.climberdb-data-table thead .clear-background-header,
+.climberdb-data-table thead .clear-background-header th {*/
+.clear-background-header,
+.clear-background-header th {
+	color: unset;
+	background-color: transparent;
+	font-size: 16px;
+	padding-top: 10px;
+}
+.clear-background-header.main-table-header th {
+	background-color: var(--sunrise-linear-gradient-blue);
+}

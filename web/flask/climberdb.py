@@ -139,17 +139,45 @@ def get_engine():
 	)
 
 
-def get_config_from_db():
+def get_config_from_db() -> dict:
+	"""
+	Retrieve saved configuration values for the web app from the 'config' table
+	and save it to the flask config
+	"""
 	engine = get_engine()
 	db_config = {}		
+	
+	# helper function to convert DB values (which are all strings) to the proper data type
+	def convert_value(value, data_type):
+		return (
+			float(value) if data_type == 'float' else  
+			int(value) if data_type == 'integer' else
+			value
+		)
+
 	with engine.connect() as conn:
 		cursor = conn.execute('TABLE config');
+	
 	for row in cursor:
-		app.config[row['property']] = (
-			float(row['value']) if row['data_type'] == 'float' else  
-			int(row['value']) if row['data_type'] == 'integer' else
-			row['value']
-		)
+		data_type = row['data_type']
+		property_name = row['property']
+		value = row['value']
+		try:
+			converted_value = (
+				[convert_value(v.strip(), data_type) for v in value.split(',')]
+				if row['is_array'] 
+				else convert_value(value, data_type)
+			)
+		except:
+			raise ValueError(f'''Invalid value for property "{property_name}" with data type "{data_type}": {value} ''')
+		
+		# Save value in Flask config and in a dict to return for the web app
+		app.config[property_name] = converted_value
+		db_config[property_name] = converted_value
+
+	return db_config
+
+# Call it
 get_config_from_db()
 
 
@@ -230,6 +258,11 @@ def add_header(response):
 def test():
 	
 	return os.getlogin()
+
+
+@app.route('/flask/config', methods=['POST'])
+def db_config_endpoint():
+	return get_config_from_db()
 
 
 # -------------- User Management ---------------- #

@@ -1504,6 +1504,7 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	fillBriefingDetailSelects(year=(new Date()).getFullYear()) {
 
+		const rangerRoleCodes = `${this.constants.userRoleCodes.ranger}, ${this.constants.userRoleCodes.noLoginRanger}`
 		var deferreds = [
 			// Fill expeditions
 			this.getExpeditionInfo(year)

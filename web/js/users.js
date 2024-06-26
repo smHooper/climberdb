@@ -3,6 +3,7 @@ class ClimberDBUsers extends ClimberDB {
 	constructor() {
 		super();
 		this.userRoleOptions = '';
+		this.noLoginRoleOptions = '';
 		this.userStatusOptions = '';
 		this.users = {};
 		return this;
@@ -39,10 +40,14 @@ class ClimberDBUsers extends ClimberDB {
 			const $select = $(e.target);
 			const $tr = $select.closest('tr');
 			$tr.toggleClass('inactive', $select.val() != 2);
-		})
+		});
 
-		$('.add-user-button').click(() => {
-			this.onaddUserRowButtonClick()
+		$(document).on('change', '[name=first_name],[name=last_name]', e => {
+			this.onFirstLastNameChange(e);
+		});
+
+		$('.add-user-button').click(e => {
+			this.onAddUserRowButtonClick(e)
 		});
 
 		$(document).on('click', '.delete-button', e => {
@@ -56,7 +61,7 @@ class ClimberDBUsers extends ClimberDB {
 	*/
 	disableAllEditing() {
 		// make all rows uneditable at first
-		$('#main-table-wrapper tbody tr')
+		$('.climberdb-data-table tbody tr')
 			.addClass('uneditable')
 			// turn off tab-ability for inputs and buttons in all other rows
 			.find('.input-field, .icon-button:not(.edit-button)')
@@ -156,16 +161,52 @@ class ClimberDBUsers extends ClimberDB {
 			}
 			
 			showModal(message, 'Duplicate username', 'confirm', footerButtons);
-
-			// If the edited user already exists, roll the username edits 
-			// on second thought, I don't think it's possible for the user to be old
-			/*const $tr = $input.closest('tr');
-			if (!$tr.is('.new-user')) {
-				const originalUserID = $tr.data('table-id');
-				$input.val(this.users[originalUserID].ad_username)
-			}*/
 		}
 	}
+
+
+	onFirstLastNameChange(e) {
+		const $tr = $(e.target).closest('tr');
+		const firstName = $tr.find('.input-field[name=first_name]').val();
+		const lastName = $tr.find('.input-field[name=last_name]').val();
+		const matchedUsers = Object.values(this.users)
+			.filter(u => u.first_name === firstName && u.last_name === lastName);
+		var onConfirmClickHandler = () => {};
+		
+		if (matchedUsers.length) {
+			const status = matchedUsers[0].user_status_code;
+			const matchedUserID = matchedUsers[0].id;
+			var message = `The user <strong>${firstName} ${lastName}</strong> already exists `
+			var footerButtons = '';
+			if (status == -1) {
+				message += `but the account is currently disabled. Would you like to enable it?`;
+				onConfirmClickHandler = () => {
+					('#alert-modal .confirm-button').click(() => {
+						this.discardEdits(); //remove new user
+						const $tr = $(`.climberdb-data-table tbody tr[data-table-id=${matchedUserID}]`);
+						// set user status code to 'enabled' for matched user
+						// 	this will do nothing for non-login users since there is no status field
+						$tr.ariaHide(false)
+							.removeClass('uneditable')
+							.find('.input-field[name=user_status_code]')
+								.val(2)
+								.change();
+					});
+				}
+
+				footerButtons = `
+					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+					<button class="generic-button modal-button primary-button close-modal confirm-button" data-dismiss="modal">Yes</button>
+				`;
+			} else {
+				message += 'and each user must have a unique first and last name.'
+				footerButtons = '';
+			}
+			
+			showModal(message, 'Duplicate user', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+		}
+	}
+
 
 	/*
 	Helper method to add new row to the users table
@@ -234,6 +275,47 @@ class ClimberDBUsers extends ClimberDB {
 		`).appendTo($('#main-table-wrapper tbody'));
 	}
 
+	addNoLoginRow({data={}}={}) {
+		return $(`
+			<tr class="uneditable" data-table-id="${data.id}">
+				<td>
+					<span>
+						<input class="input-field user-table-input" type="text" name="first_name" title="First Name" placeholder="First name" value="${data.first_name}" autocomplete="__never" tabindex=-1>
+					</span>
+				</td>
+				<td>
+					<span>
+						<input class="input-field user-table-input" type="text" name="last_name" title="Last Name" placeholder="Last name" value="${data.last_name}" autocomplete="__never" tabindex=-1>
+					</span>
+				</td>
+				<td>
+					<span>
+						<select class="input-field user-table-input" name="user_role_code" title="User role" tabindex=-1>
+							${this.noLoginRoleOptions}
+						</select>
+					</span>
+				</td>
+				<td class="no-border">
+					<button class="icon-button edit-button slide-up-on-focus has-motion" title="Toggle editing" tabindex=0>
+						<i class="fa fa-edit fa-lg"></i>
+						<label class="icon-button-label ">edit</label>
+					</button>
+				</td>
+				<td class="no-border">
+					<button class="icon-button save-button slide-up-on-focus has-motion" title="Save edits" tabindex=-1>
+						<i class="fa fa-save fa-lg"></i>
+						<label class="icon-button-label ">save</label>
+					</button>
+				</td>
+				<td class="no-border">
+					<button class="icon-button delete-button slide-up-on-focus has-motion" title="Disable user" tabindex=-1>
+						<i class="fa fa-trash fa-lg"></i>
+						<label class="icon-button-label ">delete</label>
+					</button>
+				</td>
+			</tr>
+		`).appendTo($('#no-login-table-wrapper tbody'));
+	}
 
 	/*
 	Add a row for a new user to the table. For now, an admin user has full control 
@@ -241,8 +323,8 @@ class ClimberDBUsers extends ClimberDB {
 	ad_username. I might want to move to an LDAP query and limiting the choices for 
 	ad_username or maybe handle new user creation via emails
 	*/
-	addNewUserRow() {
-		const $tr = this.addUserRow();
+	addNewUserRow($table) {
+		const $tr = $table.is('#main-data-table') ? this.addUserRow() : this.addNoLoginRow();
 		$tr.addClass('new-user')
 			.removeClass('uneditable')
 			.find('td.uneditable')
@@ -258,26 +340,32 @@ class ClimberDBUsers extends ClimberDB {
 		$tr.find('select.input-field')
 			.change()
 			.attr('tabindex', 0);
+
+		return $tr;
 	}
 
 
 	/*
 	Event handler for add new user button. 
 	*/
-	onaddUserRowButtonClick() {
+	onAddUserRowButtonClick(e) {
+		const $table = $($(e.target).closest('button').data('target'))
 		// if there's already a new user, force the user to save or discard that one
-		if ($('.new-user').length) {
+		if ($table.find('.new-user').length) {
 			showModal('You already created a new user. Either save those changes or delete that user before creating another one.', 'Save Error');
 			return;
 		}
 		// If the user is currently editing
-		if ($('.input-field.dirty').length) {
+		if ($table.find('.input-field.dirty').length) {
 			this.confirmSaveEdits({afterActionCallbackStr: 'climberDB.addNewUserRow()'})
 		} else {
 			// If the user is currently editing a row (but hasn't made any unsaved changes), 
 			//	turn off editing before adding the new row
 			this.disableAllEditing();
-			this.addNewUserRow();
+			const $tr = this.addNewUserRow($table);
+
+			// Scroll to the new row if necessary
+			$tr[0].scrollIntoView();
 		}
 
 	}
@@ -336,7 +424,7 @@ class ClimberDBUsers extends ClimberDB {
 				}
 
 				// Send activation email for a new user
-				if (isInsert) {
+				if (isInsert && !this.config.no_login_user_roles.includes(userInfo.user_role_code)) {
 					userID = result.id;
 					$tr.attr('data-table-id', userID)
 						.removeClass('new-user')
@@ -415,7 +503,7 @@ class ClimberDBUsers extends ClimberDB {
 		`;
 
 		showModal(
-			`You have unsaved edits to this expedition. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this expedition.`,
+			`You have unsaved edits to this user. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this user.`,
 			'Save edits?',
 			'alert',
 			footerButtons
@@ -425,10 +513,32 @@ class ClimberDBUsers extends ClimberDB {
 
 	onDeleteButtonClick(e) {
 		const $userRow = $(e.target).closest('tr');
-		$userRow.find('.input-field[name=user_status_code]')
-			.val(-1)
-			.change();
-		this.saveEdits();
+		const $table = $userRow.closest('.climberdb-data-table');
+		if ($userRow.is('.new-user')) { 
+			// if it's a new user that hasn't been saved yet, 
+			//	just remove it
+			$userRow.fadeRemove();
+		} else if ($table.is('#main-data-table')) {
+			// Main data table users are only disabled, not deleted because user 
+			//	IDs need to persist (mostly for ref. integrity in the briefings table)
+			$userRow.find('.input-field[name=user_status_code]')
+				.val(-1)
+				.change();
+				this.saveEdits();
+		} else {
+			// an already saved user in no-login table
+			// update status to disabled in case there are any briefing records with this user assigned to it
+			this.queryDB(`UPDATE users SET user_status_code=-1 WHERE id=${parseInt($userRow.data('table-id'))} RETURNING id`)
+				.done(response => {
+					if (this.queryReturnedError(response)) {
+						showModal('Database Error', 'The user could not be disabled because the system encountered an unexpected error: ' + response)
+					} else {
+						$userRow.fadeRemove()
+					}
+				}).fail((xhr, status, error) => {
+					showModal('Database Error', 'The user could not be disabled because the system encountered an unexpected error: ' + error)
+				});
+		}
 	}
 
 
@@ -491,12 +601,17 @@ class ClimberDBUsers extends ClimberDB {
 
 	loadSelectOptions() {
 		return [
-			this.queryDB('TABLE user_role_codes ORDER BY sort_order;').done(queryResultString => {
+			this.queryDB(`SELECT name, code FROM ${this.dbSchema}.user_role_codes WHERE code NOT IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`).done(queryResultString => {
 				// No need to check result
 				const codes = $.parseJSON(queryResultString);
 				this.userRoleOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
 			}),
-			this.queryDB('TABLE user_status_codes ORDER BY sort_order;').done(queryResultString => {
+			this.queryDB(`SELECT name, code FROM ${this.dbSchema}.user_role_codes WHERE code IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`).done(queryResultString => {
+				// No need to check result
+				const codes = $.parseJSON(queryResultString);
+				this.noLoginRoleOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
+			}),
+			this.queryDB(`TABLE ${this.dbSchema}.user_status_codes ORDER BY sort_order;`).done(queryResultString => {
 				// No need to check result
 				const codes = $.parseJSON(queryResultString);
 				this.userStatusOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
@@ -526,10 +641,13 @@ class ClimberDBUsers extends ClimberDB {
 		return this.queryDB(sql).done(queryResultString => {
 			// No need to check result
 			const result = $.parseJSON(queryResultString);
+			const noLoginRoles = this.config.no_login_user_roles;
 			for (const row of result) {
 				// Save in-memory data for rolling back edits
 				this.users[row.id] = {...row};
-				const $tr = this.addUserRow({data: row});
+				const $tr = noLoginRoles.includes(parseInt(row.user_role_code)) ? 
+					this.addNoLoginRow({data: row}) : 
+					this.addUserRow({data: row});
 				$tr.find('select[name="user_role_code"]')
 					.val(row.user_role_code);
 				$tr.find('select[name="user_status_code"]')

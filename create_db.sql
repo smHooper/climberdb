@@ -278,7 +278,9 @@ CREATE TABLE IF NOT EXISTS config (
 	property VARCHAR(50) UNIQUE,
 	display_name VARCHAR(255) UNIQUE,
 	data_type config_data_type,
-	value VARCHAR(255)
+	value VARCHAR(255),
+	is_editable BOOLEAN DEFAULT true,
+	is_array BOOLEAN DEFAULT false
 );
 
 
@@ -681,7 +683,7 @@ CREATE VIEW all_climbs_view AS
 		route_codes.name AS route_name,
 		mountain_codes.name AS mountain_name,
 		is_guiding,
-		CASE WHEN is_guiding THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
+		CASE WHEN is_guiding OR is_intrepeter THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
 		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
 		actual_return_date - actual_departure_date AS trip_length_days,
 		extract(year FROM planned_departure_date) AS year,
@@ -697,7 +699,9 @@ CREATE VIEW all_climbs_view AS
 
 CREATE VIEW registered_climbs_view AS
 	SELECT * FROM all_climbs_view
-	WHERE reservation_status_code <> 6 AND group_status_code <> 6;
+	WHERE 
+		reservation_status_code <> 6 AND 
+		group_status_code <> 6; 
 
 CREATE VIEW solo_climbs_view AS 
 	SELECT 
