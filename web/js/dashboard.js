@@ -70,7 +70,7 @@ class ClimberDBDashboard extends ClimberDB {
 			FROM 
 			 	(
 				 	SELECT DISTINCT 
-						climber_id
+						expedition_member_id
 					FROM ${this.dbSchema}.registered_climbs_view
 					WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31'
 				) t
@@ -100,21 +100,21 @@ class ClimberDBDashboard extends ClimberDB {
 			FROM (
 				SELECT 
 					mountain_name,
-					count(climber_id) AS value
+					count(expedition_member_id) AS value
 				FROM (
 				 	SELECT DISTINCT 
-						climber_id, 
+						expedition_member_id, 
 						mountain_name
 					FROM (
 						SELECT DISTINCT
-							climber_id, 
+							expedition_member_id, 
 							route_code,
 							mountain_name,
 							reservation_status_code
 						FROM ${this.dbSchema}.registered_climbs_view
 						WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' 
 							{where}
-						ORDER BY climber_id, mountain_name
+						ORDER BY expedition_member_id, mountain_name
 					) _
 				) __
 				GROUP BY mountain_name
@@ -197,14 +197,14 @@ class ClimberDBDashboard extends ClimberDB {
 			FROM (
 				SELECT 
 					mountain_name,
-					count(climber_id) AS value
+					count(expedition_member_id) AS value
 				FROM (
 				 	SELECT DISTINCT 
-						climber_id, 
+						expedition_member_id, 
 						mountain_name
 					FROM (
 						SELECT DISTINCT
-							climber_id, 
+							expedition_member_id, 
 							route_code,
 							mountain_name,
 							reservation_status_code
@@ -213,7 +213,7 @@ class ClimberDBDashboard extends ClimberDB {
 							planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
 							reservation_status_code = 5 AND
 							summit_date IS NOT NULL
-						ORDER BY climber_id, mountain_name
+						ORDER BY expedition_member_id, mountain_name
 					) _		
 				) __
 				GROUP BY ROLLUP(mountain_name)
@@ -325,7 +325,7 @@ class ClimberDBDashboard extends ClimberDB {
 		const year = new Date().getFullYear();
 		const sql = `
 			SELECT * FROM (
-				SELECT DISTINCT ON (climber_id) *
+				SELECT DISTINCT ON (expedition_member_id) *
 				FROM ${this.dbSchema}.solo_climbs_view 
 				WHERE 
 				departure_date >= '${year}-1-1' AND 
