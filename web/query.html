@@ -68,7 +68,7 @@
 						<li id="count-summits-per-month-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, month">Count summits per month</li>
 						<li id="count-summits-per-day-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, day">Count summits per day</li>
 						<li class="query-option" role="button" data-query-name="pro_pins" data-tags="climber, epeditions, pro, pro pin">Query Pro Pins</li>
-						
+						<li id="medical-query-button" class="query-option" role="button" data-query-name="medical_issues" data-tags="medical, altitude, illness, injury, frostbite, hace, hape, sickness">Medical issues</li>
 					</ul>
 					<h4 id="no-query-match-message" class="hidden" aria-hidden="true">No queries match your search</h4>
 				</div>
@@ -518,6 +518,50 @@
 								</button>
 								<label class="field-label" for="count_climbers-actual_return_date_operator">Actual return</label>
 							</div>
+							<!--<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-frostbite" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field medical-query-field" name="frostbite" required>
+									<option value="">Frostbite?</option>
+									<option value="'Yes'">Yes</option>
+									<option value="'No'">No</option>
+								</select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-frostbite">Frostbite?</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-ams" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field medical-query-field" name="ams" required>
+									<option value="">AMS?</option>
+									<option value="'Yes'">Yes</option>
+									<option value="'No'">No</option>
+								</select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-ams">AMS?</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-hace" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field medical-query-field" name="hace" required>
+									<option value="">HACE?</option>
+									<option value="'Yes'">Yes</option>
+									<option value="'No'">No</option>
+								</select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-hace">HACE?</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-hape" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field medical-query-field" name="hape" required>
+									<option value="">HAPE?</option>
+									<option value="'Yes'">Yes</option>
+									<option value="'No'">No</option>
+								</select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-hape">HAPE?</label>
+							</div>-->
 							<div class="field-container-row collapse show w-100">
 								<div class="w-100 d-flex justify-content-start">
 									<button id="add-numeric-stat-field-button" class="generic-button mt-3">Add calculated field</button>
@@ -548,12 +592,22 @@
 						</div>
 
 						<div class="query-parameters-container hidden" data-query-name="pro_pins">
-							<h4 class="w-100 mb-3">Flagged Expedition Members Query Parameters</h4>	
+							<h4 class="w-100 mb-3">Pro Pin Query Parameters</h4>	
 							<div class="field-container col-sm-6 col-md-4 col-lg-3">
 								<select id="pro_pins-year" class="input-field default no-option-fill year-select-field nullable" name="year" title="Year" required>
 									<option value="">Year</option>
 								</select>
 								<label class="field-label" for="pro_pins-year">Year</label>
+							</div>	
+						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="medical_issues">
+							<h4 class="w-100 mb-3">Medical Issues Query Parameters</h4>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="medical_issues-year" class="input-field default no-option-fill year-select-field nullable" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="medical_issues-year">Year</label>
 							</div>	
 						</div>
 					</div>
