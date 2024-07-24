@@ -3,7 +3,7 @@
 <head>
 	<meta charset='utf-8'>
 	<meta name="viewport" content="width=device-width,height=device-height, user-scalable=no" />
-	<title>Expeditions - DENA Climbing Permits</title>
+	<title>Backcountry - DENA Climbing Permits</title>
 	<link rel="icon" type="image/x-icon" href="/imgs/favicon.ico">
 	
 	<!--jquery -->
@@ -27,9 +27,18 @@
 	<link href="packages/select2/select2.min.css" rel="stylesheet" />
 	<script src="packages/select2/select2.min.js"></script>
 
+	<!-- Leaflet -->
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+		integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+		crossorigin=""/>
+	<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+		integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+		crossorigin=""></script>
+
 	<link rel="stylesheet" href="css/climberdb.css">
 	<link rel="stylesheet" href="css/climbers.css">
 	<link rel="stylesheet" href="css/expeditions.css">
+	<link rel="stylesheet" href="css/backcountry.css">
 
 </head>
 
@@ -42,7 +51,7 @@
 				<div class="main-content-header">
 					<input id="expedition-id-input" class="hidden" aria-hidden="True">
 					<div class="fuzzy-search-bar-container">
-						<textarea id="expedition-search-bar" class="fuzzy-search-bar expedition-search-bar no-click-trigger-on-enter" placeholder="Type to search expeditions" title="Expedition search bar" autocomplete="__never"></textarea>
+						<textarea id="expedition-search-bar" class="fuzzy-search-bar expedition-search-bar no-click-trigger-on-enter" placeholder="Type to search backcountry parties" title="Backcountry search bar" autocomplete="__never"></textarea>
 						<img class="search-bar-icon" src="imgs/search_icon_50px.svg" alt="Search bar icon">
 						<button class="show-query-options-button icon-button" title="Expedition filter options">
 							<img class="show-search-options-icon" src="imgs/search_options_icon_100px.svg" alt="Show search filter options">
@@ -53,7 +62,7 @@
 							<div class="fuzzy-search-bar-drawer-content">
 								<div class="query-option-container col-4">
 									<div class="query-option-condition-header">
-										<label class="query-option-label" for="query-option-planned_departure">Planned departure</label>
+										<label class="query-option-label" for="query-option-departure">Departure</label>
 									</div>
 									<div class="query-option-condition-container">
 										<select class="query-option-operator datetime-query-option" value="equals">
@@ -62,11 +71,11 @@
 											<option value=">=">is after</option>
 											<option value="BETWEEN">is between</option>
 										</select>
-										<input id="query-option-planned_departure" class="query-option-input-field single-value-field datetime-query-option" type="date" data-field-name="planned_departure_date">
+										<input id="query-option-departure" class="query-option-input-field single-value-field datetime-query-option" type="date" data-field-name="actual_departure_date">
 										<div class="query-option-double-value-container hidden">
-											<input class="query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" aria-hidden="true">
+											<input class="query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="actual_departure_date" aria-hidden="true">
 											<span>and</span>
-											<input class="query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="planned_departure_date" aria-hidden="true">
+											<input class="query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="actual_departure_date" aria-hidden="true">
 										</div>
 									</div>
 								</div>
@@ -120,32 +129,28 @@
 							<i class="fas fa-2x fa-edit"></i>
 							<label class="icon-button-label">edit</label>
 						</button>
-						<button id="open-reports-modal-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Open exports menu" title="Open exports menu">
-							<i class="fas fa-2x fa-file-export"></i>
-							<label class="icon-button-label">export</label>
-						</button>
 						<button id="show-cache-tag-modal-button" class="expedition-edit-button icon-button hidden" type="button" aria-label="Print cache tag" title="Print cache tag">
 							<i class="fas fa-2x fa-flag fa-flag-alt"></i>
 							<label class="icon-button-label">cache tag</label>
 						</button>
 					</div>
-					<button id="add-new-expedition-button" class="generic-button" title="New Expedition">New expedition</button>
+					<button id="add-new-backcountry-group-button" class="generic-button" title="New Expedition">New BC group</button>
 					<!-- this will cover everything in the main content header except edit buttons when a card is shown as a modal -->
 					<div id="main-content-modal-card-screen" aria-hidden="true"></div>
 				</div>
-				<div class="expedition-content uneditable">
+				<div class="expedition-content backcountry-content uneditable">
 					<!-- expedition info --> 
-					<div id="expedition-data-container" class="expedition-data-wrapper">
-						<div class="expedition-data-content">
+					<div class="backcountry-data-column col-lg-6">
+						<div id="expedition-data-container" class="data-container d-flex flex-wrap w-100">
 							<div class="expedition-data-header-container">
 								<div class="expedition-data-header-content">	
-									<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Expedition Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="__never" required="">
-									<select id="input-group_status" class="input-field filled-by-default needs-filled-by-default revertable ml-2" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="__never" data-default-value=1 tabindex=-1></select>
+									<input id="input-expedition_name" class="input-field expedition-data-header" placeholder="New Group Name" name="expedition_name" data-table-name="expeditions" title="Expedition name" autocomplete="__never" required="">
+									<select id="input-group_status" class="input-field no-option-fill filled-by-default needs-filled-by-default revertable group-status-option-field ml-3" name="group_status_code" data-table-name="expeditions" title="Group status" autocomplete="__never" data-default-value=4 tabindex=-1></select>
 								</div>
 								<div class="expedition-data-header-content">							
 									<div class="result-details-summary-item col-6">
 										<div id="expedition-number-result-summary-item" class="collapse col">
-											<label class="result-details-summary-label">Expedition #</label>
+											<label class="result-details-summary-label">Permit #</label>
 											<label class="result-details-summary-value"></label>
 										</div>
 										<div id="expedition-modified-by-result-summary-item" class="col">
@@ -159,73 +164,62 @@
 									</div>							
 									<div class="result-details-summary-item col-6">
 										<div id="expedition-n-members-result-summary-item" class="col collapse">
-											<label class="result-details-summary-label">Current members</label>
+											<label class="result-details-summary-label">Group size</label>
 											<label class="result-details-summary-value"></label>
-										</div>
-										<div id="expedition-confirmed-time-result-summary-item" class="col admin-edit-only">
-											<div class="field-container-row collapse">
-												<label class="result-details-summary-label">Date confirmed</label>
-												<input id="input-date_confirmed" class="input-field result-details-summary-value" type="date" name="date_confirmed" data-dependent-target="#input-group_status" data-dependent-value="3|4|5|6">
-											</div>
 										</div>
 									</div>
 								</div>
 							</div>
 							<div class="expedition-data-content-body">
 								<div class="field-container-row">
-									<div class="field-container col-6">
-										<input id="input-planned_departure_date" class="input-field" name="planned_departure_date" data-table-name="expeditions" placeholder="Planned departure" title="Planned departure" type="date" autocomplete="__never" required="">
+									<div class="field-container col-md-6 col-lg-3">
+										<input id="input-departure_date" class="input-field" name="actual_departure_date" data-table-name="expeditions" placeholder="Departure date" title="Planned departure" type="date" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
-										<label class="field-label" for="input-planned_departure_date">Planned departure</label>
+										<label class="field-label" for="input-planned_departure_date">Departure date</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
-									<div class="field-container col-6">
-										<input id="input-planned_return_date" class="input-field" name="planned_return_date" data-table-name="expeditions" placeholder="Planned return" title="Planned return" type="date" autocomplete="__never" required="">
+									<div class="field-container col-md-6 col-lg-3">
+										<input id="input-planned_return_date" class="input-field" name="planned_return_date" data-table-name="expeditions" placeholder="Expected return date" title="Expected return" type="date" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
-										<label class="field-label" for="input-planned_return_date">Planned return</label>
+										<label class="field-label" for="input-planned_return_date">Expected return</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
-								</div>
-								<div class="field-container-row collapse">
-									<div class="field-container col-6">
-										<input id="input-actual_departure_date" class="input-field" name="actual_departure_date" data-table-name="expeditions" placeholder="Actual departure" title="Actual departure" type="date" data-dependent-target="#input-group_status" data-dependent-value="3|4|5" autocomplete="__never" required="">
+									<div class="field-container col-md-6 col-lg-3 collapse">
+										<input id="input-actual_return_date" class="input-field" name="actual_return_date" data-table-name="expeditions" placeholder="Actual return date" title="Actual return" type="date" autocomplete="__never" required="" data-dependent-target="#input-group_status" data-dependent-value="5">
 										<span class="required-indicator">*</span>
-										<label class="field-label" for="input-actual_departure_date">Actual departure</label>
+										<label class="field-label" for="input-planned_return_date">Expected return</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
-									<div class="field-container col-6">
-										<input id="input-actual_return_date" class="input-field" name="actual_return_date" data-table-name="expeditions" placeholder="Actual return" title="Actual return" type="date" autocomplete="__never" required="">
-										<span class="required-indicator">*</span>
-										<label class="field-label" for="input-actual_return_date">Actual return</label>
-										<span class="null-input-indicator">&lt; null &gt;</span>
-									</div>
-								</div>
-								<div class="field-container-row">
-									<div class="field-container col-sm-6">
+									<div class="field-container col-md-6 col-lg-3">
 										<select id="input-guide_company" class="input-field filled-by-default needs-filled-by-default" name="guide_company_code" data-table-name="expeditions" title="Guide company" type="text" autocomplete="__never" data-default-value="-1"></select>
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-guide_company">Guide company</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
-									</div>	
-									<div class="field-container col-sm-6">
-										<select id="input-air_taxi" class="input-field default filled-by-default needs-filled-by-default" name="air_taxi_code" data-table-name="expeditions" placeholder="Air taxi" title="Air taxi" type="text"></select>
+									</div>
+								</div>
+								<div class="field-container-row">
+
+									<div class="field-container col-sm-6 col-lg-3">
+										<select id="input-air_taxi" class="input-field default filled-by-default needs-filled-by-default" name="air_taxi_code" data-table-name="expeditions" placeholder="Air taxi" title="Air taxi" type="text" data-default-value=-1></select>
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-air_taxi">Air taxi</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
-								</div>
-								<div class="field-container-row">
-									<div class="field-container col-sm-3">
-										<select id="input-special_group_type" class="input-field default filled-by-default needs-filled-by-default" name="special_group_type_code" data-table-name="expeditions" placeholder="Special group type" title="Special group type" type="text" autocomplete="__never" data-default-value=-1></select>
-										<label class="field-label" for="input-special_group_type">Special group type</label>
+									<div class="field-container col-md-6 col-lg-3">
+										<input id="input-bump_flights" class="input-field default filled-by-default " name="bump_flights" data-table-name="expeditions" placeholder="Bump flights" title="Bump flights" type="text">
+										<label class="field-label" for="input-bump_flights">Bump flights</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
-									<div class="field-container col-sm-3">
-										<input id="input-expected_expedition_size" class="input-field" name="expected_expedition_size" data-table-name="expeditions" title="Expected expedition size" type="number"> 
-										<label class="field-label" for="input-expected_expedition_size">Expected group size</label>
-										<span class="null-input-indicator">&lt; null &gt;</span>
-									</div>	
-									<div class="field-container checkbox-field-container col-6">
+									<div class="field-container checkbox-field-container col-md-6">	
+										<label class="checkmark-container">
+											<input id="input-is_acclimitizing" class="input-field input-checkbox" type="checkbox" name="is_acclimatizing" data-table-name="expeditions">
+											<span class="checkmark data-input-checkmark"></span>
+										</label>
+										<label class="field-label checkbox-label" for="input-needs_special_use_permit">Acclimatization trip for Denali/Foraker</label>
+									</div>
+								</div>
+								<div class="field-container-row">	
+									<div class="field-container checkbox-field-container">
 										<label class="checkmark-container">
 											<input id="input-needs_special_use_permit" class="input-field input-checkbox" type="checkbox" name="needs_special_use_permit" data-table-name="expeditions">
 											<span class="checkmark data-input-checkmark"></span>
@@ -234,35 +228,29 @@
 									</div>
 								</div>
 								<div class="field-container-row">
-									<div class="col-6 pl-0 collapse">
-											<label class="field-label expedition-briefing-link-label" for="expedition-briefing-link">No briefing scheduled</label>
-											<a id="expedition-briefing-link" class="briefing-link" href="briefings.html" target="_blank" aria-hidden="true">Set briefing time</a>
-									</div>
+									<textarea id="input-itinerary_description" class="input-field" name="itinerary_description" placeholder="General itinerary" title="General itinerary" data-table-name="expeditions" required="required"></textarea>
+									<span class="required-indicator">*</span>
+									<label class="field-label ml-1" for="input-itinerary_description">General itinerary</label>
+									<span class="null-input-indicator">&lt; null &gt;</span>
+								</div>
+								<!-- <div class="field-container-row">
 									<div class="col-6 pl-0">
 										<button class="text-only-button jump-link page-bottom-jump-link" role="button" data-target="#cmcs-data-container" title="Scroll to CMC and Comms info">CMC and Comms Info</button>
 									</div>
-								</div>
+								</div> -->
 							</div>
 						</div>
-					</div>
-
-					<div id="expedition-member-data-container" class="expedition-data-wrapper has-motion">
-						<div class="expedition-data-content">
+						<!-- party members -->
+						<div id="members-data-container" class="d-flex flex-wrap w-100 mt-5">
 							<div class="expedition-data-header-container">
-								<div class="d-flex">
-									<button class="expand-card-button icon-button" aria-label="Expand expedition members content" title="Expand expedition members content">
-										<i class="expand-card-icon fa-solid fas fa-2x fa-expand-alt"></i>
-										<label class="icon-button-label">maximize</label>
-									</button>
-									<h3 id="expedition-data-header" class="expedition-data-header">Expedition members</h3>
-								</div>
+								<h3 id="expedition-data-header" class="expedition-data-header">Backcountry Party Members</h3>
 								<button id="show-modal-climber-form-button" class="generic-button add-data-button" data-target="#expedition-members-accordion" title="Add expedition member">Add member</button>
 							</div>
 							<div class="expedition-data-content-body">
 								<div id="expedition-members-accordion" class="accordion" data-table-name="expedition_members" data-item-display-name="expedition member">
 									<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
 										<div class="card-header show-children-on-hover justify-content-between" id="cardHeader-expedition-members-cloneable">
-											<a class="card-link collapsed col-6 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
+											<a class="card-link collapsed col-9 pl-0" data-toggle="collapse" href="#collapse-expedition-members-cloneable" data-target="collapse-expedition-members-cloneable">
 												<div class="card-link-content col-7 pl-0">
 													<h6 class="card-link-label expedition-member-card-link-label col px-0"></h6>
 												</div>
@@ -279,20 +267,6 @@
 														<span class="checkmark data-input-checkmark"></span>
 													</label>
 													<label class="field-label checkbox-label" for="input-is_trip_leader">Leader</label>
-												</div>
-												<div class="col pl-0 card-header-content-container card-header-field-container">
-													<label class="checkmark-container">
-														<input id="input-application_complete" class="input-field input-checkbox file-submission-checkbox" type="checkbox" name="application_complete" data-table-name="expedition_members" title="Permit application complete?">
-														<span class="checkmark data-input-checkmark"></span>
-													</label>
-													<label class="field-label checkbox-label" for="input-application_complete">SUP app.</label>
-												</div>
-												<div class="col px-0 card-header-content-container card-header-field-container">
-													<label class="checkmark-container">
-														<input id="input-psar_complete" class="input-field input-checkbox file-submission-checkbox" type="checkbox" name="psar_complete" data-table-name="expedition_members" title="PSAR form complete?">
-														<span class="checkmark data-input-checkmark"></span>
-													</label>
-													<label class="field-label checkbox-label" for="input-psar_complete">PSAR</label>
 												</div>
 											</div>
 											<div class="member-card-header-chevron-container col-2 pr-0">
@@ -311,9 +285,6 @@
 													<li class="nav-item" role="presentation">
 														<a id="expedition-info-tab-button" class="nav-link active" data-toggle="tab" href="#expedition-info-tab-pane" type="button" role="tab" aria-controls="expedition-info-tab-pane" aria-selected="true" title="Show expedition member info">Member info</a>
 													</li>
-													<li class="nav-item show-transaction-tab-button" role="presentation">
-														<a id="transactions-tab-button" class="nav-link" data-toggle="tab" href="#transactions-tab-pane" type="button" role="tab" aria-controls="transactions-tab-pane" aria-selected="false" title="Show expedition member transactions">Transactions</a>
-													</li>
 													<li class="nav-item" role="presentation">
 														<a id="attachments-tab-button" class="nav-link show-attachment-tab-button" data-toggle="tab" href="#attachments-tab-pane" type="button" role="tab" aria-controls="attachments-tab-pane" aria-selected="false" title="Show expedition member attachments">Attachments</a>
 													</li>
@@ -327,16 +298,25 @@
 														</div>
 														<div class="field-container-row">
 															<div class="field-container col-sm-6">
-																<select id="input-reservation_status" class="input-field default reservation-status-field revertable" name="reservation_status_code" data-table-name="expedition_members" data-lookup-table="group_status_codes" placeholder="Reservation status" title="Reservation status" data-default-value="1" value="1"></select>
-																<label class="field-label" for="input-reservation_status">Expedition member status</label>
+																<select id="input-reservation_status" class="input-field default filled-by-default needs-filled-by-default reservation-status-field revertable no-option-fill group-status-option-field" name="reservation_status_code" data-table-name="expedition_members" placeholder="Party member status" title="Reservation status" data-default-value="4"></select>
+																<label class="field-label" for="input-reservation_status">Party member status</label>
 																<span class="null-input-indicator">&lt; null &gt;</span>
 															</div>	
+														</div>
+														<div class="field-container-row">
 															<div class="field-container checkbox-field-container col-sm-6">
 																<label class="checkmark-container">
 																	<input id="input-flagged" class="input-field input-checkbox" type="checkbox" name="flagged" data-table-name="expedition_members" title="Flag this expedition member">
 																	<span class="checkmark data-input-checkmark"></span>
 																</label>
 																<label class="field-label checkbox-label" for="input-flagged">Flag this expedition member</label>
+															</div>
+															<div class="field-container checkbox-field-container col-sm-6">
+																<label class="checkmark-container">
+																	<input id="input-is_illegal_guide" class="input-field input-checkbox" type="checkbox" name="is_illegal_guide" data-table-name="expedition_members" title="Illegal guide">
+																	<span class="checkmark data-input-checkmark"></span>
+																</label>
+																<label class="field-label checkbox-label" for="input-is_illegal_guide">Confirmed illegal guide</label>
 															</div>
 														</div>
 														<div class="field-container-row">
@@ -348,20 +328,6 @@
 															</div>	
 															<div class="field-container col-sm-6 hidden">
 																<input id="input-flagged_by" class="input-field" name="flagged_by" data-table-name="expedition_members" title="Flagged by" type="text">
-															</div>
-														</div>
-														<div class="field-container-row">
-															<div class="field-container col-sm-6">
-																<input id="input-permit_number" class="input-field" name="permit_number" data-table-name="expedition_members" placeholder="Permit number" title="Permit number" type="text" autocomplete="__never">
-																<label class="field-label" for="input-permit_number">Permit number</label>
-																<span class="null-input-indicator">&lt; null &gt;</span>
-															</div>	
-															<div class="field-container checkbox-field-container col-sm-6">
-																<label class="checkmark-container">
-																	<input id="input-is_illegal_guide" class="input-field input-checkbox" type="checkbox" name="is_illegal_guide" data-table-name="expedition_members" title="Illegal guide">
-																	<span class="checkmark data-input-checkmark"></span>
-																</label>
-																<label class="field-label checkbox-label" for="input-is_illegal_guide">Confirmed illegal guide</label>
 															</div>
 														</div>
 														<div class="field-container-row collapse">
@@ -473,71 +439,6 @@
 															</div>
 														</div>
 													</div>
-													<div id="transactions-tab-pane" class="tab-pane transactions-tab-pane fade" role="tabpanel" aria-labelledby="transactions-tab-button">
-														<div class="transactions-header-container">
-															
-															<h5 class="expedition-data-sub-header"></h5>
-															<button class="generic-button add-data-button add-transaction-button" role="button" type="button" title="Add transaction">Add transaction</button>
-														</div>
-														<div class="transactions-container-body">
-															<div class="data-list-item data-list-item-header">
-																<label class="data-list-col data-list-header-label col-3 transaction-type-column">Type</label>
-																<label class="data-list-col data-list-header-label col-2 payment-method-column">Payment method</label>
-																<label class="data-list-col data-list-header-label col col-13-percent transaction-value-column">Value</label>
-																<label class="data-list-col data-list-header-label col-2 transaction-date-column">Date</label>
-																<label class="data-list-col data-list-header-label col transaction-notes-column">Transaction notes</label>
-																<label class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit by</label>
-																<label class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit date</label>
-															</div>
-															<ul id="transactions-list" class="data-list">
-																<li class="data-list-item show-children-on-hover cloneable hidden">
-																	<div class="col-3 d-flex transaction-type-column">
-																		<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
-																		<span class="required-indicator">*</span>
-																	</div>
-																	<div class="col-2 payment-method-column">
-																		<div class="w-100 d-flex collapse">
-																			<select id="input-payment_method" class="input-field keep-default-option default" name="payment_method_code" data-table-name="transactions" placeholder="Payment method" title="Payment method" required=""></select>
-																			<span class="required-indicator">*</span>
-																		</div>
-																	</div>
-																	<div class="col col-13-percent transaction-value-column">
-																		<span class="unit-symbol">$</span>
-																		<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
-																	</div>
-																	<div class="col-2 d-flex transaction-date-column">
-																		<input id="input-transaction_date" class="input-field" type="date" name="transaction_date" data-table-name="transactions"> 
-																	</div>
-																	<div class="col d-flex transaction-notes-column">
-																		<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
-																		<div class="col pl-1 list-item-delete-button-container">
-																			<button class="icon-button delete-button delete-transaction-button show-on-parent-hover" title="Delete transaction">
-																				<i class="fas fa-trash fa-lg"></i>
-																				<label class="icon-button-label">delete</label>
-																			</button>
-																		</div>
-																	</div>
-																	<div class="data-list-metadata-column modal-only hidden" aria-hidden="true">
-																		<span id="text-last_modified_by" class="input-field entry-metadata-field last-modified-by-field"></span>
-																	</div>
-																	<div class="data-list-metadata-column modal-only hidden" aria-hidden="true">
-																		<span id="text-last_modified_time" class="input-field entry-metadata-field last-modified-time-field"></span>
-																	</div>
-																</li>
-															</ul>
-															<div class="data-list-item data-list-footer">
-																<label class="data-list-col data-list-header-label col-3 transaction-type-column"></label>
-																<label class="data-list-col data-list-header-label col-2 text-right pr-2 payment-method-column">Balance</label>
-																<label class="data-list-col data-list-header-label col col-13-percent total-col transaction-value-column">
-																	<span>$</span><span class="total-span"></span>
-																</label>
-																<label class="data-list-col data-list-header-label col-2 transaction-date-column"></label>
-																<label class="data-list-col data-list-header-label col transaction-notes-column"></label>
-																<label class="data-list-col data-list-header-label data-list-metadata-column modal-only hidden"></label>
-																<label class="data-list-col data-list-header-label data-list-metadata-column modal-only hidden"></label>
-															</div>
-														</div>
-													</div>
 													<div id="attachments-tab-pane" class="tab-pane attachments-tab-pane fade" role="tabpanel" aria-labelledby="attachments-tab-button">
 														<div class="attachments-header-container">
 															<h5 class="expedition-data-sub-header"></h5>
@@ -609,108 +510,188 @@
 
 							</div>
 						</div>
-
-					</div>
-					<div id="routes-data-container" class="expedition-data-wrapper has-motion">
-						<div class="expedition-data-content">
-							<div class="expedition-data-header-container">
-								<div class="d-flex">
-									<button class="expand-card-button icon-button" aria-label="Expand expedition members content" title="Expand expedition members content">
-										<i class="expand-card-icon fa-solid fas fa-2x fa-expand-alt"></i>
-										<label class="icon-button-label">maximize</label>
-									</button>
-									<h3 id="expedition-data-header" class="expedition-data-header">Routes</h3>
+						<!-- routes -->
+						<div id="routes-data-container" class="d-flex flex-wrap w-100 mt-5">
+								<div class="expedition-data-header-container">
+									<div class="d-flex">
+										<button class="expand-card-button icon-button" aria-label="Expand expedition members content" title="Expand expedition members content">
+											<i class="expand-card-icon fa-solid fas fa-2x fa-expand-alt"></i>
+											<label class="icon-button-label">maximize</label>
+										</button>
+										<h3 id="expedition-data-header" class="expedition-data-header">Routes</h3>
+									</div>
+									<button class="generic-button add-card-button" data-target="#routes-accordion" title="Add route">Add route</button>
 								</div>
-								<button class="generic-button add-card-button" data-target="#routes-accordion" title="Add route">Add route</button>
+								<div class="expedition-data-content-body">
+									<div id="routes-accordion" class="accordion" data-table-name="expedition_member_routes" data-item-display-name="expedition route">
+										<div id="cloneable-card-routes" class="card expedition-card cloneable hidden" >
+											<div class="card-header show-children-on-hover" id="cardHeader-routes-cloneable">
+												<div class="col-3 pr-0 d-flex">
+													<select id="mountain-code-header-input" class="input-field card-link-label route-code-header-input mountain-code-header-input expedition-member-card-link-label" name="mountain_code">
+														<option value="">Select mountain</option>
+													</select>
+												</div>
+												<div class="col-4 d-flex">
+													<select id="route-code-header-input" class="input-field card-link-label route-code-header-input expedition-member-card-link-label no-option-fill" name="route_code">
+														<option value="">Select route</option>
+													</select>
+												</div>
+												<a class="card-link" data-toggle="collapse" href="#collapse-routes-cloneable" data-target="collapse-routes-cloneable">
+													<div class="card-link-content">
+														<!--<h6 class="card-link-label expedition-member-card-link-label"></h6>-->
+													</div>
+													<div class="card-link-content">
+														<button class="delete-card-button icon-button delete-route-button show-on-parent-hover" title="Delete route">
+															<i class="fa fa-trash"></i>
+														</button>
+														<i class="fa fa-chevron-down pull-right"></i>
+													</div>
+												</a>
+											</div>
+											<div id="collapse-routes-cloneable" class="collapse card-collapse show" aria-labelledby="cardHeader-routes-cloneable" data-parent="#routes-accordion">
+												<div class="card-body">
+													<div class="data-list-item data-list-item-header">
+														<label class="data-list-col data-list-header-label col-4 route-member-name-column"></label>
+														<label class="data-list-col data-list-header-label col-2 text-center route-summited-column">Summited?</label>
+														<label class="data-list-col data-list-header-label col-3 text-center route-summit-date-column">Summit date</label>
+														<label class="data-list-col data-list-header-label col-2 route-highest-elevation-column">Highest elevation (ft)</label>
+														<label class="data-list-col data-list-header-label col"></label>
+													</div>
+													<ul id="route-member-list" class="data-list route-member-list">
+														<li class="data-list-item cloneable show-children-on-hover hidden">
+															<!-- route_code and route_order inputs are hidden because the select in the .card-header controls the value for all of them-->
+															<input id="input-route_code" class="input-field hidden" type="number" name="route_code" data-table-name="expedition_member_routes">
+															<input id="input-route_order" class="input-field hidden" type="number" name="route_order" data-table-name="expedition_member_routes">
+															
+															<div class="col-4 route-member-name-column">
+																<label class="data-list-header-label name-label"></label>
+															</div>
+															<div class="col-2 center-checkbox-col route-summited-column">
+																<label class="checkmark-container">
+																	<input id="input-route_summited" class="input-field input-checkbox route-summited-checkbox" type="checkbox" name="route_was_summited" data-table-name="expedition_member_routes" title="Route summitted?">
+																	<span class="checkmark data-input-checkmark"></span>
+																</label>
+															</div>
+															<div class="col-3 route-summit-date-column">
+																<div class="field-container collapse">
+																	<input id="input-summit_date" class="input-field text-center" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
+																</div>
+															</div>
+															<div class="col-2 route-highest-elevation-column">
+																<div class="field-container ">
+																	<input id="input-highest_elevation" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest elevation in feet"> 
+																</div>
+															</div>
+															<div class="col list-item-delete-button-container">
+																<button class="icon-button delete-button delete-route-member-button show-on-parent-hover" title="Delete expedition member route">
+																	<i class="fas fa-trash fa-lg"></i>
+																	<label class="icon-button-label">delete</label>
+																</button>
+															</div>
+														</li>
+													</ul>
+													<div class="data-list-item data-list-footer">
+														<div class="data-list-col data-list-header-label col-4 route-member-name-column">
+															<button class="text-only-button route-list-footer-button add-expedition-route-member-button w-100 text-left px-0 mx-0 hidden" aria-hidden="True" title="Add expedition member to route">Add member to route</button>
+														</div>
+														<div class="data-list-col data-list-header-label center-checkbox-col col-2 route-summited-column">
+															<button class="text-only-button route-list-footer-button check-all-summitted-button w-100" title="Mark all climbers as summited">check all</button>
+														</div>
+														<label class="data-list-col data-list-header-label col-3 text-center route-summit-date-column"></label>
+														<label class="data-list-col data-list-header-label col-2 route-highest-elevation-column"></label>
+														<label class="data-list-col data-list-header-label col-1"></label>
+													</div>
+												</div>
+											</div>
+										</div> <!-- card -->
+									</div> <!-- routes-accordion -->	
+								</div>
+						</div>
+					</div>
+					<div class="backcountry-data-column col-lg-6">
+						<!-- locations -->
+						<div id="locations-data-container" class="d-flex flex-wrap w-100">
+							<div id="main-map" class="col map-container"></div>
+							<div class="expedition-data-header-container">
+								<h3 id="expedition-data-header" class="expedition-data-header">Itinerary Locations</h3>
+								<button id="add-location-button" class="generic-button add-data-button" data-target="#locations-accordion" title="Add location">Add location</button>
 							</div>
 							<div class="expedition-data-content-body">
-								<div id="routes-accordion" class="accordion" data-table-name="expedition_member_routes" data-item-display-name="expedition route">
-									<div id="cloneable-card-routes" class="card expedition-card cloneable hidden" >
-										<div class="card-header show-children-on-hover" id="cardHeader-routes-cloneable">
-											<div class="col-3 pr-0 d-flex">
-												<select id="mountain-code-header-input" class="input-field card-link-label route-code-header-input mountain-code-header-input expedition-member-card-link-label" name="mountain_code">
-													<option value="">Select mountain</option>
-												</select>
-											</div>
-											<div class="col-4 d-flex">
-												<select id="route-code-header-input" class="input-field card-link-label route-code-header-input expedition-member-card-link-label no-option-fill" name="route_code">
-													<option value="">Select route</option>
-												</select>
-											</div>
-											<a class="card-link" data-toggle="collapse" href="#collapse-routes-cloneable" data-target="collapse-routes-cloneable">
-												<div class="card-link-content">
-													<!--<h6 class="card-link-label expedition-member-card-link-label"></h6>-->
-												</div>
-												<div class="card-link-content">
-													<button class="delete-card-button icon-button delete-route-button show-on-parent-hover" title="Delete route">
-														<i class="fa fa-trash"></i>
-													</button>
-													<i class="fa fa-chevron-down pull-right"></i>
-												</div>
+								<div id="locations-accordion" class="accordion" data-table-name="backcountry_locations" data-item-display-name="location">
+									<div id="cloneable-card-expedition-members" class="card expedition-card cloneable hidden">
+										<div class="card-header show-children-on-hover justify-content-between" id="cardHeader-location-cloneable">
+											<a class="card-link collapsed col-10 pl-0" data-toggle="collapse" href="#collapse-location-cloneable" data-target="collapse-location-cloneable">
+												<h6 class="card-link-label col px-0">New location</h6>
 											</a>
+											<div class="member-card-header-chevron-container col-2 pr-0">
+												<button class="zoom-to-location-button icon-button show-on-parent-hover" title="Zoom to location">
+													<i class="fa-solid fa-2xl fa-magnifying-glass-location"></i>
+												</button>
+												<button class="delete-card-button icon-button show-on-parent-hover" title="Delete location">
+													<i class="fa fa-trash"></i>
+												</button>
+												<i class="fa fa-chevron-down pull-right"></i>
+											</div>
 										</div>
-										<div id="collapse-routes-cloneable" class="collapse card-collapse show" aria-labelledby="cardHeader-routes-cloneable" data-parent="#routes-accordion">
+										<div id="collapse-location-cloneable" class="collapse card-collapse" aria-labelledby="cardHeader-location-cloneable" data-parent="#locations-accordion">
 											<div class="card-body">
-												<div class="data-list-item data-list-item-header">
-													<label class="data-list-col data-list-header-label col-4 route-member-name-column"></label>
-													<label class="data-list-col data-list-header-label col-2 text-center route-summited-column">Summited?</label>
-													<label class="data-list-col data-list-header-label col-3 text-center route-summit-date-column">Summit date</label>
-													<label class="data-list-col data-list-header-label col-2 route-highest-elevation-column">Highest elevation (ft)</label>
-													<label class="data-list-col data-list-header-label col"></label>
-												</div>
-												<ul id="route-member-list" class="data-list route-member-list">
-													<li class="data-list-item cloneable show-children-on-hover hidden">
-														<!-- route_code and route_order inputs are hidden because the select in the .card-header controls the value for all of them-->
-														<input id="input-route_code" class="input-field hidden" type="number" name="route_code" data-table-name="expedition_member_routes">
-														<input id="input-route_order" class="input-field hidden" type="number" name="route_order" data-table-name="expedition_member_routes">
-														
-														<div class="col-4 route-member-name-column">
-															<label class="data-list-header-label name-label"></label>
-														</div>
-														<div class="col-2 center-checkbox-col route-summited-column">
-															<label class="checkmark-container">
-																<input id="input-route_summited" class="input-field input-checkbox route-summited-checkbox" type="checkbox" name="route_was_summited" data-table-name="expedition_member_routes" title="Route summitted?">
-																<span class="checkmark data-input-checkmark"></span>
-															</label>
-														</div>
-														<div class="col-3 route-summit-date-column">
-															<div class="field-container collapse">
-																<input id="input-summit_date" class="input-field text-center" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
-															</div>
-														</div>
-														<div class="col-2 route-highest-elevation-column">
-															<div class="field-container ">
-																<input id="input-highest_elevation" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest elevation in feet"> 
-															</div>
-														</div>
-														<div class="col list-item-delete-button-container">
-															<button class="icon-button delete-button delete-route-member-button show-on-parent-hover" title="Delete expedition member route">
-																<i class="fas fa-trash fa-lg"></i>
-																<label class="icon-button-label">delete</label>
-															</button>
-														</div>
-													</li>
-												</ul>
-												<div class="data-list-item data-list-footer">
-													<div class="data-list-col data-list-header-label col-4 route-member-name-column">
-														<button class="text-only-button route-list-footer-button add-expedition-route-member-button w-100 text-left px-0 mx-0 hidden" aria-hidden="True" title="Add expedition member to route">Add member to route</button>
+												<div class="d-flex col-11 flex-wrap">
+													<div class="field-container col-3 px-1">
+														<select id="input-location_type" class="input-field default" name="backcountry_location_type_code" placeholder="Location type" data-table-name="itinerary_locations"></select>
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-location_type">Location type</label>
 													</div>
-													<div class="data-list-col data-list-header-label center-checkbox-col col-2 route-summited-column">
-														<button class="text-only-button route-list-footer-button check-all-summitted-button w-100" title="Mark all climbers as summited">check all</button>
+													<div class="field-container col-3 px-1">
+														<select id="input-location_name" class="input-field default" name="backcountry_location_code" placeholder="Location name" data-table-name="itinerary_locations"></select>
+														<span class="required-indicator">*</span>
+														<label class="field-label" for="input-location_name">Location name</label>
 													</div>
-													<label class="data-list-col data-list-header-label col-3 text-center route-summit-date-column"></label>
-													<label class="data-list-col data-list-header-label col-2 route-highest-elevation-column"></label>
-													<label class="data-list-col data-list-header-label col-1"></label>
+													<div class="field-container col-3 px-1">
+														<input id="input-location_start" class="input-field" name="location_start_date" type="date" placeholder="Location start date" data-table-name="itinerary_locations">
+														<label class="field-label" for="input-location_start">Start date</label>
+													</div>
+													<div class="field-container col-3 px-1 collapse">
+														<input id="input-location_end" class="input-field" name="location_end_date" type="date" placeholder="Location end date" data-table-name="itinerary_locations" data-dependent-target="#input-location_type" data-dependent-value="2">
+														<label class="field-label" for="input-location_end">End date</label>
+													</div>
+													<div class="w-100"></div>
+													<div class="d-flex w-100">
+														<div class="field-container col-3 px-1">
+															<input id="input-location_latitude" class="input-field location-coordinate-field revertable" name="latitude" type="number" step="0.0000001" placeholder="Latitude" data-table-name="itinerary_locations"></select>
+															<span class="required-indicator">*</span>
+															<label class="field-label" for="input-location_type">Latitude</label>
+														</div>
+														<div class="field-container col-3 px-1">
+															<input id="input-location_name" class="input-field location-coordinate-field revertable" name="longitude" type="number" step="0.0000001" placeholder="Longitude" data-table-name="itinerary_locations">
+															<span class="required-indicator">*</span>
+															<label class="field-label" for="input-location_name">Longitude</label>
+														</div>
+													</div>
+													<div class="field-container hidden" aria-hidden="true"> 
+														<!-- this field is permanently hidden because it only needs to exist so that the database can record the card order-->
+														<input id="input-location_display_order" class="input-field" name="display_order" type="number" placeholder="Display order" data-table-name="itinerary_locations"></select>
+													</div>
 												</div>
+
 											</div>
 										</div>
 									</div> <!-- card -->
-								</div> <!-- routes-accordion -->	
+								</div> <!-- locations-accordion -->		
+<!-- 								<ul id="locations-list" class="data-list ">
+									<li class="data-list-item backcountry-location-list-item show-children-on-hover cloneable" aria-hidden="true">
+										<div class="col pl-1 list-item-delete-button-container">
+											<button class="icon-button delete-button delete-transaction-button show-on-parent-hover" title="Delete transaction">
+												<i class="fas fa-trash fa-lg"></i>
+												<label class="icon-button-label">delete</label>
+											</button>
+										</div>
+									</li>
+								</ul> -->
 							</div>
 						</div>
-					</div>
-					<div class="expedition-data-wrapper">
-						<div id="cmcs-data-container" class="expedition-data-content">
+
+						<!-- CMCs -->
+						<div id="cmcs-data-container" class="d-flex flex-wrap w-100 mt-5">
 							<div class="expedition-data-header-container">
 								<h3 id="expedition-data-header" class="expedition-data-header">CMCs</h3>
 								<button class="generic-button add-data-button add-cmc-button" data-target="#cmc-list" title="Add CMC">Add CMC</button>
@@ -748,9 +729,9 @@
 								
 							</div>
 						</div>
-					</div>
-					<div class="expedition-data-wrapper">
-						<div id="comms-data-container" class="expedition-data-content">
+
+						<!-- comms -->
+						<div id="comms-data-container" class="d-flex flex-wrap w-100 mt-5">
 							<div class="expedition-data-header-container">
 								<h3 id="expedition-data-header" class="expedition-data-header">Comms Devices</h3>
 								<button class="generic-button add-data-button add-comms-button" data-target="#comms-list" title="Add comms">Add comms</button>
@@ -919,7 +900,7 @@
 	</div>
 
 	<!-- cache tag preview modal -->
-	<div class="modal fade centered-modal print-preview-modal" id="cache-tag-modal" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal fade print-preview-modal" id="cache-tag-modal" tabindex="-1" role="dialog" aria-hidden="true">
 	  <div class="modal-dialog" role="document">
 	    <div class="modal-content">
 	      <div class="modal-body modal-img-body" >
@@ -955,12 +936,13 @@
 	<script src="js/climberdb.js"></script>
 	<script src="js/climbers.js"></script>
 	<script src="js/expeditions.js"></script>
+	<script src="js/backcountry.js"></script>
 	
 	<script>
 		var climberDB;
 		$(document).ready(function(){
 
-			climberDB = new ClimberDBExpeditions();
+			climberDB = new ClimberDBBackcountry();
 			climberDB.init(); 
 
 		});

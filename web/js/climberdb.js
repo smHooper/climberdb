@@ -234,6 +234,8 @@ class ClimberDB {
 		}
 		this.urlChannels = {}; // for checking if a URL is already open in another tab/window
 		this.nonEditingUserRoles = [2, 5]; // for checking if user has edit privs
+		this.environment = '';
+		this.dbSchema = '';
 	}
 
 	getUserInfo() {
@@ -368,6 +370,13 @@ class ClimberDB {
 							<a href="expeditions.html">
 								<img class="sidebar-nav-item-icon" src="imgs/groups_icon_50px.svg">
 								<span class="sidebar-nav-item-label">expeditions</span>
+							</a>
+						</li>
+
+						<li class="nav-item">
+							<a href="backcountry.html">
+								<img class="sidebar-nav-item-icon" src="imgs/bc_icon_50px.svg">
+								<span class="sidebar-nav-item-label">backcountry</span>
 							</a>
 						</li>
 
@@ -593,7 +602,7 @@ class ClimberDB {
 			const id = el.id;
 			if (lookupTableName != 'undefineds') {//if neither data-lookup-table or name is defined, lookupTableName === 'undefineds' 
 				if (placeholder) $('#' + id).append(`<option class="" value="">${placeholder}</option>`);
-				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${lookupTableName} ${$el.is('.include-disabled-options') ? '' : 'WHERE sort_order IS NOT NULL'} ORDER BY sort_order`);
+				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${this.dbSchema}.${lookupTableName} ${$el.is('.include-disabled-options') ? '' : 'WHERE sort_order IS NOT NULL'} ORDER BY sort_order`);
 				
 			}
 		});
@@ -678,9 +687,7 @@ class ClimberDB {
 		}
 
 		// Close any open cards
-		$accordion.find('.card:not(.cloneable) .collapse.show').removeClass('show');/*.each(
-			function() {$(this)rem}
-		);*/
+		$accordion.find('.card:not(.cloneable) .collapse.show').removeClass('show');
 
 		// Get ID suffix for all children elements. Suffix is the 
 		//	<element_identifier>-<section_index>-<card_index>.
@@ -726,9 +733,9 @@ class ClimberDB {
 			
 			// If this depends on another input AND that input has a .cloneable parent, update the 
 			//	dependent target attribute with the card id so the right input will find its dependents
-			const $dependentTarget = $($el.data('dependent-target'));
+			const $dependentTarget = $($el.attr('data-dependent-target'));
 			if ($dependentTarget.length && $dependentTarget.closest('.cloneable').length)
-				$el.data('dependent-target', `${$el.data('dependent-target')}-${cardIndex}`);
+				$el.attr('data-dependent-target', `${$el.attr('data-dependent-target')}-${cardIndex}`);
 
 			$el.removeClass('error')
 				.attr('id', newID)
@@ -736,11 +743,16 @@ class ClimberDB {
 					.attr('for', newID);
 			if (dataTable in updateIDs)  $el.attr('data-table-id', updateIDs[dataTable]);
 			if ($el.is('select')) {
-				$el.val('').addClass('default');
+				const defaultValue = $el.data('default-value');
+				if (defaultValue) {
+					$el.val(defaultValue);
+				} else {	
+					$el.val('').addClass('default');
+				}
 			}
 		}
 
-		for (const el of $newCard.find('label.generic-button')) {
+		for (const el of $newCard.find('label.generic-button, .field-label.checkbox-label')) {
 			const $el = $(el);
 			if ($el.prop('for')) {
 				$el.prop('for', `${$el.prop('for')}-${cardIndex}`);
@@ -862,11 +874,11 @@ class ClimberDB {
 
 		// Get all the elements with a data-dependent-target 
 		const $dependentElements = $(`
-				.collapse.field-container .input-field, 
-				.collapse.field-container-row .input-field,
-				.collapse.accordion, 
-				.collapse.add-item-container .add-item-button
-			`).filter((_, el) => $(el).data('dependent-target') === selectID);
+				.collapse.field-container .input-field[data-dependent-target="{target}"], 
+				.collapse.field-container-row .input-field[data-dependent-target="{target}"],
+				.collapse.accordion[data-dependent-target="{target}"], 
+				.collapse.add-item-container .add-item-button[data-dependent-target="{target}"]
+			`.replace(/\{target\}/g, selectID));
 		//const dependentIDs = $select.data('dependent-target');
 		//var dependentValues = $select.data('dependent-value');
 		for (const el of $dependentElements) {
@@ -946,7 +958,7 @@ class ClimberDB {
 	Helper function to reset the values/classes of all inputs within a given parent to their defaults
 	*/
 	clearInputFields({parent='body', triggerChange=true}={}) {
-		for (const el of $(parent).find('.input-field:not(.no-option-fill)')) {
+		for (const el of $(parent).find('.input-field')) {
 			const $el = $(el);
 			
 			// Skip any input-fields with a cloneable parent can't filter these out in .find() 
@@ -1217,7 +1229,7 @@ class ClimberDB {
 
 
 	getTableInfo() {
-		return this.queryDB('SELECT * FROM table_info_matview').done(resultString => {
+		return this.queryDB(`SELECT * FROM table_info_matview`).done(resultString => {
 			// the only way this query could fail is if I changed DBMS, 
 			//	so I won't bother to check that the result is valid
 			var insertOrder = this.tableInfo.insertOrder;
@@ -1359,7 +1371,7 @@ class ClimberDB {
 										regexp_replace(last_name, '\\W', '', 'g') AS re_last_name,
 										regexp_replace(full_name, '\\W', '', 'g') AS re_full_name,
 										${queryFields}
-									FROM climber_info_view
+									FROM ${this.dbSchema}.climber_info_view
 								)
 								SELECT ${queryFields}, 1 AS sort_order FROM climber_names WHERE 
 									re_first_name ILIKE '${searchString}%' 
@@ -1405,14 +1417,14 @@ class ClimberDB {
 							) t 
 						GROUP BY full_name, id
 					) gb 
-				JOIN climber_info_view ON gb.id = climber_info_view.id 
+				JOIN ${this.dbSchema}.climber_info_view ON gb.id = climber_info_view.id 
 				${whereClause}
 				ORDER BY first_sort_order::text || full_name
 			` :
 			`
 				SELECT 
 					* 
-				FROM climber_info_view 
+				FROM ${this.dbSchema}.climber_info_view 
 				${whereClause}
 			`
 			;
@@ -1465,7 +1477,7 @@ class ClimberDB {
 
 		let whereClause = '';
 		if ($searchContainer.find('.7-day-only-filter').prop('checked')) 
-			whereClause += ' WHERE climber_info_view.id IN (SELECT climber_id FROM seven_day_rule_view) ';
+			whereClause += ` WHERE ${this.dbSchema}.climber_info_view.id IN (SELECT climber_id FROM ${this.dbSchema}.seven_day_rule_view) `;
 		const $guideOnlyCheckbox = $searchContainer.find('.guide-only-filter');
 		if ($guideOnlyCheckbox.prop('checked')) 
 			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
@@ -1625,6 +1637,14 @@ class ClimberDB {
 
 		this.loginInfo = $.parseJSON(window.localStorage.getItem('login') || '{}');
 
+		const envDeferred = $.get('/flask/environment')
+			.done(response => {
+				if (!this.pythonReturnedError(response)) {
+					this.environment = response;
+					this.dbSchema = response === 'dev' ? response : 'public';
+				}
+			})
+
 		if (addMenu) {
 			this.configureMenu();
 
@@ -1655,9 +1675,10 @@ class ClimberDB {
 				.addClass('selected');
 		
 		const userDeferred = this.getUserInfo()
-			.done(response => {
-				const result = response;
-				const username = result.ad_username;
+		//const finalDeferred = $.when(envDeferred, userDeferred)
+		return $.when(envDeferred, userDeferred)
+			.done((_, [userInfoResult, userInfoStatus, userInfoXHR]) => {
+				const username = userInfoResult.ad_username;
 				if (addMenu && username !== 'test') {
 					if (this.loginInfo.username !== username || this.loginInfo.expiration < new Date().getTime()) {
 						$('#climberdb-main-content').empty();
@@ -1669,8 +1690,9 @@ class ClimberDB {
 				if (window.location.pathname !== '/index.html' && this.userInfo.user_status_code != 2) {
 					window.location = 'index.html'
 				}
+			
+				return $.when(this.getTableInfo(), this.loadConfigValues());
 			});
-		return [userDeferred, this.getTableInfo(), this.loadConfigValues()];
 	}
 };
 
@@ -1705,8 +1727,11 @@ class ClimberDB {
  	/*
  	Helper function to remove a DOM element with a fade
  	*/
- 	$.fn.fadeRemove = function(fadeTime=500) {
- 		 return this.fadeOut(fadeTime, () => {this.remove()});
+ 	$.fn.fadeRemove = function({fadeTime=500, onRemove=()=>{}}={}) {
+ 		 return this.fadeOut(fadeTime, () => {
+ 		 	this.remove();
+ 		 	onRemove.call();
+ 		 });
  	}
 }( jQuery ));
 

@@ -395,10 +395,10 @@ class ClimberDBUsers extends ClimberDB {
 		var sql;
 		if (isInsert) {
 			// insert
-			sql = `INSERT INTO users (${fields.join(',')}) VALUES (${fields.map(f => '$' + (fields.indexOf(f) + 1))}) RETURNING id`;
+			sql = `INSERT INTO ${this.dbSchema}.users (${fields.join(',')}) VALUES (${fields.map(f => '$' + (fields.indexOf(f) + 1))}) RETURNING id`;
 		} else {
 			// update
-			sql = `UPDATE users SET ${fields.map(f => `${f}=$${fields.indexOf(f) + 1}`)} WHERE id=${userID}`;
+			sql = `UPDATE ${this.dbSchema}.users SET ${fields.map(f => `${f}=$${fields.indexOf(f) + 1}`)} WHERE id=${userID}`;
 		}
 
 		return $.post({ 
@@ -601,17 +601,17 @@ class ClimberDBUsers extends ClimberDB {
 
 	loadSelectOptions() {
 		return [
-			this.queryDB(`SELECT name, code FROM user_role_codes WHERE code NOT IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`).done(queryResultString => {
+			this.queryDB(`SELECT name, code FROM ${this.dbSchema}.user_role_codes WHERE code NOT IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`).done(queryResultString => {
 				// No need to check result
 				const codes = $.parseJSON(queryResultString);
 				this.userRoleOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
 			}),
-			this.queryDB(`SELECT name, code FROM user_role_codes WHERE code IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`).done(queryResultString => {
+			this.queryDB(`SELECT name, code FROM ${this.dbSchema}.user_role_codes WHERE code IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`).done(queryResultString => {
 				// No need to check result
 				const codes = $.parseJSON(queryResultString);
 				this.noLoginRoleOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
 			}),
-			this.queryDB('TABLE user_status_codes ORDER BY sort_order;').done(queryResultString => {
+			this.queryDB(`TABLE ${this.dbSchema}.user_status_codes ORDER BY sort_order;`).done(queryResultString => {
 				// No need to check result
 				const codes = $.parseJSON(queryResultString);
 				this.userStatusOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
@@ -632,7 +632,7 @@ class ClimberDBUsers extends ClimberDB {
 				email_address,
 				user_role_code,
 				user_status_code 
-			FROM users 
+			FROM ${this.dbSchema}.users 
 			ORDER BY 
 				user_status_code DESC,
 				first_name, 
@@ -663,7 +663,7 @@ class ClimberDBUsers extends ClimberDB {
 	init() {
 		// Call super.init()
 		this.showLoadingIndicator('init');
-		var initDeferreds = $.when(...super.init())
+		return super.init()
 			.then(() => { 
 				return this.checkUserRole()
 			})
@@ -679,7 +679,5 @@ class ClimberDBUsers extends ClimberDB {
 			.always(() => {
 				hideLoadingIndicator();
 			});
-
-		return initDeferreds;
 	}
 }

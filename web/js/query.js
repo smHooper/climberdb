@@ -8,9 +8,9 @@ class ClimberDBQuery extends ClimberDB {
 		this.result = [];
 		this.ancillaryResult = []; // for things like briefings that go along with 
 		this.countClimbersBySelectMap = { // mapping #count_climbers-count_field values to SELECT statements for readability
-			climbers: 'SELECT DISTINCT ON (climber_id) * FROM all_climbs_view',
-			members:  'SELECT DISTINCT ON (expedition_member_id) * FROM all_climbs_view',
-			climbs:   'SELECT * FROM all_climbs_view',
+			climbers: `SELECT DISTINCT ON (climber_id) * FROM {schema}.all_climbs_view`,
+			members:  `SELECT DISTINCT ON (expedition_member_id) * FROM {schema}.all_climbs_view`,
+			climbs:   `SELECT * FROM {schema}.all_climbs_view`,
 		}
 		this.minDragbarPageY = 220; // min height to prevent user from covering query title when resizing param container
 		this.queries = {
@@ -49,15 +49,15 @@ class ClimberDBQuery extends ClimberDB {
 							WHEN application_complete AND climbing_fees.balance <= 0 AND entrance_fees.balance <= 0 THEN 'COMPLETE'
 							ELSE 'INCOMPLETE'
 						END AS "Registration Complete"
-					FROM expedition_info_view info 
-						JOIN group_status_codes codes 
+					FROM {schema}.expedition_info_view info 
+						JOIN {schema}.group_status_codes codes 
 							ON info.reservation_status_code = codes.code   
 						LEFT JOIN 
 							(
 								SELECT 
 									expedition_member_id, 
 									sum(transaction_value)::NUMERIC AS balance 
-								FROM transactions 
+								FROM {schema}.transactions 
 								WHERE transaction_type_code IN (${this.constants.climbingFeeTransactionCodes}) 
 								GROUP BY expedition_member_id 
 							) climbing_fees 
@@ -67,7 +67,7 @@ class ClimberDBQuery extends ClimberDB {
 								SELECT 
 									expedition_member_id, 
 									sum(transaction_value)::NUMERIC AS balance 
-								FROM transactions 
+								FROM {schema}.transactions 
 								WHERE transaction_type_code IN (${this.constants.entranceFeeTransactionCodes}) 
 								GROUP BY expedition_member_id 
 							) entrance_fees ON info.expedition_member_id = entrance_fees.expedition_member_id
@@ -107,9 +107,9 @@ class ClimberDBQuery extends ClimberDB {
 							min(to_char(briefing_start, 'FMMM/FMDD/YY')) AS "Briefing Date",
 							min(to_char(briefing_start, 'FMHH12:MI')) AS "Briefing Time",
 							count(*) AS "Number of Climbers"
-						FROM briefings
-							JOIN expeditions ON briefings.expedition_id = expeditions.id
-							JOIN expedition_members ON expedition_members.expedition_id = expeditions.id
+						FROM {schema}.briefings
+							JOIN {schema}.expeditions ON briefings.expedition_id = expeditions.id
+							JOIN {schema}.expedition_members ON expedition_members.expedition_id = expeditions.id
 						WHERE
 							guide_company_code = {guide_company_code} AND 
 							extract(year FROM planned_departure_date) = {year}
@@ -158,11 +158,11 @@ class ClimberDBQuery extends ClimberDB {
 											THEN 1
 										ELSE 0
 									END AS within_peak
-								FROM expeditions
-									JOIN expedition_members ON expeditions.id = expedition_members.expedition_id 
-									JOIN expedition_member_routes on expedition_members.id = expedition_member_routes.expedition_member_id
-									JOIN guide_company_codes ON expeditions.guide_company_code = guide_company_codes.code
-									JOIN route_codes ON route_codes.code=expedition_member_routes.route_code
+								FROM {schema}.expeditions
+									JOIN {schema}.expedition_members ON expeditions.id = expedition_members.expedition_id 
+									JOIN {schema}.expedition_member_routes on expedition_members.id = expedition_member_routes.expedition_member_id
+									JOIN {schema}.guide_company_codes ON expeditions.guide_company_code = guide_company_codes.code
+									JOIN {schema}.route_codes ON route_codes.code=expedition_member_routes.route_code
 								WHERE 
 									reservation_status_code <> 6 AND 
 									group_status_code <> 6 AND 
@@ -210,9 +210,9 @@ class ClimberDBQuery extends ClimberDB {
 						flagged_by AS "Flagged By",
 						expedition_id,
 						climber_id
-					FROM expeditions
-						JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
-						JOIN climbers ON climbers.id = expedition_members.climber_id
+					FROM {schema}.expeditions
+						JOIN {schema}.expedition_members ON expeditions.id = expedition_members.expedition_id
+						JOIN {schema}.climbers ON climbers.id = expedition_members.climber_id
 					WHERE
 						flagged AND 
 						extract(year FROM planned_departure_date) = {year}
@@ -253,8 +253,8 @@ class ClimberDBQuery extends ClimberDB {
 								planned_departure_date AS "Planned Departure",
 								group_status_codes.name AS "Group Status",
 								every(sex_code = 1) AS is_all_female
-							FROM registered_climbs_view
-								JOIN group_status_codes ON group_status_code = group_status_codes.code
+							FROM {schema}.registered_climbs_view
+								JOIN {schema}.group_status_codes ON group_status_code = group_status_codes.code
 							WHERE 
 								extract(year FROM planned_departure_date) = {year}
 							GROUP BY 
@@ -284,8 +284,8 @@ class ClimberDBQuery extends ClimberDB {
 					expedition_name AS "Group Name",
 					planned_return_date AS "Planned Return",
 					COUNT(climber_id) AS "Climber Count"
-				FROM expeditions
-					JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
+				FROM {schema}.expeditions
+					JOIN {schema}.expedition_members ON expeditions.id = expedition_members.expedition_id
 				WHERE 
 					extract(year FROM planned_return_date) = extract(year FROM now()) AND
 					planned_return_date < now()::date AND
@@ -317,9 +317,9 @@ class ClimberDBQuery extends ClimberDB {
 					coalesce(expedition_members.reason_for_pro_pin, '') AS "Reason", 
 					climber_id,
 					expedition_id
-				FROM expedition_members 
-					JOIN climbers ON climbers.id = expedition_members.climber_id and climbers.id = expedition_members.climber_id 
-					JOIN expeditions ON expeditions.id=expedition_members.expedition_id
+				FROM {schema}.expedition_members 
+					JOIN {schema}.climbers ON climbers.id = expedition_members.climber_id and climbers.id = expedition_members.climber_id 
+					JOIN {schema}.expeditions ON expeditions.id=expedition_members.expedition_id
 				WHERE 
 					extract(year FROM actual_departure_date) {year} AND 
 					expedition_members.received_pro_pin -- AND expedition_members.reason_for_pro_pin IS NOT NULL
@@ -347,8 +347,8 @@ class ClimberDBQuery extends ClimberDB {
 						expedition_name AS "Group Name",
 						planned_return_date AS "Planned Return",
 						COUNT(climber_id) AS "Climber Count"
-					FROM expeditions
-						JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
+					FROM {schema}.expeditions
+						JOIN {schema}.expedition_members ON expeditions.id = expedition_members.expedition_id
 					{where_clauses}
 					GROUP BY
 						expedition_id,
@@ -381,7 +381,7 @@ class ClimberDBQuery extends ClimberDB {
 								expedition_member_id, 
 								mountain_name, 
 								least(coalesce(actual_return_date, now())::date, '{year}-{month}-1'::date + interval '1 month') - greatest(actual_departure_date, '{year}-{month}-1') AS days 
-							FROM registered_climbs_view
+							FROM {schema}.registered_climbs_view
 							WHERE 
 								actual_departure_date IS NOT NULL AND 
 								coalesce(special_group_type_code, -1) <> 3 AND 
@@ -1203,7 +1203,7 @@ class ClimberDBQuery extends ClimberDB {
 	query processing functions can still use the same code
 	*/
 	submitQuery(sql, {queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
-		return this.queryDB(sql)
+		return this.queryDB(sql.replace(/\{schema\}/g, this.dbSchema))
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
 					const queryDisplayName = $('.query-option.selected').text();
@@ -1326,7 +1326,7 @@ class ClimberDBQuery extends ClimberDB {
 
 		const where = this.getExpeditionByNameIDWhere();
 		
-		const sql = `SELECT id FROM expeditions ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id`;
+		const sql = `SELECT id FROM ${this.dbSchema}.expeditions ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id`;
 		this.queryDB(sql)
 			.done(response => {
 				if (this.queryReturnedError(response)) {
@@ -1537,12 +1537,12 @@ class ClimberDBQuery extends ClimberDB {
 			if (returnData === 'climbers') {
 				this.queries.count_climbers.columns = ['Climber name', ...whereFieldAliases];
 				outerSelectClause = 'climber_name AS "Climber name", climber_id, ' + whereFieldSelectString;
-				innerSelectStatement = 'SELECT DISTINCT ON (climber_id) * FROM all_climbs_view';
+				innerSelectStatement = this.countClimbersBySelectMap.climbers;
 				this.queries.count_climbers.hrefs = {'Climber name': 'climbers.html?id={climber_id}'}
 			} else if (returnData === 'expeditions') {
 				this.queries.count_climbers.columns = ['Expedition name', ...whereFieldAliases];
 				outerSelectClause = 'expedition_name AS "Expedition name", expedition_id, ' +  whereFieldSelectString;
-				innerSelectStatement = 'SELECT DISTINCT ON (expedition_id) * FROM all_climbs_view';
+				innerSelectStatement = `SELECT DISTINCT ON (expedition_id) * FROM ${this.dbSchema}.all_climbs_view`;
 				this.queries.count_climbers.hrefs = {'Expedition name': 'expeditions.html?id={expedition_id}'};
 			}
 		}
@@ -1619,7 +1619,7 @@ class ClimberDBQuery extends ClimberDB {
 						'1 year'
 					)
 				) AS year 
-			FROM expeditions 
+			FROM ${this.dbSchema}.expeditions 
 			ORDER BY 1 DESC`;
 		return this.queryDB(sql)
 			.done(queryResultString => {
@@ -1637,8 +1637,8 @@ class ClimberDBQuery extends ClimberDB {
 	queryRouteCodes() {
 		return this.queryDB(`
 			SELECT route_codes.*, mountain_codes.name AS mountain_name 
-			FROM route_codes 
-				JOIN mountain_codes ON mountain_codes.code=route_codes.mountain_code 
+			FROM ${this.dbSchema}.route_codes 
+				JOIN ${this.dbSchema}.mountain_codes ON mountain_codes.code=route_codes.mountain_code 
 			WHERE route_codes.sort_order IS NOT NULL
 			ORDER BY mountain_codes.sort_order, route_codes.sort_order
 		`).done(queryResultString => {
@@ -1755,21 +1755,22 @@ class ClimberDBQuery extends ClimberDB {
 		// Call super.init()
 		this.showLoadingIndicator('init');
 
-		// Need guide company info for guide company query exports
-		this.queryDB('SELECT * FROM guide_company_codes WHERE sort_order IS NOT NULL')
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					print('Failed to get guide company names. Returned result: ' + queryResultString)
-				} else {
-					for (const row of $.parseJSON(queryResultString)) {
-						this.guideCompanies[row.code] = {...row}
-					}
-				}
-			})
-		var initDeferreds = $.when(...super.init())
+		return super.init()
 			.then(() => {
 				this.configureMainContent();
-				
+
+				// Need guide company info for guide company query exports
+				this.queryDB(`SELECT * FROM ${this.dbSchema}.guide_company_codes WHERE sort_order IS NOT NULL`)
+					.done(queryResultString => {
+						if (this.queryReturnedError(queryResultString)) {
+							print('Failed to get guide company names. Returned result: ' + queryResultString)
+						} else {
+							for (const row of $.parseJSON(queryResultString)) {
+								this.guideCompanies[row.code] = {...row}
+							}
+						}
+					})
+
 				return [
 					...this.fillAllSelectOptions(),
 					this.fillYearSelects(),
@@ -1799,7 +1800,5 @@ class ClimberDBQuery extends ClimberDB {
 			.always(() => {
 				hideLoadingIndicator();
 			});
-
-		return initDeferreds;
 	}
 }

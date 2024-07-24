@@ -171,13 +171,13 @@ class ClimberForm {
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-sm-6 collapse">
-										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" required="" data-dependent-target="#input-country" data-dependent-value="236,40"></select>
+										<select id="input-state" class="input-field default" name="state_code" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" required="" data-dependent-target="#input-country" data-dependent-value="236|40"></select>
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-state">State/province</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>		
 									<div class="field-container col-sm-6 collapse">
-										<input id="input-other_state_name" class="input-field" type="text" name="other_state_name" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" data-dependent-target="#input-country" data-dependent-value="!236,40">
+										<input id="input-other_state_name" class="input-field" type="text" name="other_state_name" data-table-name="climbers" placeholder="State/province" title="State" type="text" autocomplete="__never" data-dependent-target="#input-country" data-dependent-value="!236|40">
 										<label class="field-label" for="input-other_state_name">State/province</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
@@ -592,12 +592,16 @@ class ClimberForm {
 
 		// Country/state lookup from postal code
 		$(document).on('change', '.zip-lookup-field', e => {this.onPostalCodeFieldChange(e)});
+		
 		// Get country and state short_name/codes for city/state lookup from postal code
+		// 	The constructor for the climber form is called syncronously so the DB schema
+		//	has not yet been queried. Since these are unlikely to differ from the default
+		//	schema (i.e., public), just query the default
 		$.post({
 			url: 'climberdb.php',
 			data: {
 				action: 'query',
-				queryString: 'TABLE country_codes',
+				queryString: `TABLE country_codes`,
 				db: 'climberdb'
 			}
 		}).done(queryResultString => {
@@ -610,7 +614,7 @@ class ClimberForm {
 			url: 'climberdb.php',
 			data: {
 				action: 'query',
-				queryString: 'TABLE state_codes',
+				queryString: `TABLE state_codes`,
 				db: 'climberdb'
 			}
 		}).done(queryResultString => {
@@ -698,7 +702,7 @@ class ClimberForm {
 
 		const countryAbbreviation = this.countryCodes[countryCode]
 
-		$.get(`http://api.zippopotam.us/${countryAbbreviation}/${postalCode}`).done(response => {
+		$.get(`https://api.zippopotam.us/${countryAbbreviation}/${postalCode}`).done(response => {
 			if ('places' in response) {
 				const details = response.places[0];
 				if ('place name' in details) {
@@ -991,7 +995,7 @@ class ClimberForm {
 		// Check if any of this climber's expeditions were solo. If so, mark them as such
 		if (climberHistory.length) {
 			const $newCards = $accordion.find('.card:not(.cloneable)');
-			const soloSQL = `SELECT * FROM solo_climbs_view WHERE climber_id=${climberHistory[0].climber_id}`;
+			const soloSQL = `SELECT * FROM ${this._parent.dbSchema}.solo_climbs_view WHERE climber_id=${climberHistory[0].climber_id}`;
 			const soloDeferred = this._parent.queryDB(soloSQL)
 				.done(resultString => {
 					if (this._parent.queryReturnedError(resultString)) {
@@ -1048,9 +1052,9 @@ class ClimberForm {
 
 	*/
 	queryClimberHistory(climberID) {
-		const historySQL = `SELECT * FROM climber_history_view WHERE climber_id=${climberID}`;
+		const historySQL = `SELECT * FROM ${this._parent.dbSchema}.climber_history_view WHERE climber_id=${climberID}`;
 		//`SELECT * FROM WHERE  climbers.id=${climberID} `
-		const contactsSQL = `SELECT * FROM emergency_contacts WHERE climber_id=${climberID}`;
+		const contactsSQL = `SELECT * FROM ${this._parent.dbSchema}.emergency_contacts WHERE climber_id=${climberID}`;
 
 		const historyDeferred = this._parent.queryDB(historySQL)
 			.done(resultString => {
@@ -1220,7 +1224,7 @@ class ClimberForm {
 				let parametized = fields.map(f => '$' + (fields.indexOf(f) + 1))
 					.slice(0, fields.length - currvalCount) // drop the currvalClause parametized values
 					.join(', ');
-				sqlStatements.push(`INSERT INTO ${tableName} (${fields.join(', ')}) VALUES (${parametized}${currvalClauseString}) RETURNING id`);
+				sqlStatements.push(`INSERT INTO ${this._parent.dbSchema}.${tableName} (${fields.join(', ')}) VALUES (${parametized}${currvalClauseString}) RETURNING id`);
 				sqlParameters.push(values);
 				// Record so table-id data attribute can be set from RETURNING statement
 				inserts.push({container: container, tableName: tableName});
@@ -1246,7 +1250,7 @@ class ClimberForm {
 				}
 				
 				if (hasUpdates) {
-					sqlStatements.push(`UPDATE ${tableName} SET ${parametized.join(', ')} WHERE id=${id} RETURNING id`);
+					sqlStatements.push(`UPDATE ${this._parent.dbSchema}.${tableName} SET ${parametized.join(', ')} WHERE id=${id} RETURNING id`);
 					sqlParameters.push(parameters);
 				}
 			}
@@ -1377,7 +1381,7 @@ class ClimberForm {
 				const dbID = $input.data('table-id');
 				if (!tablesToDeleteFrom.includes(tableName) && tableName && dbID != undefined) {
 					tablesToDeleteFrom.push(tableName);
-					deleteStatements.push(`DELETE FROM ${tableName} WHERE id=${parseInt(dbID)} RETURNING id, '${tableName}' AS table_name`);
+					deleteStatements.push(`DELETE FROM ${this._parent.dbSchema}.${tableName} WHERE id=${parseInt(dbID)} RETURNING id, '${tableName}' AS table_name`);
 				}
 			}
 
@@ -1433,7 +1437,7 @@ class ClimberForm {
 	/*
 	*/
 	deleteClimber(climberID) {
-		return this._parent.queryDB(`DELETE FROM climbers WHERE id=${parseInt(climberID)} RETURNING id`)
+		return this._parent.queryDB(`DELETE FROM ${this._parent.dbSchema}.climbers WHERE id=${parseInt(climberID)} RETURNING id`)
 			.done(queryResultString => {
 				if (this._parent.queryReturnedError(queryResultString)) {
 					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
@@ -1742,7 +1746,7 @@ class ClimberDBClimbers extends ClimberDB {
 		const middleName = $('#input-middle_name').val();
 		const lastName = $('#input-last_name').val();
 		const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
-		this.queryDB(`SELECT id FROM climber_info_view WHERE full_name='${fullName}'`)
+		this.queryDB(`SELECT id FROM ${this.dbSchema}.climber_info_view WHERE full_name='${fullName}'`)
 			.done(resultString => {
 				if (!this.queryReturnedError(resultString)) {
 					const result = $.parseJSON(resultString);
@@ -2018,7 +2022,7 @@ class ClimberDBClimbers extends ClimberDB {
 		
 		var whereClause = '';
 		if ($('#7-day-only-filter').prop('checked')) 
-			whereClause += ' WHERE climber_info_view.id IN (SELECT climber_id FROM seven_day_rule_view)';
+			whereClause += ` WHERE ${this.dbSchema}.climber_info_view.id IN (SELECT climber_id FROM ${this.dbSchema}.seven_day_rule_view)`;
 		if ($('#guide-only-filter').prop('checked')) 
 			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
 
@@ -2242,7 +2246,7 @@ class ClimberDBClimbers extends ClimberDB {
 		$detailsContainer.find('.merge-climber-history-list').empty();
 
 		// Query the climber's info
-		this.queryDB(`SELECT * FROM climber_info_view WHERE id=${parseInt(climberID)}`)
+		this.queryDB(`SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=${parseInt(climberID)}`)
 			.done(queryResultString => {
 				const result = $.parseJSON(queryResultString);
 				if (this.queryReturnedError(queryResultString)) {
@@ -2311,7 +2315,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 						// get climber hsitory
 						const $historyList = $detailsContainer.find('.merge-climber-history-list');
-						this.queryDB(`SELECT * FROM climber_history_view WHERE climber_id=${climberID}`)
+						this.queryDB(`SELECT * FROM ${this.dbSchema}.climber_history_view WHERE climber_id=${climberID}`)
 							.done(resultString => {
 								if (this.queryReturnedError(resultString)) {
 									showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
@@ -2442,66 +2446,61 @@ class ClimberDBClimbers extends ClimberDB {
 
 		// Call super.init()
 		this.showLoadingIndicator('init');
-		var deferreds = super.init();
-		
-		// $('.sidebar-nav-group > .nav-item.selected').removeClass('selected');
-		// $('.sidebar-nav-group .nav-item > a')
-		// 	.filter((_, el) => el.href.endsWith('climbers.html'))
-		// 	.parent()
-		// 		.addClass('selected');
+		var initDeferred = super.init();
 
 		// Do additional synchronous initialization stuff
 		this.configureMainContent();
 
-		// Get state and route codes first if they haven't been queried yet.
-		//	This needs to happen before filling the result-summary-pane
-		//	because fillResultList() substitue state_codes for the short_name
-		const lookupDeferreds = [];
-		if (Object.keys(this.stateCodes).length === 0) {
-			lookupDeferreds.push(
-				this.queryDB('SELECT * FROM state_codes')
-					.done((queryResultString) => {
-						if (!this.queryReturnedError(queryResultString)) {
-							for (const state of $.parseJSON(queryResultString)) {
-								this.stateCodes[state.code] = {...state};
+		initDeferred.then(() => {
+			// Get state and route codes first if they haven't been queried yet.
+			//	This needs to happen before filling the result-summary-pane
+			//	because fillResultList() substitue state_codes for the short_name
+			const lookupDeferreds = this.fillAllSelectOptions();
+			if (Object.keys(this.stateCodes).length === 0) {
+				lookupDeferreds.push(
+					this.queryDB(`SELECT * FROM ${this.dbSchema}.state_codes`)
+						.done((queryResultString) => {
+							if (!this.queryReturnedError(queryResultString)) {
+								for (const state of $.parseJSON(queryResultString)) {
+									this.stateCodes[state.code] = {...state};
+								}
 							}
-						}
-					})
-			)
-		}
-		if (Object.keys(this.stateCodes).length === 0) {
-			lookupDeferreds.push(
-				this.queryDB('SELECT * FROM route_codes')
-					.done((queryResultString) => {
-						if (!this.queryReturnedError(queryResultString)) {
-							for (const route of $.parseJSON(queryResultString)) {
-								this.routeCodes[route.code] = {...route};
+						})
+				)
+			}
+			if (Object.keys(this.stateCodes).length === 0) {
+				lookupDeferreds.push(
+					this.queryDB(`SELECT * FROM ${this.dbSchema}.route_codes`)
+						.done((queryResultString) => {
+							if (!this.queryReturnedError(queryResultString)) {
+								for (const route of $.parseJSON(queryResultString)) {
+									this.routeCodes[route.code] = {...route};
+								}
 							}
-						}
-					})
-			)
-		} 
-		$.when(this.fillAllSelectOptions(), ...lookupDeferreds).then(() => {
+						})
+				)
+			} 
+			return $.when(...lookupDeferreds)
+		}).then(() => {
 			var urlParams = this.parseURLQueryString();
 			const queryDeferred = urlParams.id  ?
 				this.queryClimberByID(urlParams.id) :
 				this.getResultSet({selectClimberID: -1});// select the first climber
 
-			queryDeferred.always(()=>{
-				$.when(...deferreds)
-					.done(() => {
-						if (urlParams.id) {
-							if (urlParams.edit && this.checkEditPermissions()) {
-								this.climberForm.toggleEditing({allowEdits: true});
-							}
-						} else if (urlParams.addClimber) {
-							this.showModalClimberForm(this.climberForm.$el);
-						}
-					})
-					.always(() => {this.hideLoadingIndicator()});
+			queryDeferred.always(() => {
+				if (urlParams.id) {
+					if (urlParams.edit && this.checkEditPermissions()) {
+						this.climberForm.toggleEditing({allowEdits: true});
+					}
+				} else if (urlParams.addClimber) {
+					this.showModalClimberForm(this.climberForm.$el);
+				}
+					
 			});
-		});
+			return queryDeferred
 
-		return deferreds;
+		}).always(() => {this.hideLoadingIndicator()});
+
+		return initDeferred;
 	}
 }

@@ -119,6 +119,19 @@ if not app.config.from_file(CONFIG_FILE, load=json.load):
 	raise IOError(f'Could not read CONFIG_FILE: {CONFIG_FILE}')
 
 
+@app.route('/flask/environment', methods=['GET'])
+def get_environment() -> str:
+	""" return a string indicating whether this is the production or development env."""
+	return 'prod' if '\\prod\\' in os.path.abspath(__file__) else 'dev'
+
+
+def get_schema() -> str:
+	"""
+	Return the appropriate database schema based on this file's path (i.e., the environment)
+	"""
+	return 'public' if get_environment() == 'prod' else 'dev'
+
+
 def get_engine():
 	return create_engine(
 		'postgresql://{username}:{password}@{host}:{port}/{db_name}'

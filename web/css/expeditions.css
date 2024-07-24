@@ -12,7 +12,7 @@
 	position: sticky;
 	top: -10px;
 	background: linear-gradient(180deg, #cccccc 70%, transparent);
-	z-index: 1000;
+	z-index: 10000;
 }
 .main-content-wrapper {
 	scroll-behavior: smooth; /*for CMC jump link*/
@@ -195,7 +195,7 @@
 
 /*select2 styling*/
 .climberdb-main .fuzzy-search-bar-drawer-content .select2-container--default .select2-selection--multiple .select2-selection__choice {
-	color:rgb(230, 230, 230);
+	color: var(--ui-bg-light-gray);
 }
 
 .fuzzy-search-bar-drawer .select2-container--default .select2-selection--multiple,
@@ -342,7 +342,7 @@
 	height: 100%;
 	display: flex;
 	flex-wrap: wrap;
-	background: rgb(230, 230, 230);
+	background: var(--ui-bg-light-gray);
 	border-radius: 20px;
 	padding: 20px;
 }

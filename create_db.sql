@@ -2,6 +2,8 @@ CREATE DATABASE climbing_permits;
 
 --Create lookup tables
 CREATE TABLE IF NOT EXISTS attachment_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS backcountry_location_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS backcountry_location_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER, latitude NUMERIC(10, 7), longitude NUMERIC(10, 7));
 CREATE TABLE IF NOT EXISTS country_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS cmc_status_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS communication_device_type_codes (id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
@@ -112,6 +114,10 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	needs_special_use_permit BOOLEAN, 
 	special_group_type_code INTEGER REFERENCES special_group_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	expected_expedition_size INTEGER,
+	is_backcountry BOOLEAN,
+	is_acclimatizing BOOLEAN,
+	bump_flights TEXT,
+	itinerary_description TEXT,
 	last_modified_by VARCHAR(50),
 	last_modified_time TIMESTAMP
 );
@@ -225,6 +231,22 @@ CREATE TABLE IF NOT EXISTS communication_devices (
 	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	communication_device_type_code INTEGER REFERENCES communication_device_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	number_or_address VARCHAR(255),
+	entered_by VARCHAR(50),
+	entry_time TIMESTAMP,
+	last_modified_by VARCHAR(50),
+	last_modified_time TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS itinerary_locations (
+	id SERIAL PRIMARY KEY,
+	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	backcountry_location_type_code INTEGER REFERENCES backcountry_location_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	backcountry_location_code INTEGER REFERENCES backcountry_location_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	location_start_date DATE,
+	location_end_date DATE,
+	latitude NUMERIC(10, 7),
+	longitude NUMERIC(10, 7), 
+	display_order INTEGER,	
 	entered_by VARCHAR(50),
 	entry_time TIMESTAMP,
 	last_modified_by VARCHAR(50),
@@ -375,7 +397,8 @@ CREATE VIEW climber_history_view AS
 		expeditions.equipment_loss,
 		expeditions.actual_departure_date, 
 		expeditions.actual_return_date,
-		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code  
+		expeditions.is_backcountry,
+		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code 
 	FROM expedition_member_routes 
 		JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id 
 		JOIN expeditions ON expedition_members.expedition_id=expeditions.id 
@@ -436,10 +459,21 @@ CREATE VIEW expedition_info_view AS
 		expeditions.equipment_loss,
 		COALESCE(expedition_status_view.expedition_status, expeditions.group_status_code, 1) AS group_status_code,
 		expeditions.expected_expedition_size,
+		expeditions.is_backcountry,
 		expeditions.needs_special_use_permit,
 		expeditions.special_group_type_code,
+		expeditions.is_acclimatizing,
+		expeditions.bump_flights,
+		expeditions.itinerary_description,
 		expeditions.last_modified_by,
 		expeditions.last_modified_time,
+		itinerary_locations.id AS itinerary_location_id,
+		itinerary_locations.backcountry_location_type_code,
+		itinerary_locations.backcountry_location_code,
+		itinerary_locations.location_start_date,
+		itinerary_locations.location_end_date,
+		itinerary_locations.latitude,
+		itinerary_locations.longitude,
 		expedition_members.id AS expedition_member_id,
 		expedition_members.climber_id,
 		expedition_members.permit_number,
@@ -498,6 +532,7 @@ CREATE VIEW expedition_info_view AS
 	FROM expeditions
 	LEFT JOIN (expedition_members
 	JOIN climbers ON expedition_members.climber_id = climbers.id) ON expeditions.id = expedition_members.expedition_id
+	LEFT JOIN itinerary_locations ON expeditions.id = itinerary_locations.expedition_id
 	LEFT JOIN briefings ON expeditions.id = briefings.expedition_id
 	LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 	LEFT JOIN transactions ON expedition_members.id = transactions.expedition_member_id
@@ -515,6 +550,7 @@ CREATE VIEW expedition_info_view AS
 		climbers.first_name, 
 		transactions.transaction_date, 
 		transactions.id,
+		itinerary_locations.display_order,
 		attachments.id;
 
 
@@ -541,13 +577,14 @@ CREATE VIEW special_use_permit_view AS
 		climbers.last_name, climbers.first_name;
 
 
-
+--TODO: once BC routes/area are added to route table, check that BC groups don't get included in 7-day rule
 CREATE VIEW seven_day_rule_view AS 
 	SELECT DISTINCT climber_id FROM 
 	climber_history_view 
 	WHERE 
 		actual_return_date < now() AND
 		highest_elevation_ft > (SELECT value FROM config WHERE property='minimum_elevation_for_7_day')::int AND 
+		NOT is_backcountry AND 
 		reservation_status_code <> 6 -- not cancelled
 	;
 
@@ -646,7 +683,7 @@ CREATE VIEW all_climbs_view AS
 		route_codes.name AS route_name,
 		mountain_codes.name AS mountain_name,
 		is_guiding,
-		CASE WHEN is_guiding THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
+		CASE WHEN is_guiding OR is_intrepeter THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
 		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
 		actual_return_date - actual_departure_date AS trip_length_days,
 		extract(year FROM planned_departure_date) AS year,
@@ -662,7 +699,9 @@ CREATE VIEW all_climbs_view AS
 
 CREATE VIEW registered_climbs_view AS
 	SELECT * FROM all_climbs_view
-	WHERE reservation_status_code <> 6 AND group_status_code <> 6;
+	WHERE 
+		reservation_status_code <> 6 AND 
+		group_status_code <> 6; 
 
 CREATE VIEW solo_climbs_view AS 
 	SELECT 
@@ -846,3 +885,291 @@ BEGIN
    return coalesce(group_status, 6);
 END;
 $$;
+
+
+
+/* Substitute a set of substrings within a larger string.
+   When several strings match, the longest wins.
+   Similar to php's strtr(string $str, array $replace_pairs).
+   Example:
+   select multi_replace('foo and bar is not foobar',
+             '{"bar":"foo", "foo":"bar", "foobar":"foobar"}'::jsonb);
+   => 'bar and foo is not foobar'
+ */
+CREATE OR REPLACE FUNCTION multi_replace(str text, substitutions jsonb)
+RETURNS text
+as $$
+DECLARE
+	regex text;
+	s_left text;
+	s_tail text;
+	res text:='';
+BEGIN
+	-- collect all keys as a pipe-separated string to insert into the regex to 
+	--	match any of the keys in the substitution dict
+	-- i.e., key1 | key2 | key 3 ...
+	select string_agg(quote_ident(term), '|' )
+	from jsonb_object_keys(substitutions) as x(term)
+		where term <> ''
+	into regex;
+
+	-- the regex doesn't work on a null value, so set it to an empty string
+	if (coalesce(regex, '') = '') then
+		return str;
+	end if;
+
+	-- construct the regex
+	regex := concat('^(.*?)(', regex, ')([^_]+.*)$'); -- match no more than 1 row   
+
+	loop
+		s_tail := str;
+		select 
+		   concat(matches[1], substitutions->>matches[2]),
+		   matches[3]
+		from
+		 	regexp_matches(str, regex, 'g') as matches
+		into s_left, str;
+
+		exit when s_left is null;
+		res := res || s_left;
+
+	end loop;
+
+	res := res || s_tail;
+	return res;
+
+END 
+$$ LANGUAGE plpgsql strict immutable;
+
+-- copy schema to dev
+CREATE OR REPLACE FUNCTION clone_schema(
+    source_schema text,
+    dest_schema text,
+    include_records boolean)
+  RETURNS void AS
+$BODY$
+
+--  This function will clone all sequences, tables, data, views & functions from any existing schema to a new one
+-- SAMPLE CALL:
+-- SELECT clone_schema('public', 'new_schema', TRUE);
+
+DECLARE
+  src_oid          oid;
+  tbl_oid          oid;
+  func_oid         oid;
+  object           text;
+  buffer           text;
+  srctbl           text;
+  default_         text;
+  column_          text;
+  record_          record;
+  qry              text;
+  dest_qry         text;
+  v_def            text;
+  seqval           bigint;
+  sq_last_value    bigint;
+  sq_maximum_value     bigint;
+  sq_start_value   bigint;
+  sq_increment_by  bigint;
+  sq_min_value     bigint;
+  sq_cache_value   bigint;
+  sq_log_cnt       bigint;
+  sq_is_called     boolean;
+  sq_is_cycled     boolean;
+  sq_cycled        char(10);
+
+BEGIN
+
+-- Check that source_schema exists
+  SELECT oid INTO src_oid
+    FROM pg_namespace
+   WHERE nspname = quote_ident(source_schema);
+  IF NOT FOUND
+    THEN 
+    RAISE NOTICE 'source schema % does not exist!', source_schema;
+    RETURN ;
+  END IF;
+
+  -- Check that dest_schema does not yet exist
+  PERFORM nspname 
+    FROM pg_namespace
+   WHERE nspname = quote_ident(dest_schema);
+  IF FOUND
+    THEN 
+    RAISE NOTICE 'dest schema % already exists!', dest_schema;
+    RETURN ;
+  END IF;
+
+  EXECUTE 'CREATE SCHEMA ' || quote_ident(dest_schema) ;
+
+  -- Create sequences
+  -- TODO: Find a way to make this sequence's owner is the correct table.
+  FOR object IN
+    SELECT sequence_name::text 
+      FROM information_schema.sequences
+     WHERE sequence_schema = quote_ident(source_schema)
+  LOOP
+    RAISE NOTICE 'SEQUENCE: %', quote_ident(dest_schema) || '.' || quote_ident(object);
+    
+    EXECUTE 'CREATE SEQUENCE ' || quote_ident(dest_schema) || '.' || quote_ident(object);
+    srctbl := quote_ident(source_schema) || '.' || quote_ident(object);
+
+    EXECUTE 'SELECT last_value, maximum_value, start_value, increment, minimum_value, cache_value, log_cnt, is_cycled, is_called 
+              FROM ' || --' || quote_ident(source_schema) || '.' || quote_ident(object) || ';' 
+              '(SELECT *, ''a'' AS join_field FROM information_schema.sequences WHERE sequence_schema = ''' || quote_ident(source_schema) || ''' AND sequence_name = ''' || quote_ident(object) || ''') _ NATURAL JOIN (SELECT ''a'' AS join_field, * FROM ' || quote_ident(source_schema) || '.' || quote_ident(object) || ') __ NATURAL JOIN (SELECT ''a'' AS join_field, seqcache AS cache_value, seqcycle AS is_cycled FROM pg_sequence where seqrelid = ''' || quote_ident(object) || '''::regclass) ___ ;'
+              INTO sq_last_value, sq_maximum_value, sq_start_value, sq_increment_by, sq_min_value, sq_cache_value, sq_log_cnt, sq_is_cycled, sq_is_called ; 
+
+    IF sq_is_cycled 
+      THEN 
+        sq_cycled := 'CYCLE';
+    ELSE
+        sq_cycled := 'NO CYCLE';
+    END IF;
+
+    EXECUTE 'ALTER SEQUENCE '   || quote_ident(dest_schema) || '.' || quote_ident(object) 
+            || ' INCREMENT BY ' || sq_increment_by
+            || ' MINVALUE '     || sq_min_value 
+            || ' MAXVALUE '     || sq_maximum_value
+            || ' START WITH '   || sq_start_value
+            || ' RESTART '      || sq_min_value 
+            || ' CACHE '        || sq_cache_value 
+            || sq_cycled || ' ;' ;
+
+    buffer := quote_ident(dest_schema) || '.' || quote_ident(object);
+    IF include_records 
+        THEN
+            EXECUTE 'SELECT setval( ''' || buffer || ''', ' || sq_last_value || ', ' || sq_is_called || ');' ; 
+    ELSE
+            EXECUTE 'SELECT setval( ''' || buffer || ''', ' || sq_start_value || ', ' || sq_is_called || ');' ;
+    END IF;
+
+  END LOOP;
+
+-- Create tables 
+  FOR object IN
+    SELECT table_name::text 
+      FROM information_schema.tables 
+     WHERE 
+        table_schema = quote_ident(source_schema) AND
+        table_type = 'BASE TABLE' AND 
+        to_regclass(table_name) IS NOT NULL
+  LOOP
+    buffer := dest_schema || '.' || quote_ident(object);
+    EXECUTE 'CREATE TABLE ' || buffer || ' (LIKE ' || quote_ident(source_schema) || '.' || quote_ident(object) 
+        || ' INCLUDING ALL)';
+
+    IF include_records 
+      THEN 
+      -- Insert records from source table
+      EXECUTE 'INSERT INTO ' || buffer || ' SELECT * FROM ' || quote_ident(source_schema) || '.' || quote_ident(object) || ';';
+    END IF;
+ 
+    FOR column_, default_ IN
+      SELECT column_name::text, 
+             REPLACE(column_default::text, source_schema, dest_schema) 
+        FROM information_schema.COLUMNS 
+       WHERE table_schema = dest_schema 
+         AND TABLE_NAME = object 
+         AND column_default LIKE 'nextval(%' || quote_ident(source_schema) || '%::regclass)'
+    LOOP
+      EXECUTE 'ALTER TABLE ' || buffer || ' ALTER COLUMN ' || column_ || ' SET DEFAULT ' || default_;
+    END LOOP;
+
+  END LOOP;
+
+--  add FK constraint
+  FOR qry IN
+    SELECT 'ALTER TABLE ' || quote_ident(dest_schema) || '.' || quote_ident(rn.relname) 
+                          || ' ADD CONSTRAINT ' || quote_ident(ct.conname) || ' ' || pg_get_constraintdef(ct.oid) || ';'
+      FROM pg_constraint ct
+      JOIN pg_class rn ON rn.oid = ct.conrelid
+     WHERE connamespace = src_oid
+       AND rn.relkind = 'r'
+       AND ct.contype = 'f'
+         
+    LOOP
+      EXECUTE qry;
+
+    END LOOP;
+
+  -- Make sure destination schema tables point to destination lookup tables
+  FOR qry IN
+    SELECT 
+        format(
+            'ALTER TABLE %1$s DROP CONSTRAINT %2$s; ALTER TABLE %1$s ADD CONSTRAINT %2$s %3$s;', 
+            pgc.conrelid::regclass::text, 
+            constraint_name,  
+            replace(pg_get_constraintdef(pgc.oid), pgc.confrelid::regclass::text, dest_schema || '.' || pgc.confrelid::regclass::text)
+        ) 
+    FROM 
+        pg_constraint pgc 
+    JOIN information_schema.constraint_column_usage ccu ON conname=constraint_name 
+    WHERE 
+        constraint_schema <> table_schema AND 
+        constraint_schema=dest_schema AND 
+        conrelid::regclass::text LIKE dest_schema || '.%'
+    
+    LOOP
+        EXECUTE qry;
+    END LOOP;
+
+-- Create views 
+--SELECT json_agg(json_build_object(table_name, 'dev.' || table_name))::jsonb FROM information_schema.tables WHERE table_schema='public';
+  -- FOR object IN
+  --   SELECT table_name::text
+  --     FROM information_schema.views
+  --    WHERE table_schema = quote_ident(source_schema)
+
+  -- LOOP
+  --   buffer := dest_schema || '.' || quote_ident(object);
+  --   SELECT view_definition INTO v_def
+  --     FROM information_schema.views
+  --    WHERE table_schema = quote_ident(source_schema)
+  --      AND table_name = quote_ident(object);
+     
+  --   EXECUTE 'CREATE OR REPLACE VIEW ' || buffer || ' AS ' || v_def || ';' ;
+
+  -- END LOOP;
+
+	FOR record_ IN 
+		WITH dict_query AS (SELECT 'a' AS a, ('{"'|| string_agg(table_name || '": "dev.' || table_name, '","') || '"}')::jsonb AS replace_dict FROM information_schema.tables WHERE table_schema='public' GROUP BY a)
+		SELECT table_name, multi_replace(view_definition, replace_dict) AS view_def 
+		FROM information_schema.views JOIN dict_query ON replace_dict::text <> table_name
+		WHERE table_schema = 'public'
+	LOOP
+		buffer := dest_schema || '.' || quote_ident(record_.table_name);
+		EXECUTE 'CREATE OR REPLACE VIEW ' || buffer || ' AS ' || record_.view_def || ';' ;
+	END LOOP;
+
+-- Create functions 
+  FOR func_oid IN
+    SELECT oid
+      FROM pg_proc 
+     WHERE pronamespace = src_oid
+
+  LOOP      
+    SELECT pg_get_functiondef(func_oid) INTO qry;
+    SELECT replace(qry, source_schema, dest_schema) INTO dest_qry;
+    EXECUTE dest_qry;
+
+  END LOOP;
+  
+  RETURN; 
+ 
+END;
+ 
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
+
+ALTER FUNCTION clone_schema(text, text, boolean)
+  OWNER TO postgres;
+
+
+select clone_schema('public', 'dev', true);
+GRANT USAGE ON SCHEMA dev TO climberdb_read;
+GRANT SELECT ON ALL TABLES IN SCHEMA dev TO climberdb_read;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA dev TO climberdb_read;
+GRANT USAGE ON SCHEMA dev TO climberdb_admin;
+GRANT ALL ON ALL TABLES IN SCHEMA dev TO climberdb_admin;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA dev TO climberdb_admin;

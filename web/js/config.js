@@ -73,7 +73,7 @@ class ClimberDBConfig extends ClimberDB {
 			const id = $(el).data('table-id');
 			values[id] = inputValue
 			sqlParameters.push([inputValue]);
-			sqlStatements.push(`UPDATE config SET value=$1 WHERE id=${id} RETURNING id`);
+			sqlStatements.push(`UPDATE ${this.dbSchema}.config SET value=$1 WHERE id=${id} RETURNING id`);
 		}
 
 		return $.post({ 
@@ -106,7 +106,7 @@ class ClimberDBConfig extends ClimberDB {
 
 	loadConfig() {
 
-		const sql = `SELECT * FROM config WHERE is_editable ORDER BY sort_order`;
+		const sql = `SELECT * FROM ${this.dbSchema}.config WHERE is_editable ORDER BY sort_order`;
 		return this.queryDB(sql).done(queryResultString => {
 			// No need to check result
 			const result = $.parseJSON(queryResultString);
@@ -124,7 +124,7 @@ class ClimberDBConfig extends ClimberDB {
 	init() {
 		// Call super.init()
 		this.showLoadingIndicator('init');
-		var initDeferreds = $.when(...super.init())
+		return super.init()
 			.then(() => { 
 				return this.checkUserRole()
 			})
@@ -137,6 +137,5 @@ class ClimberDBConfig extends ClimberDB {
 				hideLoadingIndicator();
 			});
 
-		return initDeferreds;
 	}
 }

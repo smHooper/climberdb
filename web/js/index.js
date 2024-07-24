@@ -369,8 +369,7 @@ class ClimberDBIndex extends ClimberDB {
 		}
 
 
-		const initDeferreds = super.init({addMenu: false});
-		$.when(...initDeferreds)
+		const initDeferreds = super.init({addMenu: false})
 			.done(resultString => {
 				const username = this.userInfo.ad_username;
 				const userStatus = this.userInfo.user_status_code;
