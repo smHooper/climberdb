@@ -841,21 +841,24 @@ def get_next_permit_number():
 	if not 'year' in data:
 		raise KeyError('Year not given in request data')
 	else:
+		# Can't use parametized SQL here because the two digit year will be inserted 
+		#	as text with single quotes surrounding it, which breaks the SQL statement. 
+		#	Instead, converting to int should be safe from SQL injection
 		year = int(data['year'])
 
 	engine = get_engine()
 
-	sql = f'''
+	sql = sqlatext(f'''
 		SELECT 
 		max(expedition_members.permit_number) AS max_permit 
 		FROM expedition_members 
 		JOIN expeditions ON expedition_members.expedition_id=expeditions.id
 		WHERE 
-			extract(year FROM planned_departure_date)={year} AND
-			expedition_members.permit_number LIKE 'TKA-{str(year)[-2:]}-%%'
-	'''
+			extract(year FROM planned_departure_date)=:full_year AND
+			expedition_members.permit_number LIKE 'TKA-{str(year)[-2:]}-%%' --1st % escapes the second
+	''')
 	with engine.connect() as conn:
-		cursor = conn.execute(sql)
+		cursor = conn.execute(sql, {'full_year': year})
 		row = cursor.first()
 		if row:
 			# Permit format: TKA-YY-####. Just return just the number + 1
