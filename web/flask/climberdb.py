@@ -841,9 +841,6 @@ def get_next_permit_number():
 	if not 'year' in data:
 		raise KeyError('Year not given in request data')
 	else:
-		# Can't use parametized SQL here because the two digit year will be inserted 
-		#	as text with single quotes surrounding it, which breaks the SQL statement. 
-		#	Instead, converting to int should be safe from SQL injection
 		year = int(data['year'])
 
 	engine = get_engine()
