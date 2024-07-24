@@ -841,7 +841,7 @@ def get_next_permit_number():
 	if not 'year' in data:
 		raise KeyError('Year not given in request data')
 	else:
-		year = data['year']
+		year = int(data['year'])
 
 	engine = get_engine()
 
@@ -850,7 +850,9 @@ def get_next_permit_number():
 		max(expedition_members.permit_number) AS max_permit 
 		FROM expedition_members 
 		JOIN expeditions ON expedition_members.expedition_id=expeditions.id
-		WHERE extract(year FROM planned_departure_date)={year}
+		WHERE 
+			extract(year FROM planned_departure_date)={year} AND
+			expedition_members.permit_number LIKE 'TKA-{str(year)[-2:]}-%%'
 	'''
 	with engine.connect() as conn:
 		cursor = conn.execute(sql)
