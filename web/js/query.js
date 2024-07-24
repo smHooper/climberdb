@@ -403,6 +403,51 @@ class ClimberDBQuery extends ClimberDB {
 				`,
 				columns: [
 				]
+			},
+			medical_issues: {
+				sql: `
+					SELECT 
+						expedition_members.expedition_id,
+						expedition_members.climber_id,
+						climbers.first_name || ' ' || climbers.last_name AS "Climber Name",
+						expeditions.expedition_name AS "Expedition Name",
+						CASE WHEN expedition_members.had_ams THEN 'Yes' ELSE 'No' END AS "AMS",
+						CASE WHEN expedition_members.had_hace THEN 'Yes' ELSE 'No' END AS "HACE",
+						CASE WHEN expedition_members.had_hape THEN 'Yes' ELSE 'No' END AS "HAPE",
+						coalesce(frostbite_severity_codes.name, '') AS "Frostbite Severity",
+						coalesce(expedition_members.frostbite_details, '') AS "Frostbite Details"
+					FROM 
+						expeditions 
+							JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
+							JOIN climbers ON expedition_members.climber_id = climbers.id
+							LEFT JOIN frostbite_severity_codes ON frostbite_severity_codes.code = expedition_members.frostbite_severity_code
+					WHERE 
+						extract(year FROM expeditions.actual_departure_date) {year} AND
+						(
+							expedition_members.frostbite_severity_code IS NOT NULL OR 
+							expedition_members.had_ams OR 
+							expedition_members.had_hace OR 
+							expedition_members.had_hape
+						) ;
+				`,
+				columns: [
+					'Climber Name',
+					'Expedition Name',
+					'AMS',
+					'HACE',
+					'HAPE',
+					'Frostbite Severity',
+					'Frostbite Details'
+				],
+				hrefs: {
+					'Climber Name': 'climbers.html?id={climber_id}',
+					'Expedition Name': 'expeditions.html?id={expedition_id}',
+				},
+				cssColumnClasses: {
+					'Climber Name': 'justify-content-start',
+					'Expedition Name': 'justify-content-start',
+					'Frostbite Details': 'justify-content-start'
+				}
 			}
 		};
 		return this;
@@ -692,9 +737,9 @@ class ClimberDBQuery extends ClimberDB {
 	/*
 	Helper function to set default options for canned count_climbers derative queries
 	*/
-	setCountClimbersOrClimbsParameters({countBy='climbers', year=new Date().getFullYear(), groupByFields=[], pivotField=''}={}) {
+	setCountClimbersOrClimbsParameters({queryTarget='summary', countBy='climbers', year=new Date().getFullYear(), groupByFields=[], pivotField=''}={}) {
 		// Set basic SQL parameter fields
-		$('#count_climbers-summary_or_records').val('summary').change();
+		$('#count_climbers-summary_or_records').val(queryTarget).change();
 		$('#count_climbers-count_field').val(countBy).change();
 		$('#count_climbers-group_by_fields').val(groupByFields).change();
 		$('#count_climbers-pivot_field').val(pivotField).change();

@@ -1510,7 +1510,13 @@ class ClimberDBBriefings extends ClimberDB {
 			this.getExpeditionInfo(year)
 			,
 			// Get rangers 
-			this.queryDB(`SELECT id, first_name || ' ' || last_name As full_name FROM ${this.dbSchema}.users WHERE user_role_code=${this.constants.userRoleCodes.ranger} AND user_status_code=2`)
+			this.queryDB(`
+				SELECT id, first_name || ' ' || last_name As full_name 
+				FROM ${this.dbSchema}.users 
+				WHERE 
+					user_role_code=${this.constants.userRoleCodes.ranger} AND 
+					user_status_code=2 --active`
+				)
 				.done(queryResultString => {
 					const $input = $('#input-ranger');
 					for (const row of $.parseJSON(queryResultString)) {
