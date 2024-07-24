@@ -414,13 +414,13 @@ class ClimberDBQuery extends ClimberDB {
 						CASE WHEN expedition_members.had_ams THEN 'Yes' ELSE 'No' END AS "AMS",
 						CASE WHEN expedition_members.had_hace THEN 'Yes' ELSE 'No' END AS "HACE",
 						CASE WHEN expedition_members.had_hape THEN 'Yes' ELSE 'No' END AS "HAPE",
-						frostbite_severity_codes.name AS "Frostbite Severity",
+						coalesce(frostbite_severity_codes.name, '') AS "Frostbite Severity",
 						coalesce(expedition_members.frostbite_details, '') AS "Frostbite Details"
 					FROM 
 						expeditions 
 							JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
 							JOIN climbers ON expedition_members.climber_id = climbers.id
-							JOIN frostbite_severity_codes ON frostbite_severity_codes.code = expedition_members.frostbite_severity_code
+							LEFT JOIN frostbite_severity_codes ON frostbite_severity_codes.code = expedition_members.frostbite_severity_code
 					WHERE 
 						extract(year FROM expeditions.actual_departure_date) {year} AND
 						(
