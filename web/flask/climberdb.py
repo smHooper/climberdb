@@ -855,10 +855,10 @@ def get_next_permit_number():
 		JOIN expeditions ON expedition_members.expedition_id=expeditions.id
 		WHERE 
 			extract(year FROM planned_departure_date)=:full_year AND
-			expedition_members.permit_number LIKE 'TKA-{str(year)[-2:]}-%%' --1st % escapes the second
+			expedition_members.permit_number LIKE :permit_search_str
 	''')
 	with engine.connect() as conn:
-		cursor = conn.execute(sql, {'full_year': year})
+		cursor = conn.execute(sql, {'full_year': year, 'permit_search_str': f'TKA-{str(year)[-2:]}-%'})
 		row = cursor.first()
 		if row:
 			# Permit format: TKA-YY-####. Just return just the number + 1
