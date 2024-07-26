@@ -36,7 +36,7 @@
 			<div class="main-content-wrapper">
 				<div class="main-dashboard-container container-fluid">
 					<!-- season mountain stats -->
-					<div class="col-md col-lg-4 card-container">
+					<div class="col card-container">
 						<div id="season-mountain-stats-card" class="card dashboard-card">
 							<h4 class="dashboard-card-header">Mountain Stats This Season</h4>
 							<h5 class="w-100 text-center hidden">Total registered climbers: <span class="total-registered-climbers-count"></span></h5>
@@ -55,8 +55,8 @@
 						</div>
 					</div>
 					<!-- flagged and solo expeditions -->
-					<div class="col-md col-lg-4 card-container">
-						<div id="flagged-groups-card" class="card dashboard-card half-height-card">
+					<div id="flagged-group-card-container" class="col card-container half-height-card">
+						<div id="flagged-groups-card" class="card dashboard-card ">
 							<h4 class="dashboard-card-header">Flagged Expeditions <span class="table-row-counter"></span></h4>
 							<div class="dashboard-card-body mt-0">
 								<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
@@ -87,7 +87,9 @@
 								</table>
 							</div>
 						</div>
-						<div id="solo-climbers-card" class="card dashboard-card half-height-card">
+					</div>
+					<div id="solo-climbers-card-container" class="col card-container half-height-card">
+						<div id="solo-climbers-card" class="card dashboard-card ">
 							<h4 class="dashboard-card-header">Confirmed Solo Climbers <span class="table-row-counter"></span></h4>
 							<div class="dashboard-card-body mt-0">
 								<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
@@ -133,7 +135,7 @@
 					</div>
 
 					<!-- group status -->
-					<div class="col-md col-lg-4 card-container">
+					<div class="col card-container">
 						<div id="group-status-card" class="card dashboard-card">
 							<h4 class="dashboard-card-header w-100 centered-text">Expedition Status</h4>
 							<div class="dashboard-card-body h-100">
@@ -227,24 +229,8 @@
 						</div>
 					</div>
 
-					<!-- breifings per day -->
-					<div class="col-md col-lg-8 card-container small-row">
-						<div class="card dashboard-card">
-							<h4 class="dashboard-card-header w-100 centered-text">Scheduled Expedition Briefings per Day</h4>
-							<div class="scrollable-chart-and-axis-wrapper">
-								<div class="scrollable-chart-outer-wrapper">
-									<div class="scrollable-chart-inner-wrapper">
-										<canvas id="daily-briefings-chart" class="climberdb-chart" height="310"></canvas>
-									</div>
-								</div>
-								<!-- for a horizontally scrollable chart, the axis has to be a separate plot outside the scrollable div-->
-								<canvas id="daily-briefings-axis" class="climberdb-chart" height="310" width="0"></canvas>
-							</div>
-						</div>
-					</div>
-
 					<!-- expeditions that still need to pay and turn in application -->
-					<div class="col-md col-lg-4 card-container small-row">
+					<div class="col card-container double-height-card">
 						<div id="missing-sup-fee-groups-card" class="card dashboard-card">
 							<h4 class="dashboard-card-header">Missing SUP or Climber Fee <span class="table-row-counter"></span></h4>
 							<div class="dashboard-card-body">
@@ -279,6 +265,23 @@
 							</div>
 						</div>
 					</div>
+
+					<!-- breifings per day -->
+					<div class="col card-container wide">
+						<div class="card dashboard-card">
+							<h4 class="dashboard-card-header w-100 centered-text">Scheduled Expedition Briefings per Day</h4>
+							<div class="scrollable-chart-and-axis-wrapper">
+								<div class="scrollable-chart-outer-wrapper">
+									<div class="scrollable-chart-inner-wrapper">
+										<canvas id="daily-briefings-chart" class="climberdb-chart" height="310"></canvas>
+									</div>
+								</div>
+								<!-- for a horizontally scrollable chart, the axis has to be a separate plot outside the scrollable div-->
+								<canvas id="daily-briefings-axis" class="climberdb-chart" height="310" width="0"></canvas>
+							</div>
+						</div>
+					</div>
+
 
 				</div>
 			</div>

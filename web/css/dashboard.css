@@ -10,25 +10,44 @@
 	height: calc(100vh - 60px - 3rem);
 }
 .main-dashboard-container {
-	display: flex;
+	display: grid;
+	grid-template-columns: repeat(3, 33.3%);
+	grid-auto-rows: 220px;
 	flex-wrap: wrap;
 	height: 100%;
 	overflow-y: auto;
-	row-gap: 16px;
+	row-gap: .75rem;
 }
 .dashboard-col {
 	padding: 0;
 }
 .card-container {
-	max-height: 500px;
+	grid-row: span 2;
 	padding-right: 8px;
 	padding-left: 8px;
 	display: flex;
 	flex-direction: column;
 	row-gap: 15px;
 }
+.card-container.half-height-card {
+	grid-row: span 1;
+}
+.card-container.double-height-card {
+	grid-row: span 4;
+}
+.card-container.wide {
+	grid-column: span 2;	
+}
 .small-row {
 	max-height: 400px;
+}
+#flagged-group-card-container {
+	grid-row: 1 / 2;
+	grid-column-start: 2;
+}
+#solo-climbers-card-container {
+	grid-row: 2 / 3;
+	grid-column-start: 2;
 }
 .card.dashboard-card {
 	border-radius: 20px;
@@ -134,6 +153,9 @@
 	text-align: center;
 }
 
+.climberdb-data-table thead tr {
+	height: 45px;
+}
 .climberdb-data-table .sort-column-button {
 	color: #00679B;
 }
