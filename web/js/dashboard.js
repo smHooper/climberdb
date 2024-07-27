@@ -5,6 +5,7 @@ class ClimberDBDashboard extends ClimberDB {
 		this.flaggedExpeditionInfo = [];
 		this.soloClimberInfo = [];
 		this.missingPaymentOrSUPInfo = [];
+		this.overduePartiesInfo = [];
 		return this;
 	}
 
@@ -34,9 +35,11 @@ class ClimberDBDashboard extends ClimberDB {
 		const $button = $(e.target).closest('.sort-column-button');
 
 		const $card = $button.closest('.dashboard-card');
-		let data = $card.is('#flagged-groups-card') ? this.flaggedExpeditionInfo :
+		let data = 
+			$card.is('#flagged-groups-card') ? this.flaggedExpeditionInfo :
 			$card.is('#solo-climbers-card') ? this.soloClimberInfo :
-			this.missingPaymentOrSUPInfo;
+			$card.is('#missing-sup-fee-groups-card') ? this.missingPaymentOrSUPInfo : 
+			this.overduePartiesInfo;
 
 		// if the column was already sorted and descending, then make it ascending. 
 		//	Otherwise, the column will be sorted ascending
@@ -352,17 +355,32 @@ class ClimberDBDashboard extends ClimberDB {
 
 
 	configureMisingPaymentOrSUP() {
-		const sql = 'TABLE missing_sup_or_payment_dashboard_view';
+		const sql = `TABLE ${this.dbSchema}.missing_sup_or_payment_dashboard_view`;
 		
 		return this.queryDB(sql)
 			.done(queryResultString => {
 				if (this.queryReturnedError(queryResultString)) {
-					console.log('error querying flagged: ' + queryResultString)
+					console.log('error querying missing SUP/payment: ' + queryResultString)
 				} else {
 					this.missingPaymentOrSUPInfo = $.parseJSON(queryResultString);
 					this.sortDataTable($('#missing-sup-fee-groups-card .climberdb-dashboard-table'), this.missingPaymentOrSUPInfo);
 				}
 			})
+	}
+
+
+	configureOverdueParties() {
+		const sql = `TABLE ${this.dbSchema}.overdue_parties_view`;
+
+		return this.queryDB(sql)
+			.done(queryResultString => {
+				if (this.queryReturnedError(queryResultString)) {
+					console.log('error querying overdue parties: ' + queryResultString)
+				} else {
+					this.overduePartiesInfo = $.parseJSON(queryResultString);
+					this.sortDataTable($('#overdue-parties-card .climberdb-dashboard-table'), this.overduePartiesInfo);
+				}
+			});
 	}
 
 	configureGroupStatusGraph() {
@@ -618,7 +636,8 @@ class ClimberDBDashboard extends ClimberDB {
 				this.configureDailyBriefingsChart(),
 				this.configureFlaggedGroups(),
 				this.configureSoloClimbers(),
-				this.configureMisingPaymentOrSUP()
+				this.configureMisingPaymentOrSUP(),
+				this.configureOverdueParties()
 			)
 		}).always(() => {
 			hideLoadingIndicator();
