@@ -11,12 +11,14 @@
 }
 .main-dashboard-container {
 	display: grid;
-	grid-template-columns: repeat(3, 33.3%);
+	/*set iniituially for small screen to all be stacked in one column*/
+	grid-template-columns: auto; 
 	grid-auto-rows: 220px;
 	flex-wrap: wrap;
 	height: 100%;
 	overflow-y: auto;
 	row-gap: .75rem;
+	grid-auto-flow: dense;
 }
 .dashboard-col {
 	padding: 0;
@@ -28,6 +30,7 @@
 	display: flex;
 	flex-direction: column;
 	row-gap: 15px;
+	max-width: calc(100vw - 60px);
 }
 .card-container.half-height-card {
 	grid-row: span 1;
@@ -35,19 +38,46 @@
 .card-container.double-height-card {
 	grid-row: span 4;
 }
+/*make sure all cards span just one column in small-screen mode*/
 .card-container.wide {
-	grid-column: span 2;	
+	grid-column: span 1;	
 }
 .small-row {
 	max-height: 400px;
 }
+/*in small-screen mode, the first card's row needs to be explicitly set*/
+.card-container:first-of-type {
+	grid-row-start: 1;
+	grid-column-start: 1;
+}
+.card-container:not(.half-height-card):first-of-type {
+	grid-row: span 2;
+}
+/*these also need to be set initially for small screen*/
 #flagged-group-card-container {
-	grid-row: 1 / 2;
-	grid-column-start: 2;
+	grid-row: 3/4;
+	grid-column-start: 1;
 }
 #solo-climbers-card-container {
-	grid-row: 2 / 3;
-	grid-column-start: 2;
+	grid-row: 4/5;
+	grid-column-start: 1;
+}
+/*set for screen wider than tablet to the "normal" layout*/
+@media (min-width: 992px) {
+	.main-dashboard-container {
+		grid-template-columns: repeat(3, 33.3%);
+	}
+	.card-container.wide {
+		grid-column: span 2;
+	}
+	#flagged-group-card-container {
+		grid-row: 1 / 2;
+		grid-column-start: 2;
+	}
+	#solo-climbers-card-container {
+		grid-row: 2 / 3;
+		grid-column-start: 2;
+	}
 }
 .card.dashboard-card {
 	border-radius: 20px;
