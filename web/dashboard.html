@@ -282,6 +282,38 @@
 						</div>
 					</div>
 
+					<!-- overdue parties -->
+					<div class="col card-container">
+						<div id="overdue-parties-card" class="card dashboard-card">
+							<h4 class="dashboard-card-header">Overdue Parties <span class="table-row-counter"></span></h4>
+							<div class="dashboard-card-body">
+								<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
+									<thead>
+										<tr>
+											<th class="col-4">
+												<button class="text-only-button sort-column-button" data-field-name="expedition_name">
+													<span>Expedition Name</span>
+													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+												</button>
+											</th>
+											<th>
+												<button class="text-only-button sort-column-button sorted" data-field-name="days_to_departure">
+													<span>Days Overdue</span>
+													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+												</button>
+											</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr class="cloneable hidden">
+											<td><a href="{page_name}.html?id={expedition_id}" target="_blank">{expedition_name}</a></td>
+											<td class="centered-text">{days_overdue}</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
 
 				</div>
 			</div>

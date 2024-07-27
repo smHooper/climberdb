@@ -797,6 +797,23 @@ CREATE VIEW missing_sup_or_payment_dashboard_view AS
 		missing_sup > 0 OR missing_payment > 0
 	ORDER BY days_to_departure, expedition_name;
 
+CREATE VIEW overdue_parties_view AS
+	SELECT 
+		CASE WHEN is_backcountry THEN 'backcountry' ELSE 'expeditions' END AS page_name,
+		expedition_name,
+		expedition_id,
+		planned_return_date,
+		now()::date - planned_return_date AS days_overdue,
+		expedition_status
+	FROM 
+		expeditions JOIN expedition_status_view ON expeditions.id=expedition_status_view.expedition_id
+	WHERE
+		expedition_status_view.expedition_status = 4 AND 
+		(now()::date - planned_return_date) >= 1 AND 
+		extract(year FROM planned_return_date) = extract(year FROM now())
+	ORDER BY 
+		planned_return_date
+
 
 CREATE VIEW transaction_type_view AS 
 SELECT 
