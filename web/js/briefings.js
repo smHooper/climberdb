@@ -1448,17 +1448,19 @@ class ClimberDBBriefings extends ClimberDB {
 	queryBriefings(year=(new Date()).getFullYear()) {
 		const sql = `
 			SELECT * FROM ${this.dbSchema}.briefings_view 
-			WHERE extract(year FROM briefing_start) >= ${year}
+			WHERE extract(year FROM briefing_start) >= :year
 		`;
 
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					console.error('query failed because ' + queryResultString)
+		return this.queryDBPython({sql: sql, sqlParameters: {year: year}})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					console.error('query failed because ' + response)
 				} else {
+					const briefings = response.data || [];
 					// organize briefings by date
-					for (const row of $.parseJSON(queryResultString)) {
-						const briefingDate = row.briefing_date;
+					for (const row of briefings) {
+						// row.briefing_date needs to be returned as YYYY-mm-dd 00:00, so safely chop off the time
+						const briefingDate = getFormattedTimestamp(new Date(row.briefing_date));
 						// If this date hasn't been added to the briefings object, add it
 						if (!(briefingDate in this.briefings)) {
 							this.briefings[briefingDate] = {};
@@ -1510,19 +1512,29 @@ class ClimberDBBriefings extends ClimberDB {
 			this.getExpeditionInfo(year)
 			,
 			// Get rangers 
-			this.queryDB(`
-				SELECT id, first_name || ' ' || last_name As full_name 
-				FROM ${this.dbSchema}.users 
-				WHERE 
-					user_role_code=${this.constants.userRoleCodes.ranger} AND 
-					user_status_code=2 --active`
-				)
-				.done(queryResultString => {
+			this.queryDBPython({
+				sql: 
+					`
+					SELECT id, first_name || ' ' || last_name As full_name 
+					FROM ${this.dbSchema}.users 
+					WHERE 
+						user_role_code=:ranger_role_code AND 
+						user_status_code=2 --active
+					`,
+				sqlParameters: {
+					ranger_role_code: this.constants.userRoleCodes.ranger
+				}
+			}).done(response => {
+				if (this.pythonReturnedError(response)) {
+					showModal('An unexpected error occurred while retreiving briefing details: <br>' + response)
+				} else {
+					const rangers = response.data || [];
 					const $input = $('#input-ranger');
-					for (const row of $.parseJSON(queryResultString)) {
+					for (const row of rangers) {
 						$input.append(`<option class="" value="${row.id}">${row.full_name}</option>`);
 					}
-				})
+				}
+			})
 		];
 
 		// Get times
@@ -1540,13 +1552,13 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	getExpeditionInfo(year=(new Date().getFullYear())) {
-		const sql = `SELECT * FROM ${this.dbSchema}.briefings_expedition_info_view WHERE planned_departure_date > '${year}-1-1' AND group_status_code <> 6 ORDER BY expedition_name`;
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					console.log('Could not get expedition info because ' + queryResultString);
+		const sql = `SELECT * FROM ${this.dbSchema}.briefings_expedition_info_view WHERE planned_departure_date > :departure_date AND group_status_code <> 6 ORDER BY expedition_name`;
+		return this.queryDBPython({sql: sql, sqlParameters: {departure_date: `${year}-1-1`}})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					console.log('Could not get expedition info because \n' + response);
 				} else {
-					const result = $.parseJSON(queryResultString);
+					const result = response.data || [];
 					for (const row of result) {
 						this.expeditionInfo.expeditions[row.expedition_id] = {...row};
 						if (row.unscheduled === 't') this.expeditionInfo.unscheduled.push(row.expedition_id);

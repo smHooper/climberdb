@@ -106,16 +106,19 @@ class ClimberDBConfig extends ClimberDB {
 
 	loadConfig() {
 
-		const sql = `SELECT * FROM ${this.dbSchema}.config WHERE is_editable ORDER BY sort_order`;
-		return this.queryDB(sql).done(queryResultString => {
-			// No need to check result
-			const result = $.parseJSON(queryResultString);
-			for (const row of result) {
-				// Save in-memory data for rolling back edits
-				this.config[row.id] = {...row};
-				const $tr = this.addRow({data: row});
+		return this.queryDBPython({
+			where: {'config': [{column_name: 'is_editable'}]}
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal('An error occurred while retreiving configuration values: <br>' + response, 'Database Error');
+			} else {
+				const result = response.data || [];
+				for (const row of result) {
+					// Save in-memory data for rolling back edits
+					this.config[row.id] = {...row};
+					const $tr = this.addRow({data: row});
+				}
 			}
-			
 		});
 	}
 

@@ -683,34 +683,41 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		super.init().then(() => {
 			let lookupDeferreds = [];
 			lookupDeferreds.push(
-				this.queryDB(`TABLE ${this.dbSchema}.backcountry_location_codes`)
-					.done(result => {
-						// No need to check for errors
-						for (const {code, name, latitude, longitude} of $.parseJSON(result)) {
-							this.locationCoordinates[code] = {
-								name: name,
-								latitude: latitude, 
-								longitude: longitude
-							}
+				this.queryDBPython({
+					tables: ['backcountry_location_codes'], 
+					order_by: [{table_name: 'backcountry_location_codes', column_name: 'sort_order'}]
+				}).done(result => {
+					if (this.pythonReturnedError(result)) {
+						showModal('An error occurred while retrieving lookup values from the database: ' + result, 'Database Error');
+						return;
+					}
+					for (const {code, name, latitude, longitude} of result.data) {
+						this.locationCoordinates[code] = {
+							name: name,
+							latitude: latitude, 
+							longitude: longitude
 						}
-					})
+					}
+				})
 			);
 
 			lookupDeferreds.push(
-				this.queryDB(`SELECT code, name FROM ${this.dbSchema}.group_status_codes WHERE is_bc_status ORDER BY sort_order`)
-					.done(result => {
-						const $selects = $('.group-status-option-field')
-						
+				this.queryDBPython({
+					where: {group_status_codes: [{column_name: 'is_bc_status'}]},
+					orderBy: [{table_name: 'group_status_codes', column_name: 'sort_order'}]
+				}).done(result => {
+					const $selects = $('.group-status-option-field')
+					
+					$selects.append(
+						'<option value="">Party member status</option>'
+					);
+					for (const {code, name} of result.data) {
 						$selects.append(
-							'<option value="">Party member status</option>'
+							$(`<option value="${code}">${name}</option>`)
 						);
-						for (const {code, name} of $.parseJSON(result)) {
-							$selects.append(
-								$(`<option value="${code}">${name}</option>`)
-							);
-						}
+					}
 
-						$selects.val($selects.data('default-value'));
+					$selects.val($selects.data('default-value'));
 				})
 			)
 		})

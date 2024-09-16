@@ -14,17 +14,21 @@ from pypdf import PdfReader, PdfWriter
 from datetime import datetime
 from uuid import uuid4
 
-from flask import Flask, has_request_context, json, render_template, request, url_for
+from flask import Flask, has_request_context, json, jsonify, render_template, request, url_for
 from flask_mail import Mail, Message
 from flask.logging import default_handler
 
 import logging
 from logging.config import dictConfig as loggingDictConfig
 
-from sqlalchemy import create_engine, text as sqlatext
+from sqlalchemy import asc, desc, text as sqlatext#, and_
+from sqlalchemy.engine.row import Row as sqla_Row
+from sqlalchemy.orm import Session, sessionmaker
 
-from export_briefings import briefings_to_excel
+# climberdb modules
 from cache_tag import CacheTag, print_zpl
+import climberdb_utils
+from export_briefings import briefings_to_excel
 
 # Asynchronously load weasyprint because it takes forever and it should only block when it's needed (exporting PDFs)
 import threading
@@ -101,42 +105,26 @@ formatter = RequestFormatter(line_separator +
 logging.root.handlers[0].setFormatter(formatter)
 
 
-CONFIG_FILE = '//inpdenaterm01/climberdb/config/climberdb_config.json'
-
 app = Flask(__name__)
 
 # Error handling
 @app.errorhandler(500)
 def internal_server_error(error):
 	app.logger.error(traceback.format_exc())
-	return 'ERROR: Internal Server Error.\n' + traceback.format_exc()
+
+	return 'ERROR: Internal Server Error.\n' + traceback.format_exc() + '\n\nrequest: ' + json.dumps(request.json)
 
 
 # Load config
-if not os.path.isfile(CONFIG_FILE):
-	raise IOError(f'CONFIG_FILE does not exists: {CONFIG_FILE}')
-if not app.config.from_file(CONFIG_FILE, load=json.load):
-	raise IOError(f'Could not read CONFIG_FILE: {CONFIG_FILE}')
+if not os.path.isfile(climberdb_utils.CONFIG_FILE):
+	raise IOError(f'CONFIG_FILE does not exists: {climberdb_utils.CONFIG_FILE}')
+if not app.config.from_file(climberdb_utils.CONFIG_FILE, load=json.load):
+	raise IOError(f'Could not read CONFIG_FILE: {climberdb_utils.CONFIG_FILE}')
 
 
 @app.route('/flask/environment', methods=['GET'])
 def get_environment() -> str:
-	""" return a string indicating whether this is the production or development env."""
-	return 'prod' if '\\prod\\' in os.path.abspath(__file__) else 'dev'
-
-
-def get_schema() -> str:
-	"""
-	Return the appropriate database schema based on this file's path (i.e., the environment)
-	"""
-	return 'public' if get_environment() == 'prod' else 'dev'
-
-
-def get_engine():
-	return create_engine(
-		'postgresql://{username}:{password}@{host}:{port}/{db_name}'
-			.format(**app.config['DB_PARAMS'])
-	)
+	return climberdb_utils.get_environment()
 
 
 def get_config_from_db() -> dict:
@@ -144,7 +132,7 @@ def get_config_from_db() -> dict:
 	Retrieve saved configuration values for the web app from the 'config' table
 	and save it to the flask config
 	"""
-	engine = get_engine()
+	engine = climberdb_utils.get_engine()
 	db_config = {}		
 	
 	# helper function to convert DB values (which are all strings) to the proper data type
@@ -180,6 +168,13 @@ def get_config_from_db() -> dict:
 # Call it
 get_config_from_db()
 
+# Establish global scope sessionmakers to reuse at the function scope
+schema = climberdb_utils.get_schema()
+read_engine = climberdb_utils.get_engine(access='read', schema=schema)
+write_engine = climberdb_utils.get_engine(access='write', schema=schema)
+ReadSession = sessionmaker(read_engine)
+WriteSession = sessionmaker(write_engine)
+
 
 def get_content_dir(dirname='exports'):
 	return os.path.join(os.path.dirname(__file__), '..', dirname)
@@ -211,10 +206,11 @@ def add_header(response):
 
 def validate_password(username, password):	
 	# Get user password from db
-	engine = get_engine()
+	#engine = climberdb_utils.get_engine()
 	hashed_password = ''
-	with engine.connect() as conn:
-		cursor = conn.execute(f'''SELECT hashed_password FROM users WHERE ad_username='{username}';''')
+	with read_engine.connect() as conn:
+		statement = sqlatext('''SELECT hashed_password FROM users WHERE ad_username=:username''')
+		cursor = conn.execute(statement, {'username': username})
 		result = cursor.first()
 		# If the result is an empty list, the user doesn't exist
 		if not result:
@@ -256,9 +252,18 @@ def add_header(response):
 # **for testing**
 @app.route('/flask/test', methods=['GET', 'POST'])
 def test():
-	
-	return os.getlogin()
 
+	where_clauses = request.json.get('where')
+	return jsonify([
+		{'table_name': table_name,
+		'column_name': where.get('column_name'), 
+		'operator': where.get('operator') or '', 
+		'comparand': where.get('comparand')
+		}
+		for table_name, table_wheres in where_clauses.items() 
+		for where in table_wheres
+		if where.get('column_name')
+		])
 
 @app.route('/flask/config', methods=['POST'])
 def db_config_endpoint():
@@ -286,8 +291,8 @@ def query_user_info(username):
 	if not '\\prod\\' in os.path.abspath(__file__):
 		sql += ' AND user_role_code=4' 
 
-	engine = get_engine()
-	result = engine.execute(sqlatext(sql), {'username': username})
+	#engine = climberdb_utils.get_engine()
+	result = read_engine.execute(sqlatext(sql), {'username': username})
 	if result.rowcount == 0:
 		return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
 	else:
@@ -335,8 +340,9 @@ def set_password():
 	hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), salt)
 	
 	# Update db
-	engine = get_engine()
-	engine.execute(f'''UPDATE users SET hashed_password='{hashed_password.decode()}', user_status_code=2 WHERE ad_username='{username}';''')
+	#engine = climberdb_utils.get_engine()
+	statement = sqlatext('''UPDATE users SET hashed_password=:password, user_status_code=2 WHERE ad_username=:username''')
+	write_engine.execute(statement, {'password': hashed_password.decode(), 'username': username})
 
 	return 'true'
 
@@ -459,9 +465,9 @@ def send_reset_password_request():
 	
 	send_password_email(data, html)
 
-	engine = get_engine()
+	#engine = climberdb_utils.get_engine()
 	try:
-		engine.execute(sqlatext('UPDATE users SET user_status_code=1 WHERE id=:user_id'), {'user_id': user_id})
+		write_engine.execute(sqlatext('UPDATE users SET user_status_code=1 WHERE id=:user_id'), {'user_id': user_id})
 	except Exception as e:
 		raise RuntimeError(f'Failed to update user status with error: {e}')
 
@@ -606,12 +612,13 @@ def export_special_use_permit():
 
 	# Query data from DB
 	expedition_member_ids = permit_data.keys()
-	engine = get_engine()
+	#engine = climberdb_utils.get_engine()
 	expedition_member_id_string = ','.join(expedition_member_ids)
-	cursor = engine.execute(f'''
+	statement = sqlatext('''
 		SELECT * FROM special_use_permit_view 
-		WHERE expedition_member_id IN ({expedition_member_id_string})
+		WHERE expedition_member_id IN (:expedition_member_ids)
 	''')
+	cursor = read_engine.execute(statement, {'expedition_member_ids': expedition_member_id_string})
 	
 	sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
 	pdf_path = os.path.join(os.path.dirname(__file__), 'assets', sup_permit_filename)
@@ -847,6 +854,126 @@ def print_cache_tag():
 
 
 #---------------- DB I/O ---------------------#
+
+
+# All-purpose SELECT query endpoint
+@app.route('/flask/query_db', methods=['POST'])
+def query_db():
+
+	request_data = request.get_json()
+	
+	session = ReadSession()
+
+	sql = request_data.get('sql')
+	where_clauses = request_data.get('where') or {}
+	selects = request_data.get('select') or {}
+	table_names = (
+		request_data.get('tables') or 
+		set([*where_clauses.keys(), *selects.keys()])
+	)
+
+	prohibited_columns = app.config['PHOHIBITED_QUERY_COLUMNS']
+
+	# If raw SQL was passed, execute it
+	if sql:
+		params = request_data.get('params') or None
+		result = session.execute(sql, params)
+		
+		response_data = ([ 
+			{
+				column_name: climberdb_utils.sanitize_query_value(value)
+				for column_name, value in row._asdict().items()
+			} 
+			for row in result.all()
+		])
+
+	# Otherwise, use the SQLAlchemy ORM
+	elif len(table_names):
+		tables = climberdb_utils.get_tables()
+		result = (session
+			.query(*[tables[table_name_] for table_name_ in table_names])
+			.where(*[
+				climberdb_utils.get_where_clause(
+					tables,
+					table_name,
+					where.get('column_name'), 
+					where.get('operator') or '', 
+					where.get('comparand')
+				)
+				for table_name, table_wheres in where_clauses.items() 
+				for where in table_wheres
+				if where.get('column_name')
+			])
+		)
+
+		joins = request_data.get('joins')
+		if joins:
+			for join_ in joins: 
+				left_table = tables[join_.get('left_table')]
+				right_table = tables[join_.get('right_table')]
+				left_table_column = getattr(left_table, join_.get('left_table_column'))
+				right_table_column = getattr(right_table, join_.get('right_table_column'))
+				result = result.join(right_table, left_table_column == right_table_column, isouter=join_.get('is_left'), full=join_.get('is_full'))
+
+		order_by_clauses = request_data.get('order_by')
+		if order_by_clauses:
+			# If there are multiple ORDER BY columns, successive calls to .order_by 
+			#	will modify the result accordingly
+			for order_by in order_by_clauses:
+				table = tables[order_by['table_name']]
+				order = asc # function from sqla
+				if 'order' in order_by:
+					order = asc if order_by['order'].lower().startswith('asc') else desc
+				result = result.order_by(order(getattr(table, order_by['column_name'])))
+
+		# helper function to process an ORM class instance into a dictionary
+		def orm_to_dict(orm_class_instance, selected_columns=[]):
+			# If specific columns weren't specified, return all
+			exclude_columns = prohibited_columns.get(orm_class_instance.__table__.name) or []
+			
+			columns = (
+				selected_columns or 
+				[column.name for column in orm_class_instance.__table__.columns]
+			)
+
+			return {
+				column_name: climberdb_utils.sanitize_query_value(getattr(orm_class_instance, column_name))
+				for column_name in columns
+				if column_name not in exclude_columns
+			}
+
+		response_data = []
+		if result.count():
+			for row in result:
+				row_data = {}
+				# If there was more than one table passed to query(), the result will be
+				#	a sqla.engine.row.Row, with separate class instances for each table.
+				#	In that case, iterate through each of them and combine
+				if isinstance(row, sqla_Row): 
+					for orm_instance in row:
+						selected_columns = selects.get(orm_instance.__table__.name) or []
+						row_data = {
+							**row_data, 
+							**orm_to_dict(orm_instance, selected_columns=selected_columns)
+						}
+				else:
+					row_data = orm_to_dict(row)
+				# Add to the list of dicts, which will 
+				response_data.append(row_data)
+	else:
+		raise RuntimeError(
+			'Either "sql", "tables", or "where" given in reequest data. Request data:\n' + 
+			json.dumps(request_data, indent=4)
+		)
+	
+	response = {'data': response_data}
+
+	if 'queryTime' in request_data:
+		response['queryTime'] = request_data['queryTime']
+
+	return jsonify(response)
+
+
 @app.route('/flask/next_permit_number', methods=['POST'])
 def get_next_permit_number():
 	
@@ -856,7 +983,7 @@ def get_next_permit_number():
 	else:
 		year = int(data['year'])
 
-	engine = get_engine()
+	#engine = climberdb_utils.get_engine()
 
 	sql = sqlatext(f'''
 		SELECT 
@@ -867,7 +994,7 @@ def get_next_permit_number():
 			extract(year FROM planned_departure_date)=:full_year AND
 			expedition_members.permit_number LIKE :permit_search_str
 	''')
-	with engine.connect() as conn:
+	with read_engine.connect() as conn:
 		cursor = conn.execute(sql, {'full_year': year, 'permit_search_str': f'TKA-{str(year)[-2:]}-%'})
 		row = cursor.first()
 		if row:
@@ -881,10 +1008,10 @@ def get_next_permit_number():
 def save_attachment():
 	
 	attachment_data = json.loads(request.form['attachment_data'])
-	engine = get_engine()
+	#engine = climberdb_utils.get_engine()
 	failed_files = []
 	attachment_ids = [] # return to set UI element .data() attributes
-	with engine.connect() as conn:
+	with write_engine.connect() as conn:
 		for filename, data in attachment_data.items():
 			try:
 				client_filename = data['client_filename']
@@ -949,14 +1076,14 @@ def merge_climbers():
 	if not 'merge_climber_id' in data:
 		raise ValueError('selected_climber_id was not specified')
 	
-	engine = get_engine()
-	with engine.connect() as conn:
+	engine = climberdb_utils.get_engine()
+	with write_engine.connect() as conn:
 		# First, update the expedition_member records for the climber to merge. To prevent duplicate 
 		#	expedition member entries when someone tries to merge two climbers that are on at least
 		#	one expedition together, filter out expeditions they both belong to. In practice, this 
 		# 	shouldn't ever be the case but it is possible
 		update_result = conn.execute(
-			sqlatext(f'''
+			sqlatext('''
 				UPDATE expedition_members 
 				SET climber_id=:selected_climber_id 
 				WHERE 
@@ -970,7 +1097,7 @@ def merge_climbers():
 		# expedition_member records have now been transferred so the climber record to merge
 		#	can now be safely deleted
 		delete_result = conn.execute(
-			sqlatext(f'''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
+			sqlatext('''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
 			data
 		)
 

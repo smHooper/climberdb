@@ -2376,6 +2376,8 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 	/*
+	Event handler for when the user clicks a dropdown option representing an 
+	expedition to move an expedition member to
 	*/
 	onModalExpeditionSearchOptionClick(e) {
 		const $option = $(e.target)
@@ -2386,37 +2388,44 @@ class ClimberDBExpeditions extends ClimberDB {
 		const expeditionID = $option.data('expedition-id');
 		const expeditionMemberID = $('#confirm-change-expedition-button').data('expedition-member-id');
 		const climberID = this.expeditionInfo.expedition_members.data[expeditionMemberID].climber_id;
-		this.queryDB(`SELECT * FROM ${this.dbSchema}.expedition_members WHERE expedition_id=${expeditionID} AND climber_id=${climberID}`)
-			.done(queryResultString => {
-				if (!this.queryReturnedError(queryResultString)) {
-					const result = $.parseJSON(queryResultString);
-					if (result.length) {
-						const climberName = $('#modal-expedition-search-bar-label > span').text();
-						showModal(`${climberName} is already a member of ${selectedExpeditionName}. If you think this is an error, check which expedition member record has the most complete or up-to-date information and delete the other one. Then change their expedition if necessary.`, 'Duplicate Expedition Member');
-					} else {
-						const $searchBar = $('#modal-expedition-search-bar');
-						
-						// Select the clicked option so that it can be easily located if the user clicks the 
-						//	confirm-change-expedition-button
-						$searchBar.siblings('.fuzzy-search-bar-drawer')
-							.find('.expedition-search-bar-option.selected').removeClass('selected');
-						$option.addClass('selected');
+		this.queryDBPython({
+			where: {
+				expedition_members: [
+					{column_name: 'expedition_id', operator: '=', comparand: expeditionID},
+					{column_name: 'expedition_id', operator: '=', comparand: climberID}
+				]
+			}
+		}).done(response => {
+			if (!this.pythonReturnedError(response)) {
+				const result = response.data || [];
+				if (result.length) {
+					const climberName = $('#modal-expedition-search-bar-label > span').text();
+					showModal(`${climberName} is already a member of ${selectedExpeditionName}. If you think this is an error, check which expedition member record has the most complete or up-to-date information and delete the other one. Then change their expedition if necessary.`, 'Duplicate Expedition Member');
+				} else {
+					const $searchBar = $('#modal-expedition-search-bar');
+					
+					// Select the clicked option so that it can be easily located if the user clicks the 
+					//	confirm-change-expedition-button
+					$searchBar.siblings('.fuzzy-search-bar-drawer')
+						.find('.expedition-search-bar-option.selected').removeClass('selected');
+					$option.addClass('selected');
 
-						// Set the search bar value
-						$searchBar.val(selectedExpeditionName);
+					// Set the search bar value
+					$searchBar.val(selectedExpeditionName);
 
-						// If this is the modal search bar, show/hide the confirm button
-						$('#confirm-change-expedition-button').ariaHide(false);
-					}
+					// If this is the modal search bar, show/hide the confirm button
+					$('#confirm-change-expedition-button').ariaHide(false);
 				}
-			})
+			}
+		})
 		// Warn the user if this expedition is from a previous year
-		this.queryDB(`SELECT coalesce(planned_departure_date, actual_departure_date) AS planned_departure_date FROM ${this.dbSchema}.expeditions WHERE id=${expeditionID}`)
-			.done(queryResultString => {
-				if (!this.queryReturnedError(queryResultString)) {
-					const result = $.parseJSON(queryResultString);
+		const previousYearSQL = `SELECT coalesce(planned_departure_date, actual_departure_date) AS planned_departure_date FROM ${this.dbSchema}.expeditions WHERE id=:expedition_id`
+		this.queryDBPython({sql: previousYearSQL, sqlParameters: {expedition_id: expeditionID}})
+			.done(response => {
+				if (!this.pythonReturnedError(response)) {
+					const result = response.data || [];
 					if (result.length) {
-						const departureYear = new Date(result[0].planned_departure_date + ' 00:00').getFullYear();
+						const departureYear = new Date(result[0].planned_departure_date).getFullYear();
 						if (departureYear < new Date().getFullYear()) {
 							showModal(`You selected the expedition <strong>${selectedExpeditionName}</strong> which has a planned departure from <strong>${departureYear}</strong>. Make sure you selected the right expedition before confirming the expedition change.`, 'Selected Expedition From Previous Year')
 						}
@@ -3215,20 +3224,22 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Hide all badges
 		$('.climber-form .result-details-header-badge').ariaHide(true);
 		
-		this.queryDB(`SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=${parseInt(climberID)}`)
-			.done(queryResultString => {
-				const result = $.parseJSON(queryResultString);
-				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An error occurred while retreiving climbering info: ${queryResultString}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
+		const sql = `SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=:climber_id`;
+		this.queryDBPython({sql: sql, sqlParameters: {climber_id: parseInt(climberID)}})
+			.done(response => {
+				const result = response.data || [];
+				if (this.pythonReturnedError(response)) {
+					showModal(`An error occurred while retreiving climbering info: <br><br>${response}. <br><br>Make sure you're connected to the NPS network and try again.`, 'Database Error');
 				} else {
 					if (result.length) {
 						this.climberForm.fillClimberForm(climberID, result[0]);	
 						$('#edit-climber-info-button').attr('href', 'climbers.html?edit=true&id=' + climberID)
 							.collapse('show');
 					} else {
-						console.log('No climber found with ID ' + ClimberID);
+						print('No climber found with ID ' + ClimberID);
 					}
 				}
+			
 			})
 	}
 
@@ -3386,6 +3397,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
 
+		// ***** fix string substitutions
 		const sql = `
 			SELECT DISTINCT 
 				expedition_id, 
@@ -3395,12 +3407,12 @@ class ClimberDBExpeditions extends ClimberDB {
 			FROM ${this.dbSchema}.expedition_info_view 
 			${whereClause} 
 			ORDER BY ${orderBy}`;
-		return this.queryDB(sql, {returnTimestamp: true})
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
+		return this.queryDBPython({sql: sql, returnTimestamp: true})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
 
 				} else {
-					var result = $.parseJSON(queryResultString);
+					var result = response.data || [];
 					
 					// Check if this result is older than the currently displayed result. This can happen if the user is 
 					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
@@ -3911,12 +3923,13 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	queryExpedition(expeditionID, {showOnLoadWarnings=true, triggerChange=null}={}) {
 
-		const sql = `
+		const expeditionSQL = `
 			SELECT 
 				*
 			FROM ${this.dbSchema}.expedition_info_view 
-			WHERE expedition_id=${expeditionID}
-		`
+			WHERE expedition_id=:expedition_id
+		`;
+		const commsSQL = `SELECT * FROM ${this.dbSchema}.communication_devices WHERE expedition_id=:expedition_id ORDER BY entry_time, id`
 		showLoadingIndicator('queryExpedition');
 
 		// Query comms separate from all other expedition info because expedition_member_id 
@@ -3926,205 +3939,210 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	records in the result without any way of determining which is right record. 
 		//	Querying them separately eliminates this issue
 		return $.when(
-			this.queryDB(sql),
-			this.queryDB(`SELECT * FROM ${this.dbSchema}.communication_devices WHERE expedition_id=${expeditionID} ORDER BY entry_time, id`)
-		).done( (expeditionInfoResult, commsResult) => {
-				if (this.queryReturnedError(expeditionInfoResult)) {
-					showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: ${expeditionInfoResult.trim()}.`, 'Unexpected error');
-					return;
-				} else if (this.queryReturnedError(commsResult)) {
-					showModal(`An unexpected error occurred while querying the comms info with ID ${expeditionID}: ${commsResult.trim()}.`, 'Unexpected error');
-					return;
+			this.queryDBPython({sql: expeditionSQL, sqlParameters: {expedition_id: parseInt(expeditionID)}}),
+			this.queryDBPython({sql: commsSQL, sqlParameters: {expedition_id: parseInt(expeditionID)} })
+		).done( (expeditionInfoResponse, commsResponse) => {
+			// $.when responses are returned as [response, status], but all we care about
+			//	is the response
+			expeditionInfoResponse = expeditionInfoResponse[0];
+			commsResponse = commsResponse[0];
+			
+			if (this.pythonReturnedError(expeditionInfoResponse)) {
+				showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: <br><br>${expeditionInfoResponse}.`, 'Unexpected error');
+				return;
+			} else if (this.pythonReturnedError(commsResponse)) {
+				showModal(`An unexpected error occurred while querying the comms info with ID ${expeditionID}: <br><br>${commsResponse}.`, 'Unexpected error');
+				return;
+			} else {
+				const expeditionResult = expeditionInfoResponse.data;
+
+				// Gather IDs of open cards and tabs in case this is being reloaded after the user saves. 
+				//	Get the IDs, in particular, because .clearExpeditionInfo() wipes the cards and jQuery 
+				//	references go with them. The element IDs will be the same once the data are reloaded, 
+				//	though, so use those to re-reference the elements
+				const $openCards = $('.card:not(.cloneable) .card-collapse.show');
+				const openCardIDs = '#' + $openCards.map((_, el) => el.id).get().join(',#');
+				const $activeTabs = $('.card:not(.cloneable) .nav-tabs .nav-link.active');
+				const activeTabIDs = '#' + $activeTabs.map((_, el) => el.id).get().join(',#');
+				
+				// Get expedition info
+				if (expeditionResult.length) {
+					this.clearExpeditionInfo(
+						// don't hide expedition buttons when reloading data. Toggling edits for other cases will happen otherwise
+						{hideEditButtons: showOnLoadWarnings} 
+					);  
+
+					// Prevent the user from loading backcountry expeditions on the Expeditions page and vice versa
+					const pageName = window.location.pathname;
+					const isBackcountry = expeditionResult[0].is_backcountry;
+					if (pageName.match('expedition') && isBackcountry === 't') {
+						const message = `You're trying to view a Backcountry group on the Expedition page. View this group on <a href="backcountry.html?id=${expeditionID}">the Backcountry page</a> instead.`;
+						showModal(message, 'Invalid Expedition');
+						return;
+					} else if (pageName.match('backcountry') && isBackcountry === 'f') {
+						const message = `You're trying to view a Denali or Foraker expedition on the Backcountry page. View this group on <a href="expeditions.html?id=${expeditionID}">the Expeditons page</a> instead.`;
+						showModal(message, 'Invalid Backcountry Group');
+						return;
+					}
+
+					const firstRow = expeditionResult[0];//there should only be one
+					for (const fieldName in this.tableInfo.tables.expeditions.columns) {
+						const queryField = this.entryMetaFields.includes(fieldName) ? 'expeditions_' + fieldName : fieldName;
+						this.expeditionInfo.expeditions[fieldName] = firstRow[queryField];
+					}
+					this.expeditionInfo.expeditions.id = firstRow.expedition_id;
 				} else {
-					const expeditionResult = $.parseJSON(expeditionInfoResult[0]);
+					const footerButton = '<button class="generic-button modal-button close-modal" onclick="climberDB.createNewExpedition()" data-dismiss="modal">Close</button>';
+					showModal(`There are no expeditions with the database ID '${expeditionID}'. This expedition was either deleted or the URL you are trying to use is invalid.`, 'Invalid Expedition ID', 'alert', footerButton);
+				}
 
-					// Gather IDs of open cards and tabs in case this is being reloaded after the user saves. 
-					//	Get the IDs, in particular, because .clearExpeditionInfo() wipes the cards and jQuery 
-					//	references go with them. The element IDs will be the same once the data are reloaded, 
-					//	though, so use those to re-reference the elements
-					const $openCards = $('.card:not(.cloneable) .card-collapse.show');
-					const openCardIDs = '#' + $openCards.map((_, el) => el.id).get().join(',#');
-					const $activeTabs = $('.card:not(.cloneable) .nav-tabs .nav-link.active');
-					const activeTabIDs = '#' + $activeTabs.map((_, el) => el.id).get().join(',#');
-					
-					// Get expedition info
-					if (expeditionResult.length) {
-						this.clearExpeditionInfo(
-							// don't hide expedition buttons when reloading data. Toggling edits for other cases will happen otherwise
-							{hideEditButtons: showOnLoadWarnings} 
-						);  
-
-						// Prevent the user from loading backcountry expeditions on the Expeditions page and vice versa
-						const pageName = window.location.pathname;
-						const isBackcountry = expeditionResult[0].is_backcountry;
-						if (pageName.match('expedition') && isBackcountry === 't') {
-							const message = `You're trying to view a Backcountry group on the Expedition page. View this group on <a href="backcountry.html?id=${expeditionID}">the Backcountry page</a> instead.`;
-							showModal(message, 'Invalid Expedition');
-							return;
-						} else if (pageName.match('backcountry') && isBackcountry === 'f') {
-							const message = `You're trying to view a Denali or Foraker expedition on the Backcountry page. View this group on <a href="expeditions.html?id=${expeditionID}">the Expeditons page</a> instead.`;
-							showModal(message, 'Invalid Backcountry Group');
-							return;
+				// Get data for right-side tables
+				let members = this.expeditionInfo.expedition_members;
+				let locations = this.expeditionInfo.itinerary_locations;
+				let transactions = this.expeditionInfo.transactions;
+				let attachments = this.expeditionInfo.attachments;
+				let routes = this.expeditionInfo.expedition_member_routes;
+				let cmcs = this.expeditionInfo.cmc_checkout;
+				let briefingInfo = this.expeditionInfo.briefings;
+				for (const row of expeditionResult) {
+					// get expedition members
+					const memberID = row.expedition_member_id;
+					if (!(memberID in members.data) && memberID != null) {
+						members.data[memberID] = {};
+						members.order.push(memberID);
+						transactions[memberID] = {data: {}, order: []};
+						attachments[memberID] = {data: {}, order: []};
+						for (const fieldName in this.tableInfo.tables.expedition_members.columns) {
+							const queryField = this.entryMetaFields.includes(fieldName) ? 'expedition_members_' + fieldName : fieldName;
+							members.data[memberID][fieldName] = row[queryField];
 						}
-
-						const firstRow = expeditionResult[0];//there should only be one
-						for (const fieldName in this.tableInfo.tables.expeditions.columns) {
-							const queryField = this.entryMetaFields.includes(fieldName) ? 'expeditions_' + fieldName : fieldName;
-							this.expeditionInfo.expeditions[fieldName] = firstRow[queryField];
+						members.data[memberID].first_name = row.first_name;
+						members.data[memberID].last_name = row.last_name;
+						this.climberInfo[row.climber_id] = {
+							firstName: row.first_name,
+							lastName: row.last_name,
+							isCommercialGuide: row.is_guide
 						}
-						this.expeditionInfo.expeditions.id = firstRow.expedition_id;
-					} else {
-						const footerButton = '<button class="generic-button modal-button close-modal" onclick="climberDB.createNewExpedition()" data-dismiss="modal">Close</button>';
-						showModal(`There are no expeditions with the database ID '${expeditionID}'. This expedition was either deleted or the URL you are trying to use is invalid.`, 'Invalid Expedition ID', 'alert', footerButton);
 					}
-
-					// Get data for right-side tables
-					let members = this.expeditionInfo.expedition_members;
-					let locations = this.expeditionInfo.itinerary_locations;
-					let transactions = this.expeditionInfo.transactions;
-					let attachments = this.expeditionInfo.attachments;
-					let routes = this.expeditionInfo.expedition_member_routes;
-					let cmcs = this.expeditionInfo.cmc_checkout;
-					let briefingInfo = this.expeditionInfo.briefings;
-					for (const row of expeditionResult) {
-						// get expedition members
-						const memberID = row.expedition_member_id;
-						if (!(memberID in members.data) && memberID != null) {
-							members.data[memberID] = {};
-							members.order.push(memberID);
-							transactions[memberID] = {data: {}, order: []};
-							attachments[memberID] = {data: {}, order: []};
-							for (const fieldName in this.tableInfo.tables.expedition_members.columns) {
-								const queryField = this.entryMetaFields.includes(fieldName) ? 'expedition_members_' + fieldName : fieldName;
-								members.data[memberID][fieldName] = row[queryField];
+					const locationID = row.itinerary_location_id;
+					if (!(locationID in locations.data) && locationID != null) {
+						locations.data[locationID] = {};
+						locations.order.push(locationID);
+						for (const fieldName in this.tableInfo.tables.itinerary_locations.columns) {
+							const queryField = this.entryMetaFields.includes(fieldName) ? 'itinerary_locations_' + fieldName : fieldName;
+							locations.data[locationID][fieldName] = row[queryField];
+						}
+					}
+					const transactionID = row.transaction_id;
+					if (transactionID != null) {
+						if (!(transactionID in transactions[memberID].data)) {
+							transactions[memberID].data[transactionID] = {};
+							transactions[memberID].order.push(transactionID);
+							for (const fieldName in this.tableInfo.tables.transactions.columns) {
+								const queryField = this.entryMetaFields.includes(fieldName) ? 'transactions_' + fieldName : fieldName;
+								//transactions[memberID].data[transactionID][fieldName] = row[queryField];
+								transactions[memberID].data[transactionID][fieldName] = 
+									queryField === 'transaction_value' ? 
+									row[queryField].replace(/\(/, '-').replace(/[$)]/g, '') :
+									row[queryField];
 							}
-							members.data[memberID].first_name = row.first_name;
-							members.data[memberID].last_name = row.last_name;
-							this.climberInfo[row.climber_id] = {
-								firstName: row.first_name,
-								lastName: row.last_name,
-								isCommercialGuide: row.is_guide
-							}
-						}
-						const locationID = row.itinerary_location_id;
-						if (!(locationID in locations.data) && locationID != null) {
-							locations.data[locationID] = {};
-							locations.order.push(locationID);
-							for (const fieldName in this.tableInfo.tables.itinerary_locations.columns) {
-								const queryField = this.entryMetaFields.includes(fieldName) ? 'itinerary_locations_' + fieldName : fieldName;
-								locations.data[locationID][fieldName] = row[queryField];
-							}
-						}
-						const transactionID = row.transaction_id;
-						if (transactionID != null) {
-							if (!(transactionID in transactions[memberID].data)) {
-								transactions[memberID].data[transactionID] = {};
-								transactions[memberID].order.push(transactionID);
-								for (const fieldName in this.tableInfo.tables.transactions.columns) {
-									const queryField = this.entryMetaFields.includes(fieldName) ? 'transactions_' + fieldName : fieldName;
-									//transactions[memberID].data[transactionID][fieldName] = row[queryField];
-									transactions[memberID].data[transactionID][fieldName] = 
-										queryField === 'transaction_value' ? 
-										row[queryField].replace(/\(/, '-').replace(/[$)]/g, '') :
-										row[queryField];
-								}
-							}
-						}
-
-						const attachmentID = row.attachment_id;
-						if (attachmentID != null) {
-							if (!(attachmentID in attachments[memberID].data)) {
-								attachments[memberID].data[attachmentID] = {};
-								attachments[memberID].order.push(attachmentID);
-								for (const fieldName in this.tableInfo.tables.attachments.columns) {
-									const queryField = this.entryMetaFields.includes(fieldName) ? 'attachments_' + fieldName : fieldName;
-									attachments[memberID].data[attachmentID][fieldName] = row[queryField];
-								}
-							}
-						}
-
-						/* this.expeditionInfo.expedition_member_routes = {
-							data: {
-								routeCode: {
-									memberID: {...}
-								}
-							},
-							order: [
-								routeID
-							]
-						}
-						*/
-						const routeCode = row.route_code;
-						if (!(routeCode in routes.data) && routeCode != null) {
-							routes.data[routeCode] = {};
-							routes.order.push(routeCode);
-						}
-						if (memberID !== null && routeCode in routes.data && !(memberID in routes.data[routeCode])) { 
-							routes.data[routeCode][memberID] = {};
-							for (const fieldName in this.tableInfo.tables.expedition_member_routes.columns) {
-								routes.data[routeCode][memberID][fieldName] = row[fieldName];
-							}
-							routes.data[routeCode][memberID].expedition_member_route_id = row.expedition_member_route_id;
-						}
-
-						const cmcCheckoutID = row.cmc_checkout_id;
-						if (!(cmcCheckoutID in cmcs.data) && row.cmc_id !== null) {
-							cmcs.data[cmcCheckoutID] = {};
-							cmcs.order.push(cmcCheckoutID);
-							for (const fieldName in this.tableInfo.tables.cmc_checkout.columns) {
-								cmcs.data[cmcCheckoutID][fieldName] = row[fieldName];
-							}
-						}
-						
-						if (row.briefing_date && !briefingInfo.briefing_date) {
-							briefingInfo.id = row.briefing_id;
-							briefingInfo.briefing_date = row.briefing_date;
-							briefingInfo.briefing_time = row.briefing_time;
-							briefingInfo.briefing_datetime = row.briefing_datetime;
 						}
 					}
 
-					// Process comms results
-					let comms = this.expeditionInfo.communication_devices;
-					for (const row of $.parseJSON(commsResult[0])) {
-						comms.data[row.id] = {...row};
-						comms.order.push(row.id);
+					const attachmentID = row.attachment_id;
+					if (attachmentID != null) {
+						if (!(attachmentID in attachments[memberID].data)) {
+							attachments[memberID].data[attachmentID] = {};
+							attachments[memberID].order.push(attachmentID);
+							for (const fieldName in this.tableInfo.tables.attachments.columns) {
+								const queryField = this.entryMetaFields.includes(fieldName) ? 'attachments_' + fieldName : fieldName;
+								attachments[memberID].data[attachmentID][fieldName] = row[queryField];
+							}
+						}
+					}
+
+					/* this.expeditionInfo.expedition_member_routes = {
+						data: {
+							routeCode: {
+								memberID: {...}
+							}
+						},
+						order: [
+							routeID
+						]
+					}
+					*/
+					const routeCode = row.route_code;
+					if (!(routeCode in routes.data) && routeCode != null) {
+						routes.data[routeCode] = {};
+						routes.order.push(routeCode);
+					}
+					if (memberID !== null && routeCode in routes.data && !(memberID in routes.data[routeCode])) { 
+						routes.data[routeCode][memberID] = {};
+						for (const fieldName in this.tableInfo.tables.expedition_member_routes.columns) {
+							routes.data[routeCode][memberID][fieldName] = row[fieldName];
+						}
+						routes.data[routeCode][memberID].expedition_member_route_id = row.expedition_member_route_id;
+					}
+
+					const cmcCheckoutID = row.cmc_checkout_id;
+					if (!(cmcCheckoutID in cmcs.data) && row.cmc_id !== null) {
+						cmcs.data[cmcCheckoutID] = {};
+						cmcs.order.push(cmcCheckoutID);
+						for (const fieldName in this.tableInfo.tables.cmc_checkout.columns) {
+							cmcs.data[cmcCheckoutID][fieldName] = row[fieldName];
+						}
 					}
 					
-					this.fillFieldValues(false);//don't trigger change
-					// If the data are being re-loaded after a save, show the cards and tabs that were open before
-					if (!showOnLoadWarnings && $openCards.length) {
-						$(openCardIDs).addClass('show');
-						//$('.nav-tabs .nav-link.active').removeClass('active');
-						$(activeTabIDs).click();
-					}
-
-					// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
-					const $searchBar = $('#expedition-search-bar');
-					const $idInput = $('#expedition-id-input').val(expeditionID)
-						.data('current-value', expeditionID)
-						.change();
-
-					//$select.toggleClass('default', $select.val() === '');
-
-					// If there are any expedition members that aren't assigned to a route, show that .add-expedition-route-member-button 
-					const nMembers = this.expeditionInfo.expedition_members.order.length;
-					for (const el of $('#routes-accordion .card:not(.cloneable)') ) {
-						const $card = $(el);
-						$card.find( $('.add-expedition-route-member-button') ).ariaHide(
-							$card.find('.route-member-list .data-list-item:not(.cloneable)').length === nMembers 
-						)
-					}
-
-					hideLoadingIndicator('queryExpedition');
-
-					// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
-					if (showOnLoadWarnings) {
-						this.showFlaggedMemberWarning();
-						this.show60DayWarning();
+					if (row.briefing_date && !briefingInfo.briefing_date) {
+						briefingInfo.id = row.briefing_id;
+						briefingInfo.briefing_date = row.briefing_date;
+						briefingInfo.briefing_time = row.briefing_time;
+						briefingInfo.briefing_datetime = row.briefing_datetime;
 					}
 				}
-			});
+
+				// Process comms results
+				let comms = this.expeditionInfo.communication_devices;
+				for (const row of commsResponse.data) {
+					comms.data[row.id] = {...row};
+					comms.order.push(row.id);
+				}
+				
+				this.fillFieldValues(false);//don't trigger change
+				// If the data are being re-loaded after a save, show the cards and tabs that were open before
+				if (!showOnLoadWarnings && $openCards.length) {
+					$(openCardIDs).addClass('show');
+					//$('.nav-tabs .nav-link.active').removeClass('active');
+					$(activeTabIDs).click();
+				}
+
+				// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
+				const $searchBar = $('#expedition-search-bar');
+				const $idInput = $('#expedition-id-input').val(expeditionID)
+					.data('current-value', expeditionID)
+					.change();
+
+				//$select.toggleClass('default', $select.val() === '');
+
+				// If there are any expedition members that aren't assigned to a route, show that .add-expedition-route-member-button 
+				const nMembers = this.expeditionInfo.expedition_members.order.length;
+				for (const el of $('#routes-accordion .card:not(.cloneable)') ) {
+					const $card = $(el);
+					$card.find( $('.add-expedition-route-member-button') ).ariaHide(
+						$card.find('.route-member-list .data-list-item:not(.cloneable)').length === nMembers 
+					)
+				}
+
+				hideLoadingIndicator('queryExpedition');
+
+				// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
+				if (showOnLoadWarnings) {
+					this.showFlaggedMemberWarning();
+					this.show60DayWarning();
+				}
+			}
+		});
 	}
 
 
@@ -4753,9 +4771,20 @@ class ClimberDBExpeditions extends ClimberDB {
 		;`
 		const $select = $('#input-cmc_id') // this is the select from the .cloneable <li>
 			.append(`<option class="" value="">CMC #</option>`); 
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				for (const row of $.parseJSON(queryResultString)) {
+		return this.queryDBPython({
+			tables: ['cmc_inventory'],
+			joins: [{left_table: 'cmc_inventory', left_table_column: 'id', right_table: 'cmc_checkout', right_table_column: 'cmc_id', is_left: true}],
+			where: {
+				cmc_checkout: [{column_name: 'return_date', operator: 'IS NOT', comparand: 'NULL'}]
+			},
+			orderBy: [{table_name: 'cmc_inventory', column_name: 'id'}]
+		})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					print('Error while querying CMC inventory: ' + response);
+					return;
+				}
+				for (const row of response.data || []) {
 					this.cmcInfo.cmcCanIDs[row.id] = row.cmc_can_identifier;
 					this.cmcInfo.rfidTags[row.rfid_taf_id] = row.id;
 					$select.append(`<option class="" value="${row.id}">${row.cmc_can_identifier}</option>`);

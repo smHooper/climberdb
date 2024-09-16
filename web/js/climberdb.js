@@ -555,38 +555,54 @@ class ClimberDB {
 
 
 	/*
+	Run a SELECT query by either sending WHERE (and possibly ORDER BY) parameters to use the 
+	SQLAlchemy ORM or raw SQL and parameters to execute parameterized SQL
 	*/
-	fillSelectOptions(selectElementID, queryString, optionClassName='') {
-		let deferred = this.queryDB(queryString);
-		deferred.done(queryResultString => {
-				
-				queryResultString = queryResultString.trim();
+	queryDBPython({tables=[], selects={}, joins=[], where={}, orderBy=[], sql='', sqlParameters={}, returnTimestamp=false}={}) {
+		
+		var requestData = Object.keys({...selects, ...where}).length || tables.length ? 
+			{	
+				tables: tables,
+				select: selects,
+				joins: joins,
+				where: where,
+				order_by: orderBy
+			} : 
+			{sql: sql, params: sqlParameters};
 
-				var queryResult;
-				try {
-					queryResult = $.parseJSON(queryResultString);
-				} catch {
-					//console.log(`error filling in ${selectElementID}: ${queryResultString}`);
-				}
-				if (queryResult) {
+		if (returnTimestamp) requestData.queryTime = (new Date()).getTime();
+		
+		return $.post({
+			url: '/flask/query_db',
+			data: JSON.stringify(requestData),
+			contentType: 'application/json'
+		});
+	}	
+
+
+	/*
+	*/
+	fillSelectOptions(selectElementID, sqlArgs, optionClassName='') {
+		return this.queryDBPython(sqlArgs)
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					print(`fillSelectOptions() failed for ${selectElementID} with error: ` + response);
+				} else {
+					const queryResult = response.data || [];
 					const $el = $('#' + selectElementID);
 					for (const row of queryResult) {
 						$el.append(
-							`<option class="${optionClassName}" value="${row.value}">${row.name}</option>`
+							`<option class="${optionClassName}" value="${row.value || row.code}">${row.name}</option>`
 						);
 					}
 					const defaultValue = $el.data('default-value');
 					if (defaultValue !== undefined) $el.val(defaultValue);
-				} else {
-					console.log(`error filling in ${selectElementID}: ${queryResultString}`);
-				}
+				} 
 			})
 		.fail((xhr, status, error) => {
 				console.log(`fill select failed with status ${status} because ${error} from query:\n${queryString}`)
 			}
 		);
-
-		return deferred;
 	}
 
 	/*
@@ -602,7 +618,19 @@ class ClimberDB {
 			const id = el.id;
 			if (lookupTableName != 'undefineds') {//if neither data-lookup-table or name is defined, lookupTableName === 'undefineds' 
 				if (placeholder) $('#' + id).append(`<option class="" value="">${placeholder}</option>`);
-				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${this.dbSchema}.${lookupTableName} ${$el.is('.include-disabled-options') ? '' : 'WHERE sort_order IS NOT NULL'} ORDER BY sort_order`);
+				
+				let sqlArgs = {orderBy: [{table_name: lookupTableName, column_name: 'sort_order'}]};
+				if ($el.is('.include-disabled-options')) { 
+					sqlArgs.where = {[lookupTableName]: [{
+						column_name: 'sort_order', 
+						operator: 'IS NOT', 
+						comparand: 'NULL'}
+					]};
+				} else {
+					sqlArgs.tables = [lookupTableName];
+				}
+
+				return this.fillSelectOptions(id, sqlArgs);
 				
 			}
 		});
@@ -1281,14 +1309,17 @@ class ClimberDB {
 		const isCheckbox = $el.is('.input-checkbox');
 		const fieldName = el.name.replace(/-\d+$/g, '');
 		const value = values[fieldName];
+		const valueIsNull = value == null;
 		if (fieldName in values) {
 			if (isCheckbox) {
 				$el.prop('checked', value === 't'); //bool vals from postgres are returned as either 't' or 'f'
 			} else {
 				
 				if (isSelect) {
-					$el.val(value == null ? '' : value); //if the db record isn't filled in, set it to the default
-					$el.toggleClass('default', value == null || value == '');
+					$el.val(valueIsNull ? '' : value); //if the db record isn't filled in, set it to the default
+					$el.toggleClass('default', valueIsNull || value == '');
+				} else if ($el.is('[type=date]') && !valueIsNull) {
+					$el.val(getFormattedTimestamp(new Date(value)));
 				} else {
 					$el.val(value);
 				}
@@ -1677,7 +1708,7 @@ class ClimberDB {
 		const userDeferred = this.getUserInfo()
 		//const finalDeferred = $.when(envDeferred, userDeferred)
 		return $.when(envDeferred, userDeferred)
-			.done((_, [userInfoResult, userInfoStatus, userInfoXHR]) => {
+			.then((_, [userInfoResult, userInfoStatus, userInfoXHR]) => {
 				const username = userInfoResult.ad_username;
 				if (addMenu && username !== 'test') {
 					if (this.loginInfo.username !== username || this.loginInfo.expiration < new Date().getTime()) {

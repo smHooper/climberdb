@@ -995,26 +995,25 @@ class ClimberForm {
 		// Check if any of this climber's expeditions were solo. If so, mark them as such
 		if (climberHistory.length) {
 			const $newCards = $accordion.find('.card:not(.cloneable)');
-			const soloSQL = `SELECT * FROM ${this._parent.dbSchema}.solo_climbs_view WHERE climber_id=${climberHistory[0].climber_id}`;
-			const soloDeferred = this._parent.queryDB(soloSQL)
-				.done(resultString => {
-					if (this._parent.queryReturnedError(resultString)) {
-						console.log('could not get solo info because ' + resultString)
-					} else {
-						const result = $.parseJSON(resultString);
-						for (const row of result) {
-							// Mark the history card as a solo climb
-							const cardIndex = expeditionMemberIDs[row.expedition_member_id];
-							const $card = $newCards.eq(cardIndex);
-							$card.find('.card-link-label').text($card.find('.card-link').text() + ' - solo');
-
-							// Unhide the solo-climber badge
-						}
+			const soloSQL = `SELECT * FROM ${this._parent.dbSchema}.solo_climbs_view WHERE climber_id=:climber_id`;
+			const soloDeferred = this._parent.queryDBPython({
+				sql: soloSQL, 
+				sqlParameters:{climber_id: parseInt(climberHistory[0].climber_id)}
+			}).done(response => {
+				if (this._parent.pythonReturnedError(response)) {
+					console.log('could not get solo info because ' + response)
+				} else {
+					const result = response.data || [];
+					for (const row of result) {
+						// Mark the history card as a solo climb
+						const cardIndex = expeditionMemberIDs[row.expedition_member_id];
+						const $card = $newCards.eq(cardIndex);
+						$card.find('.card-link-label').text($card.find('.card-link').text() + ' - solo');
 					}
-				})
-				.fail((xhr, status, error) => {
-					showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
-				});
+				}
+			}).fail((xhr, status, error) => {
+				showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
+			});
 
 		}
 	}
@@ -1052,31 +1051,31 @@ class ClimberForm {
 
 	*/
 	queryClimberHistory(climberID) {
-		const historySQL = `SELECT * FROM ${this._parent.dbSchema}.climber_history_view WHERE climber_id=${climberID}`;
+		const historySQL = `SELECT * FROM ${this._parent.dbSchema}.climber_history_view WHERE climber_id=:climber_id`;
 		//`SELECT * FROM WHERE  climbers.id=${climberID} `
-		const contactsSQL = `SELECT * FROM ${this._parent.dbSchema}.emergency_contacts WHERE climber_id=${climberID}`;
+		const contactsSQL = `SELECT * FROM ${this._parent.dbSchema}.emergency_contacts WHERE climber_id=:climber_id`;
 
-		const historyDeferred = this._parent.queryDB(historySQL)
-			.done(resultString => {
-				if (this._parent.queryReturnedError(resultString)) {
-					showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
+		const historyDeferred = this._parent.queryDBPython({sql: historySQL, sqlParameters: {climber_id: climberID}})
+			.done(response => {
+				if (this._parent.pythonReturnedError(response)) {
+					showModal('Retrieving climber history from the database failed with the following error:<br>' + response, 'Database Error');
 				} else {
-					this.fillClimberHistory($.parseJSON(resultString));
+					this.fillClimberHistory(response.data || []);
 				}
 			})
 			.fail((xhr, status, error) => {
-				showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
+				showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
 			});
-		const contactsDeferred = this._parent.queryDB(contactsSQL)
-			.done(resultString => {
-				if (this._parent.queryReturnedError(resultString)) {
-					showModal('Retrieving emergency contact info from the database failed because because ' + resultString, 'Database Error');
+		const contactsDeferred = this._parent.queryDBPython({sql: contactsSQL, sqlParameters: {climber_id: climberID}})
+			.done(response => {
+				if (this._parent.queryReturnedError(response)) {
+					showModal('Retrieving emergency contact info from the database failed because ' + response, 'Database Error');
 				} else {
-					this.fillEmergencyContacts($.parseJSON(resultString));
+					this.fillEmergencyContacts(response.data || []);
 				}
 			})
 			.fail((xhr, status, error) => {
-				showModal('Retrieving emergency contact info from the database failed because because ' + error, 'Database Error')
+				showModal('Retrieving emergency contact info from the database failed because ' + error, 'Database Error')
 			});
 
 
@@ -1746,10 +1745,11 @@ class ClimberDBClimbers extends ClimberDB {
 		const middleName = $('#input-middle_name').val();
 		const lastName = $('#input-last_name').val();
 		const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
-		this.queryDB(`SELECT id FROM ${this.dbSchema}.climber_info_view WHERE full_name='${fullName}'`)
-			.done(resultString => {
-				if (!this.queryReturnedError(resultString)) {
-					const result = $.parseJSON(resultString);
+		const sql = `SELECT id FROM ${this.dbSchema}.climber_info_view WHERE full_name=:full_name`;
+		this.queryDBPython({sql: sql, sqlParameters: {full_name: fullName}})
+			.done(response => {
+				if (!this.pythonReturnedError(response)) {
+					const result = response.data || [];
 					const nClimbers = result.length;
 					if (nClimbers) {
 						// show modal
@@ -2032,10 +2032,9 @@ class ClimberDBClimbers extends ClimberDB {
 			climberID: climberID,
 			coreWhereClause: whereClause
 		});
-		return this.queryDB(sql, {returnTimestamp: true})
-		//return this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
+		return this.queryDBPython({sql: sql, returnTimestamp: true})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
 					// result was empty so let the user know
 					if (withSearchString) {
 						$('.query-result-list-item:not(.header-row)').remove()
@@ -2043,20 +2042,19 @@ class ClimberDBClimbers extends ClimberDB {
 						$('.hidden-on-invalid-result').ariaHide(true);
 						$('.result-details-pane').addClass('collapsed');
 					} else { // some other problem
-						showModal('Retrieving climber info from the database failed because because ' + queryResultString, 'Database Error');
+						showModal('Retrieving climber info from the database failed with the following error: <br>' + response, 'Database Error');
 					}
 				} else {  
-					var result = $.parseJSON(queryResultString);
+					var result = response.data || [];
 					// Check if this result is older than the currently displayed result. This can happen if the user is 
 					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
 					//	since we don't want the older result to overwrite the newer one
-					const queryTime = result.queryTime;
+					const queryTime = response.queryTime;
 					if (queryTime < this.lastSearchQuery) {
 						return;
 					} else {
 						this.lastSearchQuery = queryTime;
 					}
-					result = result.data;
 					if (!result.length) {
 						$('.query-result-list-item:not(.header-row)').remove();
 						$('.empty-result-message').ariaHide(false);
@@ -2080,11 +2078,11 @@ class ClimberDBClimbers extends ClimberDB {
 						minIndex = minIndex || Math.min(...rowNumbers);
 						let maxIndex = Math.max(...rowNumbers);
 						const countSQL = `SELECT count(*) FROM (${coreQuery}) t;`
-						this.queryDB(countSQL).done((resultString) => {
-							if (this.queryReturnedError(resultString)) {
+						this.queryDBPython({sql: countSQL}).done(response => {
+							if (this.pythonReturnedError(response)) {
 
 							} else {
-								const countResult = $.parseJSON(resultString);
+								const countResult = response.data || [];
 								if (countResult.length) {
 									// Show the currently loaded range of climber results
 									const count = countResult[0].count;
@@ -2109,7 +2107,7 @@ class ClimberDBClimbers extends ClimberDB {
 					
 				}
 			}).fail((xhr, status, error) => {
-				showModal('Retrieving climber info from the database failed because because ' + error, 'Database Error')
+				showModal('Retrieving climber info from the database failed because ' + error, 'Database Error')
 			})
 	}
 
@@ -2246,12 +2244,13 @@ class ClimberDBClimbers extends ClimberDB {
 		$detailsContainer.find('.merge-climber-history-list').empty();
 
 		// Query the climber's info
-		this.queryDB(`SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=${parseInt(climberID)}`)
-			.done(queryResultString => {
-				const result = $.parseJSON(queryResultString);
-				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An error occurred while retreiving climbering info: ${queryResultString}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
+		const sql = `SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=:climber_id`;
+		this.queryDBPython({sql: sql, sqlParameters: {climber_id: parseInt(climberID)}})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					showModal(`An error occurred while retreiving climbering info: <br>${response}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
 				} else {
+					const result = response.data || [];
 					if (result.length) {
 						const climberInfo = result[0];
 						const {
@@ -2315,12 +2314,14 @@ class ClimberDBClimbers extends ClimberDB {
 
 						// get climber hsitory
 						const $historyList = $detailsContainer.find('.merge-climber-history-list');
-						this.queryDB(`SELECT * FROM ${this.dbSchema}.climber_history_view WHERE climber_id=${climberID}`)
-							.done(resultString => {
-								if (this.queryReturnedError(resultString)) {
-									showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
+						const sql = `SELECT * FROM ${this.dbSchema}.climber_history_view WHERE climber_id=:climber_id`;
+						this.queryDBPython({sql: sql, sqlParameters: {climber_id: parseInt(climberID)}})
+							.done(response => {
+								if (this.pythonReturnedError(response)) {
+									showModal('Retrieving climber history from the database failed with the following error: <br>' + response, 'Database Error');
 								} else {
-									for (const row of $.parseJSON(resultString)) {
+									const result = response.data || [];
+									for (const row of result) {
 										const formattedDeparture = (new Date(row.actual_departure_date + ' 12:00')).toLocaleDateString(); //add a time otherwise the date will be a day before
 										const actualReturnDate = new Date(row.actual_return_date + ' 12:00');
 										const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
@@ -2329,7 +2330,7 @@ class ClimberDBClimbers extends ClimberDB {
 								}
 							})
 							.fail((xhr, status, error) => {
-								showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
+								showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
 							});
 					} else {
 						console.log('No climber found with ID ' + ClimberID);
@@ -2458,28 +2459,28 @@ class ClimberDBClimbers extends ClimberDB {
 			const lookupDeferreds = this.fillAllSelectOptions();
 			if (Object.keys(this.stateCodes).length === 0) {
 				lookupDeferreds.push(
-					this.queryDB(`SELECT * FROM ${this.dbSchema}.state_codes`)
-						.done((queryResultString) => {
-							if (!this.queryReturnedError(queryResultString)) {
-								for (const state of $.parseJSON(queryResultString)) {
+					this.queryDBPython({tables: ['state_codes']})
+						.done(response => {
+							if (!this.pythonReturnedError(response)) {
+								for (const state of response.data || []) {
 									this.stateCodes[state.code] = {...state};
 								}
 							}
 						})
 				)
 			}
-			if (Object.keys(this.stateCodes).length === 0) {
+			if (Object.keys(this.routeCodes).length === 0) {
 				lookupDeferreds.push(
-					this.queryDB(`SELECT * FROM ${this.dbSchema}.route_codes`)
-						.done((queryResultString) => {
-							if (!this.queryReturnedError(queryResultString)) {
-								for (const route of $.parseJSON(queryResultString)) {
+					this.queryDBPython({tables: ['route_codes']})
+						.done(response => {
+							if (!this.pythonReturnedError(response)) {
+								for (const route of response.data || []) {
 									this.routeCodes[route.code] = {...route};
 								}
 							}
 						})
 				)
-			} 
+			}
 			return $.when(...lookupDeferreds)
 		}).then(() => {
 			var urlParams = this.parseURLQueryString();

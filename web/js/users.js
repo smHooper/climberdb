@@ -601,19 +601,29 @@ class ClimberDBUsers extends ClimberDB {
 
 	loadSelectOptions() {
 		return [
-			this.queryDB(`SELECT name, code FROM ${this.dbSchema}.user_role_codes WHERE code NOT IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`).done(queryResultString => {
+			//this.queryDB(`SELECT name, code FROM ${this.dbSchema}.user_role_codes WHERE code NOT IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`)
+			this.queryDBPython({
+				where: { user_role_codes: [{column_name: 'code', operator: 'NOT IN', comparand: this.config.no_login_user_roles}] },
+				orderBy: [{table_name: 'user_role_codes', column_name: 'sort_order'}]
+			}).done(response => {
 				// No need to check result
-				const codes = $.parseJSON(queryResultString);
+				const codes = response.data || [];
 				this.userRoleOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
 			}),
-			this.queryDB(`SELECT name, code FROM ${this.dbSchema}.user_role_codes WHERE code IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`).done(queryResultString => {
+			this.queryDBPython({
+				where: { user_role_codes: [{column_name: 'code', operator: 'IN', comparand: this.config.no_login_user_roles}] },
+				orderBy: [{table_name: 'user_role_codes', column_name: 'sort_order'}]
+			}).done(response => {
 				// No need to check result
-				const codes = $.parseJSON(queryResultString);
+				const codes = response.data || [];
 				this.noLoginRoleOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
 			}),
-			this.queryDB(`TABLE ${this.dbSchema}.user_status_codes ORDER BY sort_order;`).done(queryResultString => {
+			this.queryDBPython({
+				tables: ['user_status_codes'], 
+				orderBy: [{table_name: 'user_status_codes', column_name: 'sort_order'}]
+			}).done(response => {
 				// No need to check result
-				const codes = $.parseJSON(queryResultString);
+				const codes = response.data || [];
 				this.userStatusOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
 			})
 		]
@@ -638,9 +648,29 @@ class ClimberDBUsers extends ClimberDB {
 				first_name, 
 				last_name
 		`;
-		return this.queryDB(sql).done(queryResultString => {
-			// No need to check result
-			const result = $.parseJSON(queryResultString);
+		return this.queryDBPython({
+			selects: {
+				users: [
+					'id', 
+					'ad_username', 
+					'first_name', 
+					'last_name', 
+					'email_address',
+					'user_role_code',
+					'user_status_code'
+				]
+			},
+			orderBy: [
+				{table_name: 'users', column_name: 'user_status_code', order: 'desc'},
+				{table_name: 'users', column_name: 'first_name'},
+				{table_name: 'users', column_name: 'last_name'},
+			]
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal('An error occurred while loading users: <br><br>' + response, 'Unexpected Error');
+				return false;
+			}
+			const result = response.data || [];
 			const noLoginRoles = this.config.no_login_user_roles;
 			for (const row of result) {
 				// Save in-memory data for rolling back edits

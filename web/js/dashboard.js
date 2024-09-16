@@ -75,26 +75,30 @@ class ClimberDBDashboard extends ClimberDB {
 				 	SELECT DISTINCT 
 						expedition_member_id
 					FROM ${this.dbSchema}.registered_climbs_view
-					WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31'
+					WHERE planned_departure_date BETWEEN :start_date AND :end_date
 				) t
 			;
 		`;
 		
-		const totalClimbersDeferred = this.queryDB(totalClimbersSQL)
-			.done(queryResultString => {
-				const $totalClimbersSpan = $('.total-registered-climbers-count');
-				if (this.queryReturnedError(queryResultString)) {
-					print(`Total climbers query failed with result: ${queryResultString}`);
-					$totalClimbersSpan.text('ERROR');
-				} else {
-					const result = $.parseJSON(queryResultString);
-					$totalClimbersSpan.text(result[0].total_climbers)
-				}
-			})
-			.fail((xhr, status, error) => {
-				print('Registered climber query failed with error: ' + error);
+		const startDate = `${year}-1-1`;
+		const endDate = `${year}-12-31`;
+		const totalClimbersDeferred = this.queryDBPython({
+			sql: totalClimbersSQL, 
+			sqlParameters: {start_date: startDate, end_date: endDate}
+		}).done(response => {
+			const $totalClimbersSpan = $('.total-registered-climbers-count');
+			if (this.pythonReturnedError(response)) {
+				print(`Total climbers query failed with result:\n${response}`);
 				$totalClimbersSpan.text('ERROR');
-			})
+			} else {
+				const result = response.data || [];
+				$totalClimbersSpan.text(result[0].total_climbers)
+			}
+		})
+		.fail((xhr, status, error) => {
+			print('Registered climber query failed with error: ' + error);
+			$totalClimbersSpan.text('ERROR');
+		})
 
 		const templateSQL = `
 			SELECT
@@ -115,7 +119,7 @@ class ClimberDBDashboard extends ClimberDB {
 							mountain_name,
 							reservation_status_code
 						FROM ${this.dbSchema}.registered_climbs_view
-						WHERE planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' 
+						WHERE planned_departure_date BETWEEN :start_date AND :end_date 
 							{where}
 						ORDER BY expedition_member_id, mountain_name
 					) _
@@ -128,13 +132,13 @@ class ClimberDBDashboard extends ClimberDB {
 			{mountain_name: 'Foraker', value: 0}
 		]
 		
-		const processResult = (queryResultString, statName, displayName) => {
+		const processResult = (response, statName, displayName) => {
 			tableData[statName] = {displayName: displayName}
-			if (this.queryReturnedError(queryResultString)) {
-				print(`${statName} query failed with result: ${queryResultString}`);
+			if (this.pythonReturnedError(response)) {
+				print(`${statName} query failed with result:\n${response}`);
 				tableData[statName].data = [...nullResult];
 			} else {
-				let result = $.parseJSON(queryResultString);
+				let result = response.data || [];
 				// In case the query returns nothing, set the values to 0
 				if (!result.length) {
 					result = [...nullResult];
@@ -152,45 +156,54 @@ class ClimberDBDashboard extends ClimberDB {
 
 		// registered climbers
 		const registeredSQL = templateSQL.replace(/\{where\}/g, '');
-		const registeredDeferred =  this.queryDB(registeredSQL)
-			.done(queryResultString => {
-				processResult(queryResultString, 'registered', 'Registered climbers');
-			})
-			.fail((xhr, status, error) => {
-				print('Registered climber query failed with error: ' + error);
-				tableData.registered = {
-					displayName: 'Registered climbers',
-					data: [...nullResult]
-				}
-			});
+		const registeredDeferred =  this.queryDBPython({
+			sql: registeredSQL, 
+			sqlParameters: {start_date: startDate, end_date: endDate}
+		})
+		.done(response => {
+			processResult(response, 'registered', 'Registered climbers');
+		})
+		.fail((xhr, status, error) => {
+			print('Registered climber query failed with error: ' + error);
+			tableData.registered = {
+				displayName: 'Registered climbers',
+				data: [...nullResult]
+			}
+		});
 
 		// on the mountain
 		const onMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 4 --4 == briefing complete');
-		const onMountainDeferred =  this.queryDB(onMountainSQL)
-			.done(queryResultString => {
-				processResult(queryResultString, 'onMountain', 'On the mountain');
-			})
-			.fail((xhr, status, error) => {
-				print('Registered climber query failed with error: ' + error);
-				tableData.onMountain = {
-					displayName: 'On the mountain',
-					data: [...nullResult]
-				};
-			});
+		const onMountainDeferred =  this.queryDBPython({
+			sql: onMountainSQL, 
+			sqlParameters: {start_date: startDate, end_date: endDate}
+		})
+		.done(response => {
+			processResult(response, 'onMountain', 'On the mountain');
+		})
+		.fail((xhr, status, error) => {
+			print('Registered climber query failed with error: ' + error);
+			tableData.onMountain = {
+				displayName: 'On the mountain',
+				data: [...nullResult]
+			};
+		});
 
 		// off mountain
 		const offMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 5 --5 == returned');
-		const offMountainDeferred =  this.queryDB(offMountainSQL)
-			.done(queryResultString => {
-				processResult(queryResultString, 'offMountain', 'Done and off mountain');
-			})
-			.fail((xhr, status, error) => {
-				print('Registered climber query failed with error: ' + error);
-				tableData.offMountain = {
-					displayName: 'Done and off mountain',
-					data: [...nullResult]
-				};
-			});
+		const offMountainDeferred =  this.queryDBPython({
+			sql: offMountainSQL, 
+			sqlParameters: {start_date: startDate, end_date: endDate}
+		})
+		.done(response => {
+			processResult(response, 'offMountain', 'Done and off mountain');
+		})
+		.fail((xhr, status, error) => {
+			print('Registered climber query failed with error: ' + error);
+			tableData.offMountain = {
+				displayName: 'Done and off mountain',
+				data: [...nullResult]
+			};
+		});
 
 		// summited
 		const summitedSQL = `
@@ -213,7 +226,7 @@ class ClimberDBDashboard extends ClimberDB {
 							reservation_status_code
 						FROM ${this.dbSchema}.registered_climbs_view
 						WHERE 
-							planned_departure_date BETWEEN '${year}-1-1' AND '${year}-12-31' AND 
+							planned_departure_date BETWEEN :start_date AND :end_date AND 
 							reservation_status_code = 5 AND
 							summit_date IS NOT NULL
 						ORDER BY expedition_member_id, mountain_name
@@ -223,33 +236,39 @@ class ClimberDBDashboard extends ClimberDB {
 			) ___ 
 		`;
 
-		const summitedDeferred =  this.queryDB(summitedSQL)
-			.done(queryResultString => {
-				processResult(queryResultString, 'summited', 'Summits');
-			})
-			.fail((xhr, status, error) => {
-				print('Registered climber query failed with error: ' + error);
-				tableData.summited = {
-					displayName: 'Summits',
-					data: [...nullResult]
-				};
-			});
+		const summitedDeferred =  this.queryDBPython({
+			sql: summitedSQL, 
+			sqlParameters: {start_date: startDate, end_date: endDate}
+		})
+		.done(response => {
+			processResult(response, 'summited', 'Summits');
+		})
+		.fail((xhr, status, error) => {
+			print('Registered climber query failed with error: ' + error);
+			tableData.summited = {
+				displayName: 'Summits',
+				data: [...nullResult]
+			};
+		});
 
 		const cancelledSQL = offMountainSQL
 			.replace(/reservation_status_code = 5/g, 'reservation_status_code = 6')
 			.replace(/registered_climbs_view/g, 'all_climbs_view');
 
-		const cancelledDeferred = this.queryDB(cancelledSQL)
-					.done(queryResultString => {
-						processResult(queryResultString, 'cancelled', 'Cancelled climbers');
-					})
-					.fail((xhr, status, error) => {
-						print('Registered climber query failed with error: ' + error);
-						tableData.offMountain = {
-							displayName: 'Cancelled climbers',
-							data: [...nullResult]
-						};
-					});
+		const cancelledDeferred = this.queryDBPython({
+			sql: cancelledSQL, 
+			sqlParameters: {start_date: startDate, end_date: endDate}
+		})
+		.done(response => {
+			processResult(response, 'cancelled', 'Cancelled climbers');
+		})
+		.fail((xhr, status, error) => {
+			print('Registered climber query failed with error: ' + error);
+			tableData.offMountain = {
+				displayName: 'Cancelled climbers',
+				data: [...nullResult]
+			};
+		});
 
 		function addData(rowData, statDisplayName) {
 			return $(`
@@ -311,12 +330,12 @@ class ClimberDBDashboard extends ClimberDB {
 			WHERE planned_departure_date >= now()::date
 			ORDER BY planned_departure_date;`
 		
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					print('error querying flagged: ' + queryResultString)
+		return this.queryDBPython({sql: sql})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					print('error querying flagged: ' + response)
 				} else {
-					this.flaggedExpeditionInfo = $.parseJSON(queryResultString);
+					this.flaggedExpeditionInfo = response.data || [];
 					this.sortDataTable($('#flagged-groups-card .climberdb-dashboard-table'), this.flaggedExpeditionInfo);
 				}
 			})
@@ -331,16 +350,16 @@ class ClimberDBDashboard extends ClimberDB {
 				SELECT DISTINCT ON (expedition_member_id) *
 				FROM ${this.dbSchema}.solo_climbs_view 
 				WHERE 
-				departure_date >= '${year}-1-1' AND 
+				departure_date >= :start_date AND 
 				group_status_code IN (3, 4)
 			) _ ORDER BY departure_date
 		`;
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					print('error querying solo climbs: ' + queryResultString)
+		return this.queryDBPython({sql: sql, sqlParameters: {start_date: `${year}-1-1`}})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					print('error querying solo climbs: ' + response)
 				} else {
-					const result = $.parseJSON(queryResultString);
+					const result = response.data || [];
 					this.soloClimberInfo = result.filter( (value, index, self) =>
 						index === self.findIndex( 
 							t => t.expedition_id === value.expedition_id 
@@ -357,12 +376,12 @@ class ClimberDBDashboard extends ClimberDB {
 	configureMisingPaymentOrSUP() {
 		const sql = `TABLE ${this.dbSchema}.missing_sup_or_payment_dashboard_view`;
 		
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					console.log('error querying missing SUP/payment: ' + queryResultString)
+		return this.queryDBPython({sql: sql})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					print('error querying missing SUP/payment: ' + response)
 				} else {
-					this.missingPaymentOrSUPInfo = $.parseJSON(queryResultString);
+					this.missingPaymentOrSUPInfo = response.data || [];
 					this.sortDataTable($('#missing-sup-fee-groups-card .climberdb-dashboard-table'), this.missingPaymentOrSUPInfo);
 				}
 			})
@@ -372,12 +391,12 @@ class ClimberDBDashboard extends ClimberDB {
 	configureOverdueParties() {
 		const sql = `TABLE ${this.dbSchema}.overdue_parties_view`;
 
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					console.log('error querying overdue parties: ' + queryResultString)
+		return this.queryDBPython({sql: sql})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					print('error querying overdue parties: ' + response)
 				} else {
-					this.overduePartiesInfo = $.parseJSON(queryResultString);
+					this.overduePartiesInfo = response.data || [];
 					this.sortDataTable($('#overdue-parties-card .climberdb-dashboard-table'), this.overduePartiesInfo);
 				}
 			});
@@ -396,13 +415,13 @@ class ClimberDBDashboard extends ClimberDB {
 				planned_departure_date
 			FROM ${this.dbSchema}.expedition_info_view JOIN ${this.dbSchema}.group_status_codes ON group_status_code = group_status_codes.code
 			WHERE 
-				planned_departure_date > '${year}-1-1' AND 
+				planned_departure_date > :start_date AND 
 				NOT is_backcountry
 			ORDER BY expedition_name;
 		`;
-		return this.queryDB(sql)
-			.done((queryResultString) => {
-				if (this.queryReturnedError(queryResultString)) {
+		return this.queryDBPython({sql: sql, sqlParameters: {start_date: `${year}-1-1`}})
+			.done((response) => {
+				if (this.pythonReturnedError(response)) {
 					showModal(
 						`An error occurred while querying group status. Make sure you're` + 
 						` connected to the NPS network and reload the page. If the` + 
@@ -412,7 +431,7 @@ class ClimberDBDashboard extends ClimberDB {
 				} else {
 					const dropdowns = {};
 					const nExpeditions = {};
-					for (const row of $.parseJSON(queryResultString)) {
+					for (const row of response.data) {
 						const status = row.group_status_code;
 						if (!(status in nExpeditions)) nExpeditions[status] = 0;
 						nExpeditions[status] ++;
@@ -441,7 +460,7 @@ class ClimberDBDashboard extends ClimberDB {
 				}
 			})
 			.fail((xhr, status, error) => {
-
+				print('Error querying group status: ' + error)
 			});
 
 	}
@@ -495,14 +514,18 @@ class ClimberDBDashboard extends ClimberDB {
 			$(e.native.target).css("cursor", el[0] ? "pointer" : "default");
 		}
 
-		return this.queryDB(sql, 'climberdb')
-			.done((queryResultString) => {
-	        	let resultString = queryResultString.trim();
-	        	if (resultString.startsWith('ERROR') || resultString === "false" || resultString === "php query failed") {
-	        		alert('Unable to query briefings per day: ' + resultString);
+		return this.queryDBPython({sql: sql})
+			.done(response => {
+	        	if (this.pythonReturnedError(response)) {
+	        		showModal(
+	        			`An error occurred while querying breifings. Make sure you're` + 
+	        			` connected to the NPS network and reload the page. If the` + 
+	        			` problem persists, contact your IT administrator.`, 
+	        			'Database error'
+	        		);
 	        		return false; // Save was unsuccessful
 	        	} else {
-	        		let queryResult = $.parseJSON(resultString);
+	        		let queryResult = response.data || [];
 	        		var data = [];
 	        		var xlabels = [];
 	        		for (let row of queryResult) {
