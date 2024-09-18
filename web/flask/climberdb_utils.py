@@ -12,6 +12,7 @@ from sqlalchemy.engine import Engine, URL
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.decl_api import DeclarativeMeta
+from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.elements import BinaryExpression
 
 from typing import Any, Mapping
@@ -39,7 +40,12 @@ def get_engine(access='read', schema='public') -> Engine:
 
 	url = URL.create('postgresql', **config[f'DB_{access.upper()}_PARAMS'])
 
-	return create_engine(url)\
+	# Use NullPool to prevent connection pooling. Since IIS spins up a 
+	#	new instance for every request (or maybe just every request 
+	#	with a different URL), each app instance creates its own connection. 
+	#	With SQLAlchemy connection pooling, connections stay open and the 
+	#	postgres simultaneous connection limit can easily be exceeded
+	return create_engine(url, poolclass=NullPool)\
 		.execution_options(schema_translate_map={'public': schema, None: schema})
 
 
