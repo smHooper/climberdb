@@ -844,21 +844,32 @@ class ClimberDBBriefings extends ClimberDB {
 		}
 		// Otherwise, delete it from the DB
 		else {
-			this.queryDB(`DELETE FROM ${this.dbSchema}.briefings WHERE id=${briefingID} RETURNING id, briefing_start::date AS briefing_date`)
-				.done(queryResultString => {
-					if (this.queryReturnedError(queryResultString)) {
-						showModal(`An error occurred while deleting the briefing: ${queryResultString}. Try again and if this problem persists, contact IT for assistance.`, 'Unexpected Error')
+			const deleteOptions = {
+				returning: {
+					briefings: ['briefing_start']
+				}
+			}
+			this.deleteByID('briefings', briefingID, deleteOptions)
+				.done(response => {
+					if (this.pythonReturnedError(response)) {
+						showModal('An error occurred while deleting the briefing. Try again and if this problem persists, contact IT for assistance. Full error message: <br><br>' + response, 'Unexpected Error')
 					} else {
-						const result = $.parseJSON(queryResultString);
+						const result = response.data || {};
+						if (Object.keys(result).length === 0) {
+							showModal('An error occurred while deleting the briefing. Reload the page and try again. If this problem persists, contact IT for assistance');
+							return;
+						}
+
 						// empty edits
 						this.edits = {};
 
 						// add expedition to unscheduled list
 						const briefingInfo = this.getBriefingInfo(briefingID);
 						this.expeditionInfo.unscheduled.push(briefingInfo.expedition_id);
-						
+
 						// remove briefing from info
-						const briefingDate = result[0].briefing_date;
+						const briefingDateString = result.briefings[0].briefing_start;
+						const briefingDate = getFormattedTimestamp(new Date(briefingDateString));
 						delete this.briefings[briefingDate][briefingID];
 
 						this.removeBriefingFromSchedule(briefingID, {briefingDate: briefingDate});
@@ -1561,7 +1572,7 @@ class ClimberDBBriefings extends ClimberDB {
 					const result = response.data || [];
 					for (const row of result) {
 						this.expeditionInfo.expeditions[row.expedition_id] = {...row};
-						if (row.unscheduled === 't') this.expeditionInfo.unscheduled.push(row.expedition_id);
+						if (row.unscheduled) this.expeditionInfo.unscheduled.push(row.expedition_id);
 					}
 					this.fillExpeditionsSelectOptions(result);
 				}

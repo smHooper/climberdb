@@ -581,6 +581,27 @@ class ClimberDB {
 
 
 	/*
+	Delete one or more rows from a database table. id is either a single ID or a list of IDs
+	*/
+	deleteByID(tableName, id, {returning={}}={}) {
+
+		var requestData = {
+			table_name: tableName,
+			db_ids: id
+		};
+		if (Object.keys(returning).length) 
+			requestData.returning = returning;
+		
+
+		return $.post({
+			url: '/flask/delete/id',
+			data: JSON.stringify(requestData),
+			contentType: 'application/json'
+		});
+	}
+
+
+	/*
 	*/
 	fillSelectOptions(selectElementID, sqlArgs, optionClassName='') {
 		return this.queryDBPython(sqlArgs)
@@ -1006,7 +1027,11 @@ class ClimberDB {
 				el.value = defaultValue || null;
 			}
 
-			$el.removeData('table-id');
+			$el.removeData('table-id')
+				// call this too because removeData() only removes things that 
+				//	were set via .data(), not attr('data-*'): 
+				//	https://api.jquery.com/removeData/
+				.removeAttr('data-table-id'); 
 
 			if (triggerChange) $el.change();
 		}
@@ -1257,11 +1282,11 @@ class ClimberDB {
 
 
 	getTableInfo() {
-		return this.queryDB(`SELECT * FROM table_info_matview`).done(resultString => {
+		return this.queryDBPython({sql: 'SELECT * FROM table_info_matview'}).done(response => {
 			// the only way this query could fail is if I changed DBMS, 
 			//	so I won't bother to check that the result is valid
 			var insertOrder = this.tableInfo.insertOrder;
-			for (const info of $.parseJSON(resultString)) {
+			for (const info of response.data || []) {
 				const tableName = info.table_name;
 				if (!insertOrder.includes(tableName)) insertOrder.push(tableName);
 				if (!(tableName in this.tableInfo.tables)) {

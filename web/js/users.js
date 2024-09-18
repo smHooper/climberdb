@@ -601,7 +601,6 @@ class ClimberDBUsers extends ClimberDB {
 
 	loadSelectOptions() {
 		return [
-			//this.queryDB(`SELECT name, code FROM ${this.dbSchema}.user_role_codes WHERE code NOT IN (${this.config.no_login_user_roles.join(',')}) ORDER BY sort_order;`)
 			this.queryDBPython({
 				where: { user_role_codes: [{column_name: 'code', operator: 'NOT IN', comparand: this.config.no_login_user_roles}] },
 				orderBy: [{table_name: 'user_role_codes', column_name: 'sort_order'}]

@@ -348,7 +348,7 @@ class ClimberForm {
 									<button class="generic-button add-card-button" data-target="#emergency-contacts-accordion" title="Add emergency contact">Add contact</button>
 								</div>
 								<div id="emergency-contacts-accordion" class="accordion" data-table-name="emergency_contacts">
-									<div class="card cloneable hidden" id="cloneable-card-emergency-contacts" data-label-template="first_name last_name, relationship">
+									<div class="card cloneable hidden" id="cloneable-card-emergency-contacts" data-table-name="emergency_contacts" data-label-template="first_name last_name, relationship">
 										<div class="card-header" id="cardHeader-emergency-contacts-cloneable">
 											<a class="card-link" data-toggle="collapse" href="#collapse-emergency-contacts-cloneable" data-target="collapse-emergency-contacts-cloneable">
 												<div class="card-link-content">
@@ -577,7 +577,9 @@ class ClimberForm {
 			this.saveEdits()
 		});
 
-		$('.climber-form .delete-card-button').click(this.onDeleteCardButtonClick);
+		$('.climber-form .delete-card-button').click(e => {
+			this.onDeleteCardButtonClick(e)
+		});
 
 		$('#disable-required-switch-container input[type=checkbox]').change(e => {
 			this.onToggleRequiredChange(e);
@@ -597,32 +599,19 @@ class ClimberForm {
 		// 	The constructor for the climber form is called syncronously so the DB schema
 		//	has not yet been queried. Since these are unlikely to differ from the default
 		//	schema (i.e., public), just query the default
-		$.post({
-			url: 'climberdb.php',
-			data: {
-				action: 'query',
-				queryString: `TABLE country_codes`,
-				db: 'climberdb'
-			}
-		}).done(queryResultString => {
-			for (const row of $.parseJSON(queryResultString)) {
-				// Need to get abbreviation from code for API call
-				this.countryCodes[row.code] = row.short_name;
-			};
-		});		
-		$.post({
-			url: 'climberdb.php',
-			data: {
-				action: 'query',
-				queryString: `TABLE state_codes`,
-				db: 'climberdb'
-			}
-		}).done(queryResultString => {
-			for (const row of $.parseJSON(queryResultString)) {
-				// Need to get code from abbreviation for API response
-				this.stateCodes[row.short_name] = row.code;
-			};
-		});
+		this._parent.queryDBPython({tables: ['country_codes']})
+			.done(response => {
+				for (const row of response.data || []) {
+					this.countryCodes[row.code] = row.short_name;
+				}
+			});	
+		this._parent.queryDBPython({tables: ['state_codes']})
+			.done(response => {
+				for (const row of response.data || []) {
+					// Need to get code from abbreviation for API response
+					this.stateCodes[row.short_name] = row.code;
+				}
+			});	
 
 	}
 
@@ -1286,7 +1275,9 @@ class ClimberForm {
 					// Set the card's class and inputs' attributes so it changes will register as updates
 					const {container, tableName} = inserts[i];
 					const $container = $(container)
-						.removeClass('new-card');
+						.removeClass('new-card')
+						.data('table-name', tableName)
+						.data('table-id', id);
 					$container
 						.find('.input-field')
 							.data('table-name', tableName)
@@ -1372,38 +1363,25 @@ class ClimberForm {
 			$card.fadeOut(500, () => {$card.remove()})
 		} else {
 			showLoadingIndicator('deleteCard');
-			var tablesToDeleteFrom = [];
-			var deleteStatements = [];
-			for (const el of $card.find('.input-field')) {
-				const $input = $(el);
-				const tableName = $input.data('table-name');
-				const dbID = $input.data('table-id');
-				if (!tablesToDeleteFrom.includes(tableName) && tableName && dbID != undefined) {
-					tablesToDeleteFrom.push(tableName);
-					deleteStatements.push(`DELETE FROM ${this._parent.dbSchema}.${tableName} WHERE id=${parseInt(dbID)} RETURNING id, '${tableName}' AS table_name`);
-				}
+			const tableName = $card.data('table-name');
+			if (!tableName) {
+				print('No data-table-name attribute for #' + cardID);
+				return $.Deferred().resolve(false);
 			}
 
-			return this._parent.queryDB(deleteStatements)
-				.done(queryResultString => {
-					if (this._parent.queryReturnedError(queryResultString)) {
-						showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}.`, 'Unexpected error');
+			const dbID = $card.data('table-id');
+			if (!dbID) {
+				print('No data-table-id attribute for #' + cardID);
+				return $.Deferred().resolve(false);
+			}
+
+			return this._parent.deleteByID(tableName, dbID)
+				.done(response => {
+					if (this._parent.pythonReturnedError(response)) {
+						showModal('An unexpected error occurred while deleting data from the database: <br><br' + response, 'Unexpected error');
 						return;
 					} else {
-						const failedDeletes = [];
-						for (const {id, tableName} of $.parseJSON(queryResultString)) {
-							if (id == null) {
-								failedDeletes.push(tableName);
-							}
-						}
-						if (failedDeletes.length) {
-							showModal(
-								`There was a problem deleting objects from the table${failedDeletes.length > 1 ? 's' : ''} ${failedDeletes.join(', ')}.` +
-									`Contact your database adminstrator to resolve this issue.<br><br>Attempted SQL statements:<br>${deleteStatements.join('<br>')}`, 
-								'Database Error')
-						} else {
-							$card.fadeOut(500, () => {$card.remove()});
-						}
+						$card.fadeOut(500, () => {$card.remove()});
 					}
 				}).fail((xhr, status, error) => {
 					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
@@ -1420,26 +1398,27 @@ class ClimberForm {
 		const $button = $(e.target).closest('.delete-card-button');
 		const $card = $button.closest('.card');
 		const itemName = $button.data('item-name') || $card.data('item-name');
-		const onConfirmClick = `
-			climberDB.climberForm.deleteCard('${$card.attr('id')}');
-			${afterActionCallbackStr} 
-		`;
+		const onConfirmClickHandler = () => {
+			$('#alert-modal .confirm-button').click(() => {
+				this.deleteCard($card.attr('id'));
+			});
+		}
 		
 		const footerButtons = `
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
+			<button class="generic-button modal-button confirm-button danger-button close-modal" data-dismiss="modal">Yes</button>
 		`;
-		showModal(`Are you sure you want to delete this ${itemName}?`, `Delete ${itemName}?`, 'confirm', footerButtons);
+		showModal(`Are you sure you want to delete this ${itemName}?`, `Delete ${itemName}?`, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
 
 	}
 
 	/*
 	*/
 	deleteClimber(climberID) {
-		return this._parent.queryDB(`DELETE FROM ${this._parent.dbSchema}.climbers WHERE id=${parseInt(climberID)} RETURNING id`)
-			.done(queryResultString => {
-				if (this._parent.queryReturnedError(queryResultString)) {
-					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
+		return this._parent.deleteByID('climbers', climberID)
+			.done(response => {
+				if (this._parent.pythonReturnedError(response)) {
+					showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
 					return;
 				} 
 			}).fail((xhr, status, error) => {

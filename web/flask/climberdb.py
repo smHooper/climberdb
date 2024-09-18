@@ -974,6 +974,64 @@ def query_db():
 	return jsonify(response)
 
 
+@app.route('/flask/delete/id', methods=['POST'])
+def delete_by_id():
+
+	request_data = request.get_json()
+
+	table_name = request_data.get('table_name')
+	if not table_name:
+		raise ValueError('table_name not specified in request data')
+
+	ids = request_data.get('db_ids')
+	if not ids:
+		raise ValueError('"db_ids" not specified in request data')
+	try:
+		id_list = (
+			# If it's a list, make sure they're all integers
+			[int(i) for i in ids] 
+			if isinstance(ids, list)
+			else [int(ids)] # otherwise, just make it a list of length 1
+		)
+	except ValueError:
+		raise ValueError('Invalid ID in id_list: ' + str(ids))
+
+	table = climberdb_utils.get_tables().get(table_name)
+	if not table:
+		raise ValueError(f'The table "{table_name}" does not exist')
+
+	returning = request_data.get('returning')
+
+	# For collecting values that would be in RETURNING clauses.
+	#	The dict is in the form { table_name: [{column: value}] }
+	returned = {}
+
+	# Execute deletes within a transaction so an error will ROLLBACK 
+	#	any would-be successful deletes
+	with WriteSession() as session, session.begin():
+		for table_id in id_list:
+			# Get the row by ID
+			row = session.get(table, table_id)	
+			# If a single ID was invalid, ROLLBACK the entire transaction
+			if not row:
+				raise RuntimeError(f'No {table_name} row with ID {table_id} found')
+			
+			if returning:
+				if not table_name in returned:
+					returned[table_name] = []
+				returned[table_name].append(
+					 {
+					 	column_name: climberdb_utils.sanitize_query_value(getattr(row, column_name)) 
+					 	for column_name in returning[table_name]
+					 } 
+				)
+			session.delete(row)
+
+	return jsonify({
+		'data': returned
+	})
+
+
 @app.route('/flask/next_permit_number', methods=['POST'])
 def get_next_permit_number():
 	
@@ -1023,7 +1081,7 @@ def save_attachment():
 				request.files[client_filename].save(file_path)
 				sorted_columns = sorted(data.keys())
 				sql = f'''
-					INSERT INTO attachments ({','.join(sorted_columns)}) 
+					INSERT INTO {schema}.attachments ({','.join(sorted_columns)}) 
 					VALUES ({','.join([':' + k for k in sorted_columns])})
 					RETURNING id
 				'''
