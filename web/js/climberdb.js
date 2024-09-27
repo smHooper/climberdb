@@ -573,11 +573,188 @@ class ClimberDB {
 		if (returnTimestamp) requestData.queryTime = (new Date()).getTime();
 		
 		return $.post({
-			url: '/flask/query_db',
+			url: '/flask/db/select',
 			data: JSON.stringify(requestData),
 			contentType: 'application/json'
 		});
 	}	
+
+
+	/*
+	Collect edits organized in a heirarchical structure to send to the server. 
+	The ORM will add the necessary foreign keys, but the ORM objects need to 
+	be created in reverse one-to-many order. This function will sequentially
+	step through the containerSelectors array to get the values of .input-fields
+	as nested objects 
+	*/
+	getEdits({containerSelectors=[], editedFieldSelector='.input-field.dirty'}) {
+
+		var inserts = {},
+			updates = {};
+		var $fields = $(editedFieldSelector);
+		//const reverseInsertOrder = this.tableInfo.tables.insertOrder;
+		// for (const selector of containerSelectors) {
+		// 	for (const container of $(selector).has(editedFieldSelector)) {
+		// 		const $container = $(container);
+		// 		const containerDBID = $container.data('table-id');
+		// 		const $containerFields = $container.find($fields);
+		// 		const containerValues = {};
+		// 		for (const tableName of reverseInsertOrder) {
+		// 			const $containerTableFields = $containerFields.find(`[data-table-id="${tableName}"]`);
+		// 			const containerValues = Object.fromEntries(
+		// 				$containerTableFields.map((_, el) => [el.name, el.value])
+		// 			);
+		// 			const dbID = containerDBID || $containerTableFields
+		// 				.map((_, el) => $(el).data('table-id'))
+		// 				.get()
+		// 					.filter(id => id)[0];
+		// 			if (!dbID) {
+		// 				containerValues[tableName] = {
+		// 					container: $container,
+		// 					values: containerValues
+		// 				};
+		// 			} else {
+		// 				updates[tableName] = {...(updates[tableName] || {}), ...containerValues}
+		// 			}
+
+		// 		}
+		// 		$fields = $fields.not($containerFields);
+				
+		// 	}
+		// }
+
+		
+		// Get all containers that have edits
+		const joinedSelector = containerSelectors.join(',');
+		const $containers = $(joinedSelector).has(editedFieldSelector);
+		
+		// Get just containers that will be INSERTed rather than UPDATEd
+		var $insertContainers = $containers.map((_, el) => !$(el).data('table-id'));
+		
+
+		const nSelectors = containerSelectors.length;
+		/*
+		{
+			table1: [
+				{
+					id: 1,
+					children: {
+						table2: [
+							{
+								values: {field1: val1, field2: val2}
+								children: {
+									table3: [
+										{
+											values: {f1: v1, f2: f3}
+										},
+										{
+											values: {f1: v1, f2: f3}
+										}
+									]
+								}
+							}
+						]
+					}
+				},
+				{
+					id: 2,
+					children: 
+				}
+			]
+		}
+
+		{
+			tables: [
+				{tableName: 'transactions', selector: '.transactions-tab-pane .data-list-item'},
+				{tableName: 'attachments'}
+			],
+			parent: {
+				tableName: 'expedition_members',
+				selector: '#expedition-members-accordion .card',
+				parent: 
+			}
+		}
+		*/
+		var values = {};
+			//currentValues = {}; 
+		
+		// Helper function to get values from a container
+		const getContainerValues = $container => {
+			const $containerFields = $container.find($fields);
+			// Drop the container and the fields from the master selection objects
+			//	because a subsequent search higher up in the DOM tree will find them
+			$insertContainers = $insertContainers.not($container);
+			$fields = $fields.not($containerFields);
+			
+			const containerValues = Object.fromEntries(
+				$containerFields.map((_, el) => [el.name, el.value])
+			); 
+			return containerValues 
+		} 
+
+		// Loop through each container selector and accumulate the edits by traversing 
+		//	up the DOM tree, stopping at the first element that already exists in the DB
+		for (const i = 0; i < nSelectors; i++) {
+			let selector = containerSelectors[i];
+			for (const c of $insertContainers.find(selector)) {
+				let $container = $(c);
+				
+				// IF there's no table name, throw and error. This is only necessary for development
+				//	becasuse this shouldn't happen in production
+				const tableName = $container.data('table-name');
+				if (!tableName) throw `no 'table-name' data attribute for #${$container.attr('id')}`;
+
+				const containerValues = getContainerValues($container);
+
+				currentValues = {
+					[tableName]: [
+						...(currentValues[tableName] || []), 
+						{
+							values: containerValues
+						}
+					]
+				};
+
+				// Traverse the DOM upwards to get edits from the $container's parents
+				for (const parentSelector of containerSelectors.slice(i + 1, nSelectors)) {
+					const $parentContainer = $container.closest(parentSelector);
+					const parentDBID = $parentContainer.data('table-id');
+					const parentTableName = $parentContainer.data('table-name');
+					if (parentDBID) {
+						values[parentTableName] = [
+							...(values[parentTableName] || []),
+							{
+								id: parentDBID,
+								children: {
+									...((values[parentTableName] || {}).children || {}), 
+									...currentValues
+								}
+							}
+						]
+						break;
+					} else {
+						const parentContainerValues = getContainerValues($parentContainer);
+						currentValues[parentTableName] = [
+							...(currentValues[parentTableName] || []),
+							{
+								values: parentContainerValues,
+								children: {
+									...((currentValues[parentTableName] || {}).children || {}),
+									...currentValues
+								}
+							}
+						]
+					}
+					// Set for the next iteration to get this parent's parent
+					$container = $parentContainer;
+
+				}
+			}
+		}
+
+		return values;
+
+	}
 
 
 	/*
@@ -594,7 +771,7 @@ class ClimberDB {
 		
 
 		return $.post({
-			url: '/flask/delete/id',
+			url: '/flask/db/delete/by_id',
 			data: JSON.stringify(requestData),
 			contentType: 'application/json'
 		});
@@ -703,23 +880,23 @@ class ClimberDB {
 		if (parentDBID !== null) $newItem.data('parent-table-id', parentDBID);
 		if (dbID !== null) $newItem.attr('data-table-id', dbID);
 
+		const itemTag = (dbID ? dbID + '-' : '') + itemIndex;
 		for (const el of $newItem.find('.input-field, .attachment-input')) {
-			el.id = `${el.id}-${dbID || itemIndex}`;
+			el.id = `${el.id}-${itemTag}`;
 			const $el = $(el);
 			if ($el.data('dependent-target')) 
-				$el.data('dependent-target', `${$el.data('dependent-target')}-${dbID || itemIndex}`);
+				$el.attr('data-dependent-target', `${$el.data('dependent-target')}-${itemTag}`);
 			if (!isNaN(dbID)) $el.attr('data-table-id', dbID);
 		}
 
 		for (const el of $newItem.find('label.generic-button')) {
 			const $el = $(el);
 			if ($el.prop('for')) {
-				$el.prop('for', `${$el.prop('for')}-${dbID || itemIndex}`);
+				$el.prop('for', `${$el.prop('for')}-${itemTag}`);
 			}
 		}
 
 		return $newItem.addClass(newItemClass).insertBefore($cloneable);
-
 
 	}
 
@@ -1115,9 +1292,14 @@ class ClimberDB {
 
 	pythonReturnedError(resultString) {
 		resultString = String(resultString); // force as string in case it's something else
-		return resultString.startsWith('ERROR: Internal Server Error') ?
-		   resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/)[0].trim() :
-		   false;
+		if (resultString.startsWith('ERROR: Internal Server Error')) {
+			// almost all Python excetions have a class anme in the form *Error (e.g., ValueError).
+			//	That's not a hard and fast rule, however, and so if the match is null, return something generic
+			const pythonException = resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/) || ['unknown custom exception thrown'];
+			return pythonException[0].trim()
+		} else {
+			return false;
+		}
 	}
 
 
@@ -1375,7 +1557,19 @@ class ClimberDB {
 	Helper method to get the value of in input depedning on whether or not its a checkbox
 	*/
 	getInputFieldValue($input) {
-		return $input.is('.input-checkbox') ? $input.prop('checked') : $input.val();
+		const val = $input.val();
+		const returnValue = 
+			// if it's a checkbox, return the 'checked' property, which is a boolean
+			$input.is('.input-checkbox') ? $input.prop('checked') : 
+			
+			// if it's a datetime type and the value is null, return null because 
+			//	sending '' to the server throws an error when saving
+			$input.is('[type=date], [type=datetime-local], [type=time]') && val === '' ? null : 
+			
+			// otherwise, just return the value
+			val;
+		
+		return returnValue;
 	}
 	
 

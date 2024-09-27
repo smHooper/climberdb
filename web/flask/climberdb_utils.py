@@ -17,7 +17,7 @@ from sqlalchemy.sql.elements import BinaryExpression
 
 from typing import Any, Mapping
 
-SQLA_TABLE_DIR = 'flask/_sqlalchemy_cache'
+SQLA_TABLE_DIR = os.path.join(os.path.dirname(__file__), '_sqlalchemy_cache')
 CONFIG_FILE = '//inpdenaterm01/climberdb/config/climberdb_config.json'
 
 # __all__ = [
@@ -82,6 +82,7 @@ def get_tables(overwrite_cache: bool=False) -> dict:
 	schema = get_schema()
 	engine = get_engine(schema=schema)
 	
+
 	if not os.path.isdir(SQLA_TABLE_DIR):
 		os.mkdir(SQLA_TABLE_DIR)
 

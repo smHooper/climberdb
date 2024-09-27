@@ -1450,6 +1450,41 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	setInsertedIDsPython(insertedIDs) {
+
+		var expeditionID = this.expeditionInfo.expeditions.id;
+		for (const {table_name, html_id, db_id, foreign_keys} of insertedIDs) {
+			if (db_id == null || db_id === '') continue;
+
+			if (table_name === 'expeditions') {
+				expeditionID = db_id;
+				
+				// this was a new expedition, so add the expedition to the URL history
+				this.updateURLHistory(expeditionID, $('#expedition-id-input'));
+			}
+
+			// Set the card's/list item's class and inputs' attributes so changes will register as updates
+			const $container = $('#' + html_id);
+			// TODO: make sure parent-table-id isn't necessary for anything
+			// const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
+			// if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
+			const $inputs = $container.closest('.data-list-item, .card')
+				.removeClass('new-card')
+				.removeClass('new-list-item')
+				.attr('data-table-id', db_id)
+				.attr('data-table-name', table_name)
+				.find('.input-field.dirty')
+					.attr('data-table-name', table_name)
+					.attr('data-table-id', db_id)
+					.removeClass('dirty');
+			if (Object.keys(foreign_keys).length) $inputs.data('foreign-ids', foreign_keys);
+			
+		}
+
+		return expeditionID;
+	}
+
+
 	/*
 	Helper function to use in this.saveEdits() and ClimberDBBackcountry.saveEdits()
 	*/
@@ -1499,7 +1534,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Save new attachments before writing other changes to the DB because files need
 		//	to be saved to the server
 		var attachmentData = {},
-			attachmentItems = {},
 			attachmentInserts = [],
 			now = getFormattedTimestamp(new Date(), {format: 'datetime'}),
 			username = this.userInfo.ad_username;
@@ -1847,6 +1881,269 @@ class ClimberDBExpeditions extends ClimberDB {
 		})
 	}
 	
+
+	saveEditsPython() {
+
+		var dbInserts = {},
+			dbUpdates = {},
+			attachmentInserts = {},
+			inserts = []; // change this name to be more descriptive or somehow roll into dbInserts
+
+		// Make a shallow reference to dbInserts. On the server, database objects are inserted/updated heirarchically so that foreign column values can be populated automatically. With this mutable reference, we can point to whatever the top-level 
+		var parentTable = dbInserts;
+
+		if (!this.validateEdits()) return; // Error message already shown in validateEdits()
+
+		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
+		const username = this.userInfo.ad_username;
+
+		showLoadingIndicator('saveEdits');
+		
+		const inputSelector = '.input-field.dirty'
+
+		// get expedition table edits
+		var expeditionEdits = {};
+		var expeditionFields = []; 
+		for (const el of $(`#expedition-data-container ${inputSelector}`)) {
+			expeditionEdits[el.name] = this.getInputFieldValue($(el));
+		}
+
+		// determine if this is a new expedition or not
+		const expeditionID = $('#input-expedition_name').data('table-id') || null;
+		const isNewExpedition = expeditionID === undefined;
+		const expeditionsHasEdits = Object.keys(expeditionEdits).length;
+		if (expeditionsHasEdits) {
+			if (isNewExpedition) {
+				dbInserts.expeditions = [{
+					values: expeditionEdits,
+					html_id: 'input-expedition_name',
+					children: {}
+				}];
+			} else {
+				dbUpdates.expeditions = {[expeditionID]: [expeditionEdits]}; 
+				dbInserts.expeditions = [
+					{
+						id: expeditionID,
+						children: {}
+					}
+				]
+			}
+		}
+
+		var foreignColumns = {};
+		const getEdits = (dbID, $inputs, tableName, {htmlID='', additionalValues={} }={}) => {
+			var values = {
+				...Object.fromEntries(
+					$inputs.get().map(el => { return [ el.name, this.getInputFieldValue($(el)) ] } )
+				),
+				...additionalValues
+			}
+
+			const columnInfo = this.tableInfo.tables[tableName].columns;
+			if ('last_modified_by' in columnInfo) {
+				values.last_modified_by = username; 
+				values.last_modified_time = now;
+			}
+
+
+			// If the ID is defined, this is an update
+			if (dbID) {
+				// compbine with any existing expedition member updates
+				if (!dbUpdates[tableName]) dbUpdates[tableName] = [];
+				dbUpdates[tableName].push({[dbID]: values})
+				
+				// Add to the parentTable reference so its children have 
+				//	something to be added to
+				if (!parentTable[tableName]) parentTable[tableName] = [];
+				parentTable[tableName].push(
+					{
+						id: dbID,
+						children: {}
+					}
+				)
+			// Otherwise, it's an insert
+			} else {
+				if (!parentTable[tableName]) parentTable[tableName] = [];
+				var insertValues = values;
+				if ('entered_by' in columnInfo) {
+					values.entered_by = username; 
+					values.entry_time = now;
+				}
+				parentTable[tableName].push(
+					{
+						values: insertValues, 
+						html_id: htmlID,
+						children: {}
+					}
+				)
+				foreignColumns[tableName] = this.tableInfo.tables[tableName].foreignColumns;
+			}
+		}
+
+		// Transactions and routes might have edits without expedition members having any, so loop 
+		//	through each expedition member card, regardless of whether it has any dirty inputs
+		var parentTable,
+			formData = new FormData();
+		for (const el of $('#expedition-members-accordion .card:not(.cloneable)').has(inputSelector)) {
+			// Reset for each expedition member
+			
+			const $card = $(el);
+			const cardID = el.id;
+			const climberID = $card.data('climber-id');
+			const expeditionMemberID = $card.data('table-id') || null;
+			const $inputs = $card.find(`.card-header .input-field.dirty, .expedition-info-tab-pane ${inputSelector}`);
+			const nMemberInputEdits = $inputs.length;
+
+			// Get edits if there were any
+			const nEditedMembers = Object.keys(parentTable.expedition_members || []).length;
+			if (nMemberInputEdits) {
+				// If this is an insert, set the parent table to the root. Otherwise, it needs 
+				//	to descend from the expeditions property
+				if (expeditionMemberID) {
+					parentTable = dbInserts;
+				} else {
+					// if the expeditions property doesn't exist yet, add it
+					if ((dbInserts.expeditions || []).length === 0) {
+						dbInserts.expeditions = [{
+							id: expeditionID,
+							children: {}
+						}];
+					}
+					parentTable = dbInserts.expeditions[0].children;
+				}
+				
+				// Make sure the current parent table reference points to expedition_members
+				getEdits(expeditionMemberID, $inputs, 'expedition_members', {htmlID: cardID, additionalValues: {climber_id: climberID}});
+				parentTable = parentTable.expedition_members[nEditedMembers].children;
+			} else {
+				parentTable = dbInserts;
+			}
+
+			const $transactionItems = $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)')
+				.has(inputSelector);
+			const $attachmentItems = $card.find('.attachments-tab-pane .data-list > li.data-list-item:not(.cloneable)')
+				.has(inputSelector);
+			const $memberRouteItems = $(`#routes-accordion .card:not(.cloneable) li.data-list-item[data-climber-id=${climberID}]`)
+				.has(inputSelector);
+			// If there weren't any expedition_member edits and there were transaction/attachment
+			//	edits, make sure it's in the parentTable object so that the foreign key 
+			//	(expedition_member_id) is available for the server
+			const nExpeditionMembers = (parentTable.expedition_members || []).length;
+			const nMemberChildrenEdits = $([...$transactionItems, ...$attachmentItems, ...$memberRouteItems]).length;
+			if (nMemberChildrenEdits > 0 && nMemberInputEdits === 0) {
+				if (!nExpeditionMembers) parentTable.expedition_members = [];
+				parentTable.expedition_members.push(
+					{
+						id: expeditionMemberID,
+						children: {}
+					}
+				);
+				parentTable = parentTable.expedition_members[nEditedMembers].children;
+			}
+			
+			for (const li of $transactionItems) {
+				const transactionID = $(li).data('table-id') || null;
+				const $inputs = $(li).find(inputSelector);
+				getEdits(transactionID, $inputs, 'transactions', {htmlID: li.id})
+			}
+
+			// TODO: doesn't wind up in dbInserts
+			for (const li of $attachmentItems) {
+				const $li = $(li);
+				const attachmentID = $li.data('table-id') || null;
+				const $inputs = $(li).find(inputSelector);
+
+				const fileInputID = $li.find('.attachment-input').attr('id');
+				const attachmentFile = this.attachments[fileInputID].file;
+				const filename = attachmentFile.name;
+				var additionalValues = {};
+				if (!attachmentID) { // this is a new attachment
+					formData.append(filename, attachmentFile, filename)
+					additionalValues = {
+						client_filename: filename,
+						mime_type: attachmentFile.type,
+						file_size_kb: Math.ceil(attachmentFile.size / 1000)
+					}
+				}
+				
+				getEdits(attachmentID, $inputs, 'attachments', {htmlID: li.id, additionalValues: additionalValues});
+			}
+
+			for (const li of $memberRouteItems) {
+				const routeID = $(li).data('table-id') || null;
+				const $inputs = $(li).find(inputSelector);
+				getEdits(routeID, $inputs, 'expedition_member_routes', {htmlID: li.id})
+			}
+		}
+
+		const $cmcItems = $('#cmc-list li.data-list-item:not(.cloneable)').has(inputSelector);
+		const $commsItems = $('#comms-list li.data-list-item:not(.cloneable)').has(inputSelector);
+		// CMCs and Comms are related directly to expeditions. If there are CMC/Comms 
+		//	edits and expeditions has not yet been added to the inserts object, do so 
+		if ($([...$cmcItems, ...$commsItems]) && (dbInserts.expeditions || []).length === 0) {
+			dbInserts.expeditions = [
+				{
+					id: expeditionID,
+					children: {}
+				}
+			]
+		}
+
+		for (const li of $cmcItems) {
+			const cmcID = $(li).data('table-id') || null;
+			parentTable = cmcID === null ? dbInserts.expeditions[0].children : dbInserts;
+			const $inputs = $cmcItems.find(inputSelector);
+			getEdits(cmcID, $inputs, 'cmc_checkout', {htmlID: li.id})//
+		}
+		
+		for (const li of $commsItems) {
+			const commsID = $(li).data('table-id') || null;
+			parentTable =  commsID === null ? dbInserts.expeditions[0].children : dbInserts;
+			const $inputs = $commsItems.find(inputSelector);
+			getEdits(commsID, $inputs, 'communication_devices', {htmlID: li.id})//
+		}
+
+		// const requestData = JSON.stringify({
+
+		// })
+		formData.append('data', JSON.stringify({
+			inserts: dbInserts,
+			updates: dbUpdates,
+			year: new Date().getFullYear(),
+			foreign_columns: foreignColumns
+		}) )
+
+		return $.post({
+			url: '/flask/db/save',
+			data: formData,
+			contentType: false,
+			processData: false
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
+				return false;
+			} else {
+				const expeditionID = this.setInsertedIDsPython(response.data || {});
+
+				// update in-memory data for each edited input
+				this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
+
+				// Hide the save button again since there aren't any edits
+				$('#save-expedition-button').ariaHide(true);
+				// but open the reports modal button since there's something to show
+				$('#open-reports-modal-button, #show-cache-tag-modal-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
+
+			}
+		}).fail((xhr, status, error) => {
+			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+		}).always(() => {
+			 	this.hideLoadingIndicator();
+			});
+
+		//return [dbInserts, dbUpdates];
+
+	}
+
 
 	discardEdits() {
 		
@@ -4303,7 +4600,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$select.closest('.data-list-item')
 			.find('.input-field[name=payment_method_code]')
 				.closest('.collapse')
-					.collapse(info.is_payment === 't' ? 'show' : 'hide');
+					.collapse(info.is_payment === true ? 'show' : 'hide');
 
 		// if this was a refund, remove the refund post
 		if (previousTransactionType === 3 || previousTransactionType === 26) {

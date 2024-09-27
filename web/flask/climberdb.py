@@ -25,6 +25,8 @@ from sqlalchemy import asc, desc, text as sqlatext#, and_
 from sqlalchemy.engine.row import Row as sqla_Row
 from sqlalchemy.orm import Session, sessionmaker
 
+from werkzeug.datastructures import FileStorage
+
 # climberdb modules
 from cache_tag import CacheTag, print_zpl
 import climberdb_utils
@@ -256,17 +258,10 @@ def add_header(response):
 @app.route('/flask/test', methods=['GET', 'POST'])
 def test():
 
-	where_clauses = request.json.get('where')
-	return jsonify([
-		{'table_name': table_name,
-		'column_name': where.get('column_name'), 
-		'operator': where.get('operator') or '', 
-		'comparand': where.get('comparand')
-		}
-		for table_name, table_wheres in where_clauses.items() 
-		for where in table_wheres
-		if where.get('column_name')
-		])
+	if request.files:
+		return 'true'
+	else:
+		return 'false'
 
 @app.route('/flask/config', methods=['POST'])
 def db_config_endpoint():
@@ -861,12 +856,10 @@ def print_cache_tag():
 
 
 # All-purpose SELECT query endpoint
-@app.route('/flask/query_db', methods=['POST'])
+@app.route('/flask/db/select', methods=['POST'])
 def query_db():
 
-	request_data = request.get_json()
-	
-	
+	request_data = request.get_json()	
 
 	sql = request_data.get('sql')
 	where_clauses = request_data.get('where') or {}
@@ -979,7 +972,160 @@ def query_db():
 		return jsonify(response)
 
 
-@app.route('/flask/delete/id', methods=['POST'])
+@app.route('/flask/db/save', methods=['POST'])
+def saveDBEdits():
+	"""
+	Generic endpoinr to process INSERT and UPDATE requests. The INSERT data come in as 
+	{
+		root_table: [
+			{
+				root_data_1: {
+					values: {...}, 
+					children: {
+						child_table: [
+							{
+								values: {...},
+								child_table_1: {...}
+							...
+
+	UPDATE data come in as 
+	{
+		table_1: [
+			{field_1: value_1, field_2: value_2},
+			{field_1: value_1, field_2: value_2}
+			...
+		],
+		table_2: [
+			...
+		]
+	}
+	"""
+	request_data = json.loads(request.form['data'])
+	foreign_columns = request_data.get('foreign_columns') or {}
+	year = request_data.get('year')
+
+	# For inserts, map the HTML element IDs to database IDs
+	inserted_rows = {}
+	
+	# For collecting filenames from INSERTS to save files later
+	attachments = {}
+
+	# Helper function to recursively create inserts
+	def walk_inserts(data, parent_row):
+		# data should be dictionary with items as {table_name: [values]}
+		for table_name, table_data_list in data.items():
+			
+			# Get the ORM class factory
+			table = tables[table_name]
+			
+			# Loop through each list item, which is a dictionary of {field: value}
+			for table_data in table_data_list:
+				html_id = table_data.get('html_id')
+				
+				values = table_data.get('values')
+				if not values:
+					continue
+				
+				if table_name == 'expedition_members' and not 'permit_number' in values:
+					if not year:
+						raise ValueError('Year not specified in request data but permit number was not in insert data')
+					values['permit_number'] = f'TKA-{str(year)[-2:]}-{get_next_permit_number(year)}'
+				
+				if table_name == 'attachments':
+					filename = values.get('client_filename')
+					if not filename:
+						raise ValueError(f'Filename not specified in request data for #{html_id}')
+					attachments[filename] = html_id
+
+				# Create the row
+				child_row = table(**values)
+				
+				# Add to the parent, which will relate the records by the appropriate IDs
+				#	The automapped class factory automatically creates the relationship, 
+				#	naming it <child_table_name>_collection
+				getattr(parent_row, f'{table_name}_collection')\
+					.append(child_row)
+
+				# For now, just map the ID to ORM class instance. Once the data are inserted,
+				#	the database ID will automatically be set
+				inserted_rows[html_id] = child_row
+
+				# recurse through the tree
+				walk_inserts(table_data.get('children') or {}, child_row)
+
+
+	with WriteSession() as session, session.begin():
+
+		# Loop through each parent table at the root of the inserts dicitionary
+		#	and iterate successively through each child record
+		inserts = request_data.get('inserts')
+		for root_table_name, root_data_list in inserts.items():
+			for root_data in root_data_list:
+				root_table = tables[root_table_name]
+				values = root_data.get('values')
+				root_id = root_data.get('id')
+				# If there were values defined in the insert dict, 
+				#	this is a new record that needs to be inserted
+				if values:
+					root_row = root_table(**values)
+					session.add(root_row) # add as an INSERT
+				# If there's an 'id' property, the parent already exists
+				elif root_id:
+					root_row = session.get(root_table, root_id)
+				else:
+					raise RuntimeError(f'No "values" or "id" in request for table "{root_table_name}"')
+
+				children = root_data.get('children') or {}
+
+				walk_inserts(children, root_row)
+
+		# If files were sent in the request but no attachment information was, raise
+		if len(attachments) == 0 and request.files:
+			raise RuntimeError('A file was sent to server but there was no attachment information')
+		
+		# Save attachments to server
+		for filename, html_id in attachments.items():
+			# Save the file
+			file_path = save_attachment_to_file(filename, request.files.get(filename))
+
+			# Set the value of the ORM attachment 
+			inserted_rows[html_id].file_path = file_path
+
+		# Save an updates to existing records
+		updates = request_data.get('updates')
+		for table_name, update_data_list in updates.items():
+			table = tables[table_name]
+			for update_data in update_data_list:
+				session.query(table).where(table.id == update_data['id'])\
+					.update(update_data['values'])
+
+		# Send the changes to the DB. To get the foreign keys in the next *for* 
+		#	block, the data have to be flushed. The IDs also have to be retrieved 
+		# 	within the with/as block because the session has to still be active 
+		session.flush()
+
+		# Get the table name, HTML element ID, database ID, and foreign keys as a 
+		#	dictionary for each INSERTed row
+		html_ids = []
+		for html_id, row in inserted_rows.items():
+			table_name = row.__class__.__table__.name
+			foreign_keys = {
+				d['foreignTable']: getattr(row, d['column']) 
+				for d 
+				in foreign_columns.get(row.__class__.__table__.name) or []
+			}
+			html_ids.append({
+				'table_name': table_name, 
+				'html_id': html_id, 
+				'db_id': row.id,
+				'foreign_keys': foreign_keys
+			})
+		
+	
+	return {'data': html_ids}
+
+
+@app.route('/flask/db/delete/by_id', methods=['POST'])
 def delete_by_id():
 
 	request_data = request.get_json()
@@ -1037,17 +1183,10 @@ def delete_by_id():
 	})
 
 
-@app.route('/flask/next_permit_number', methods=['POST'])
-def get_next_permit_number():
-	
-	data = request.form
-	if not 'year' in data:
-		raise KeyError('Year not given in request data')
-	else:
-		year = int(data['year'])
-
-	#engine = climberdb_utils.get_engine()
-
+def get_next_permit_number(year: int) -> str:
+	"""
+	Generate the next permit number for a given year. 
+	"""
 	sql = sqlatext(f'''
 		SELECT 
 		max(expedition_members.permit_number) AS max_permit 
@@ -1067,6 +1206,32 @@ def get_next_permit_number():
 			raise RuntimeError('Failed to get next permit number')
 
 
+@app.route('/flask/next_permit_number', methods=['POST'])
+def request_next_permit_number():
+	
+	data = request.form
+	if not 'year' in data:
+		raise KeyError('Year not given in request data')
+	else:
+		year = int(data['year'])
+
+	return get_next_permit_number()
+
+
+
+
+def save_attachment_to_file(client_filename: str, uploaded_file: FileStorage) -> str:
+	"""
+	Save a file passed to the server
+	"""
+	client_basename, extension = os.path.splitext(client_filename)
+	server_filename = str(uuid4()) + extension	
+	file_path = os.path.join(get_content_dir('attachments'), server_filename)
+	request.files[client_filename].save(file_path)
+
+	return os.path.abspath(file_path)
+
+
 @app.route('/flask/attachments/add_expedition_member_files', methods=['POST'])
 def save_attachment():
 	
@@ -1078,7 +1243,6 @@ def save_attachment():
 		for filename, data in attachment_data.items():
 			try:
 				client_filename = data['client_filename']
-				uploaded_files = request.files[client_filename]
 				client_basename, extension = os.path.splitext(client_filename)
 				server_filename = str(uuid4()) + extension	
 				file_path = os.path.join(get_content_dir('attachments'), server_filename)
