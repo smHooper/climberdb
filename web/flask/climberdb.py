@@ -973,7 +973,7 @@ def query_db():
 
 
 @app.route('/flask/db/save', methods=['POST'])
-def saveDBEdits():
+def save_db_edits():
 	"""
 	Generic endpoinr to process INSERT and UPDATE requests. The INSERT data come in as 
 	{
@@ -1067,8 +1067,13 @@ def saveDBEdits():
 				# If there were values defined in the insert dict, 
 				#	this is a new record that needs to be inserted
 				if values:
+					html_id = root_data.get('html_id')
+					if not html_id:
+						raise RuntimeError(f'No "html_id" for insert on table "{root_table_name}"')
 					root_row = root_table(**values)
 					session.add(root_row) # add as an INSERT
+					inserted_rows[html_id] = root_row
+
 				# If there's an 'id' property, the parent already exists
 				elif root_id:
 					root_row = session.get(root_table, root_id)
@@ -1093,11 +1098,11 @@ def saveDBEdits():
 
 		# Save an updates to existing records
 		updates = request_data.get('updates')
-		for table_name, update_data_list in updates.items():
+		for table_name, update_data_dict in updates.items():
 			table = tables[table_name]
-			for update_data in update_data_list:
-				session.query(table).where(table.id == update_data['id'])\
-					.update(update_data['values'])
+			for update_id, update_data in update_data_dict.items():
+				session.query(table).where(table.id == update_id)\
+					.update(update_data)
 
 		# Send the changes to the DB. To get the foreign keys in the next *for* 
 		#	block, the data have to be flushed. The IDs also have to be retrieved 
@@ -1189,12 +1194,12 @@ def get_next_permit_number(year: int) -> str:
 	"""
 	sql = sqlatext(f'''
 		SELECT 
-		max(expedition_members.permit_number) AS max_permit 
-		FROM expedition_members 
-		JOIN expeditions ON expedition_members.expedition_id=expeditions.id
+		max(m.permit_number) AS max_permit 
+		FROM {schema}.expedition_members m
+		JOIN {schema}.expeditions e ON m.expedition_id=e.id
 		WHERE 
 			extract(year FROM planned_departure_date)=:full_year AND
-			expedition_members.permit_number LIKE :permit_search_str
+			m.permit_number LIKE :permit_search_str
 	''')
 	with ReadSession() as session:
 		cursor = session.execute(sql, {'full_year': year, 'permit_search_str': f'TKA-{str(year)[-2:]}-%'})

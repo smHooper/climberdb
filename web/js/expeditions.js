@@ -38,6 +38,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			payGovForm: 4,
 			other: 3
 		}
+		this.locationCardIndexSelector = '#locations-accordion .card:not(.cloneable)';
 
 		return this;
 	}
@@ -87,7 +88,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$('#save-expedition-button').click(e => {
 			showLoadingIndicator('saveEdits');
-			this.saveEdits();
+			this.saveEditsPython();
 		});
 
 		$('#delete-expedition-button').click(() => {
@@ -698,7 +699,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		if ($input.closest('.new-list-item, .new-card').length) {
 			valueChanged = true;
 		} else {
-			var newValue = this.getInputFieldValue($input);
+			var newValue = this.getInputFieldValue($input) || null;
 			const dbID = $input.data('table-id');
 			const tableName = $input.data('table-name');
 			const fieldName = $input.attr('name');
@@ -1908,19 +1909,23 @@ class ClimberDBExpeditions extends ClimberDB {
 			expeditionEdits[el.name] = this.getInputFieldValue($(el));
 		}
 
+
 		// determine if this is a new expedition or not
 		const expeditionID = $('#input-expedition_name').data('table-id') || null;
-		const isNewExpedition = expeditionID === undefined;
+		const isNewExpedition = expeditionID === null;
 		const expeditionsHasEdits = Object.keys(expeditionEdits).length;
 		if (expeditionsHasEdits) {
 			if (isNewExpedition) {
+				// if this is the backcountry page, set the is_backcountry field to true
+				if ($('#locations-accordion').length) expeditionEdits.is_backcountry = true;
+
 				dbInserts.expeditions = [{
 					values: expeditionEdits,
 					html_id: 'input-expedition_name',
 					children: {}
 				}];
 			} else {
-				dbUpdates.expeditions = {[expeditionID]: [expeditionEdits]}; 
+				dbUpdates.expeditions = {[expeditionID]: expeditionEdits}; 
 				dbInserts.expeditions = [
 					{
 						id: expeditionID,
@@ -1948,9 +1953,10 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			// If the ID is defined, this is an update
 			if (dbID) {
-				// compbine with any existing expedition member updates
-				if (!dbUpdates[tableName]) dbUpdates[tableName] = [];
-				dbUpdates[tableName].push({[dbID]: values})
+				// if this is the first update, create the object to store updates for this table
+				if (!dbUpdates[tableName]) dbUpdates[tableName] = {};
+				// updates are an object with keys as DB IDs
+				dbUpdates[tableName][dbID] = values;
 				
 				// Add to the parentTable reference so its children have 
 				//	something to be added to
@@ -1980,12 +1986,37 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		}
 
-		// Transactions and routes might have edits without expedition members having any, so loop 
-		//	through each expedition member card, regardless of whether it has any dirty inputs
 		var parentTable,
 			formData = new FormData();
+
+		// Get itinerary locations from the backcountry page because this same class method is used 
+		//	on that page as well. On the expedition page, this will just be ignored since the itinerary
+		//	 locations accordion doesn't exist
+		for (const el of $(this.locationCardIndexSelector).has(inputSelector)) {
+			const $card = $(el);
+			const cardID = el.id;
+			const locationID = $card.data('table-id') || null;
+			const $inputs = $card.find(inputSelector);
+			// If this is an update, set the parent table to the root. Otherwise, it needs to descend
+			//	from the expeditions property
+			if (locationID) {
+				parentTable = dbInserts;
+			} else {
+				// if the expeditions property doesn't exist yet, add it
+				if ((dbInserts.expeditions || []).length === 0) {
+					dbInserts.expeditions = [{
+						id: expeditionID,
+						children: {}
+					}];
+				}
+				parentTable = dbInserts.expeditions[0].children;
+			}
+			getEdits(locationID, $inputs, 'itinerary_locations', {htmlID: cardID});
+		}
+
+		// Transactions and routes might have edits without expedition members having any, so loop 
+		//	through each expedition member card, regardless of whether it has any dirty inputs
 		for (const el of $('#expedition-members-accordion .card:not(.cloneable)').has(inputSelector)) {
-			// Reset for each expedition member
 			
 			const $card = $(el);
 			const cardID = el.id;
@@ -1997,7 +2028,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// Get edits if there were any
 			const nEditedMembers = Object.keys(parentTable.expedition_members || []).length;
 			if (nMemberInputEdits) {
-				// If this is an insert, set the parent table to the root. Otherwise, it needs 
+				// If this is an update, set the parent table to the root. Otherwise, it needs 
 				//	to descend from the expeditions property
 				if (expeditionMemberID) {
 					parentTable = dbInserts;

@@ -24,7 +24,6 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		this.defaultMapCenter = [63, -150.9];
 		this.defaultMapZoom = 10;
 		this.maxInitialMapZoom = 12; // don't zoom in past this level when fitting map bounds to marker
-		this.locationCardIndexSelector = '#locations-accordion .card:not(.cloneable)';
 		return this;
 	}
 

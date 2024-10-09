@@ -1564,7 +1564,7 @@ class ClimberDB {
 			
 			// if it's a datetime type and the value is null, return null because 
 			//	sending '' to the server throws an error when saving
-			$input.is('[type=date], [type=datetime-local], [type=time]') && val === '' ? null : 
+			$input.is('[type=date], [type=datetime-local], [type=time], select') && val === '' ? null : 
 			
 			// otherwise, just return the value
 			val;
