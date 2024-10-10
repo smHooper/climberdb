@@ -1058,7 +1058,7 @@ def save_db_edits():
 
 		# Loop through each parent table at the root of the inserts dicitionary
 		#	and iterate successively through each child record
-		inserts = request_data.get('inserts')
+		inserts = request_data.get('inserts') or {}
 		for root_table_name, root_data_list in inserts.items():
 			for root_data in root_data_list:
 				root_table = tables[root_table_name]
@@ -1067,12 +1067,11 @@ def save_db_edits():
 				# If there were values defined in the insert dict, 
 				#	this is a new record that needs to be inserted
 				if values:
-					html_id = root_data.get('html_id')
-					if not html_id:
-						raise RuntimeError(f'No "html_id" for insert on table "{root_table_name}"')
 					root_row = root_table(**values)
 					session.add(root_row) # add as an INSERT
-					inserted_rows[html_id] = root_row
+					html_id = root_data.get('html_id')
+					if html_id:
+						inserted_rows[html_id] = root_row
 
 				# If there's an 'id' property, the parent already exists
 				elif root_id:
@@ -1097,7 +1096,7 @@ def save_db_edits():
 			inserted_rows[html_id].file_path = file_path
 
 		# Save an updates to existing records
-		updates = request_data.get('updates')
+		updates = request_data.get('updates') or {}
 		for table_name, update_data_dict in updates.items():
 			table = tables[table_name]
 			for update_id, update_data in update_data_dict.items():
