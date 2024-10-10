@@ -236,7 +236,7 @@ class ClimberDBBriefings extends ClimberDB {
 		});
 
 		$('#save-button').click(e => {
-			this.saveEdits();
+			this.saveEditsPython();
 		})
 
 		$('#delete-button').click(e => {
@@ -577,7 +577,7 @@ class ClimberDBBriefings extends ClimberDB {
 	}
 
 
-	saveEdits() {
+	saveEditsPython() {
 		showLoadingIndicator('saveEdits');
 
 		if (!$('.appointment-details-drawer .input-field.dirty').length) {
@@ -596,77 +596,90 @@ class ClimberDBBriefings extends ClimberDB {
 				return;
 			}
 		}
-		var fields = [];
-		var values = [];
+
+		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
+		var values = {
+			last_modified_time: now,
+			last_modified_by: this.userInfo.ad_username
+		};
 		const briefingDate = $('#input-briefing_date').val();
 		for (const el of $('.input-field:not(#input-briefing_date, .ignore-on-save)')) {
 			const $input = $(el);
+			// briefing start and end are actually datetimes in the database, but since the user 
+			//	has already selected a date, they're just selects with different times as options. 
+			//	The INSERT/UPDATE value needs to include the date too though
 			if (el.id.endsWith('_time')) {
-				fields.push(el.name.replace(/_time$/, ''));
-				values.push(`${briefingDate} ${el.value}`)
+				values[el.name.replace(/_time$/, '')] = `${briefingDate} ${el.value}`;
 			} else {
-				fields.push(el.name);
-				values.push(el.value);
+				values[el.name] = el.value;
 			}
 		}
 
-		// Add last modified fields
-		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
-		fields = fields.concat(['last_modified_time', 'last_modified_by']);
-		values = values.concat([now, this.userInfo.ad_username]);
-
 		const $selectedAppointment = $('.briefing-appointment-container.selected');
 		const isInsert = $selectedAppointment.is('.new-briefing');
-		var sql = '';
+		var formData = new FormData();
+		var briefingID = $selectedAppointment.data('briefing-id');
 		if (isInsert) {
 			// This is a new entry so add "entered by" fields
-			fields = fields.concat(['entry_time', 'entered_by']);
-			values = values.concat([now, this.userInfo.ad_username]);
-			// get parametized fields
-			let parametized = fields.map(f => '$' + (fields.indexOf(f) + 1))
-				.join(', ');
-			sql = `INSERT INTO ${this.dbSchema}.briefings (${fields.join(', ')}) VALUES (${parametized}) RETURNING id;`;
+			values = {
+				...values,
+				entry_time: now, 
+				entered_by: this.userInfo.ad_username
+			}
+			formData.append('data', JSON.stringify({
+				inserts: {
+					briefings: [{
+						values: values, 
+						// the actual HTML ID doesn't matter. The existence of this 
+						//	property (with a truthy value) will get the backend to 
+						//	return the INSERTed ID
+						html_id: 'a'
+					}]
+				}
+			}) )
 		} else {
-			const briefingID = $selectedAppointment.data('briefing-id');
-			let parametized = fields.map(f => `${f}=$${fields.indexOf(f) + 1}`)
-				.join(', ');
-			sql = `UPDATE ${this.dbSchema}.briefings SET ${parametized} WHERE id=${briefingID} RETURNING id;`;
+			formData.append('data', JSON.stringify({
+				updates: {
+					briefings: {
+						[briefingID]: values
+					}
+				}
+			}) )
 		}
 
-		return $.ajax({ 
-			url: 'climberdb.php',
-			method: 'POST',
-			data: {action: 'paramQuery', queryString: sql, params: values},
-			cache: false
-		}).done(queryResultString => {
-			if (this.queryReturnedError(queryResultString)) {
-				showModal(
-					`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}.` + 
-						` Make sure you're still connected to the NPS network and try again. Contact your database` + 
-						` adminstrator if the problem persists.`, 
-					'Unexpected error'
-				);
+		return $.post({
+			url: '/flask/db/save',
+			data: formData,
+			contentType: false,
+			processData: false
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				const message = 'An unexpected error occurred while saving data to the database:' + 
+					' Make sure you\'re still connected to the NPS network and try again.' +
+					` <a href="mailto:${this.config.db_admin_email}">Contact your database` +
+					` adminstrator</a> if the problem persists. Full error: <br><br>${response}`
+				showModal(message, 'Unexpected error');
+				return;
 			} else {
-				const result = $.parseJSON(queryResultString);
-				const briefingID = result[0].id;
+				const result = response.data || [];
+				if (result.length) briefingID = result[0].db_id;
 
 				// Update in-memory data
-				if (!this.briefings[briefingDate]) this.briefings[briefingDate] = {};
-				if (!this.briefings[briefingDate][briefingID]) this.briefings[briefingDate][briefingID] = {};
+				// 	make sure the briefing date and briefingID exist first
+				this.briefings[briefingDate] = this.briefings[briefingDate] || {};
+				this.briefings[briefingDate][briefingID] = this.briefings[briefingDate][briefingID] || {};
 				
 				var info = this.briefings[briefingDate][briefingID];
 
 				for (const el of $('.input-field')) {
 					info[el.name] = el.value;
 				}
-				info.briefing_start = info.briefing_date + ' '  + info.briefing_start_time;
-				info.briefing_end = info.briefing_date + ' '  + info.briefing_end_time;
+				info.briefing_start = info.briefing_date + ' ' + info.briefing_start_time;
+				info.briefing_end =   info.briefing_date + ' ' + info.briefing_end_time;
 				info.expedition_name = this.expeditionInfo.expeditions[info.expedition_id].expedition_name;
 				info.n_members = this.expeditionInfo.expeditions[info.expedition_id].n_members;
 				info.routes = (this.expeditionInfo.expeditions[info.expedition_id].routes || '<em>none</em>').replace(/; /g, ', ');
 				info.id = briefingID;
-
-				this.briefings[briefingDate][briefingID] = {...info};
 				
 				const rangerID = info.briefing_ranger_user_id;
 				if (rangerID) {
