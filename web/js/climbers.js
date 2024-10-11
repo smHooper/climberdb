@@ -574,7 +574,7 @@ class ClimberForm {
 		});
 
 		$('#save-button').click(e => {
-			this.saveEdits()
+			this.saveEditsPython()
 		});
 
 		$('.climber-form .delete-card-button').click(e => {
@@ -1103,27 +1103,21 @@ class ClimberForm {
 
 	/*
 	Save edits to climber info. Edits are either changes to a climber's information 
-	or related records (climber history or emergency contacts) or completely new 
+	or related records (i.e., emergency contacts) or completely new 
 	climber inserts (if the form is being shown as a modal)
 	*/
-	saveEdits({chainInserts=false}={}) {
+	saveEditsPython() {
 
-		showLoadingIndicator('saveEdits');
-
-		var sqlStatements = [];
-		var sqlParameters = [];
 		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
 		const userName = this._parent.userInfo.ad_username;
 		
-		// Deep copy to be able to roll back changes to in-memory data (climberDB.climberInfo)
-		const originalDataValues = deepCopy(this.selectedClimberInfo.climbers);
-		const currentIndex = $('.query-result-list-item.selected').index();
-		var climberInfo = {};
-		if (this._parent.climberInfo) { // will be undefined if this is a new climber
-			climberInfo = this._parent.climberInfo[currentIndex];
+		const inputSelector = '.input-field.dirty';
+		if ($(inputSelector).length === 0) {
+			showModal("You have not made any edits to save yet. Add or change this climber's information and then try to save it.", "No edits to save");
+			return $.Deferred().resolve('');
 		}
 
-		// If the user disabled required fields, still make validate first and last name fields. Otherwise, validate all
+		// If the user disabled required fields, still validate first and last name fields. Otherwise, validate all
 		const requiredFieldsDisabled = $('#disable-required-switch-container input[type=checkbox]').prop('checked');
 		const $editParents = requiredFieldsDisabled ? 
 			$('.input-field.always-required.dirty').closest('.field-container-row') : 
@@ -1140,152 +1134,115 @@ class ClimberForm {
 			if (requiredFieldsDisabled) message += 
 				' Even though you disabled required fields,' + 
 				' first and last name are always required.'
-			showModal(message, 'Required field is empty');
-			hideLoadingIndicator();
+			showModal(message, 'Required Field Is Empty');
 			return;
 		};
 
-		// collect inserts
-		let inserts = [];
-		for (const container of $('.climberdb-modal #climber-info-tab-content, .new-card:not(.cloneable)')) { 
-			let tableParameters = {}
-			for (const el of $(container).find('.input-field.dirty')) {
-				const $input = $(el);
-				const tableName = $input.data('table-name');
-				const fieldName = el.name;
+		showLoadingIndicator('saveEdits');
 
-				if (!(tableName in tableParameters)) tableParameters[tableName] = {fields: [], values: []};
-				tableParameters[tableName].fields.push(fieldName);
-				tableParameters[tableName].values.push(this.getInputFieldValue($input));
-			}
-			// Loop through tables in their insert order
-			let currvalClauseString = '';
-			let currvalCount = 0;
-			for (const tableName in this._parent.tableInfo.tables) {
-				// If the table doesn't have any fields that were edited, skip it
-				if (!(tableName in tableParameters)) continue;
-
-				const columnInfo = this._parent.tableInfo.tables[tableName].columns;
-				let values = tableParameters[tableName].values;
-				let fields = tableParameters[tableName].fields;
-				if ('entered_by' in columnInfo) {
-					values = values.concat([now, userName]);
-					fields = fields.concat(['entry_time', 'entered_by']);
-				}
-				if ('last_modified_by' in columnInfo) {
-					values = values.concat([now, userName]);
-					fields = fields.concat(['last_modified_time', 'last_modified_by']);
-				}
-				const foreignColumnInfo = this._parent.tableInfo.tables[tableName].foreignColumns || [];
-				if (foreignColumnInfo.length) {
-					// find the ID
-					for (const {foreignTable, column} of foreignColumnInfo) {
-						// Assume this is an insert whose parent (left-side) table is also being inserted.
-						//	In that case, the parent record should have already been inserted and currval would return its ID.
-						//	This only works, however, if only 1 record is being inserted into the parent table
-						var foreignID;//= ;
-						// Loop through all input fields and look for the parent ID in the input's .data().
-						//	If found, the parent record already exists and the ID can just be retrieved from
-						//	the .data()
-						for (const el of $('.input-field')) {
-							const $el = $(el);
-							if ($el.data('table-name') === foreignTable && $el.data('table-id') !== undefined) {
-								foreignID = parseInt($el.data('table-id')); // the ID is set on an input, meaning this field belongs to an existing record
-								break;
-							}
-						}
-						if (foreignID === undefined) {
-							// insert a value to get what will be the foreign table ID 
-							currvalClauseString += `, currval(pg_get_serial_sequence('${foreignTable}', 'id'))`;
-							currvalCount ++;
-							//showModal(`Foreign row ID could not be found for the table '${tableName}' and column '${column}' with foreign table '${foreignTable}'`, 'Database Error')
-							//return;
-						} else {
-							values.push(foreignID);
-						}
-						fields.push(column);
-						//}
-
-					}
-				}
-
-				let parametized = fields.map(f => '$' + (fields.indexOf(f) + 1))
-					.slice(0, fields.length - currvalCount) // drop the currvalClause parametized values
-					.join(', ');
-				sqlStatements.push(`INSERT INTO ${this._parent.dbSchema}.${tableName} (${fields.join(', ')}) VALUES (${parametized}${currvalClauseString}) RETURNING id`);
-				sqlParameters.push(values);
-				// Record so table-id data attribute can be set from RETURNING statement
-				inserts.push({container: container, tableName: tableName});
-			}
+		let inserts = {},
+			updates = {},
+			lastModifiedAttributes = {
+				last_modified_by: userName,
+				last_modified_time: now
+			},
+			climberEdits = {...lastModifiedAttributes};
+		// Get edits to climber
+		const $climberInputs = $(`#climber-info-tab-content ${inputSelector}`)
+		for (const el of $climberInputs) {
+			climberEdits[el.name] = this._parent.getInputFieldValue($(el));
 		}
 
-		// collect updates
-		const updates = this.edits.updates;
-		for (const tableName in updates) {
-			const columnInfo = this._parent.tableInfo.tables[tableName].columns;
-			const hasLastModifiedBy = 'last_modified_by' in columnInfo;
-			for (const id in updates[tableName]) {
-				let parameters = hasLastModifiedBy ? [now, userName] : [];
-				let parametized = hasLastModifiedBy ? ['last_modified_time=$1', 'last_modified_by=$2'] : [];
-				let hasUpdates = false;
-				for (const fieldName in updates[tableName][id]) {
-					const value = updates[tableName][id][fieldName];
-					parameters.push(value);
-					parametized.push(`${fieldName}=$${parametized.length + 1}`);
-
-					if (fieldName in climberInfo) climberInfo[fieldName] = value;
-					hasUpdates = true;
-				}
-				
-				if (hasUpdates) {
-					sqlStatements.push(`UPDATE ${this._parent.dbSchema}.${tableName} SET ${parametized.join(', ')} WHERE id=${id} RETURNING id`);
-					sqlParameters.push(parameters);
-				}
-			}
-		}
-
-
-		 if (!sqlStatements.length) {
-		 	showModal("You have not made any edits to save yet. Add or change this climber's information and then try to save it.", "No edits to save");
-		 	hideLoadingIndicator();
-		 	return $.Deferred().resolve('');
-		 }
-
-		return $.ajax({ 
-			url: 'climberdb.php',
-			method: 'POST',
-			data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
-			cache: false
-		}).done(queryResultString => {
-			if (this._parent.queryReturnedError(queryResultString)) { 
-				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-				// roll back in-memory data
-				for (const dbID in updates.climbers) {
-					for (const fieldName in updates.climbers[dbID]) {
-						climberInfo[fieldName] = originalDataValues[dbID][fieldName];
-					}
-				}
-				return;
+		var climberID = $('#climber-info-tab-content').data('table-id');
+		const climberHasEdits = !!Object.keys(climberEdits).length;
+		if (climberHasEdits) {
+			if (climberID) {
+				updates.climbers = {[climberID]: climberEdits}
 			} else {
-				const returnedIDs = $.parseJSON(queryResultString);
-				for (const i in inserts) {
-					const id = returnedIDs[i].id;
-					if (id == null || id === '') continue;
+				inserts.climbers = [{
+					values: {
+						...climberEdits,
+						entered_by: userName,
+						entry_time: now
+					},
+					html_id: 'climber-info-tab-content',
+					children: {}
+				}]
+			}
+		}
+
+		// get edits to each emergency contact
+		for (const el of $('#emergency-contacts-accordion .card:not(.cloneable)').has(inputSelector)) {
+			const $card = $(el);
+			const $inputs = $card.find(inputSelector);
+			const dbID = $card.data('table-id');
+			var values = {...lastModifiedAttributes};
+			for (const el of $inputs) {
+				values[el.name] = this._parent.getInputFieldValue($(el));
+			}
+			
+			if (dbID) {
+				(updates.emergency_contacts = updates.emergency_contacts || {})[dbID] = values;
+			} else {
+				// if there were no edits to the climber info, inserts.climbers won't exist
+				if (!inserts.climbers) {
+					inserts.climbers = [{
+						id: climberID,
+						children: {emergency_contacts: []}
+					}]
+				}
+				// If this is the first emergency contact, create the array
+				(inserts.climbers[0].children.emergency_contacts = inserts.climbers[0].children.emergency_contacts || [])
+					// then add the changes for this contact
+					.push({
+						values: {
+							...values,
+							entered_by: userName,
+							entry_time: now
+						},
+						html_id: $card.attr('id')
+					})
+			}
+		}
+
+		const requestData = {
+			inserts: inserts,
+			updates: updates,
+			foreignColumns: this._parent.tableInfo.tables.emergency_contacts.foreignColumns
+		}
+		const formData = new FormData();
+		formData.append('data', JSON.stringify(requestData));
+
+		return $.post({
+			url: '/flask/db/save',
+			data: formData,
+			contentType: false,
+			processData: false
+		}).done(response => {
+			if (this._parent.pythonReturnedError(response)) {
+				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this._parent.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
+				
+				return false;
+			} else {
+				const result = response.data || [];
+				// add IDs to .data() attributes of HTML elements for each newly inserted record
+				for (const {table_name, html_id, db_id} of result) {
+					if (db_id == null || db_id === '') continue;
 
 					// Set the card's class and inputs' attributes so it changes will register as updates
-					const {container, tableName} = inserts[i];
-					const $container = $(container)
+					//const {container, tableName} = inserts[i];
+					const $container = $('#' + html_id)
 						.removeClass('new-card')
-						.data('table-name', tableName)
-						.data('table-id', id);
+						.data('table-name', table_name)
+						.data('table-id', db_id);
 					$container
 						.find('.input-field')
-							.data('table-name', tableName)
-							.data('table-id', id);
-					if (!(tableName in this.selectedClimberInfo)) this.selectedClimberInfo[tableName] = {};
-					this.selectedClimberInfo[tableName][id] = {};
+							.data('table-name', table_name)
+							.data('table-id', db_id);
+					if (!(table_name in this.selectedClimberInfo)) this.selectedClimberInfo[table_name] = {};
+					this.selectedClimberInfo[table_name][db_id] = {};
 					for (const el of $container.find('.input-field')) {
-						this.selectedClimberInfo[tableName][id][el.name] = el.value;
+						this.selectedClimberInfo[table_name][db_id][el.name] = el.value;
 					}
 				}
 
@@ -1298,17 +1255,10 @@ class ClimberForm {
 					}
 				}
 
-
 				$('.climber-form .input-field.dirty').removeClass('dirty');
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-			// roll back in-memory data
-			for (const dbID in updates.climbers) {
-				for (const fieldName in updates.climbers[dbID]) {
-					climberInfo[dbID][fieldName] = updates.climbers[dbID];
-				}
-			}
 		}).always(() => {
 			this._parent.hideLoadingIndicator();
 		});
@@ -1331,7 +1281,7 @@ class ClimberForm {
 			});
 			$('#alert-modal .save-button').click(() => {
 				showLoadingIndicator();
-				this.saveEdits(); 
+				this.saveEditsPython(); 
 				afterActionCallback.call();
 			});
 		}
@@ -1667,6 +1617,9 @@ class ClimberDBClimbers extends ClimberDB {
 
 		// Show the climber info tab
 		$('#climber-info-tab').click();
+
+		// clear the climber-id data attribute
+		$('#climber-info-tab-content').data('table-id', '');
 	}
 
 
@@ -1691,10 +1644,10 @@ class ClimberDBClimbers extends ClimberDB {
 	from.
 	*/
 	saveModalClimber() {
-		const deferred = this.climberForm.saveEdits();
+		const deferred = this.climberForm.saveEditsPython();
 		if (deferred) {	
-			deferred.done(resultString => {
-				if (!this.queryReturnedError(resultString) && resultString.length) {
+			deferred.done(response => {
+				if (!this.pythonReturnedError(response)) {
 					const firstName = $('#input-first_name').val();
 					const lastName = $('#input-last_name').val();
 					const climberName = `${firstName} ${lastName}`;
@@ -1702,10 +1655,13 @@ class ClimberDBClimbers extends ClimberDB {
 					// Uncheck the filters in case this climber was marked as not a guide
 					$('#7-day-only-filter, #guide-only-filter').prop('checked', false);
 
+					// query climbers by name. This will return multiple climbers, but one of them
+					//	will be the newly created climber
 					this.queryClimbers({searchString: climberName})
 						.done(() => {
-							// Select 
-							const climberID = $.parseJSON(resultString)[0].id;
+							// Select the new climber from the climber ID
+							//	The climber ID will always be the first returned ID
+							const climberID = response.data[0].db_id;
 							this.selectResultItem($(`#item-${climberID}`));
 							this.climberForm.closeClimberForm($('.climber-form button.close'));
 						});
@@ -1735,9 +1691,14 @@ class ClimberDBClimbers extends ClimberDB {
 						const message = `Are you sure you want to create another climber with this name. There ${nClimbers > 1 ? 'are' : 'is'} already ${nClimbers} climber${nClimbers > 1 ? 's' : ''} with this name in the database. If you click yes, make sure you are not creating a duplicate climber.`
 						const footerButtons = `
 							<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-							<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.saveModalClimber()">Yes</button>
+							<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal">Yes</button>
 						`;
-						showModal(message, 'Possible Duplicate Climber', 'confirm', footerButtons);
+						const onConfirmClick = () => {
+							$('#alert-modal .danger-button').click(
+								() => {this.saveModalClimber()}
+							)
+						}
+						showModal(message, 'Possible Duplicate Climber', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClick});
 					} else {
 						this.saveModalClimber();
 					}
@@ -1762,7 +1723,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	saveEdits() {
-		this.climberForm.saveEdits();
+		this.climberForm.saveEditsPython();
 	}
 
 	/*
@@ -1873,6 +1834,8 @@ class ClimberDBClimbers extends ClimberDB {
 		const climberIndex = this.climberIDs[climberID];
 		const climberInfo = this.climberInfo[climberIndex];
 		this.climberForm.fillClimberForm(climberID, climberInfo);
+
+		$('#climber-info-tab-content').data('table-id', climberID);
 
 		// Make sure required fields are required
 		$('#disable-required-switch-container input[type=checkbox]').prop('checked', false).change();
