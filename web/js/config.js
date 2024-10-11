@@ -65,30 +65,31 @@ class ClimberDBConfig extends ClimberDB {
 		showLoadingIndicator('saveEdits');
 
 		// Gather fields and values
-		var values = {},
-			sqlParameters = [],
-			sqlStatements = [];
+		var updates = {};
+
 		for (const el of $inputs) {
 			const inputValue = el.value;
 			const id = $(el).data('table-id');
-			values[id] = inputValue
-			sqlParameters.push([inputValue]);
-			sqlStatements.push(`UPDATE ${this.dbSchema}.config SET value=$1 WHERE id=${id} RETURNING id`);
+			updates[id] = {value: inputValue};
 		}
 
-		return $.post({ 
-			url: 'climberdb.php',
-			data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
-			cache: false
-		}).done(queryResultString => {
-			if (this.queryReturnedError(queryResultString)) {
-				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-			} else  {
-				const result = $.parseJSON(queryResultString);
+		const formData = new FormData();
+		formData.append('data', JSON.stringify({
+			updates: {config: updates}
+		}) )
 
+		return $.post({
+			url: '/flask/db/save',
+			data: formData,
+			contentType: false,
+			processData: false
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
+			} else  {
 				// update in-memory data
-				for (const {id} of result) {
-					this.config[id].value = values[id];
+				for (const [id, {value}] of Object.entries(updates)) {
+					this.config[id].value = value;
 				}
 
 				$inputs.removeClass('dirty');
