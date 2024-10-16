@@ -1641,9 +1641,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			getEdits(commsID, $inputs, 'communication_devices', {htmlID: li.id})//
 		}
 
-		// const requestData = JSON.stringify({
-
-		// })
 		formData.append('data', JSON.stringify({
 			inserts: dbInserts,
 			updates: dbUpdates,

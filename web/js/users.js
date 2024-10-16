@@ -383,77 +383,94 @@ class ClimberDBUsers extends ClimberDB {
 		showLoadingIndicator('saveEdits');
 
 		// Gather fields and values
-		var values = [], 
-			fields = [];
-		for (const el of $inputs) {
-			values.push(el.value);
-			fields.push(el.name);
-		}
+		// var values = [], 
+		// 	fields = [];
+		// for (const el of $inputs) {
+		// 	values.push(el.value);
+		// 	fields.push(el.name);
+		// }
+		var values = Object.fromEntries(
+			$inputs.map( (_, el) => [[el.name, this.getInputFieldValue($(el))]] ).get()
+		)
 
 		var userID = $tr.data('table-id');
 		const isInsert = $tr.is('.new-user');
-		var sql;
+		var inserts = {},
+			updates = {};
 		if (isInsert) {
-			// insert
-			sql = `INSERT INTO ${this.dbSchema}.users (${fields.join(',')}) VALUES (${fields.map(f => '$' + (fields.indexOf(f) + 1))}) RETURNING id`;
+			inserts = {users: [{
+				values: values,
+				// since only one user can be selected at a time, it doesn't matter 
+				//	what the html_id is as long as it's truthy
+				html_id: 'a' 
+			}]}
 		} else {
-			// update
-			sql = `UPDATE ${this.dbSchema}.users SET ${fields.map(f => `${f}=$${fields.indexOf(f) + 1}`)} WHERE id=${userID}`;
+			updates = {
+				users: {[userID]: values}
+			}
 		}
 
-		return $.post({ 
-			url: 'climberdb.php',
-			data: {action: 'paramQuery', queryString: sql, params: values},
-			cache: false
-		}).done(queryResultString => {
-			if (this.queryReturnedError(queryResultString)) {
-				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-			} else  {
-				const result = $.parseJSON(queryResultString)[0];
+		const formData = new FormData()
+		formData.append('data', JSON.stringify({
+			inserts: inserts,
+			updates: updates
+		}) )
+
+		return $.post({
+			url: '/flask/db/save',
+			data: formData,
+			contentType: false,
+			processData: false
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
+				return false;
+			} else {
 
 				$inputs.removeClass('dirty');
+				$tr.addClass('uneditable');
 
 				// update in-memory data
-				const userInfo = this.users[userID] || {};
-				for (const i in values) {
-					userInfo[fields[i]] = values[i];
-				}
-				// If this was an update, actually set the in-memory data
-				if (!(userID in this.users)) {
-					this.users[userID] = {...userInfo};
+				const userInfo = (this.users[userID] = this.users[userID] || {});
+				for (const [field, value] of Object.entries(values)) {
+					userInfo[field = value;
 				}
 
-				// Send activation email for a new user
-				if (isInsert && !this.config.no_login_user_roles.includes(userInfo.user_role_code)) {
-					userID = result.id;
-					$tr.attr('data-table-id', userID)
+				if (isInsert) { 
+					result = ( response.data || [] )[0]
+					$tr.attr('data-table-id', (result || {}).db_id)
 						.removeClass('new-user')
-						.addClass('uneditable');
+						
+					// Send activation email for a new user
+					if (!this.config.no_login_user_roles.includes(userInfo.user_role_code)) {
 
-					const username = userInfo.ad_username;//$tr.find('.input-field[name="ad_username"]').val();
-					const firstName = userInfo.first_name;//$tr.find('.input-field[name="first_name"]').val();
-					const email = userInfo.email_address;//$tr.find('.input-field[name="email_address"]').val();
-					const activationURL = `${window.location.origin}/index.html?activation=true&id=${userID}`
-						.replace(':9006', ':9007'); // make sure the URL is for the prod. site
 
-					// Send an activation email to the user 
-					return $.post({
-						url: 'flask/notifications/account_activation',
-						data: {
-							username: username,
-							user_id: userID
-						},
-						cache: false
-					}).done(resultString => {
-						const pythonError = this.pythonReturnedError(resultString);
-						if (pythonError !== false) {
-							showModal(`Account activation email failed to send with the error:\n${pythonError.trim()}.\nYou can send the activation link directly to ${firstName}: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
-						} else {
-							showModal(`An activation email was successfully sent to ${email} with the activation link <a href="${activationURL}">${activationURL}</a>. The account will not be active until ${firstName} completes the activation process.`, 'Activation Email Sent')
-						}
-					}).fail((xhr, status, error) => { 
-						showModal(`Account activation email failed to send with the error: ${error}. You can send the activation link directly to the user whose account you just created: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
-					})
+						const username = userInfo.ad_username;//$tr.find('.input-field[name="ad_username"]').val();
+						const firstName = userInfo.first_name;//$tr.find('.input-field[name="first_name"]').val();
+						const email = userInfo.email_address;//$tr.find('.input-field[name="email_address"]').val();
+						const port = window.location.port;
+						const activationURL = `${window.location.origin}/index.html?activation=true&id=${userID}`
+							.replace(':' + port, ':4007'); // make sure the URL is for the prod. site
+
+						// Send an activation email to the user 
+						return $.post({
+							url: 'flask/notifications/account_activation',
+							data: {
+								username: username,
+								user_id: userID
+							},
+							cache: false
+						}).done(resultString => {
+							const pythonError = this.pythonReturnedError(resultString);
+							if (pythonError !== false) {
+								showModal(`Account activation email failed to send with the error:\n${pythonError.trim()}.\nYou can send the activation link directly to ${firstName}: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
+							} else {
+								showModal(`An activation email was successfully sent to ${email} with the activation link <a href="${activationURL}">${activationURL}</a>. The account will not be active until ${firstName} completes the activation process.`, 'Activation Email Sent')
+							}
+						}).fail((xhr, status, error) => { 
+							showModal(`Account activation email failed to send with the error: ${error}. You can send the activation link directly to the user whose account you just created: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
+						})
+					}
 				}
 			}
 		}).fail((xhr, status, error) => {
