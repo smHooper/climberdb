@@ -285,8 +285,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.onConfirmChangeExpeditionButtonClick();
 		})
 
-		// Fill with this year's expeditions to start
-		this.fillExpeditionSearchSelect({showExpeditionOptions: !this.parseURLQueryString()});
 		// ^^^^^^^^^ Query stuff ^^^^^^^^^^^^^^^^
 
 
@@ -2237,7 +2235,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			where: {
 				expedition_members: [
 					{column_name: 'expedition_id', operator: '=', comparand: expeditionID},
-					{column_name: 'expedition_id', operator: '=', comparand: climberID}
+					{column_name: 'climber_id', operator: '=', comparand: climberID}
 				]
 			}
 		}).done(response => {
@@ -2264,9 +2262,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		})
 		// Warn the user if this expedition is from a previous year
-		const previousYearSQL = `SELECT coalesce(planned_departure_date, actual_departure_date) AS planned_departure_date FROM ${this.dbSchema}.expeditions WHERE id=:expedition_id`
-		this.queryDBPython({sql: previousYearSQL, sqlParameters: {expedition_id: expeditionID}})
-			.done(response => {
+		this.queryDBPython({where:
+			{expeditions: [{column_name: 'id', operator: '=', comparand: expeditionID}]}
+		}).done(response => {
 				if (!this.pythonReturnedError(response)) {
 					const result = response.data || [];
 					if (result.length) {
@@ -3275,6 +3273,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					if (result.length) {
 						//$drawer.append('<option value="">Click to select an expedition</option>')
 						for (const row of result) {
+							// **** TODO: use this.constants instead of number
 							const cancelledClass = row.group_status_code == 6 ? 'cancelled' : '';
 							$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
 						}
@@ -4760,6 +4759,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.configureMainContent();
 
 		initDeferred.then(() => {
+
+			// Fill with this year's expeditions to start. Do this after super.init() get's the schema
+			this.fillExpeditionSearchSelect({showExpeditionOptions: !this.parseURLQueryString()});
 
 			// Get route codes first if they haven't been queried yet.
 			const lookupDeferreds = [this.getCMCInfo()];
