@@ -965,6 +965,74 @@ BEGIN
 END 
 $$ LANGUAGE plpgsql strict immutable;
 
+-- keep function to copy views separate so that it can be called on its own
+CREATE OR REPLACE FUNCTION clone_views(
+	source_schema text,
+	dest_schema text
+) RETURNS void AS 
+$BODY$
+
+	DECLARE
+		view_name text;
+		record_   record;
+
+	BEGIN
+
+	FOR record_ IN 
+		WITH 
+		  dict_query AS (
+		    SELECT 
+		      'a' AS a, 
+		      ('{"'|| string_agg(table_name || '": "dev.' || table_name, '","') || '"}')::jsonb AS replace_dict 
+		    FROM information_schema.tables 
+		    WHERE table_schema='public' 
+		    GROUP BY a
+		  ), 
+		  dependency AS (
+		    SELECT
+		      source_table.relname as source_table,
+		      dependent_view.relname as dependent_views
+		    FROM pg_depend 
+		    JOIN pg_rewrite ON pg_depend.objid = pg_rewrite.oid 
+		    JOIN pg_class as dependent_view ON pg_rewrite.ev_class = dependent_view.oid 
+		    JOIN pg_class as source_table ON pg_depend.refobjid = source_table.oid 
+		    JOIN pg_namespace source_ns ON source_ns.oid = source_table.relnamespace
+		    WHERE 
+		      source_ns.nspname = 'public' AND 
+		      source_table.relname LIKE '%view' AND
+		      source_table.relname <> dependent_view.relname
+		  )
+		SELECT DISTINCT ON (sort_order, table_name) 
+			* 
+		FROM (
+		  SELECT 
+		    table_name,
+		    dependency.dependent_views,
+		    CASE 
+		      WHEN table_name IN (dependency.source_table) AND table_name NOT IN (SELECT dependent_views FROM dependency) THEN 0
+		      WHEN table_name IN (dependency.source_table) AND table_name IN (SELECT dependent_views FROM dependency) THEN 1
+		      ELSE 2 
+		    END AS sort_order,
+		    multi_replace(view_definition, replace_dict) AS view_def
+		  FROM information_schema.views 
+		    JOIN dict_query ON replace_dict::text <> table_name
+		    LEFT JOIN dependency ON dependency.source_table = table_name
+		  WHERE table_schema = 'public'
+		) _
+		ORDER BY sort_order, table_name
+	LOOP
+		view_name := dest_schema || '.' || quote_ident(record_.table_name);
+		EXECUTE 'DROP VIEW IF EXISTS ' || view_name || ' CASCADE; CREATE OR REPLACE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
+	END LOOP;
+  
+	RETURN; 
+ 
+	END;
+
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
+
 -- copy schema to dev
 CREATE OR REPLACE FUNCTION clone_schema(
     source_schema text,
@@ -1138,32 +1206,7 @@ BEGIN
     END LOOP;
 
 -- Create views 
---SELECT json_agg(json_build_object(table_name, 'dev.' || table_name))::jsonb FROM information_schema.tables WHERE table_schema='public';
-  -- FOR object IN
-  --   SELECT table_name::text
-  --     FROM information_schema.views
-  --    WHERE table_schema = quote_ident(source_schema)
-
-  -- LOOP
-  --   buffer := dest_schema || '.' || quote_ident(object);
-  --   SELECT view_definition INTO v_def
-  --     FROM information_schema.views
-  --    WHERE table_schema = quote_ident(source_schema)
-  --      AND table_name = quote_ident(object);
-     
-  --   EXECUTE 'CREATE OR REPLACE VIEW ' || buffer || ' AS ' || v_def || ';' ;
-
-  -- END LOOP;
-
-	FOR record_ IN 
-		WITH dict_query AS (SELECT 'a' AS a, ('{"'|| string_agg(table_name || '": "dev.' || table_name, '","') || '"}')::jsonb AS replace_dict FROM information_schema.tables WHERE table_schema='public' GROUP BY a)
-		SELECT table_name, multi_replace(view_definition, replace_dict) AS view_def 
-		FROM information_schema.views JOIN dict_query ON replace_dict::text <> table_name
-		WHERE table_schema = 'public'
-	LOOP
-		buffer := dest_schema || '.' || quote_ident(record_.table_name);
-		EXECUTE 'CREATE OR REPLACE VIEW ' || buffer || ' AS ' || record_.view_def || ';' ;
-	END LOOP;
+  clone_views(source_schema, dest_schema);
 
 -- Create functions 
   FOR func_oid IN
