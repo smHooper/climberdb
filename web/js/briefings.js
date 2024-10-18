@@ -1540,30 +1540,18 @@ class ClimberDBBriefings extends ClimberDB {
 			// Fill expeditions
 			this.getExpeditionInfo(year)
 			,
-			// Get rangers 
-			this.queryDBPython({
-				sql: 
-					`
-					SELECT id, first_name || ' ' || last_name As full_name 
-					FROM ${this.dbSchema}.users 
-					WHERE 
-						user_role_code=:ranger_role_code AND 
-						user_status_code=2 --active
-					`,
-				sqlParameters: {
-					ranger_role_code: this.constants.userRoleCodes.ranger
-				}
-			}).done(response => {
-				if (this.pythonReturnedError(response)) {
-					showModal('An unexpected error occurred while retreiving briefing details: <br>' + response)
-				} else {
-					const rangers = response.data || [];
-					const $input = $('#input-ranger');
-					for (const row of rangers) {
-						$input.append(`<option class="" value="${row.id}">${row.full_name}</option>`);
+			$.post({url: '/flask/db/select/rangers'})
+				.done(response => {
+					if (this.pythonReturnedError(response)) {
+						showModal('An unexpected error occurred while retreiving briefing details: <br><br>' + response, 'Unexpected Error')
+					} else {
+						const rangers = response.data || [];
+						const $input = $('#input-ranger');
+						for (const row of rangers) {
+							$input.append(`<option class="" value="${row.id}">${row.full_name}</option>`);
+						}
 					}
-				}
-			})
+				})
 		];
 
 		// Get times
@@ -1581,9 +1569,15 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	getExpeditionInfo(year=(new Date().getFullYear())) {
-		const sql = `SELECT * FROM ${this.dbSchema}.briefings_expedition_info_view WHERE planned_departure_date > :departure_date AND group_status_code <> 6 ORDER BY expedition_name`;
-		return this.queryDBPython({sql: sql, sqlParameters: {departure_date: `${year}-1-1`}})
-			.done(response => {
+
+		return this.queryDBPython({where:
+			{
+				briefings_expedition_info_view: [
+					{column_name: 'planned_departure_date', operator: '>', comparand: `${year}-1-1`},
+					{column_name: 'group_status_code', operator: '<>', comparand: this.constants.groupStatusCodes.cancelled}
+				]
+			}
+		}).done(response => {
 				if (this.pythonReturnedError(response)) {
 					console.log('Could not get expedition info because \n' + response);
 				} else {

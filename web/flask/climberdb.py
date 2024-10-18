@@ -21,9 +21,14 @@ from flask.logging import default_handler
 import logging
 from logging.config import dictConfig as loggingDictConfig
 
-from sqlalchemy import asc, desc, text as sqlatext#, and_
+from sqlalchemy import asc
+from sqlalchemy import desc
+from sqlalchemy import select
+from sqlalchemy import text as sqlatext
 from sqlalchemy.engine.row import Row as sqla_Row
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import MappedClassProtocol
 
 from werkzeug.datastructures import FileStorage
 
@@ -854,6 +859,36 @@ def print_cache_tag():
 
 #---------------- DB I/O ---------------------#
 
+# helper function to process an ORM class instance into a dictionary
+def orm_to_dict(orm_class_instance: MappedClassProtocol, selected_columns:[str]=[], prohibited_columns: dict={}) -> dict:
+	
+	prohibited_columns = prohibited_columns or app.config['PHOHIBITED_QUERY_COLUMNS']
+	exclude_columns = prohibited_columns.get(orm_class_instance.__table__.name) or []
+	
+	# If specific columns weren't specified, return all
+	columns = (
+		selected_columns or 
+		[column.name for column in orm_class_instance.__table__.columns]
+	)
+
+	return {
+		column_name: climberdb_utils.sanitize_query_value(getattr(orm_class_instance, column_name))
+		for column_name in columns
+		if column_name not in exclude_columns
+	}
+
+
+# helper function to process results from SQLAlchemy result cursor resulting 
+#	from a .execute() call
+def select_result_to_dict(cursor) -> list:
+	return ([ 
+		{
+			column_name: climberdb_utils.sanitize_query_value(value)
+			for column_name, value in row._asdict().items()
+		} 
+		for row in cursor.all()
+	])
+
 
 # All-purpose SELECT query endpoint
 @app.route('/flask/db/select', methods=['POST'])
@@ -877,13 +912,7 @@ def query_db():
 			params = request_data.get('params') or None
 			result = session.execute(sql, params)
 			
-			response_data = ([ 
-				{
-					column_name: climberdb_utils.sanitize_query_value(value)
-					for column_name, value in row._asdict().items()
-				} 
-				for row in result.all()
-			])
+			response_data = select_result_to_dict(result)
 
 		# Otherwise, use the SQLAlchemy ORM
 		elif len(table_names):
@@ -924,21 +953,6 @@ def query_db():
 						order = asc if order_by['order'].lower().startswith('asc') else desc
 					result = result.order_by(order(getattr(table, order_by['column_name'])))
 
-			# helper function to process an ORM class instance into a dictionary
-			def orm_to_dict(orm_class_instance, selected_columns=[]):
-				# If specific columns weren't specified, return all
-				exclude_columns = prohibited_columns.get(orm_class_instance.__table__.name) or []
-				
-				columns = (
-					selected_columns or 
-					[column.name for column in orm_class_instance.__table__.columns]
-				)
-
-				return {
-					column_name: climberdb_utils.sanitize_query_value(getattr(orm_class_instance, column_name))
-					for column_name in columns
-					if column_name not in exclude_columns
-				}
 
 			response_data = []
 			if result.count():
@@ -968,6 +982,27 @@ def query_db():
 
 		if 'queryTime' in request_data:
 			response['queryTime'] = request_data['queryTime']
+
+		return jsonify(response)
+
+
+
+@app.route('/flask/db/select/rangers', methods=['POST'])
+def query_rangers():
+
+	with ReadSession() as session:
+		users = tables['users']
+		stmt = (
+			select(
+				users.id,
+				(users.first_name + ' ' + users.last_name).label('full_name')
+			).where(
+				users.user_role_code == 2, # rangers
+				users.user_status_code == 2 # enabled
+			).order_by('full_name')
+		)
+		result = session.execute(stmt)
+		response = {'data': select_result_to_dict(result)}
 
 		return jsonify(response)
 
