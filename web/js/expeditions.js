@@ -3069,9 +3069,11 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Hide all badges
 		$('.climber-form .result-details-header-badge').ariaHide(true);
 		
-		const sql = `SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=:climber_id`;
-		this.queryDBPython({sql: sql, sqlParameters: {climber_id: parseInt(climberID)}})
-			.done(response => {
+		this.queryDBPython({
+			where: {
+				climber_info_view: [{column_name: 'id', operator: '=', comparand: parseInt(climberID)}]
+			}
+		}).done(response => {
 				const result = response.data || [];
 				if (this.pythonReturnedError(response)) {
 					showModal(`An error occurred while retreiving climbering info: <br><br>${response}. <br><br>Make sure you're connected to the NPS network and try again.`, 'Database Error');
@@ -3762,15 +3764,17 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	queryExpedition(expeditionID, {showOnLoadWarnings=true, triggerChange=null}={}) {
 
-		const expeditionSQL = `
-			SELECT 
-				*
-			FROM ${this.dbSchema}.expedition_info_view 
-			WHERE expedition_id=:expedition_id
-		`;
-		const commsSQL = `SELECT * FROM ${this.dbSchema}.communication_devices WHERE expedition_id=:expedition_id ORDER BY entry_time, id`
 		showLoadingIndicator('queryExpedition');
-
+		const expeditionQueryParams = {
+			where: {
+				expedition_info_view: [{column_name: 'expedition_id', operator: '=', comparand: expeditionID}]
+			}
+		}
+		const commsQueryParams = {
+			where: {
+				communication_devices: [{column_name: 'expedition_id', operator: '=', comparand: expeditionID}]
+			}
+		}
 		// Query comms separate from all other expedition info because expedition_member_id 
 		//	needs to be optional and, therefore, potentially null. This means that comms are 
 		//	only related to other data by expedition_id. Using this relationship to join 
@@ -3778,8 +3782,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	records in the result without any way of determining which is right record. 
 		//	Querying them separately eliminates this issue
 		return $.when(
-			this.queryDBPython({sql: expeditionSQL, sqlParameters: {expedition_id: parseInt(expeditionID)}}),
-			this.queryDBPython({sql: commsSQL, sqlParameters: {expedition_id: parseInt(expeditionID)} })
+			this.queryDBPython(expeditionQueryParams),
+			this.queryDBPython(commsQueryParams)
 		).done( (expeditionInfoResponse, commsResponse) => {
 			// $.when responses are returned as [response, status], but all we care about
 			//	is the response
@@ -4785,8 +4789,9 @@ class ClimberDBExpeditions extends ClimberDB {
 					})
 			);
 			lookupDeferreds.push(
-				this.queryDBPython({sql: `SELECT code, default_fee, is_credit, is_payment FROM ${this.dbSchema}.transaction_type_view`})
-					.then(response => {
+				this.queryDBPython({selects: 
+					{transaction_type_view: ['code', 'default_fee', 'is_credit', 'is_payment']}
+				}).then(response => {
 						if (!this.pythonReturnedError(response)) {
 							for (const {code, default_fee, is_credit, is_payment} of response.data || []) {
 								this.defaultTransactionFees[code] = {

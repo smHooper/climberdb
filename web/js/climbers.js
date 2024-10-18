@@ -984,10 +984,12 @@ class ClimberForm {
 		// Check if any of this climber's expeditions were solo. If so, mark them as such
 		if (climberHistory.length) {
 			const $newCards = $accordion.find('.card:not(.cloneable)');
-			const soloSQL = `SELECT * FROM ${this._parent.dbSchema}.solo_climbs_view WHERE climber_id=:climber_id`;
 			const soloDeferred = this._parent.queryDBPython({
-				sql: soloSQL, 
-				sqlParameters:{climber_id: parseInt(climberHistory[0].climber_id)}
+				where: {
+					solo_climbs_view: [
+						{column_name: 'climber_id', operator: '=', comparand: climberHistory[0].climber_id}
+					]
+				}
 			}).done(response => {
 				if (this._parent.pythonReturnedError(response)) {
 					console.log('could not get solo info because ' + response)
@@ -1040,12 +1042,13 @@ class ClimberForm {
 
 	*/
 	queryClimberHistory(climberID) {
-		const historySQL = `SELECT * FROM ${this._parent.dbSchema}.climber_history_view WHERE climber_id=:climber_id`;
-		//`SELECT * FROM WHERE  climbers.id=${climberID} `
-		const contactsSQL = `SELECT * FROM ${this._parent.dbSchema}.emergency_contacts WHERE climber_id=:climber_id`;
-
-		const historyDeferred = this._parent.queryDBPython({sql: historySQL, sqlParameters: {climber_id: climberID}})
-			.done(response => {
+		const historyDeferred = this._parent.queryDBPython({
+				where: {
+					climber_history_view: [
+						{column_name: 'climber_id', operator: '=', comparand: climberID}
+					]
+				}
+			}).done(response => {
 				if (this._parent.pythonReturnedError(response)) {
 					showModal('Retrieving climber history from the database failed with the following error:<br>' + response, 'Database Error');
 				} else {
@@ -1055,9 +1058,15 @@ class ClimberForm {
 			.fail((xhr, status, error) => {
 				showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
 			});
-		const contactsDeferred = this._parent.queryDBPython({sql: contactsSQL, sqlParameters: {climber_id: climberID}})
-			.done(response => {
-				if (this._parent.queryReturnedError(response)) {
+
+		const contactsDeferred = this._parent.queryDBPython({
+				where: {
+					emergency_contacts: [
+						{column_name: 'climber_id', operator: '=', comparand: climberID}
+					]
+				}
+			}).done(response => {
+				if (this._parent.pythonReturnedError(response)) {
 					showModal('Retrieving emergency contact info from the database failed because ' + response, 'Database Error');
 				} else {
 					this.fillEmergencyContacts(response.data || []);
@@ -1680,32 +1689,36 @@ class ClimberDBClimbers extends ClimberDB {
 		const middleName = $('#input-middle_name').val();
 		const lastName = $('#input-last_name').val();
 		const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
-		const sql = `SELECT id FROM ${this.dbSchema}.climber_info_view WHERE full_name=:full_name`;
-		this.queryDBPython({sql: sql, sqlParameters: {full_name: fullName}})
-			.done(response => {
-				if (!this.pythonReturnedError(response)) {
-					const result = response.data || [];
-					const nClimbers = result.length;
-					if (nClimbers) {
-						// show modal
-						const message = `Are you sure you want to create another climber with this name. There ${nClimbers > 1 ? 'are' : 'is'} already ${nClimbers} climber${nClimbers > 1 ? 's' : ''} with this name in the database. If you click yes, make sure you are not creating a duplicate climber.`
-						const footerButtons = `
-							<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-							<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal">Yes</button>
-						`;
-						const onConfirmClick = () => {
-							$('#alert-modal .danger-button').click(
-								() => {this.saveModalClimber()}
-							)
-						}
-						showModal(message, 'Possible Duplicate Climber', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClick});
-					} else {
-						this.saveModalClimber();
+		this.queryDBPython({
+			where: {
+				climber_info_view: [{
+					column_name: 'full_name', operator: '=', comparand: fullName
+				}]
+			}
+		}).done(response => {
+			if (!this.pythonReturnedError(response)) {
+				const result = response.data || [];
+				const nClimbers = result.length;
+				if (nClimbers) {
+					// show modal
+					const message = `Are you sure you want to create another climber with this name. There ${nClimbers > 1 ? 'are' : 'is'} already ${nClimbers} climber${nClimbers > 1 ? 's' : ''} with this name in the database. If you click yes, make sure you are not creating a duplicate climber.`
+					const footerButtons = `
+						<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+						<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal">Yes</button>
+					`;
+					const onConfirmClick = () => {
+						$('#alert-modal .danger-button').click(
+							() => {this.saveModalClimber()}
+						)
 					}
+					showModal(message, 'Possible Duplicate Climber', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClick});
 				} else {
 					this.saveModalClimber();
 				}
-			})
+			} else {
+				this.saveModalClimber();
+			}
+		})
 	}
 
 	onAddNewClimberClick(e) {
@@ -2186,99 +2199,105 @@ class ClimberDBClimbers extends ClimberDB {
 		$detailsContainer.find('.merge-climber-history-list').empty();
 
 		// Query the climber's info
-		const sql = `SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=:climber_id`;
-		this.queryDBPython({sql: sql, sqlParameters: {climber_id: parseInt(climberID)}})
-			.done(response => {
-				if (this.pythonReturnedError(response)) {
-					showModal(`An error occurred while retreiving climbering info: <br>${response}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
-				} else {
-					const result = response.data || [];
-					if (result.length) {
-						const climberInfo = result[0];
-						const {
-							first_name,
-							middle_name,
-							last_name,
-							address, 
-							city, 
-							state_code, 
-							country_code, 
-							postal_code,
-							phone,
-							email_address,
-							dob,
-							age,
-							entered_by,
-							entry_time
-						} = {...climberInfo}
+		this.queryDBPython({
+			where: {
+				climber_info_view: [{column_name: 'id', operator: '=', comparand: parseInt(climberID)}]
+			}
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal(`An error occurred while retreiving climbering info: <br>${response}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
+			} else {
+				const result = response.data || [];
+				if (result.length) {
+					const climberInfo = result[0];
+					const {
+						first_name,
+						middle_name,
+						last_name,
+						address, 
+						city, 
+						state_code, 
+						country_code, 
+						postal_code,
+						phone,
+						email_address,
+						dob,
+						age,
+						entered_by,
+						entry_time
+					} = {...climberInfo}
 
-						// Fill in name
-						$detailsContainer.find('.merge-climber-name').text(
-							this.climberForm.getFullName(first_name, last_name, middle_name)
-						)
-						$detailsContainer.find('.merge-climber-entry-metadata-label').text(
-							`Entered by ${entered_by} on ${entry_time}`
-						)
-						// Completeness of address is highly variable so format defensively
-						const addressText = (address || '').trim() ? address + '<br>' : '';
-						const cityText = (city || '').trim() ? city : '';
-						const state = Object.keys(this.stateCodes[state_code] || {}).length ? 
-							(cityText ? ', ' : '') + this.stateCodes[state_code].short_name : 
-							'';
-						const country = this.climberForm.countryCodes[country_code] ? (cityText || state ? ', ' : '') + this.climberForm.countryCodes[country_code] : '';
-						const postalCode = postal_code ? ' ' + postal_code : '';
-						$detailsContainer.find('.merge-climber-address').html(
-							addressText + 
-							cityText + state + country + postalCode
-						)
+					// Fill in name
+					$detailsContainer.find('.merge-climber-name').text(
+						this.climberForm.getFullName(first_name, last_name, middle_name)
+					)
+					$detailsContainer.find('.merge-climber-entry-metadata-label').text(
+						`Entered by ${entered_by} on ${entry_time}`
+					)
+					// Completeness of address is highly variable so format defensively
+					const addressText = (address || '').trim() ? address + '<br>' : '';
+					const cityText = (city || '').trim() ? city : '';
+					const state = Object.keys(this.stateCodes[state_code] || {}).length ? 
+						(cityText ? ', ' : '') + this.stateCodes[state_code].short_name : 
+						'';
+					const country = this.climberForm.countryCodes[country_code] ? (cityText || state ? ', ' : '') + this.climberForm.countryCodes[country_code] : '';
+					const postalCode = postal_code ? ' ' + postal_code : '';
+					$detailsContainer.find('.merge-climber-address').html(
+						addressText + 
+						cityText + state + country + postalCode
+					)
 
-						// Fill phone and email
-						$detailsContainer.find('.merge-climber-phone-label')
-							.ariaHide(!phone)
-							.find('span')
-								.text(phone)
-						$detailsContainer.find('.merge-climber-email-label')
-							.ariaHide(!email_address)
-							.find('span')
-								.text(email_address)
-						
-						// Fill in D.O.B. and/or age
-						var dobText = '', 
-							ageText = '';
-						const yearsPlural = age > 1 ? 's' : '';
-						if (dob) {
-							dobText = 'D.O.B.: ' + dob;
-							if (age) ageText = ` (${age} year${yearsPlural} old)`;
-						} else {
-							if (age) ageText = `${age} year${yearsPlural} old`;
-						}
-						$detailsContainer.find('.merge-climber-dob-label').text(dobText + ageText)
-
-						// get climber hsitory
-						const $historyList = $detailsContainer.find('.merge-climber-history-list');
-						const sql = `SELECT * FROM ${this.dbSchema}.climber_history_view WHERE climber_id=:climber_id`;
-						this.queryDBPython({sql: sql, sqlParameters: {climber_id: parseInt(climberID)}})
-							.done(response => {
-								if (this.pythonReturnedError(response)) {
-									showModal('Retrieving climber history from the database failed with the following error: <br>' + response, 'Database Error');
-								} else {
-									const result = response.data || [];
-									for (const row of result) {
-										const formattedDeparture = (new Date(row.actual_departure_date + ' 12:00')).toLocaleDateString(); //add a time otherwise the date will be a day before
-										const actualReturnDate = new Date(row.actual_return_date + ' 12:00');
-										const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
-										$historyList.append(`<li><label>${this.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}</label></li>`);
-									}
-								}
-							})
-							.fail((xhr, status, error) => {
-								showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
-							});
+					// Fill phone and email
+					$detailsContainer.find('.merge-climber-phone-label')
+						.ariaHide(!phone)
+						.find('span')
+							.text(phone)
+					$detailsContainer.find('.merge-climber-email-label')
+						.ariaHide(!email_address)
+						.find('span')
+							.text(email_address)
+					
+					// Fill in D.O.B. and/or age
+					var dobText = '', 
+						ageText = '';
+					const yearsPlural = age > 1 ? 's' : '';
+					if (dob) {
+						dobText = 'D.O.B.: ' + dob;
+						if (age) ageText = ` (${age} year${yearsPlural} old)`;
 					} else {
-						console.log('No climber found with ID ' + ClimberID);
+						if (age) ageText = `${age} year${yearsPlural} old`;
 					}
+					$detailsContainer.find('.merge-climber-dob-label').text(dobText + ageText)
+
+					// get climber hsitory
+					const $historyList = $detailsContainer.find('.merge-climber-history-list');
+					this.queryDBPython({
+						where: {
+							climber_history_view: [
+								{column_name: 'climber_id', operator: '=', comparand: climberID}
+							]
+						}
+					}).done(response => {
+						if (this.pythonReturnedError(response)) {
+							showModal('Retrieving climber history from the database failed with the following error: <br>' + response, 'Database Error');
+						} else {
+							const result = response.data || [];
+							for (const row of result) {
+								const formattedDeparture = (new Date(row.actual_departure_date)).toLocaleDateString(); //add a time otherwise the date will be a day before
+								const actualReturnDate = new Date(row.actual_return_date);
+								const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
+								$historyList.append(`<li><label>${this.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}</label></li>`);
+							}
+						}
+					})
+					.fail((xhr, status, error) => {
+						showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
+					});
+				} else {
+					console.log('No climber found with ID ' + ClimberID);
 				}
-			})
+			}
+		})
 
 	}
 

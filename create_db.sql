@@ -358,6 +358,7 @@ CREATE VIEW climber_info_view AS
 -- climber history view
 CREATE VIEW climber_history_view AS 
 	SELECT 
+		row_number() over(),
 		expeditions.expedition_name, 
 		expeditions.id AS expedition_id, 
 		expedition_member_routes.id AS expedition_member_route_id,
@@ -422,6 +423,7 @@ CREATE VIEW expedition_status_view AS
 
 CREATE VIEW expedition_info_view AS 
 	SELECT 
+		row_number() over(),
 		expedition_member_routes.id AS expedition_member_route_id,
 		transactions.id AS transaction_id,
 		climbers.first_name,
@@ -656,6 +658,7 @@ CREATE VIEW briefings_expedition_info_view AS
 
 CREATE VIEW all_climbs_view AS 
 	SELECT 
+		row_number() over(),
 		climbers.first_name || ' ' || climbers.last_name AS climber_name,
 		climbers.state_code,
 		climbers.country_code,
@@ -683,7 +686,7 @@ CREATE VIEW all_climbs_view AS
 		route_codes.name AS route_name,
 		mountain_codes.name AS mountain_name,
 		is_guiding,
-		CASE WHEN is_guiding OR is_intrepeter THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
+		CASE WHEN is_guiding OR is_interpreter THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
 		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
 		actual_return_date - actual_departure_date AS trip_length_days,
 		extract(year FROM planned_departure_date) AS year,
@@ -705,6 +708,7 @@ CREATE VIEW registered_climbs_view AS
 
 CREATE VIEW solo_climbs_view AS 
 	SELECT 
+		row_number() over(),
 		t.expedition_id,
 		expedition_members.id AS expedition_member_id,
 		t.route_code,
@@ -739,7 +743,7 @@ CREATE VIEW solo_climbs_view AS
 	JOIN route_codes ON t.route_code=route_codes.code 
 	LEFT JOIN expedition_status_view ON expeditions.id = expedition_status_view.expedition_id
 	JOIN group_status_codes ON coalesce(expedition_status_view.expedition_status, 1) = group_status_codes.code
-	WHERE t.count = 1 AND (expeditions.actual_departure_date IS NOT NULL OR expedition_status_view.expedition_status = 3)
+	WHERE t.count = 1 AND (expeditions.actual_departure_date IS NOT NULL OR expedition_status_view.expedition_status = 3);
 
 
 CREATE VIEW missing_sup_or_payment_dashboard_view AS 
@@ -817,6 +821,7 @@ CREATE VIEW overdue_parties_view AS
 
 CREATE VIEW transaction_type_view AS 
 SELECT 
+	codes.id,
 	name,
 	code,
 	is_credit,
@@ -840,7 +845,9 @@ ORDER BY sort_order;
 
 
 CREATE MATERIALIZED VIEW table_info_matview AS 
-   SELECT columns.column_name,
+   SELECT 
+   		row_number() over(),
+   		columns.column_name,
   		columns.table_name,
   		columns.data_type,
   		columns.character_maximum_length,

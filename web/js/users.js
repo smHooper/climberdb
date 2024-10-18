@@ -649,21 +649,6 @@ class ClimberDBUsers extends ClimberDB {
 
 	loadUsers() {
 
-		const sql = `
-			SELECT 
-				id, 
-				ad_username, 
-				first_name, 
-				last_name, 
-				email_address,
-				user_role_code,
-				user_status_code 
-			FROM ${this.dbSchema}.users 
-			ORDER BY 
-				user_status_code DESC,
-				first_name, 
-				last_name
-		`;
 		return this.queryDBPython({
 			selects: {
 				users: [

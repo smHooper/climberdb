@@ -374,9 +374,8 @@ class ClimberDBDashboard extends ClimberDB {
 
 
 	configureMisingPaymentOrSUP() {
-		const sql = `TABLE ${this.dbSchema}.missing_sup_or_payment_dashboard_view`;
 		
-		return this.queryDBPython({sql: sql})
+		return this.queryDBPython({tables: ['missing_sup_or_payment_dashboard_view']})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print('error querying missing SUP/payment: ' + response)
@@ -389,9 +388,8 @@ class ClimberDBDashboard extends ClimberDB {
 
 
 	configureOverdueParties() {
-		const sql = `TABLE ${this.dbSchema}.overdue_parties_view`;
-
-		return this.queryDBPython({sql: sql})
+		
+		return this.queryDBPython({tables: ['overdue_parties_view']})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print('error querying overdue parties: ' + response)

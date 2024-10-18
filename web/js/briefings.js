@@ -1470,13 +1470,18 @@ class ClimberDBBriefings extends ClimberDB {
 	of server calls and speed up data loading
 	*/
 	queryBriefings(year=(new Date()).getFullYear()) {
-		const sql = `
-			SELECT * FROM ${this.dbSchema}.briefings_view 
-			WHERE extract(year FROM briefing_start) >= :year
-		`;
 
-		return this.queryDBPython({sql: sql, sqlParameters: {year: year}})
-			.done(response => {
+		return this.queryDBPython({
+			where: {
+				briefings_view: [
+					{
+						column_name: 'briefing_start', 
+						operator: 'between', 
+						comparand: [`${year}-1-1`, `${year}-12-31`]
+					}
+				]
+			}
+		}).done(response => {
 				if (this.pythonReturnedError(response)) {
 					console.error('query failed because ' + response)
 				} else {

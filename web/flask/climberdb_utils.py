@@ -7,7 +7,7 @@ import datetime
 import json
 import dill as pickle
 import os
-from sqlalchemy import inspect, create_engine
+from sqlalchemy import inspect, create_engine, Table, Column, Integer
 from sqlalchemy.engine import Engine, URL
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import declarative_base
@@ -19,6 +19,20 @@ from typing import Any, Mapping
 
 SQLA_TABLE_DIR = os.path.join(os.path.dirname(__file__), '_sqlalchemy_cache')
 CONFIG_FILE = '//inpdenaterm01/climberdb/config/climberdb_config.json'
+# The SQLAlchemy ORM requires that views have a primary key. This dict 
+#	stores the PK column name for each view. ANy views not specified here
+#	have a row_number column that serves as the PK
+VIEW_PRIMARY_KEYS = { 
+	'climber_info_view': 'id',
+	'briefings_view': 'id',
+	'briefings_expedition_info_view': 'expedition_id',
+	'expedition_status_view': 'expedition_id',
+	'missing_sup_or_payment_dashboard_view': 'expedition_id',
+	'overdue_parties_view': 'expedition_id',
+	'seven_day_rule_view': 'climber_id',
+	'special_use_permit_view': 'expedition_member_id',
+	'transaction_type_view': 'id'
+}
 
 # __all__ = [
 # 	'CONFIG_FILE',
@@ -88,6 +102,10 @@ def get_tables(overwrite_cache: bool=False) -> dict:
 
 	pickle_path = os.path.join(SQLA_TABLE_DIR, f'{schema}.pkl')
 
+
+	inspector = inspect(engine)
+	view_names = inspector.get_view_names(schema=schema)
+
 	if not overwrite_cache and os.path.isfile(pickle_path):
 		# Only try to load the DB model from the pickled cache if overwrite_cache is False 
 		#	(and the file exists)
@@ -100,16 +118,26 @@ def get_tables(overwrite_cache: bool=False) -> dict:
 	else:
 		# Otherwise, reflect the metadata from the DB
 		base = automap_base()
+		# Views are not automapped by default so manually add them
+		for view_name_ in view_names:
+			Table(
+				view_name_, 
+				base.metadata, 
+				Column(VIEW_PRIMARY_KEYS.get(view_name_) or 'row_number', Integer, primary_key=True), 
+				autoload=True, 
+				autoload_with=engine
+				)
 		base.prepare(autoload_with=engine, schema=schema, reflect=True)
 		
 		# Write the metadata to cache
 		with open(pickle_path, 'wb') as f:
 			pickle.dump(base.metadata, f)
-	
-	inspector = inspect(engine)
+
 	table_names = inspector.get_table_names()
 		
-	return {table_name_: getattr(base.classes, table_name_) for table_name_ in table_names}
+	return {
+		**{table_name_: getattr(base.classes, table_name_) for table_name_ in table_names + view_names}
+	}
 
 def get_where_clause(
 		table_dict: Mapping, 
