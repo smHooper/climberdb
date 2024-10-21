@@ -1464,7 +1464,7 @@ class ClimberDB {
 
 
 	getTableInfo() {
-		return this.queryDBPython({sql: 'SELECT * FROM table_info_matview'}).done(response => {
+		return this.queryDBPython({tables: ['table_info_matview']}).done(response => {
 			// the only way this query could fail is if I changed DBMS, 
 			//	so I won't bother to check that the result is valid
 			var insertOrder = this.tableInfo.insertOrder;
