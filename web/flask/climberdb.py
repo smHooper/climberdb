@@ -28,8 +28,9 @@ from sqlalchemy import text as sqlatext
 from sqlalchemy.engine.row import Row as sqla_Row
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import MappedClassProtocol
+# from sqlalchemy.orm import MappedClassProtocol //sqla 2.0 only
 
+from typing import Any
 from werkzeug.datastructures import FileStorage
 
 # climberdb modules
@@ -860,7 +861,7 @@ def print_cache_tag():
 #---------------- DB I/O ---------------------#
 
 # helper function to process an ORM class instance into a dictionary
-def orm_to_dict(orm_class_instance: MappedClassProtocol, selected_columns:[str]=[], prohibited_columns: dict={}) -> dict:
+def orm_to_dict(orm_class_instance: Any, selected_columns:[str]=[], prohibited_columns: dict={}) -> dict:
 	
 	prohibited_columns = prohibited_columns or app.config['PHOHIBITED_QUERY_COLUMNS']
 	exclude_columns = prohibited_columns.get(orm_class_instance.__table__.name) or []
@@ -1004,6 +1005,162 @@ def query_rangers():
 		result = session.execute(stmt)
 		response = {'data': select_result_to_dict(result)}
 
+		return jsonify(response)
+
+
+@app.route('/flask/db/select/climbers', methods=['POST'])
+def query_climbers():
+
+	request_data = request.get_json()
+	climber_id = request_data.get('climber_id')
+	
+	# If a climber_id was given, just return the climber
+	if climber_id:
+		with ReadSession() as session:
+			climbers = tables['climber_info_view']
+			row = session.get(climbers, climber_id)
+			# If a single ID was invalid, ROLLBACK the entire transaction
+			if not row:
+				raise RuntimeError(f'No climber with ID {climber_id} found')
+			return jsonify({
+				'data': [orm_to_dict(row)]
+			})
+
+	search_string = request_data.get('search_string')
+	is_guide = request_data.get('is_guide')
+	is_7_day = request_data.get('is_7_day')
+	query_all_fields = request_data.get('query_all_fields')
+
+	where_clause = ''
+	if is_7_day:
+		where_clause += f' WHERE {schema}.climber_info_view.id IN (SELECT climber_id FROM {schema}.seven_day_rule_view)'
+	if is_guide:
+		where_clause += ' AND is_guide' if where_clause else ' WHERE is_guide'
+
+
+	# for the climbers page, results are paginated and only n_records climbers 
+	#	are returned at a time. If this option is specified, get records from 
+	#	min_index to min_index + n_records, as numbered in alphabetical order 
+	#	by name
+	min_index = int(request_data.get('min_index') or 1)
+	n_records = int(request_data.get('n_records') or 0)
+	index_where = ''
+	if n_records:
+		index_where = f'WHERE row_number BETWEEN :min_index AND :max_index'
+
+	query_fields = '*' if query_all_fields else 'first_name, middle_name, last_name, full_name'
+	sql = ''
+	if search_string:
+		core_sql = f'''
+			SELECT
+				*	
+			FROM (
+				SELECT 
+					id, 
+					min(sort_order) AS first_sort_order
+				FROM (
+					WITH climber_names AS (
+						SELECT 
+							*,
+							regexp_replace(first_name, '\\W', '', 'g') AS re_first_name, 
+							regexp_replace(middle_name, '\\W', '', 'g') AS re_middle_name, 
+							regexp_replace(last_name, '\\W', '', 'g') AS re_last_name,
+							regexp_replace(full_name, '\\W', '', 'g') AS re_full_name
+						FROM {schema}.climber_info_view
+					)
+					SELECT *, 1 AS sort_order FROM climber_names WHERE 
+						re_first_name ILIKE :search_string || '%%' 
+					UNION ALL 
+					SELECT *, 2 AS sort_order FROM climber_names WHERE 
+						re_first_name || re_middle_name ILIKE :search_string || '%%' AND
+						re_first_name NOT ILIKE :search_string || '%%'
+					UNION ALL 
+					SELECT *, 3 AS sort_order FROM climber_names WHERE 
+						re_first_name || re_last_name ILIKE :search_string || '%%' AND
+						(
+							re_first_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_middle_name NOT ILIKE :search_string || '%%'
+						)
+					UNION ALL
+					SELECT *, 4 AS sort_order FROM climber_names WHERE 
+						re_last_name ILIKE :search_string || '%%' AND
+						(
+							re_first_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_middle_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_last_name NOT ILIKE :search_string || '%%'
+						)
+					UNION ALL 
+					SELECT *, 5 AS sort_order FROM climber_names WHERE 
+						re_middle_name || re_last_name ILIKE :search_string || '%%' AND 
+						re_middle_name IS NOT NULL AND 
+						(
+							re_first_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_middle_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_last_name NOT ILIKE :search_string || '%%' OR 
+							re_last_name NOT ILIKE :search_string || '%%'
+						)
+					UNION ALL
+					SELECT *, 6 AS sort_order FROM climber_names WHERE 
+						similarity(re_full_name, :search_string || '%%') > 0.5 AND 
+						(
+							re_first_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_middle_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_last_name NOT ILIKE :search_string || '%%' OR 
+							re_last_name NOT ILIKE :search_string || '%%' OR
+							re_middle_name || re_last_name NOT ILIKE :search_string || '%%'
+						)
+				) t 
+				GROUP BY full_name, id
+			) gb 
+			JOIN {schema}.climber_info_view ON gb.id = climber_info_view.id 
+			{where_clause}
+			ORDER BY first_sort_order::text || full_name
+		'''
+
+	else:
+		core_sql = f'''
+			SELECT 
+				*  
+			FROM {schema}.climber_info_view 
+			{where_clause}
+		'''
+
+	# If n_records given, execute the core sql as a subquery and return
+	#	n_records starting with the specified min_index
+	if n_records:
+		sql = f''' 
+			SELECT * FROM (
+				SELECT
+					row_number() over(),
+					*	
+				FROM 
+					( {core_sql} ) t1
+			) t2
+			{index_where}
+			ORDER BY row_number
+
+		'''
+	else:
+		sql = core_sql
+
+	return_count = request_data.get('return_count')
+	with ReadSession() as session:
+		params = {
+			'search_string': re.sub(r'\W', '', search_string),
+			'is_guide': is_guide,
+			'is_7_day': is_7_day,
+			'min_index': min_index,
+			'max_index': (min_index + n_records - 1) if n_records else '' 
+		}
+		result = session.execute(sqlatext(sql), params)
+		response = {
+			'data': select_result_to_dict(result),
+			'queryTime': request_data.get('queryTime')
+		}
+		if return_count:
+			cursor = session.execute(sqlatext(f'SELECT count(*) FROM ({core_sql}) _'), params)
+			response['count'] = cursor.first().count
+		
 		return jsonify(response)
 
 

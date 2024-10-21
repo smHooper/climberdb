@@ -1975,95 +1975,87 @@ class ClimberDBClimbers extends ClimberDB {
 		const withSearchString = searchString.length > 0;
 		var minIndex = minIndex; // not sure why but for some reason this needs to be used here to be defined later
 		
-		var whereClause = '';
-		if ($('#7-day-only-filter').prop('checked')) 
-			whereClause += ` WHERE ${this.dbSchema}.climber_info_view.id IN (SELECT climber_id FROM ${this.dbSchema}.seven_day_rule_view)`;
-		if ($('#guide-only-filter').prop('checked')) 
-			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
-
-		const [sql, coreQuery] = this.getClimberQuerySQL({
-			searchString: searchString, 
-			minIndex: minIndex, 
-			climberID: climberID,
-			coreWhereClause: whereClause
-		});
-		return this.queryDBPython({sql: sql, returnTimestamp: true})
-			.done(response => {
-				if (this.pythonReturnedError(response)) {
-					// result was empty so let the user know
-					if (withSearchString) {
-						$('.query-result-list-item:not(.header-row)').remove()
-						$('.empty-result-message').ariaHide(false);
-						$('.hidden-on-invalid-result').ariaHide(true);
-						$('.result-details-pane').addClass('collapsed');
-					} else { // some other problem
-						showModal('Retrieving climber info from the database failed with the following error: <br>' + response, 'Database Error');
-					}
-				} else {  
-					var result = response.data || [];
-					// Check if this result is older than the currently displayed result. This can happen if the user is 
-					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
-					//	since we don't want the older result to overwrite the newer one
-					const queryTime = response.queryTime;
-					if (queryTime < this.lastSearchQuery) {
-						return;
-					} else {
-						this.lastSearchQuery = queryTime;
-					}
-					if (!result.length) {
-						$('.query-result-list-item:not(.header-row)').remove();
-						$('.empty-result-message').ariaHide(false);
-						$('.hidden-on-invalid-result').ariaHide(true);
-						$('.result-details-pane').addClass('collapsed');
-						return;
-					}
-
-					this.climberInfo = [...result];
-					for (const i in this.climberInfo) {
-						let id = this.climberInfo[i].id;
-						this.climberIDs[id] = i;
-					}
-					// Add climbers to the list. If a climberID was given, it will automatically be selected. 
-					//	If not, only select the first climber if there was no search string provided
-					this.fillResultList(this.climberInfo, {autoSelectID: selectClimberID || !withSearchString});
-
-					// Update index
-					if (isNaN(climberID)) {
-						const rowNumbers = this.climberInfo.map(i => parseInt(i.row_number));
-						minIndex = minIndex || Math.min(...rowNumbers);
-						let maxIndex = Math.max(...rowNumbers);
-						const countSQL = `SELECT count(*) FROM (${coreQuery}) t;`
-						this.queryDBPython({sql: countSQL}).done(response => {
-							if (this.pythonReturnedError(response)) {
-
-							} else {
-								const countResult = response.data || [];
-								if (countResult.length) {
-									// Show the currently loaded range of climber results
-									const count = countResult[0].count;
-									$('#min-record-index-span').text(minIndex);
-									$('#max-record-index-span').text(Math.min(maxIndex, count));
-									$('#total-records-span').text(count);
-									$('.result-index-label').ariaHide(false);
-									$('.show-next-result-set-button').prop('disabled', maxIndex === parseInt(count));
-									$('.show-previous-result-set-button').prop('disabled', minIndex === 1);
-								}
-
-							}
-						});
-					} else {
-						$('#min-record-index-span').text(1);
-						$('#max-record-index-span').text(1);
-						$('#total-records-span').text(1);
-						$('.result-index-label').ariaHide(false);
-						$('.show-next-result-set-button').prop('disabled', true);
-						$('.show-previous-result-set-button').prop('disabled', true);
-					}
-					
+		const returnCount = isNaN(climberID);
+		return $.post({
+			url: '/flask/db/select/climbers',
+			data: JSON.stringify({
+				search_string: searchString,
+				is_guide: $('#guide-only-filter').prop('checked'),
+				is_7_day: $('#7-day-only-filter').prop('checked'),
+				min_index: minIndex,
+				n_records: this.recordsPerSet,
+				climber_id: climberID,
+				queryTime: (new Date()).getTime(),
+				return_count: returnCount
+			}),
+			contentType: 'application/json'
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				// result was empty so let the user know
+				if (withSearchString) {
+					$('.query-result-list-item:not(.header-row)').remove()
+					$('.empty-result-message').ariaHide(false);
+					$('.hidden-on-invalid-result').ariaHide(true);
+					$('.result-details-pane').addClass('collapsed');
+				} else { // some other problem
+					showModal('Retrieving climber info from the database failed with the following error: <br>' + response, 'Database Error');
 				}
-			}).fail((xhr, status, error) => {
-				showModal('Retrieving climber info from the database failed because ' + error, 'Database Error')
-			})
+			} else {  
+				var result = response.data || [];
+				// Check if this result is older than the currently displayed result. This can happen if the user is 
+				//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
+				//	since we don't want the older result to overwrite the newer one
+				const queryTime = response.queryTime;
+				if (queryTime < this.lastSearchQuery) {
+					return;
+				} else {
+					this.lastSearchQuery = queryTime;
+				}
+				if (!result.length) {
+					$('.query-result-list-item:not(.header-row)').remove();
+					$('.empty-result-message').ariaHide(false);
+					$('.hidden-on-invalid-result').ariaHide(true);
+					$('.result-details-pane').addClass('collapsed');
+					return;
+				}
+
+				this.climberInfo = [...result];
+				for (const i in this.climberInfo) {
+					let id = this.climberInfo[i].id;
+					this.climberIDs[id] = i;
+				}
+				// Add climbers to the list. If a climberID was given, it will automatically be selected. 
+				//	If not, only select the first climber if there was no search string provided
+				this.fillResultList(this.climberInfo, {autoSelectID: selectClimberID || !withSearchString});
+
+				// Update index
+				if (returnCount) {
+					const rowNumbers = this.climberInfo.map(i => parseInt(i.row_number));
+					minIndex = minIndex || Math.min(...rowNumbers);
+					let maxIndex = Math.max(...rowNumbers);
+					if (response.count) {
+						// Show the currently loaded range of climber results
+						const count = response.count;
+						$('#min-record-index-span').text(minIndex);
+						$('#max-record-index-span').text(Math.min(maxIndex, count));
+						$('#total-records-span').text(count);
+						$('.result-index-label').ariaHide(false);
+						$('.show-next-result-set-button').prop('disabled', maxIndex === parseInt(count));
+						$('.show-previous-result-set-button').prop('disabled', minIndex === 1);
+					}
+				} else {
+					$('#min-record-index-span').text(1);
+					$('#max-record-index-span').text(1);
+					$('#total-records-span').text(1);
+					$('.result-index-label').ariaHide(false);
+					$('.show-next-result-set-button').prop('disabled', true);
+					$('.show-previous-result-set-button').prop('disabled', true);
+				}
+				
+			}
+		}).fail((xhr, status, error) => {
+			showModal('Retrieving climber info from the database failed because ' + error, 'Database Error')
+		})
 	}
 
 
