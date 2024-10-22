@@ -697,7 +697,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		if ($input.closest('.new-list-item, .new-card').length) {
 			valueChanged = true;
 		} else {
-			var newValue = this.getInputFieldValue($input) || null;
+			var newValue = this.getInputFieldValue($input);
 			const dbID = $input.data('table-id');
 			const tableName = $input.data('table-name');
 			const fieldName = $input.attr('name');
@@ -730,9 +730,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			} else if (tableName === 'cmc_checkout') {
 				dbValue = this.expeditionInfo.cmc_checkout.data[dbID][fieldName];
 			}
-
-			// If this is a checkbox, the new value needs to be converted to PostreSQL's boolean as intepreted by PHP
-			if ($input.is('.input-checkbox')) newValue = newValue ? 't' : 'f';
 
 		}
 
