@@ -107,7 +107,7 @@ class ClimberDBConfig extends ClimberDB {
 
 	loadConfig() {
 
-		return this.queryDBPython({
+		return this.queryDB({
 			where: {'config': [{column_name: 'is_editable'}]}
 		}).done(response => {
 			if (this.pythonReturnedError(response)) {

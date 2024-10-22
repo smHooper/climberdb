@@ -543,22 +543,11 @@ class ClimberDB {
 	}
 
 
-	queryDB(sql, {returnTimestamp=false}={}) {
-		var requestData = {action: 'query', queryString: sql, db: 'climberdb'};
-		if (returnTimestamp) requestData.queryTime = (new Date()).getTime();
-		return $.post({
-			url: 'climberdb.php',
-			data: requestData,
-			cache: false
-		});
-	}	
-
-
 	/*
 	Run a SELECT query by either sending WHERE (and possibly ORDER BY) parameters to use the 
 	SQLAlchemy ORM or raw SQL and parameters to execute parameterized SQL
 	*/
-	queryDBPython({tables=[], selects={}, joins=[], where={}, orderBy=[], sql='', sqlParameters={}, returnTimestamp=false}={}) {
+	queryDB({tables=[], selects={}, joins=[], where={}, orderBy=[], sql='', sqlParameters={}, returnTimestamp=false}={}) {
 		
 		var requestData = Object.keys({...selects, ...where}).length || tables.length ? 
 			{	
@@ -781,7 +770,7 @@ class ClimberDB {
 	/*
 	*/
 	fillSelectOptions(selectElementID, sqlArgs, optionClassName='') {
-		return this.queryDBPython(sqlArgs)
+		return this.queryDB(sqlArgs)
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print(`fillSelectOptions() failed for ${selectElementID} with error: ` + response);
@@ -1270,26 +1259,6 @@ class ClimberDB {
 	}
 
 
-	/*
-	Helper function to check a Postgres query result for an error
-	*/
-	queryReturnedError(queryResultString) {
-		
-		
-
-		if (typeof queryResultString === 'object') {
-			if (Array.isArray(queryResultString)) {
-				return !queryResultString.length;
-			} else {
-				return queryResultString === null;
-			}
-		} else if (typeof queryResultString === 'string') {
-			queryResultString = queryResultString.trim();
-		}
-		return queryResultString.match(/Query failed: ERROR:/) || queryResultString.startsWith('ERROR:') || queryResultString === '["query returned an empty result"]';
-	}
-
-
 	pythonReturnedError(resultString) {
 		resultString = String(resultString); // force as string in case it's something else
 		if (resultString.startsWith('ERROR: Internal Server Error')) {
@@ -1464,7 +1433,7 @@ class ClimberDB {
 
 
 	getTableInfo() {
-		return this.queryDBPython({tables: ['table_info_matview']}).done(response => {
+		return this.queryDB({tables: ['table_info_matview']}).done(response => {
 			// the only way this query could fail is if I changed DBMS, 
 			//	so I won't bother to check that the result is valid
 			var insertOrder = this.tableInfo.insertOrder;

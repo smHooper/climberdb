@@ -82,7 +82,7 @@ class ClimberDBDashboard extends ClimberDB {
 		
 		const startDate = `${year}-1-1`;
 		const endDate = `${year}-12-31`;
-		const totalClimbersDeferred = this.queryDBPython({
+		const totalClimbersDeferred = this.queryDB({
 			sql: totalClimbersSQL, 
 			sqlParameters: {start_date: startDate, end_date: endDate}
 		}).done(response => {
@@ -156,7 +156,7 @@ class ClimberDBDashboard extends ClimberDB {
 
 		// registered climbers
 		const registeredSQL = templateSQL.replace(/\{where\}/g, '');
-		const registeredDeferred =  this.queryDBPython({
+		const registeredDeferred =  this.queryDB({
 			sql: registeredSQL, 
 			sqlParameters: {start_date: startDate, end_date: endDate}
 		})
@@ -173,7 +173,7 @@ class ClimberDBDashboard extends ClimberDB {
 
 		// on the mountain
 		const onMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 4 --4 == briefing complete');
-		const onMountainDeferred =  this.queryDBPython({
+		const onMountainDeferred =  this.queryDB({
 			sql: onMountainSQL, 
 			sqlParameters: {start_date: startDate, end_date: endDate}
 		})
@@ -190,7 +190,7 @@ class ClimberDBDashboard extends ClimberDB {
 
 		// off mountain
 		const offMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 5 --5 == returned');
-		const offMountainDeferred =  this.queryDBPython({
+		const offMountainDeferred =  this.queryDB({
 			sql: offMountainSQL, 
 			sqlParameters: {start_date: startDate, end_date: endDate}
 		})
@@ -236,7 +236,7 @@ class ClimberDBDashboard extends ClimberDB {
 			) ___ 
 		`;
 
-		const summitedDeferred =  this.queryDBPython({
+		const summitedDeferred =  this.queryDB({
 			sql: summitedSQL, 
 			sqlParameters: {start_date: startDate, end_date: endDate}
 		})
@@ -255,7 +255,7 @@ class ClimberDBDashboard extends ClimberDB {
 			.replace(/reservation_status_code = 5/g, 'reservation_status_code = 6')
 			.replace(/registered_climbs_view/g, 'all_climbs_view');
 
-		const cancelledDeferred = this.queryDBPython({
+		const cancelledDeferred = this.queryDB({
 			sql: cancelledSQL, 
 			sqlParameters: {start_date: startDate, end_date: endDate}
 		})
@@ -330,7 +330,7 @@ class ClimberDBDashboard extends ClimberDB {
 			WHERE planned_departure_date >= now()::date
 			ORDER BY planned_departure_date;`
 		
-		return this.queryDBPython({sql: sql})
+		return this.queryDB({sql: sql})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print('error querying flagged: ' + response)
@@ -354,7 +354,7 @@ class ClimberDBDashboard extends ClimberDB {
 				group_status_code IN (3, 4)
 			) _ ORDER BY departure_date
 		`;
-		return this.queryDBPython({sql: sql, sqlParameters: {start_date: `${year}-1-1`}})
+		return this.queryDB({sql: sql, sqlParameters: {start_date: `${year}-1-1`}})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print('error querying solo climbs: ' + response)
@@ -375,7 +375,7 @@ class ClimberDBDashboard extends ClimberDB {
 
 	configureMisingPaymentOrSUP() {
 		
-		return this.queryDBPython({tables: ['missing_sup_or_payment_dashboard_view']})
+		return this.queryDB({tables: ['missing_sup_or_payment_dashboard_view']})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print('error querying missing SUP/payment: ' + response)
@@ -389,7 +389,7 @@ class ClimberDBDashboard extends ClimberDB {
 
 	configureOverdueParties() {
 		
-		return this.queryDBPython({tables: ['overdue_parties_view']})
+		return this.queryDB({tables: ['overdue_parties_view']})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print('error querying overdue parties: ' + response)
@@ -417,7 +417,7 @@ class ClimberDBDashboard extends ClimberDB {
 				NOT is_backcountry
 			ORDER BY expedition_name;
 		`;
-		return this.queryDBPython({sql: sql, sqlParameters: {start_date: `${year}-1-1`}})
+		return this.queryDB({sql: sql, sqlParameters: {start_date: `${year}-1-1`}})
 			.done((response) => {
 				if (this.pythonReturnedError(response)) {
 					showModal(
@@ -512,7 +512,7 @@ class ClimberDBDashboard extends ClimberDB {
 			$(e.native.target).css("cursor", el[0] ? "pointer" : "default");
 		}
 
-		return this.queryDBPython({sql: sql})
+		return this.queryDB({sql: sql})
 			.done(response => {
 	        	if (this.pythonReturnedError(response)) {
 	        		showModal(

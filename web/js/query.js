@@ -1203,7 +1203,7 @@ class ClimberDBQuery extends ClimberDB {
 	query processing functions can still use the same code
 	*/
 	submitQuery(sql, {sqlParameters={}, queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
-		return this.queryDBPython({sql: sql.replace(/\{schema\}/g, this.dbSchema), sqlParameters: sqlParameters})
+		return this.queryDB({sql: sql.replace(/\{schema\}/g, this.dbSchema), sqlParameters: sqlParameters})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					const queryDisplayName = $('.query-option.selected').text();
@@ -1331,7 +1331,7 @@ class ClimberDBQuery extends ClimberDB {
 		const [where, sqlParameters] = this.getExpeditionByNameIDWhere();
 		
 		const sql = `SELECT id FROM ${this.dbSchema}.expeditions ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id`;
-		this.queryDBPython({sql: sql, sqlParameters: sqlParameters})
+		this.queryDB({sql: sql, sqlParameters: sqlParameters})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print('Error querying expedition IDs: '  + response)
@@ -1628,7 +1628,7 @@ class ClimberDBQuery extends ClimberDB {
 				) AS year 
 			FROM ${this.dbSchema}.expeditions 
 			ORDER BY 1 DESC`;
-		return this.queryDBPython({sql: sql})
+		return this.queryDB({sql: sql})
 			.done(response => {
 				if (!this.pythonReturnedError(response)) {
 					$('.year-select-field.nullable').append(`<option value=" IS NOT NULL">All</option>`);
@@ -1767,7 +1767,7 @@ class ClimberDBQuery extends ClimberDB {
 				this.configureMainContent();
 
 				// Need guide company info for guide company query exports
-				this.queryDBPython({
+				this.queryDB({
 					where: {
 						guide_company_codes: [{column_name: 'sort_order', operator: 'IS NOT', comparand: 'NULL'}]
 					}

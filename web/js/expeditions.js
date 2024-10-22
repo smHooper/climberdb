@@ -2228,7 +2228,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const expeditionID = $option.data('expedition-id');
 		const expeditionMemberID = $('#confirm-change-expedition-button').data('expedition-member-id');
 		const climberID = this.expeditionInfo.expedition_members.data[expeditionMemberID].climber_id;
-		this.queryDBPython({
+		this.queryDB({
 			where: {
 				expedition_members: [
 					{column_name: 'expedition_id', operator: '=', comparand: expeditionID},
@@ -2259,7 +2259,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		})
 		// Warn the user if this expedition is from a previous year
-		this.queryDBPython({where:
+		this.queryDB({where:
 			{expeditions: [{column_name: 'id', operator: '=', comparand: expeditionID}]}
 		}).done(response => {
 				if (!this.pythonReturnedError(response)) {
@@ -3064,7 +3064,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Hide all badges
 		$('.climber-form .result-details-header-badge').ariaHide(true);
 		
-		this.queryDBPython({
+		this.queryDB({
 			where: {
 				climber_info_view: [{column_name: 'id', operator: '=', comparand: parseInt(climberID)}]
 			}
@@ -3756,8 +3756,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	records in the result without any way of determining which is right record. 
 		//	Querying them separately eliminates this issue
 		return $.when(
-			this.queryDBPython(expeditionQueryParams),
-			this.queryDBPython(commsQueryParams)
+			this.queryDB(expeditionQueryParams),
+			this.queryDB(commsQueryParams)
 		).done( (expeditionInfoResponse, commsResponse) => {
 			// $.when responses are returned as [response, status], but all we care about
 			//	is the response
@@ -4584,7 +4584,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		;`
 		const $select = $('#input-cmc_id') // this is the select from the .cloneable <li>
 			.append(`<option class="" value="">CMC #</option>`); 
-		return this.queryDBPython({
+		return this.queryDB({
 			tables: ['cmc_inventory'],
 			joins: [{left_table: 'cmc_inventory', left_table_column: 'id', right_table: 'cmc_checkout', right_table_column: 'cmc_id', is_left: true}],
 			where: {
@@ -4742,7 +4742,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const lookupDeferreds = [this.getCMCInfo()];
 			if (Object.keys(this.routeCodes).length === 0) {
 				lookupDeferreds.push(
-					this.queryDBPython({
+					this.queryDB({
 						where: {
 							route_codes: [{column_name: 'sort_order', operator: 'IS NOT',  comparand: 'NULL'}]
 						}
@@ -4758,7 +4758,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				)
 			} 
 			lookupDeferreds.push(
-				this.queryDBPython({tables: ['mountain_codes']})
+				this.queryDB({tables: ['mountain_codes']})
 					.done(response => {
 						for (const row of response.data || []) {
 							this.mountainCodes[row.code] = {...row};
@@ -4766,7 +4766,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					})
 			);
 			lookupDeferreds.push(
-				this.queryDBPython({selects: 
+				this.queryDB({selects: 
 					{transaction_type_view: ['code', 'default_fee', 'is_credit', 'is_payment']}
 				}).then(response => {
 						if (!this.pythonReturnedError(response)) {

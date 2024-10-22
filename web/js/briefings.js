@@ -1471,7 +1471,7 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	queryBriefings(year=(new Date()).getFullYear()) {
 
-		return this.queryDBPython({
+		return this.queryDB({
 			where: {
 				briefings_view: [
 					{
@@ -1570,7 +1570,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 	getExpeditionInfo(year=(new Date().getFullYear())) {
 
-		return this.queryDBPython({where:
+		return this.queryDB({where:
 			{
 				briefings_expedition_info_view: [
 					{column_name: 'planned_departure_date', operator: '>', comparand: `${year}-1-1`},

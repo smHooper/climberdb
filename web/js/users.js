@@ -618,7 +618,7 @@ class ClimberDBUsers extends ClimberDB {
 
 	loadSelectOptions() {
 		return [
-			this.queryDBPython({
+			this.queryDB({
 				where: { user_role_codes: [{column_name: 'code', operator: 'NOT IN', comparand: this.config.no_login_user_roles}] },
 				orderBy: [{table_name: 'user_role_codes', column_name: 'sort_order'}]
 			}).done(response => {
@@ -626,7 +626,7 @@ class ClimberDBUsers extends ClimberDB {
 				const codes = response.data || [];
 				this.userRoleOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
 			}),
-			this.queryDBPython({
+			this.queryDB({
 				where: { user_role_codes: [{column_name: 'code', operator: 'IN', comparand: this.config.no_login_user_roles}] },
 				orderBy: [{table_name: 'user_role_codes', column_name: 'sort_order'}]
 			}).done(response => {
@@ -634,7 +634,7 @@ class ClimberDBUsers extends ClimberDB {
 				const codes = response.data || [];
 				this.noLoginRoleOptions = codes.map(({code, name}) => `<option value=${code}>${name}</option>`).join('\n');
 			}),
-			this.queryDBPython({
+			this.queryDB({
 				tables: ['user_status_codes'], 
 				orderBy: [{table_name: 'user_status_codes', column_name: 'sort_order'}]
 			}).done(response => {
@@ -649,7 +649,7 @@ class ClimberDBUsers extends ClimberDB {
 
 	loadUsers() {
 
-		return this.queryDBPython({
+		return this.queryDB({
 			selects: {
 				users: [
 					'id', 

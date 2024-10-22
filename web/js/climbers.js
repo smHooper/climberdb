@@ -599,13 +599,13 @@ class ClimberForm {
 		// 	The constructor for the climber form is called syncronously so the DB schema
 		//	has not yet been queried. Since these are unlikely to differ from the default
 		//	schema (i.e., public), just query the default
-		this._parent.queryDBPython({tables: ['country_codes']})
+		this._parent.queryDB({tables: ['country_codes']})
 			.done(response => {
 				for (const row of response.data || []) {
 					this.countryCodes[row.code] = row.short_name;
 				}
 			});	
-		this._parent.queryDBPython({tables: ['state_codes']})
+		this._parent.queryDB({tables: ['state_codes']})
 			.done(response => {
 				for (const row of response.data || []) {
 					// Need to get code from abbreviation for API response
@@ -984,7 +984,7 @@ class ClimberForm {
 		// Check if any of this climber's expeditions were solo. If so, mark them as such
 		if (climberHistory.length) {
 			const $newCards = $accordion.find('.card:not(.cloneable)');
-			const soloDeferred = this._parent.queryDBPython({
+			const soloDeferred = this._parent.queryDB({
 				where: {
 					solo_climbs_view: [
 						{column_name: 'climber_id', operator: '=', comparand: climberHistory[0].climber_id}
@@ -1042,7 +1042,7 @@ class ClimberForm {
 
 	*/
 	queryClimberHistory(climberID) {
-		const historyDeferred = this._parent.queryDBPython({
+		const historyDeferred = this._parent.queryDB({
 				where: {
 					climber_history_view: [
 						{column_name: 'climber_id', operator: '=', comparand: climberID}
@@ -1059,7 +1059,7 @@ class ClimberForm {
 				showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
 			});
 
-		const contactsDeferred = this._parent.queryDBPython({
+		const contactsDeferred = this._parent.queryDB({
 				where: {
 					emergency_contacts: [
 						{column_name: 'climber_id', operator: '=', comparand: climberID}
@@ -1689,7 +1689,7 @@ class ClimberDBClimbers extends ClimberDB {
 		const middleName = $('#input-middle_name').val();
 		const lastName = $('#input-last_name').val();
 		const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
-		this.queryDBPython({
+		this.queryDB({
 			where: {
 				climber_info_view: [{
 					column_name: 'full_name', operator: '=', comparand: fullName
@@ -2191,7 +2191,7 @@ class ClimberDBClimbers extends ClimberDB {
 		$detailsContainer.find('.merge-climber-history-list').empty();
 
 		// Query the climber's info
-		this.queryDBPython({
+		this.queryDB({
 			where: {
 				climber_info_view: [{column_name: 'id', operator: '=', comparand: parseInt(climberID)}]
 			}
@@ -2263,7 +2263,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 					// get climber hsitory
 					const $historyList = $detailsContainer.find('.merge-climber-history-list');
-					this.queryDBPython({
+					this.queryDB({
 						where: {
 							climber_history_view: [
 								{column_name: 'climber_id', operator: '=', comparand: climberID}
@@ -2412,7 +2412,7 @@ class ClimberDBClimbers extends ClimberDB {
 			const lookupDeferreds = this.fillAllSelectOptions();
 			if (Object.keys(this.stateCodes).length === 0) {
 				lookupDeferreds.push(
-					this.queryDBPython({tables: ['state_codes']})
+					this.queryDB({tables: ['state_codes']})
 						.done(response => {
 							if (!this.pythonReturnedError(response)) {
 								for (const state of response.data || []) {
@@ -2424,7 +2424,7 @@ class ClimberDBClimbers extends ClimberDB {
 			}
 			if (Object.keys(this.routeCodes).length === 0) {
 				lookupDeferreds.push(
-					this.queryDBPython({tables: ['route_codes']})
+					this.queryDB({tables: ['route_codes']})
 						.done(response => {
 							if (!this.pythonReturnedError(response)) {
 								for (const route of response.data || []) {
