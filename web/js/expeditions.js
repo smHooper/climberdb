@@ -2717,7 +2717,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	Update the source Excel file for Label Matrix server-side
 	*/
 	writeToLabelMatrix() {
-		let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === 't')
+		let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === true)
 		if (!tripLeaderInfo.length) {
 			showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
 			return;
@@ -2779,7 +2779,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Or if not, show the user a preview of the image
 		else {
 			// get cache tag data
-			let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === 't')
+			let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === true)
 			if (!tripLeaderInfo.length) {
 				showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
 				return;
@@ -3795,11 +3795,11 @@ class ClimberDBExpeditions extends ClimberDB {
 					// Prevent the user from loading backcountry expeditions on the Expeditions page and vice versa
 					const pageName = window.location.pathname;
 					const isBackcountry = expeditionResult[0].is_backcountry;
-					if (pageName.match('expedition') && isBackcountry === 't') {
+					if (pageName.match('expedition') && isBackcountry) {
 						const message = `You're trying to view a Backcountry group on the Expedition page. View this group on <a href="backcountry.html?id=${expeditionID}">the Backcountry page</a> instead.`;
 						showModal(message, 'Invalid Expedition');
 						return;
-					} else if (pageName.match('backcountry') && isBackcountry === 'f') {
+					} else if (pageName.match('backcountry') && !isBackcountry) {
 						const message = `You're trying to view a Denali or Foraker expedition on the Backcountry page. View this group on <a href="expeditions.html?id=${expeditionID}">the Expeditons page</a> instead.`;
 						showModal(message, 'Invalid Backcountry Group');
 						return;
@@ -4163,7 +4163,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $transactionTypeField = $valueField.closest('li').find('.transaction-type-field');
 		const transactionType = parseInt($transactionTypeField.val());
 		if (!transactionType) return;
-		const isCredit = this.defaultTransactionFees[transactionType].is_credit === 't';
+		const isCredit = this.defaultTransactionFees[transactionType].is_credit;
 		if (isCredit && amount > 0) {
 			$valueField.val(amount * -1);
 		} else if (!isCredit && amount < 0) {

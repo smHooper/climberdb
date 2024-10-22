@@ -900,7 +900,7 @@ class ClimberForm {
 			$firstCollapse.closest('.card').find('.card-link').click();
 		}
 
-		this.queryClimberHistory(climberID);
+		this.queryClimberHistory(parseInt(climberID));
 
 		// Show the details pane
 		$formParent
@@ -925,8 +925,8 @@ class ClimberForm {
 		const now = new Date();
 		for (const i in climberHistory) {
 			const row = climberHistory[i];
-			const formattedDeparture = (new Date(row.actual_departure_date + ' 12:00')).toLocaleDateString(); //add a time otherwise the date will be a day before
-			const actualReturnDate = new Date(row.actual_return_date + ' 12:00');
+			const formattedDeparture = (new Date(row.actual_departure_date)).toLocaleDateString(); //add a time otherwise the date will be a day before
+			const actualReturnDate = new Date(row.actual_return_date);
 			const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
 			//TODO: handle routes that don't have a sort_order (and aren't in route_codes)
 			const cardTitle = `${this._parent.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}`;
@@ -967,7 +967,7 @@ class ClimberForm {
 					row.highest_elevation_ft >= this._parent.config.minimum_elevation_for_7_day || 10000
 				)
 
-			receivedProPin = receivedProPin || row.received_pro_pin === 't';
+			receivedProPin = receivedProPin || row.received_pro_pin;
 		}	
 
 		// Only show badges if this the climber form is NOT being shpwn as a modal and this is on the

@@ -1519,7 +1519,7 @@ class ClimberDB {
 		const valueIsNull = value == null;
 		if (fieldName in values) {
 			if (isCheckbox) {
-				$el.prop('checked', value === 't'); //bool vals from postgres are returned as either 't' or 'f'
+				$el.prop('checked', value);
 			} else {
 				
 				if (isSelect) {
