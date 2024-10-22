@@ -22,10 +22,12 @@ import logging
 from logging.config import dictConfig as loggingDictConfig
 
 from sqlalchemy import asc
+from sqlalchemy import case
 from sqlalchemy import desc
+from sqlalchemy.engine.row import Row as sqla_Row
+from sqlalchemy.sql.expression import func as sqlafunc
 from sqlalchemy import select
 from sqlalchemy import text as sqlatext
-from sqlalchemy.engine.row import Row as sqla_Row
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
 # from sqlalchemy.orm import MappedClassProtocol //sqla 2.0 only
@@ -1162,6 +1164,79 @@ def query_climbers():
 			response['count'] = cursor.first().count
 		
 		return jsonify(response)
+
+
+
+@app.route('/flask/db/select/expeditions', methods=['POST'])
+def query_expeditions():
+
+	request_data = request.get_json()
+
+	search_string = request_data.get('search_string')
+	where_clauses = request_data.get('where') or []
+	search_start_date = request_data.get('search_start_date')
+	#expedition_name_in_where = len(list(filter(lambda x: x.get('column_name') == 'expedition_name', where_clauses)))
+	if where_clauses:
+		where_clauses = [
+			climberdb_utils.get_where_clause(
+				tables,
+				'expedition_info_view',
+				where.get('column_name'), 
+				where.get('operator') or '', 
+				where.get('comparand')
+			) 
+			for where in where_clauses
+		]
+
+	view = tables['expedition_info_view']
+	if search_start_date:
+		where_clauses.append(
+			sqlafunc.coalesce(view.planned_departure_date, view.actual_departure_date) >= search_start_date
+		)
+
+	
+	similarity_select = []
+	order_by = [asc(view.expedition_name)]
+	if search_string:# and not expedition_name_in_where:
+		# define the similarity() epxression for reuse 
+		similarity = sqlafunc.similarity(
+			sqlafunc.lower(view.expedition_name), 
+			search_string.lower()
+		)
+		# CASE statement used for ORDER BY and as a SELECTed column
+		similarity_case = case(
+			# boost expeditions that start with search string by adding 1 to the similarity score
+			(view.expedition_name.ilike(f'{search_string}%'), 1 + similarity),
+			else_=similarity
+		).label('search_score')
+		order_by = [desc(similarity_case), asc(view.expedition_name)]
+		# Only select expeditions where the similarity() score is greater than 0.3 (similarity() returns 
+		#	scores between 0 and 1 where 1 is the best match)
+		where_clauses.append(similarity_case > 0.3)
+		
+		# The similarity SELECT column needs to be wrapped in a list so in case we never entered this 'if'
+		#	block, the destructuring *[] idiom can be silently ignored. If we did get here, the list will
+		#	be unpacked and the similar CASE clause will be added to the SELECTed columns
+		similarity_select = [similarity_case]
+
+	statement = select(
+			view.expedition_id,
+			view.expedition_name,
+			view.group_status_code,
+			*similarity_select
+		).where(
+			*where_clauses
+		).order_by(
+			*order_by
+		).distinct()
+	
+	with ReadSession() as session: 
+		result = session.execute(statement)
+
+		return jsonify({
+			'data': select_result_to_dict(result),
+			'queryTime': request_data.get('queryTime')
+		})
 
 
 @app.route('/flask/db/save', methods=['POST'])

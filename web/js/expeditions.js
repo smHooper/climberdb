@@ -1887,10 +1887,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		// fill the select by default with all 
 		this.fillExpeditionSearchSelect({
 			$searchBar: $searchBar, 
-			queryStrings: {
-				planned_departure_date: `coalesce(planned_departure_date, actual_departure_date) >= '${new Date().getFullYear()}-01-01'`,
-				expedition_id: `expedition_id <> ${expeditionID}`
-			}
+			searchStartDate: `${new Date().getFullYear()}-1-1`,
+			where: [{
+				column_name: 'expedition_id', operator: '<>', comparand: parseInt(expeditionID)
+			}]
 		})
 		const expeditionMemberID = $card.data('table-id');
 		const memberInfo = this.expeditionInfo.expedition_members.data[expeditionMemberID];
@@ -3153,139 +3153,117 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(e.target).siblings('.close-modal-button').click();
 	}
 
-
-	queryOptionToWhereClause(field, operatorValue, searchValue) {
-		
-		var searchString;
-		switch (operatorValue) {
-			case 'equals':
-				searchString = `${field} = '${searchValue}'`;
-				break;
-			case 'startsWith':
-				searchString = `${field} LIKE '${searchValue}%'`;
-				break;
-			case 'endsWith':
-				searchString = `${field} LIKE '%${searchValue}'`;
-				break;
-			case 'contains': 
-				searchString = `${field} LIKE '%${searchValue}'%`; 
-				break;
-			case 'BETWEEN':
-				searchString = `${field} BETWEEN '${searchValue[0]}' AND '${searchValue[1]}'`;
-				break;
-			default:
-				searchString = `${field} ${operatorValue} '${searchValue}'`
-		}
-		return searchString;
-	}
-
-
-	fillExpeditionSearchSelect({$searchBar='#expedition-search-bar', searchString=null, showExpeditionOptions=false, queryStrings={}}={}) {
+	
+	/*
+	Event handler for filling expedition search-selects. There are 2 search-selects in the expeditions page: the 
+	main one at the top and also one shown in the modal dialog shown when the user clicks the 'change-expedition' 
+	button to move a given expedition member to a different expedition
+	*/
+	fillExpeditionSearchSelect({$searchBar='#expedition-search-bar', searchString=null, showExpeditionOptions=false, where=[], searchStartDate=null}={}) {
 		
 		$searchBar = $($searchBar);
 
 		const $queryOptions = $searchBar.siblings('.search-options-container').find('.query-option-container'); //empty for modal
-		if (!Object.keys(queryStrings).length) {
+		if (!Object.keys(where).length) {
 			for (const el of $queryOptions ) {
 				const $container = $(el);
 				const $inputs = $container.find('*:not(.hidden) > .query-option-input-field:not(.hidden)');
 				const fieldName = $inputs.first().data('field-name');
 				let searchValues = $inputs.map((_, el) => {
-					const value = el.value;
-					if (value !== null && value.length > 0) return el.value
+					const value = $(el).val();
+					if (value !== null && value.length > 0) return value;
 				}).get();
+
+				// Skip if the value field is blank or the field was already captured
+				if (searchValues.length === 0 || fieldName in where) continue; 
+
+				// If there's no operator field, 
+				const operator = $inputs.is('.select2-no-tag') ?  
+					'in' : 
+					$container.find('.query-option-operator').val();
 				
-				if (searchValues.length === 0 || fieldName in queryStrings) continue; //2 value option (i.e. operaor === BETWEEN) and field already captured
-
-				const operator = $container.find('.query-option-operator').val();
-
-				if ($inputs.is('.datetime-query-option') && operator == 'BETWEEN') {
-					queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues));
-				} else if ($inputs.first().is('.string-match-query-option, .datetime-query-option')) {
-					queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues[0]));
-				} else if ($inputs.is('.select2-no-tag')) {
-					queryStrings[fieldName] = (`${fieldName} IN (${searchValues.join(',')})`)
-				}
+				const comparand = 
+					// if this is a multiple select, make sure the values have been converted to integers
+					$inputs.is('.select2-no-tag') ? 
+						searchValues.map(v => parseInt(v)) : 
+					// If it's a datetime option and the operator is BETWEEN, return values as an array
+					$inputs.is('.datetime-query-option') && operator == 'BETWEEN' ? 
+						searchValues :	  
+					// otherwise, just return the first (and only) value in the searchValues array
+					searchValues[0]; //$inputs.first().is('.string-match-query-option, .datetime-query-option')
+					
+				where.push(
+					{column_name: fieldName, operator: operator, comparand: comparand}
+				)
 			}
 		}
 
 		// If a search string is given and the expedition_name filter isn't filled, use Postgres trigram fuzzy search
 		if (searchString === null) searchString = $searchBar.val();
-		var orderBy, 
-			similarity = '';
-		if (searchString && !queryStrings.expedition_name) {
-			// Make sure options that start with the search string appear first
-			similarity = `
-				CASE 
-					WHEN expedition_name ILIKE '${searchString}%' THEN 1 + similarity(lower(expedition_name), lower('${searchString}'))
-					ELSE similarity(lower(expedition_name), lower('${searchString}'))
-				END`;
-			queryStrings.expedition_id = similarity + ' > 0.3';
-			orderBy = 'search_score DESC, expedition_name';
-		} else {
-			orderBy = 'expedition_name'
-		}
-		if (Object.keys(queryStrings).length === 0) {
-			queryStrings = {planned_departure_date: `coalesce(planned_departure_date, actual_departure_date) >= '${new Date().getFullYear()}-1-1'`}
-		};
-		if (!('expedition_id' in queryStrings)) {
+
+		// If searchStartDate isn't given, check if there are other parameters specified. If not, 
+		//	set the search date to prevent returning too many results
+		searchStartDate = searchStartDate || Object.keys(where).length === 0 ?
+			`${new Date().getFullYear()}-1-1` :
+			'';
+
+		if (!('expedition_id' in where)) {
 			// Exclude the current expedition. If this is a new expedition and table-id isn't set, 
 			//	ID should never = -1 so it will return everything
-			const currentExpeditionID = $('#input-expedition_name').data('table-id') || '-1';
-			queryStrings.expedition_id = `expedition_id <> ${currentExpeditionID}`;
+			const currentExpeditionID = parseInt($('#input-expedition_name').data('table-id') || '-1');
+			where.push({column_name: 'expedition_id', operator: '<>', comparand: currentExpeditionID});
 		}
 
 		// IF this is the expedition page, 
-		queryStrings.is_backcountry = window.location.pathname.match('backcountry.html') ? 
-			'is_backcountry' : 
-			'NOT is_backcountry';
+		where.push({
+			column_name: 'is_backcountry',
+			operator: '=',
+			comparand: !!window.location.pathname.match('backcountry.html') 
+		});
 
-		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
+		const requestData = {
+			where: where,
+			search_string: searchString,
+			search_start_date: searchStartDate,
+			queryTime: (new Date()).getTime()
+		}
 
-		// ***** fix string substitutions
-		const sql = `
-			SELECT DISTINCT 
-				expedition_id, 
-				expedition_name,
-				group_status_code  
-				${similarity ? `, ${similarity} AS search_score` : ''} 
-			FROM ${this.dbSchema}.expedition_info_view 
-			${whereClause} 
-			ORDER BY ${orderBy}`;
-		return this.queryDBPython({sql: sql, returnTimestamp: true})
-			.done(response => {
-				if (this.pythonReturnedError(response)) {
-
+		return $.post({
+			url: '/flask/db/select/expeditions',
+			data: JSON.stringify(requestData),
+			contentType: 'application/json'
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				throw('expedition query failed with Python error: ' + response)
+			} else {
+				var result = response.data || [];
+				
+				// Check if this result is older than the currently displayed result. This can happen if the user is 
+				//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
+				//	since we don't want the older result to overwrite the newer one
+				const queryTime = result.queryTime;
+				if (queryTime < this.lastSearchQuery) {
+					return;
 				} else {
-					var result = response.data || [];
-					
-					// Check if this result is older than the currently displayed result. This can happen if the user is 
-					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
-					//	since we don't want the older result to overwrite the newer one
-					const queryTime = result.queryTime;
-					if (queryTime < this.lastSearchQuery) {
-						return;
-					} else {
-						this.lastSearchQuery = queryTime;
-					}
-
-					const $drawer = $searchBar.siblings('.expedition-options-container').empty();
-					if (result.length) {
-						//$drawer.append('<option value="">Click to select an expedition</option>')
-						for (const row of result) {
-							// **** TODO: use this.constants instead of number
-							const cancelledClass = row.group_status_code == 6 ? 'cancelled' : '';
-							$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
-						}
-					} else {
-						$drawer.append('<div class="expedition-search-bar-option">No expeditions match your search</div>');
-					}
-					if (showExpeditionOptions) $drawer.collapse('show');
+					this.lastSearchQuery = queryTime;
 				}
-			})
-			.fail((xhr, status, error) => {
-				console.log('Failed to query expeditions for search select with sql ' + sql)
-			});
+
+				const $drawer = $searchBar.siblings('.expedition-options-container').empty();
+				if (result.length) {
+					//$drawer.append('<option value="">Click to select an expedition</option>')
+					for (const row of result) {
+						const cancelledClass = row.group_status_code == this.constants.groupStatusCodes.cancelled ? 'cancelled' : '';
+						$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
+					}
+				} else {
+					$drawer.append('<div class="expedition-search-bar-option">No expeditions match your search</div>');
+				}
+				if (showExpeditionOptions) $drawer.collapse('show');
+			}
+		})
+		.fail((xhr, status, error) => {
+			console.log('Failed to query expeditions for search select with sql ' + sql)
+		});
 		
 	}
 
