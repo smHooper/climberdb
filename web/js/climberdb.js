@@ -543,50 +543,253 @@ class ClimberDB {
 	}
 
 
-	queryDB(sql, {returnTimestamp=false}={}) {
-		var requestData = {action: 'query', queryString: sql, db: 'climberdb'};
+	/*
+	Run a SELECT query by either sending WHERE (and possibly ORDER BY) parameters to use the 
+	SQLAlchemy ORM or raw SQL and parameters to execute parameterized SQL
+	*/
+	queryDB({tables=[], selects={}, joins=[], where={}, orderBy=[], sql='', sqlParameters={}, returnTimestamp=false}={}) {
+		
+		var requestData = Object.keys({...selects, ...where}).length || tables.length ? 
+			{	
+				tables: tables,
+				select: selects,
+				joins: joins,
+				where: where,
+				order_by: orderBy
+			} : 
+			{sql: sql, params: sqlParameters};
+
 		if (returnTimestamp) requestData.queryTime = (new Date()).getTime();
+		
 		return $.post({
-			url: 'climberdb.php',
-			data: requestData,
-			cache: false
+			url: '/flask/db/select',
+			data: JSON.stringify(requestData),
+			contentType: 'application/json'
 		});
 	}	
 
 
 	/*
+	Collect edits organized in a heirarchical structure to send to the server. 
+	The ORM will add the necessary foreign keys, but the ORM objects need to 
+	be created in reverse one-to-many order. This function will sequentially
+	step through the containerSelectors array to get the values of .input-fields
+	as nested objects 
 	*/
-	fillSelectOptions(selectElementID, queryString, optionClassName='') {
-		let deferred = this.queryDB(queryString);
-		deferred.done(queryResultString => {
-				
-				queryResultString = queryResultString.trim();
+	getEdits({containerSelectors=[], editedFieldSelector='.input-field.dirty'}) {
 
-				var queryResult;
-				try {
-					queryResult = $.parseJSON(queryResultString);
-				} catch {
-					//console.log(`error filling in ${selectElementID}: ${queryResultString}`);
+		var inserts = {},
+			updates = {};
+		var $fields = $(editedFieldSelector);
+		//const reverseInsertOrder = this.tableInfo.tables.insertOrder;
+		// for (const selector of containerSelectors) {
+		// 	for (const container of $(selector).has(editedFieldSelector)) {
+		// 		const $container = $(container);
+		// 		const containerDBID = $container.data('table-id');
+		// 		const $containerFields = $container.find($fields);
+		// 		const containerValues = {};
+		// 		for (const tableName of reverseInsertOrder) {
+		// 			const $containerTableFields = $containerFields.find(`[data-table-id="${tableName}"]`);
+		// 			const containerValues = Object.fromEntries(
+		// 				$containerTableFields.map((_, el) => [el.name, el.value])
+		// 			);
+		// 			const dbID = containerDBID || $containerTableFields
+		// 				.map((_, el) => $(el).data('table-id'))
+		// 				.get()
+		// 					.filter(id => id)[0];
+		// 			if (!dbID) {
+		// 				containerValues[tableName] = {
+		// 					container: $container,
+		// 					values: containerValues
+		// 				};
+		// 			} else {
+		// 				updates[tableName] = {...(updates[tableName] || {}), ...containerValues}
+		// 			}
+
+		// 		}
+		// 		$fields = $fields.not($containerFields);
+				
+		// 	}
+		// }
+
+		
+		// Get all containers that have edits
+		const joinedSelector = containerSelectors.join(',');
+		const $containers = $(joinedSelector).has(editedFieldSelector);
+		
+		// Get just containers that will be INSERTed rather than UPDATEd
+		var $insertContainers = $containers.map((_, el) => !$(el).data('table-id'));
+		
+
+		const nSelectors = containerSelectors.length;
+		/*
+		{
+			table1: [
+				{
+					id: 1,
+					children: {
+						table2: [
+							{
+								values: {field1: val1, field2: val2}
+								children: {
+									table3: [
+										{
+											values: {f1: v1, f2: f3}
+										},
+										{
+											values: {f1: v1, f2: f3}
+										}
+									]
+								}
+							}
+						]
+					}
+				},
+				{
+					id: 2,
+					children: 
 				}
-				if (queryResult) {
+			]
+		}
+
+		{
+			tables: [
+				{tableName: 'transactions', selector: '.transactions-tab-pane .data-list-item'},
+				{tableName: 'attachments'}
+			],
+			parent: {
+				tableName: 'expedition_members',
+				selector: '#expedition-members-accordion .card',
+				parent: 
+			}
+		}
+		*/
+		var values = {};
+			//currentValues = {}; 
+		
+		// Helper function to get values from a container
+		const getContainerValues = $container => {
+			const $containerFields = $container.find($fields);
+			// Drop the container and the fields from the master selection objects
+			//	because a subsequent search higher up in the DOM tree will find them
+			$insertContainers = $insertContainers.not($container);
+			$fields = $fields.not($containerFields);
+			
+			const containerValues = Object.fromEntries(
+				$containerFields.map((_, el) => [el.name, el.value])
+			); 
+			return containerValues 
+		} 
+
+		// Loop through each container selector and accumulate the edits by traversing 
+		//	up the DOM tree, stopping at the first element that already exists in the DB
+		for (const i = 0; i < nSelectors; i++) {
+			let selector = containerSelectors[i];
+			for (const c of $insertContainers.find(selector)) {
+				let $container = $(c);
+				
+				// IF there's no table name, throw and error. This is only necessary for development
+				//	becasuse this shouldn't happen in production
+				const tableName = $container.data('table-name');
+				if (!tableName) throw `no 'table-name' data attribute for #${$container.attr('id')}`;
+
+				const containerValues = getContainerValues($container);
+
+				currentValues = {
+					[tableName]: [
+						...(currentValues[tableName] || []), 
+						{
+							values: containerValues
+						}
+					]
+				};
+
+				// Traverse the DOM upwards to get edits from the $container's parents
+				for (const parentSelector of containerSelectors.slice(i + 1, nSelectors)) {
+					const $parentContainer = $container.closest(parentSelector);
+					const parentDBID = $parentContainer.data('table-id');
+					const parentTableName = $parentContainer.data('table-name');
+					if (parentDBID) {
+						values[parentTableName] = [
+							...(values[parentTableName] || []),
+							{
+								id: parentDBID,
+								children: {
+									...((values[parentTableName] || {}).children || {}), 
+									...currentValues
+								}
+							}
+						]
+						break;
+					} else {
+						const parentContainerValues = getContainerValues($parentContainer);
+						currentValues[parentTableName] = [
+							...(currentValues[parentTableName] || []),
+							{
+								values: parentContainerValues,
+								children: {
+									...((currentValues[parentTableName] || {}).children || {}),
+									...currentValues
+								}
+							}
+						]
+					}
+					// Set for the next iteration to get this parent's parent
+					$container = $parentContainer;
+
+				}
+			}
+		}
+
+		return values;
+
+	}
+
+
+	/*
+	Delete one or more rows from a database table. id is either a single ID or a list of IDs
+	*/
+	deleteByID(tableName, id, {returning={}}={}) {
+
+		var requestData = {
+			table_name: tableName,
+			db_ids: id
+		};
+		if (Object.keys(returning).length) 
+			requestData.returning = returning;
+		
+
+		return $.post({
+			url: '/flask/db/delete/by_id',
+			data: JSON.stringify(requestData),
+			contentType: 'application/json'
+		});
+	}
+
+
+	/*
+	*/
+	fillSelectOptions(selectElementID, sqlArgs, optionClassName='') {
+		return this.queryDB(sqlArgs)
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					print(`fillSelectOptions() failed for ${selectElementID} with error: ` + response);
+				} else {
+					const queryResult = response.data || [];
 					const $el = $('#' + selectElementID);
 					for (const row of queryResult) {
 						$el.append(
-							`<option class="${optionClassName}" value="${row.value}">${row.name}</option>`
+							`<option class="${optionClassName}" value="${row.value || row.code}">${row.name}</option>`
 						);
 					}
 					const defaultValue = $el.data('default-value');
 					if (defaultValue !== undefined) $el.val(defaultValue);
-				} else {
-					console.log(`error filling in ${selectElementID}: ${queryResultString}`);
-				}
+				} 
 			})
 		.fail((xhr, status, error) => {
 				console.log(`fill select failed with status ${status} because ${error} from query:\n${queryString}`)
 			}
 		);
-
-		return deferred;
 	}
 
 	/*
@@ -602,7 +805,19 @@ class ClimberDB {
 			const id = el.id;
 			if (lookupTableName != 'undefineds') {//if neither data-lookup-table or name is defined, lookupTableName === 'undefineds' 
 				if (placeholder) $('#' + id).append(`<option class="" value="">${placeholder}</option>`);
-				return this.fillSelectOptions(id, `SELECT code AS value, name FROM ${this.dbSchema}.${lookupTableName} ${$el.is('.include-disabled-options') ? '' : 'WHERE sort_order IS NOT NULL'} ORDER BY sort_order`);
+				
+				let sqlArgs = {orderBy: [{table_name: lookupTableName, column_name: 'sort_order'}]};
+				if ($el.is('.include-disabled-options')) { 
+					sqlArgs.where = {[lookupTableName]: [{
+						column_name: 'sort_order', 
+						operator: 'IS NOT', 
+						comparand: 'NULL'}
+					]};
+				} else {
+					sqlArgs.tables = [lookupTableName];
+				}
+
+				return this.fillSelectOptions(id, sqlArgs);
 				
 			}
 		});
@@ -654,23 +869,23 @@ class ClimberDB {
 		if (parentDBID !== null) $newItem.data('parent-table-id', parentDBID);
 		if (dbID !== null) $newItem.attr('data-table-id', dbID);
 
+		const itemTag = (dbID ? dbID + '-' : '') + itemIndex;
 		for (const el of $newItem.find('.input-field, .attachment-input')) {
-			el.id = `${el.id}-${dbID || itemIndex}`;
+			el.id = `${el.id}-${itemTag}`;
 			const $el = $(el);
 			if ($el.data('dependent-target')) 
-				$el.data('dependent-target', `${$el.data('dependent-target')}-${dbID || itemIndex}`);
+				$el.attr('data-dependent-target', `${$el.data('dependent-target')}-${itemTag}`);
 			if (!isNaN(dbID)) $el.attr('data-table-id', dbID);
 		}
 
 		for (const el of $newItem.find('label.generic-button')) {
 			const $el = $(el);
 			if ($el.prop('for')) {
-				$el.prop('for', `${$el.prop('for')}-${dbID || itemIndex}`);
+				$el.prop('for', `${$el.prop('for')}-${itemTag}`);
 			}
 		}
 
 		return $newItem.addClass(newItemClass).insertBefore($cloneable);
-
 
 	}
 
@@ -978,7 +1193,11 @@ class ClimberDB {
 				el.value = defaultValue || null;
 			}
 
-			$el.removeData('table-id');
+			$el.removeData('table-id')
+				// call this too because removeData() only removes things that 
+				//	were set via .data(), not attr('data-*'): 
+				//	https://api.jquery.com/removeData/
+				.removeAttr('data-table-id'); 
 
 			if (triggerChange) $el.change();
 		}
@@ -1040,31 +1259,16 @@ class ClimberDB {
 	}
 
 
-	/*
-	Helper function to check a Postgres query result for an error
-	*/
-	queryReturnedError(queryResultString) {
-		
-		
-
-		if (typeof queryResultString === 'object') {
-			if (Array.isArray(queryResultString)) {
-				return !queryResultString.length;
-			} else {
-				return queryResultString === null;
-			}
-		} else if (typeof queryResultString === 'string') {
-			queryResultString = queryResultString.trim();
-		}
-		return queryResultString.match(/Query failed: ERROR:/) || queryResultString.startsWith('ERROR:') || queryResultString === '["query returned an empty result"]';
-	}
-
-
 	pythonReturnedError(resultString) {
 		resultString = String(resultString); // force as string in case it's something else
-		return resultString.startsWith('ERROR: Internal Server Error') ?
-		   resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/)[0].trim() :
-		   false;
+		if (resultString.startsWith('ERROR: Internal Server Error')) {
+			// almost all Python excetions have a class anme in the form *Error (e.g., ValueError).
+			//	That's not a hard and fast rule, however, and so if the match is null, return something generic
+			const pythonException = resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/) || ['unknown custom exception thrown'];
+			return pythonException[0].trim()
+		} else {
+			return false;
+		}
 	}
 
 
@@ -1229,11 +1433,11 @@ class ClimberDB {
 
 
 	getTableInfo() {
-		return this.queryDB(`SELECT * FROM table_info_matview`).done(resultString => {
+		return this.queryDB({tables: ['table_info_matview']}).done(response => {
 			// the only way this query could fail is if I changed DBMS, 
 			//	so I won't bother to check that the result is valid
 			var insertOrder = this.tableInfo.insertOrder;
-			for (const info of $.parseJSON(resultString)) {
+			for (const info of response.data || []) {
 				const tableName = info.table_name;
 				if (!insertOrder.includes(tableName)) insertOrder.push(tableName);
 				if (!(tableName in this.tableInfo.tables)) {
@@ -1281,14 +1485,17 @@ class ClimberDB {
 		const isCheckbox = $el.is('.input-checkbox');
 		const fieldName = el.name.replace(/-\d+$/g, '');
 		const value = values[fieldName];
+		const valueIsNull = value == null;
 		if (fieldName in values) {
 			if (isCheckbox) {
-				$el.prop('checked', value === 't'); //bool vals from postgres are returned as either 't' or 'f'
+				$el.prop('checked', value);
 			} else {
 				
 				if (isSelect) {
-					$el.val(value == null ? '' : value); //if the db record isn't filled in, set it to the default
-					$el.toggleClass('default', value == null || value == '');
+					$el.val(valueIsNull ? '' : value); //if the db record isn't filled in, set it to the default
+					$el.toggleClass('default', valueIsNull || value == '');
+				} else if ($el.is('[type=date]') && !valueIsNull) {
+					$el.val(getFormattedTimestamp(new Date(value)));
 				} else {
 					$el.val(value);
 				}
@@ -1319,7 +1526,19 @@ class ClimberDB {
 	Helper method to get the value of in input depedning on whether or not its a checkbox
 	*/
 	getInputFieldValue($input) {
-		return $input.is('.input-checkbox') ? $input.prop('checked') : $input.val();
+		const val = $input.val();
+		const returnValue = 
+			// if it's a checkbox, return the 'checked' property, which is a boolean
+			$input.is('.input-checkbox') ? $input.prop('checked') : 
+			
+			// if it's a datetime type and the value is null, return null because 
+			//	sending '' to the server throws an error when saving
+			$input.is('[type=date], [type=datetime-local], [type=time], select') && val === '' ? null : 
+			
+			// otherwise, just return the value
+			val;
+		
+		return returnValue;
 	}
 	
 
@@ -1431,7 +1650,7 @@ class ClimberDB {
 	}
 
 	getClimberQuerySQL({searchString='', minIndex=1, climberID=undefined, queryFields='*', coreWhereClause=''} = {}) {
-		const withSearchString = searchString.length > 0;
+		
 		const coreQuery = this.getCoreClimberSQL({searchString: searchString, queryFields: queryFields, whereClause: coreWhereClause});
 		var maxIndex = minIndex + this.recordsPerSet - 1;
 		const whereClause = isNaN(maxIndex) ? 
@@ -1471,72 +1690,68 @@ class ClimberDB {
 		$searchContainer.find('.climber-select')
 			.closest('.collapse')
 				.collapse('show');
-
 		const $loadingIndicator = $searchContainer.find('.climber-search-option-loading-indicator')
 			.ariaHide(false);
-
-		let whereClause = '';
-		if ($searchContainer.find('.7-day-only-filter').prop('checked')) 
-			whereClause += ` WHERE ${this.dbSchema}.climber_info_view.id IN (SELECT climber_id FROM ${this.dbSchema}.seven_day_rule_view) `;
-		const $guideOnlyCheckbox = $searchContainer.find('.guide-only-filter');
-		if ($guideOnlyCheckbox.prop('checked')) 
-			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
-		
-		const queryFields = 'id, full_name';
-		const sql = this.getCoreClimberSQL({searchString: searchString,  queryFields: queryFields, whereClause: whereClause});
-
 		const $climberCount = $('.climber-search-result-count').text('')
 			.ariaHide(true);
 
-		return this.queryDB(sql, {returnTimestamp: true})
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-
+		return $.post({
+			url: '/flask/db/select/climbers',
+			data: JSON.stringify({
+				search_string: searchString,
+				is_guide: $searchContainer.find('.7-day-only-filter').prop('checked'),
+				is_7_day: $searchContainer.find('.guide-only-filter').prop('checked'),
+				queryTime: (new Date()).getTime()
+			}),
+			contentType: 'application/json'
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				print(response);
+				return;
+			} else {
+				var result = response.data || [];
+				// Check if this result is older than the currently displayed result. This can happen if the user is 
+				//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
+				//	since we don't want the older result to overwrite the newer one
+				const queryTime = result.queryTime;
+				if (queryTime < this.climberForm.lastSearchQuery) {
+					return;
 				} else {
-					var result = $.parseJSON(queryResultString);
-					// Check if this result is older than the currently displayed result. This can happen if the user is 
-					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
-					//	since we don't want the older result to overwrite the newer one
-					const queryTime = result.queryTime;
-					if (queryTime < this.climberForm.lastSearchQuery) {
-						return;
-					} else {
-						this.climberForm.lastSearchQuery = queryTime;
-					}
-					const $select = $searchContainer.find('.climber-select').empty();
-					result = result.data;
-					var resultCount = result.length;
-					if (resultCount === 0) {
-						$select.append('<option value="">No climbers match your search</option>')
+					this.climberForm.lastSearchQuery = queryTime;
+				}
+				const $select = $searchContainer.find('.climber-select').empty();
+				var resultCount = result.length;
+				if (resultCount === 0) {
+					$select.append('<option value="">No climbers match your search</option>')
 
-						// Because results are asynchonous, make sure result count is hidden
-						$climberCount.text('')
-							.ariaHide(true);
-					} else {
-						// Still show placeholder option because a climber should not be selected automatically
-						$select.append('<option value="">Select climber to view</option>')
-						for (const row of result) {
-							if (row.id == excludeID) {
-								resultCount --;
-								continue;
-							}
-							$select.append(`<option value="${row.id}">${row.full_name}</option>`);
+					// Because results are asynchonous, make sure result count is hidden
+					$climberCount.text('')
+						.ariaHide(true);
+				} else {
+					// Still show placeholder option because a climber should not be selected automatically
+					$select.append('<option value="">Select climber to view</option>')
+					for (const row of result) {
+						if (row.id == excludeID) {
+							resultCount --;
+							continue;
 						}
-						// Because the result is retrieved asynchonously and when a user types no search is done, 
-						//	
-						if ($searchContainer.find('.climber-search-select-filter').val().length >= 3 || $guideOnlyCheckbox.prop('checked')) {
-							$climberCount.text(
-									`${resultCount} climber${resultCount > 1 ? 's' : ''} found`
-								)
-								.ariaHide(false);
-						}
+						$select.append(`<option value="${row.id}">${row.full_name}</option>`);
+					}
+					// Because the result is retrieved asynchonously and when a user types no search is done, 
+					//	
+					if ($searchContainer.find('.climber-search-select-filter').val().length >= 3 || $guideOnlyCheckbox.prop('checked')) {
+						$climberCount.text(
+								`${resultCount} climber${resultCount > 1 ? 's' : ''} found`
+							)
+							.ariaHide(false);
 					}
 				}
-			})
-			.fail((xhr, status, error) => {
-				console.log('fillFuzzySearchSelectOptions query failed: ' + sql);
-			})
-			.always(() => {$loadingIndicator.ariaHide(true)});
+			}
+		})
+		.fail((xhr, status, error) => {
+			console.log('fillFuzzySearchSelectOptions query failed: ' + sql);
+		})
+		.always(() => {$loadingIndicator.ariaHide(true)});
 	}
 
 
@@ -1677,7 +1892,7 @@ class ClimberDB {
 		const userDeferred = this.getUserInfo()
 		//const finalDeferred = $.when(envDeferred, userDeferred)
 		return $.when(envDeferred, userDeferred)
-			.done((_, [userInfoResult, userInfoStatus, userInfoXHR]) => {
+			.then((_, [userInfoResult, userInfoStatus, userInfoXHR]) => {
 				const username = userInfoResult.ad_username;
 				if (addMenu && username !== 'test') {
 					if (this.loginInfo.username !== username || this.loginInfo.expiration < new Date().getTime()) {

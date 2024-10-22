@@ -358,6 +358,7 @@ CREATE VIEW climber_info_view AS
 -- climber history view
 CREATE VIEW climber_history_view AS 
 	SELECT 
+		row_number() over(),
 		expeditions.expedition_name, 
 		expeditions.id AS expedition_id, 
 		expedition_member_routes.id AS expedition_member_route_id,
@@ -422,6 +423,7 @@ CREATE VIEW expedition_status_view AS
 
 CREATE VIEW expedition_info_view AS 
 	SELECT 
+		row_number() over(),
 		expedition_member_routes.id AS expedition_member_route_id,
 		transactions.id AS transaction_id,
 		climbers.first_name,
@@ -656,6 +658,7 @@ CREATE VIEW briefings_expedition_info_view AS
 
 CREATE VIEW all_climbs_view AS 
 	SELECT 
+		row_number() over(),
 		climbers.first_name || ' ' || climbers.last_name AS climber_name,
 		climbers.state_code,
 		climbers.country_code,
@@ -683,7 +686,7 @@ CREATE VIEW all_climbs_view AS
 		route_codes.name AS route_name,
 		mountain_codes.name AS mountain_name,
 		is_guiding,
-		CASE WHEN is_guiding OR is_intrepeter THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
+		CASE WHEN is_guiding OR is_interpreter THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
 		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
 		actual_return_date - actual_departure_date AS trip_length_days,
 		extract(year FROM planned_departure_date) AS year,
@@ -705,6 +708,7 @@ CREATE VIEW registered_climbs_view AS
 
 CREATE VIEW solo_climbs_view AS 
 	SELECT 
+		row_number() over(),
 		t.expedition_id,
 		expedition_members.id AS expedition_member_id,
 		t.route_code,
@@ -739,7 +743,7 @@ CREATE VIEW solo_climbs_view AS
 	JOIN route_codes ON t.route_code=route_codes.code 
 	LEFT JOIN expedition_status_view ON expeditions.id = expedition_status_view.expedition_id
 	JOIN group_status_codes ON coalesce(expedition_status_view.expedition_status, 1) = group_status_codes.code
-	WHERE t.count = 1 AND (expeditions.actual_departure_date IS NOT NULL OR expedition_status_view.expedition_status = 3)
+	WHERE t.count = 1 AND (expeditions.actual_departure_date IS NOT NULL OR expedition_status_view.expedition_status = 3);
 
 
 CREATE VIEW missing_sup_or_payment_dashboard_view AS 
@@ -817,6 +821,7 @@ CREATE VIEW overdue_parties_view AS
 
 CREATE VIEW transaction_type_view AS 
 SELECT 
+	codes.id,
 	name,
 	code,
 	is_credit,
@@ -840,7 +845,9 @@ ORDER BY sort_order;
 
 
 CREATE MATERIALIZED VIEW table_info_matview AS 
-   SELECT columns.column_name,
+   SELECT 
+   		row_number() over(),
+   		columns.column_name,
   		columns.table_name,
   		columns.data_type,
   		columns.character_maximum_length,
@@ -957,6 +964,74 @@ BEGIN
 
 END 
 $$ LANGUAGE plpgsql strict immutable;
+
+-- keep function to copy views separate so that it can be called on its own
+CREATE OR REPLACE FUNCTION clone_views(
+	source_schema text,
+	dest_schema text
+) RETURNS void AS 
+$BODY$
+
+	DECLARE
+		view_name text;
+		record_   record;
+
+	BEGIN
+
+	FOR record_ IN 
+		WITH 
+		  dict_query AS (
+		    SELECT 
+		      'a' AS a, 
+		      ('{"'|| string_agg(table_name || '": "dev.' || table_name, '","') || '"}')::jsonb AS replace_dict 
+		    FROM information_schema.tables 
+		    WHERE table_schema='public' 
+		    GROUP BY a
+		  ), 
+		  dependency AS (
+		    SELECT
+		      source_table.relname as source_table,
+		      dependent_view.relname as dependent_views
+		    FROM pg_depend 
+		    JOIN pg_rewrite ON pg_depend.objid = pg_rewrite.oid 
+		    JOIN pg_class as dependent_view ON pg_rewrite.ev_class = dependent_view.oid 
+		    JOIN pg_class as source_table ON pg_depend.refobjid = source_table.oid 
+		    JOIN pg_namespace source_ns ON source_ns.oid = source_table.relnamespace
+		    WHERE 
+		      source_ns.nspname = 'public' AND 
+		      source_table.relname LIKE '%view' AND
+		      source_table.relname <> dependent_view.relname
+		  )
+		SELECT DISTINCT ON (sort_order, table_name) 
+			* 
+		FROM (
+		  SELECT 
+		    table_name,
+		    dependency.dependent_views,
+		    CASE 
+		      WHEN table_name IN (dependency.source_table) AND table_name NOT IN (SELECT dependent_views FROM dependency) THEN 0
+		      WHEN table_name IN (dependency.source_table) AND table_name IN (SELECT dependent_views FROM dependency) THEN 1
+		      ELSE 2 
+		    END AS sort_order,
+		    multi_replace(view_definition, replace_dict) AS view_def
+		  FROM information_schema.views 
+		    JOIN dict_query ON replace_dict::text <> table_name
+		    LEFT JOIN dependency ON dependency.source_table = table_name
+		  WHERE table_schema = 'public'
+		) _
+		ORDER BY sort_order, table_name
+	LOOP
+		view_name := dest_schema || '.' || quote_ident(record_.table_name);
+		EXECUTE 'DROP VIEW IF EXISTS ' || view_name || ' CASCADE; CREATE OR REPLACE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
+	END LOOP;
+  
+	RETURN; 
+ 
+	END;
+
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
 
 -- copy schema to dev
 CREATE OR REPLACE FUNCTION clone_schema(
@@ -1131,32 +1206,7 @@ BEGIN
     END LOOP;
 
 -- Create views 
---SELECT json_agg(json_build_object(table_name, 'dev.' || table_name))::jsonb FROM information_schema.tables WHERE table_schema='public';
-  -- FOR object IN
-  --   SELECT table_name::text
-  --     FROM information_schema.views
-  --    WHERE table_schema = quote_ident(source_schema)
-
-  -- LOOP
-  --   buffer := dest_schema || '.' || quote_ident(object);
-  --   SELECT view_definition INTO v_def
-  --     FROM information_schema.views
-  --    WHERE table_schema = quote_ident(source_schema)
-  --      AND table_name = quote_ident(object);
-     
-  --   EXECUTE 'CREATE OR REPLACE VIEW ' || buffer || ' AS ' || v_def || ';' ;
-
-  -- END LOOP;
-
-	FOR record_ IN 
-		WITH dict_query AS (SELECT 'a' AS a, ('{"'|| string_agg(table_name || '": "dev.' || table_name, '","') || '"}')::jsonb AS replace_dict FROM information_schema.tables WHERE table_schema='public' GROUP BY a)
-		SELECT table_name, multi_replace(view_definition, replace_dict) AS view_def 
-		FROM information_schema.views JOIN dict_query ON replace_dict::text <> table_name
-		WHERE table_schema = 'public'
-	LOOP
-		buffer := dest_schema || '.' || quote_ident(record_.table_name);
-		EXECUTE 'CREATE OR REPLACE VIEW ' || buffer || ' AS ' || record_.view_def || ';' ;
-	END LOOP;
+  clone_views(source_schema, dest_schema);
 
 -- Create functions 
   FOR func_oid IN

@@ -14,17 +14,31 @@ from pypdf import PdfReader, PdfWriter
 from datetime import datetime
 from uuid import uuid4
 
-from flask import Flask, has_request_context, json, render_template, request, url_for
+from flask import Flask, has_request_context, json, jsonify, render_template, request, url_for
 from flask_mail import Mail, Message
 from flask.logging import default_handler
 
 import logging
 from logging.config import dictConfig as loggingDictConfig
 
-from sqlalchemy import create_engine, text as sqlatext
+from sqlalchemy import asc
+from sqlalchemy import case
+from sqlalchemy import desc
+from sqlalchemy.engine.row import Row as sqla_Row
+from sqlalchemy.sql.expression import func as sqlafunc
+from sqlalchemy import select
+from sqlalchemy import text as sqlatext
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
+# from sqlalchemy.orm import MappedClassProtocol //sqla 2.0 only
 
-from export_briefings import briefings_to_excel
+from typing import Any
+from werkzeug.datastructures import FileStorage
+
+# climberdb modules
 from cache_tag import CacheTag, print_zpl
+import climberdb_utils
+from export_briefings import briefings_to_excel
 
 # Asynchronously load weasyprint because it takes forever and it should only block when it's needed (exporting PDFs)
 import threading
@@ -101,42 +115,26 @@ formatter = RequestFormatter(line_separator +
 logging.root.handlers[0].setFormatter(formatter)
 
 
-CONFIG_FILE = '//inpdenaterm01/climberdb/config/climberdb_config.json'
-
 app = Flask(__name__)
 
 # Error handling
 @app.errorhandler(500)
 def internal_server_error(error):
 	app.logger.error(traceback.format_exc())
-	return 'ERROR: Internal Server Error.\n' + traceback.format_exc()
+
+	return 'ERROR: Internal Server Error.\n' + traceback.format_exc() + '\n\nrequest: ' + json.dumps(request.json)
 
 
 # Load config
-if not os.path.isfile(CONFIG_FILE):
-	raise IOError(f'CONFIG_FILE does not exists: {CONFIG_FILE}')
-if not app.config.from_file(CONFIG_FILE, load=json.load):
-	raise IOError(f'Could not read CONFIG_FILE: {CONFIG_FILE}')
+if not os.path.isfile(climberdb_utils.CONFIG_FILE):
+	raise IOError(f'CONFIG_FILE does not exists: {climberdb_utils.CONFIG_FILE}')
+if not app.config.from_file(climberdb_utils.CONFIG_FILE, load=json.load):
+	raise IOError(f'Could not read CONFIG_FILE: {climberdb_utils.CONFIG_FILE}')
 
 
 @app.route('/flask/environment', methods=['GET'])
 def get_environment() -> str:
-	""" return a string indicating whether this is the production or development env."""
-	return 'prod' if '\\prod\\' in os.path.abspath(__file__) else 'dev'
-
-
-def get_schema() -> str:
-	"""
-	Return the appropriate database schema based on this file's path (i.e., the environment)
-	"""
-	return 'public' if get_environment() == 'prod' else 'dev'
-
-
-def get_engine():
-	return create_engine(
-		'postgresql://{username}:{password}@{host}:{port}/{db_name}'
-			.format(**app.config['DB_PARAMS'])
-	)
+	return climberdb_utils.get_environment()
 
 
 def get_config_from_db() -> dict:
@@ -144,7 +142,7 @@ def get_config_from_db() -> dict:
 	Retrieve saved configuration values for the web app from the 'config' table
 	and save it to the flask config
 	"""
-	engine = get_engine()
+	engine = climberdb_utils.get_engine()
 	db_config = {}		
 	
 	# helper function to convert DB values (which are all strings) to the proper data type
@@ -158,27 +156,37 @@ def get_config_from_db() -> dict:
 	with engine.connect() as conn:
 		cursor = conn.execute('TABLE config');
 	
-	for row in cursor:
-		data_type = row['data_type']
-		property_name = row['property']
-		value = row['value']
-		try:
-			converted_value = (
-				[convert_value(v.strip(), data_type) for v in value.split(',')]
-				if row['is_array'] 
-				else convert_value(value, data_type)
-			)
-		except:
-			raise ValueError(f'''Invalid value for property "{property_name}" with data type "{data_type}": {value} ''')
-		
-		# Save value in Flask config and in a dict to return for the web app
-		app.config[property_name] = converted_value
-		db_config[property_name] = converted_value
+		for row in cursor:
+			data_type = row['data_type']
+			property_name = row['property']
+			value = row['value']
+			try:
+				converted_value = (
+					[convert_value(v.strip(), data_type) for v in value.split(',')]
+					if row['is_array'] 
+					else convert_value(value, data_type)
+				)
+			except:
+				raise ValueError(f'''Invalid value for property "{property_name}" with data type "{data_type}": {value} ''')
+			
+			# Save value in Flask config and in a dict to return for the web app
+			app.config[property_name] = converted_value
+			db_config[property_name] = converted_value
 
 	return db_config
 
 # Call it
 get_config_from_db()
+
+# Establish global scope sessionmakers to reuse at the function scope
+schema = climberdb_utils.get_schema()
+read_engine = climberdb_utils.get_engine(access='read', schema=schema)
+write_engine = climberdb_utils.get_engine(access='write', schema=schema)
+ReadSession = sessionmaker(read_engine)
+WriteSession = sessionmaker(write_engine)
+
+# Get DB model in app's global scope
+tables = climberdb_utils.get_tables()
 
 
 def get_content_dir(dirname='exports'):
@@ -211,10 +219,11 @@ def add_header(response):
 
 def validate_password(username, password):	
 	# Get user password from db
-	engine = get_engine()
+	#engine = climberdb_utils.get_engine()
 	hashed_password = ''
-	with engine.connect() as conn:
-		cursor = conn.execute(f'''SELECT hashed_password FROM users WHERE ad_username='{username}';''')
+	with read_engine.connect() as conn:
+		statement = sqlatext('''SELECT hashed_password FROM users WHERE ad_username=:username''')
+		cursor = conn.execute(statement, {'username': username})
 		result = cursor.first()
 		# If the result is an empty list, the user doesn't exist
 		if not result:
@@ -256,9 +265,11 @@ def add_header(response):
 # **for testing**
 @app.route('/flask/test', methods=['GET', 'POST'])
 def test():
-	
-	return os.getlogin()
 
+	if request.files:
+		return 'true'
+	else:
+		return 'false'
 
 @app.route('/flask/config', methods=['POST'])
 def db_config_endpoint():
@@ -286,8 +297,8 @@ def query_user_info(username):
 	if not '\\prod\\' in os.path.abspath(__file__):
 		sql += ' AND user_role_code=4' 
 
-	engine = get_engine()
-	result = engine.execute(sqlatext(sql), {'username': username})
+	#engine = climberdb_utils.get_engine()
+	result = read_engine.execute(sqlatext(sql), {'username': username})
 	if result.rowcount == 0:
 		return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
 	else:
@@ -335,8 +346,9 @@ def set_password():
 	hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), salt)
 	
 	# Update db
-	engine = get_engine()
-	engine.execute(f'''UPDATE users SET hashed_password='{hashed_password.decode()}', user_status_code=2 WHERE ad_username='{username}';''')
+	#engine = climberdb_utils.get_engine()
+	statement = sqlatext('''UPDATE users SET hashed_password=:password, user_status_code=2 WHERE ad_username=:username''')
+	write_engine.execute(statement, {'password': hashed_password.decode(), 'username': username})
 
 	return 'true'
 
@@ -459,9 +471,9 @@ def send_reset_password_request():
 	
 	send_password_email(data, html)
 
-	engine = get_engine()
+	#engine = climberdb_utils.get_engine()
 	try:
-		engine.execute(sqlatext('UPDATE users SET user_status_code=1 WHERE id=:user_id'), {'user_id': user_id})
+		write_engine.execute(sqlatext('UPDATE users SET user_status_code=1 WHERE id=:user_id'), {'user_id': user_id})
 	except Exception as e:
 		raise RuntimeError(f'Failed to update user status with error: {e}')
 
@@ -606,49 +618,51 @@ def export_special_use_permit():
 
 	# Query data from DB
 	expedition_member_ids = permit_data.keys()
-	engine = get_engine()
+	#engine = climberdb_utils.get_engine()
 	expedition_member_id_string = ','.join(expedition_member_ids)
-	cursor = engine.execute(f'''
+	statement = sqlatext('''
 		SELECT * FROM special_use_permit_view 
-		WHERE expedition_member_id IN ({expedition_member_id_string})
+		WHERE expedition_member_id IN (:expedition_member_ids)
 	''')
-	
-	sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
-	pdf_path = os.path.join(os.path.dirname(__file__), 'assets', sup_permit_filename)
-
-	output_pdfs = []	
-	for row in cursor:
-		member_id = str(row.expedition_member_id)
-		form_prefix = f'id_{member_id}'
-
-		# Combine the client-side and DB data
-		member_data = dict(**permit_data[member_id], **row)
+	with read_engine.connect():
+		cursor = read_engine.execute(statement, {'expedition_member_ids': expedition_member_id_string})
 		
-		reader = PdfReader(pdf_path)
-		writer = PdfWriter()
+		sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
+		pdf_path = os.path.join(os.path.dirname(__file__), 'assets', sup_permit_filename)
 
-		# Get the index of the first page of this permit. This is the 0th page of the permit
-		#	so it will always be the number of pages before pages for this permit are added
-		data_page_index = len(writer.pages)
-		
-		# Add pages for this permit. clone_document_from_reader is the only method that 
-		#	copies the form and all other PDF structural components such that 
-		writer.clone_document_from_reader(reader)
+		output_pdfs = []	
+		for row in cursor:
+			member_id = str(row.expedition_member_id)
+			form_prefix = f'id_{member_id}'
 
-		writer.update_page_form_field_values(writer.pages[data_page_index], member_data)
-		
-		# If each permit is a separate PDF or if there's only one to write, write this one to disk
-		climber_name = re.sub(r'\W+', '_', member_data['climber_name']).lower()
-		pdf_filename = f'special_use_permit_{expedition_id}_{climber_name}.pdf'
-		output_pdf = os.path.join(get_content_dir('exports'), pdf_filename)
-		with open(output_pdf, 'wb') as f:
-			writer.write(f)
-		
-		# If there's only one PDF to create, just return that path
-		if len(expedition_member_ids) == 1:
-			return 'exports/' + pdf_filename
-		else:
-			output_pdfs.append(output_pdf)
+			# Combine the client-side and DB data
+			member_data = dict(**permit_data[member_id], **row)
+			
+			reader = PdfReader(pdf_path)
+			writer = PdfWriter()
+
+			# Get the index of the first page of this permit. This is the 0th page of the permit
+			#	so it will always be the number of pages before pages for this permit are added
+			data_page_index = len(writer.pages)
+			
+			# Add pages for this permit. clone_document_from_reader is the only method that 
+			#	copies the form and all other PDF structural components such that 
+			writer.clone_document_from_reader(reader)
+
+			writer.update_page_form_field_values(writer.pages[data_page_index], member_data)
+			
+			# If each permit is a separate PDF or if there's only one to write, write this one to disk
+			climber_name = re.sub(r'\W+', '_', member_data['climber_name']).lower()
+			pdf_filename = f'special_use_permit_{expedition_id}_{climber_name}.pdf'
+			output_pdf = os.path.join(get_content_dir('exports'), pdf_filename)
+			with open(output_pdf, 'wb') as f:
+				writer.write(f)
+			
+			# If there's only one PDF to create, just return that path
+			if len(expedition_member_ids) == 1:
+				return 'exports/' + pdf_filename
+			else:
+				output_pdfs.append(output_pdf)
 
 	if len(output_pdfs) == 0:
 		raise RuntimeError('PDFs could not be created because no expediton_member_ids matached ' + expedition_member_id_string)
@@ -847,28 +861,614 @@ def print_cache_tag():
 
 
 #---------------- DB I/O ---------------------#
-@app.route('/flask/next_permit_number', methods=['POST'])
-def get_next_permit_number():
+
+# helper function to process an ORM class instance into a dictionary
+def orm_to_dict(orm_class_instance: Any, selected_columns:[str]=[], prohibited_columns: dict={}) -> dict:
 	
-	data = request.form
-	if not 'year' in data:
-		raise KeyError('Year not given in request data')
+	prohibited_columns = prohibited_columns or app.config['PHOHIBITED_QUERY_COLUMNS']
+	exclude_columns = prohibited_columns.get(orm_class_instance.__table__.name) or []
+	
+	# If specific columns weren't specified, return all
+	columns = (
+		selected_columns or 
+		[column.name for column in orm_class_instance.__table__.columns]
+	)
+
+	return {
+		column_name: climberdb_utils.sanitize_query_value(getattr(orm_class_instance, column_name))
+		for column_name in columns
+		if column_name not in exclude_columns
+	}
+
+
+# helper function to process results from SQLAlchemy result cursor resulting 
+#	from a .execute() call
+def select_result_to_dict(cursor) -> list:
+	return ([ 
+		{
+			column_name: climberdb_utils.sanitize_query_value(value)
+			for column_name, value in row._asdict().items()
+		} 
+		for row in cursor.all()
+	])
+
+
+# All-purpose SELECT query endpoint
+@app.route('/flask/db/select', methods=['POST'])
+def query_db():
+
+	request_data = request.get_json()	
+
+	sql = request_data.get('sql')
+	where_clauses = request_data.get('where') or {}
+	selects = request_data.get('select') or {}
+	table_names = (
+		request_data.get('tables') or 
+		set([*where_clauses.keys(), *selects.keys()])
+	)
+
+	prohibited_columns = app.config['PHOHIBITED_QUERY_COLUMNS']
+
+	# If raw SQL was passed, execute it
+	with ReadSession() as session:
+		if sql:
+			params = request_data.get('params') or None
+			result = session.execute(sql, params)
+			
+			response_data = select_result_to_dict(result)
+
+		# Otherwise, use the SQLAlchemy ORM
+		elif len(table_names):
+			
+			result = (session
+				.query(*[tables[table_name_] for table_name_ in table_names])
+				.where(*[
+					climberdb_utils.get_where_clause(
+						tables,
+						table_name,
+						where.get('column_name'), 
+						where.get('operator') or '', 
+						where.get('comparand')
+					)
+					for table_name, table_wheres in where_clauses.items() 
+					for where in table_wheres
+					if where.get('column_name')
+				])
+			)
+
+			joins = request_data.get('joins')
+			if joins:
+				for join_ in joins: 
+					left_table = tables[join_.get('left_table')]
+					right_table = tables[join_.get('right_table')]
+					left_table_column = getattr(left_table, join_.get('left_table_column'))
+					right_table_column = getattr(right_table, join_.get('right_table_column'))
+					result = result.join(right_table, left_table_column == right_table_column, isouter=join_.get('is_left'), full=join_.get('is_full'))
+
+			order_by_clauses = request_data.get('order_by')
+			if order_by_clauses:
+				# If there are multiple ORDER BY columns, successive calls to .order_by 
+				#	will modify the result accordingly
+				for order_by in order_by_clauses:
+					table = tables[order_by['table_name']]
+					order = asc # function from sqla
+					if 'order' in order_by:
+						order = asc if order_by['order'].lower().startswith('asc') else desc
+					result = result.order_by(order(getattr(table, order_by['column_name'])))
+
+
+			response_data = []
+			if result.count():
+				for row in result:
+					row_data = {}
+					# If there was more than one table passed to query(), the result will be
+					#	a sqla.engine.row.Row, with separate class instances for each table.
+					#	In that case, iterate through each of them and combine
+					if isinstance(row, sqla_Row): 
+						for orm_instance in row:
+							selected_columns = selects.get(orm_instance.__table__.name) or []
+							row_data = {
+								**row_data, 
+								**orm_to_dict(orm_instance, selected_columns=selected_columns)
+							}
+					else:
+						row_data = orm_to_dict(row)
+					# Add to the list of dicts, which will 
+					response_data.append(row_data)
+		else:
+			raise RuntimeError(
+				'Either "sql", "tables", or "where" given in reequest data. Request data:\n' + 
+				json.dumps(request_data, indent=4)
+			)
+		
+		response = {'data': response_data}
+
+		if 'queryTime' in request_data:
+			response['queryTime'] = request_data['queryTime']
+
+		return jsonify(response)
+
+
+
+@app.route('/flask/db/select/rangers', methods=['POST'])
+def query_rangers():
+
+	with ReadSession() as session:
+		users = tables['users']
+		stmt = (
+			select(
+				users.id,
+				(users.first_name + ' ' + users.last_name).label('full_name')
+			).where(
+				users.user_role_code == 2, # rangers
+				users.user_status_code == 2 # enabled
+			).order_by('full_name')
+		)
+		result = session.execute(stmt)
+		response = {'data': select_result_to_dict(result)}
+
+		return jsonify(response)
+
+
+@app.route('/flask/db/select/climbers', methods=['POST'])
+def query_climbers():
+
+	request_data = request.get_json()
+	climber_id = request_data.get('climber_id')
+	
+	# If a climber_id was given, just return the climber
+	if climber_id:
+		with ReadSession() as session:
+			climbers = tables['climber_info_view']
+			row = session.get(climbers, climber_id)
+			# If a single ID was invalid, ROLLBACK the entire transaction
+			if not row:
+				raise RuntimeError(f'No climber with ID {climber_id} found')
+			return jsonify({
+				'data': [orm_to_dict(row)]
+			})
+
+	search_string = request_data.get('search_string')
+	is_guide = request_data.get('is_guide')
+	is_7_day = request_data.get('is_7_day')
+	query_all_fields = request_data.get('query_all_fields')
+
+	where_clause = ''
+	if is_7_day:
+		where_clause += f' WHERE {schema}.climber_info_view.id IN (SELECT climber_id FROM {schema}.seven_day_rule_view)'
+	if is_guide:
+		where_clause += ' AND is_guide' if where_clause else ' WHERE is_guide'
+
+
+	# for the climbers page, results are paginated and only n_records climbers 
+	#	are returned at a time. If this option is specified, get records from 
+	#	min_index to min_index + n_records, as numbered in alphabetical order 
+	#	by name
+	min_index = int(request_data.get('min_index') or 1)
+	n_records = int(request_data.get('n_records') or 0)
+	index_where = ''
+	if n_records:
+		index_where = f'WHERE row_number BETWEEN :min_index AND :max_index'
+
+	query_fields = '*' if query_all_fields else 'first_name, middle_name, last_name, full_name'
+	sql = ''
+	if search_string:
+		core_sql = f'''
+			SELECT
+				*	
+			FROM (
+				SELECT 
+					id, 
+					min(sort_order) AS first_sort_order
+				FROM (
+					WITH climber_names AS (
+						SELECT 
+							*,
+							regexp_replace(first_name, '\\W', '', 'g') AS re_first_name, 
+							regexp_replace(middle_name, '\\W', '', 'g') AS re_middle_name, 
+							regexp_replace(last_name, '\\W', '', 'g') AS re_last_name,
+							regexp_replace(full_name, '\\W', '', 'g') AS re_full_name
+						FROM {schema}.climber_info_view
+					)
+					SELECT *, 1 AS sort_order FROM climber_names WHERE 
+						re_first_name ILIKE :search_string || '%%' 
+					UNION ALL 
+					SELECT *, 2 AS sort_order FROM climber_names WHERE 
+						re_first_name || re_middle_name ILIKE :search_string || '%%' AND
+						re_first_name NOT ILIKE :search_string || '%%'
+					UNION ALL 
+					SELECT *, 3 AS sort_order FROM climber_names WHERE 
+						re_first_name || re_last_name ILIKE :search_string || '%%' AND
+						(
+							re_first_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_middle_name NOT ILIKE :search_string || '%%'
+						)
+					UNION ALL
+					SELECT *, 4 AS sort_order FROM climber_names WHERE 
+						re_last_name ILIKE :search_string || '%%' AND
+						(
+							re_first_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_middle_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_last_name NOT ILIKE :search_string || '%%'
+						)
+					UNION ALL 
+					SELECT *, 5 AS sort_order FROM climber_names WHERE 
+						re_middle_name || re_last_name ILIKE :search_string || '%%' AND 
+						re_middle_name IS NOT NULL AND 
+						(
+							re_first_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_middle_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_last_name NOT ILIKE :search_string || '%%' OR 
+							re_last_name NOT ILIKE :search_string || '%%'
+						)
+					UNION ALL
+					SELECT *, 6 AS sort_order FROM climber_names WHERE 
+						similarity(re_full_name, :search_string || '%%') > 0.5 AND 
+						(
+							re_first_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_middle_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_last_name NOT ILIKE :search_string || '%%' OR 
+							re_last_name NOT ILIKE :search_string || '%%' OR
+							re_middle_name || re_last_name NOT ILIKE :search_string || '%%'
+						)
+				) t 
+				GROUP BY full_name, id
+			) gb 
+			JOIN {schema}.climber_info_view ON gb.id = climber_info_view.id 
+			{where_clause}
+			ORDER BY first_sort_order::text || full_name
+		'''
+
 	else:
-		year = int(data['year'])
+		core_sql = f'''
+			SELECT 
+				*  
+			FROM {schema}.climber_info_view 
+			{where_clause}
+		'''
 
-	engine = get_engine()
+	# If n_records given, execute the core sql as a subquery and return
+	#	n_records starting with the specified min_index
+	if n_records:
+		sql = f''' 
+			SELECT * FROM (
+				SELECT
+					row_number() over(),
+					*	
+				FROM 
+					( {core_sql} ) t1
+			) t2
+			{index_where}
+			ORDER BY row_number
 
+		'''
+	else:
+		sql = core_sql
+
+	return_count = request_data.get('return_count')
+	with ReadSession() as session:
+		params = {
+			'search_string': re.sub(r'\W', '', search_string),
+			'is_guide': is_guide,
+			'is_7_day': is_7_day,
+			'min_index': min_index,
+			'max_index': (min_index + n_records - 1) if n_records else '' 
+		}
+		result = session.execute(sqlatext(sql), params)
+		response = {
+			'data': select_result_to_dict(result),
+			'queryTime': request_data.get('queryTime')
+		}
+		if return_count:
+			cursor = session.execute(sqlatext(f'SELECT count(*) FROM ({core_sql}) _'), params)
+			response['count'] = cursor.first().count
+		
+		return jsonify(response)
+
+
+
+@app.route('/flask/db/select/expeditions', methods=['POST'])
+def query_expeditions():
+
+	request_data = request.get_json()
+
+	search_string = request_data.get('search_string')
+	where_clauses = request_data.get('where') or []
+	search_start_date = request_data.get('search_start_date')
+	#expedition_name_in_where = len(list(filter(lambda x: x.get('column_name') == 'expedition_name', where_clauses)))
+	if where_clauses:
+		where_clauses = [
+			climberdb_utils.get_where_clause(
+				tables,
+				'expedition_info_view',
+				where.get('column_name'), 
+				where.get('operator') or '', 
+				where.get('comparand')
+			) 
+			for where in where_clauses
+		]
+
+	view = tables['expedition_info_view']
+	if search_start_date:
+		where_clauses.append(
+			sqlafunc.coalesce(view.planned_departure_date, view.actual_departure_date) >= search_start_date
+		)
+
+	
+	similarity_select = []
+	order_by = [asc(view.expedition_name)]
+	if search_string:# and not expedition_name_in_where:
+		# define the similarity() epxression for reuse 
+		similarity = sqlafunc.similarity(
+			sqlafunc.lower(view.expedition_name), 
+			search_string.lower()
+		)
+		# CASE statement used for ORDER BY and as a SELECTed column
+		similarity_case = case(
+			# boost expeditions that start with search string by adding 1 to the similarity score
+			(view.expedition_name.ilike(f'{search_string}%'), 1 + similarity),
+			else_=similarity
+		).label('search_score')
+		order_by = [desc(similarity_case), asc(view.expedition_name)]
+		# Only select expeditions where the similarity() score is greater than 0.3 (similarity() returns 
+		#	scores between 0 and 1 where 1 is the best match)
+		where_clauses.append(similarity_case > 0.3)
+		
+		# The similarity SELECT column needs to be wrapped in a list so in case we never entered this 'if'
+		#	block, the destructuring *[] idiom can be silently ignored. If we did get here, the list will
+		#	be unpacked and the similar CASE clause will be added to the SELECTed columns
+		similarity_select = [similarity_case]
+
+	statement = select(
+			view.expedition_id,
+			view.expedition_name,
+			view.group_status_code,
+			*similarity_select
+		).where(
+			*where_clauses
+		).order_by(
+			*order_by
+		).distinct()
+	
+	with ReadSession() as session: 
+		result = session.execute(statement)
+
+		return jsonify({
+			'data': select_result_to_dict(result),
+			'queryTime': request_data.get('queryTime')
+		})
+
+
+@app.route('/flask/db/save', methods=['POST'])
+def save_db_edits():
+	"""
+	Generic endpoinr to process INSERT and UPDATE requests. The INSERT data come in as 
+	{
+		root_table: [
+			{
+				root_data_1: {
+					values: {...}, 
+					children: {
+						child_table: [
+							{
+								values: {...},
+								child_table_1: {...}
+							...
+
+	UPDATE data come in as 
+	{
+		table_1: [
+			{field_1: value_1, field_2: value_2},
+			{field_1: value_1, field_2: value_2}
+			...
+		],
+		table_2: [
+			...
+		]
+	}
+	"""
+	request_data = json.loads(request.form['data'])
+	foreign_columns = request_data.get('foreign_columns') or {}
+	year = request_data.get('year')
+
+	# For inserts, map the HTML element IDs to database IDs
+	inserted_rows = {}
+	
+	# For collecting filenames from INSERTS to save files later
+	attachments = {}
+
+	# Helper function to recursively create inserts
+	def walk_inserts(data, parent_row):
+		# data should be dictionary with items as {table_name: [values]}
+		for table_name, table_data_list in data.items():
+			
+			# Get the ORM class factory
+			table = tables[table_name]
+			
+			# Loop through each list item, which is a dictionary of {field: value}
+			for table_data in table_data_list:
+				html_id = table_data.get('html_id')
+				
+				values = table_data.get('values')
+				if not values:
+					continue
+				
+				if table_name == 'expedition_members' and not 'permit_number' in values:
+					if not year:
+						raise ValueError('Year not specified in request data but permit number was not in insert data')
+					values['permit_number'] = f'TKA-{str(year)[-2:]}-{get_next_permit_number(year)}'
+				
+				if table_name == 'attachments':
+					filename = values.get('client_filename')
+					if not filename:
+						raise ValueError(f'Filename not specified in request data for #{html_id}')
+					attachments[filename] = html_id
+
+				# Create the row
+				child_row = table(**values)
+				
+				# Add to the parent, which will relate the records by the appropriate IDs
+				#	The automapped class factory automatically creates the relationship, 
+				#	naming it <child_table_name>_collection
+				getattr(parent_row, f'{table_name}_collection')\
+					.append(child_row)
+
+				# For now, just map the ID to ORM class instance. Once the data are inserted,
+				#	the database ID will automatically be set
+				inserted_rows[html_id] = child_row
+
+				# recurse through the tree
+				walk_inserts(table_data.get('children') or {}, child_row)
+
+
+	with WriteSession() as session, session.begin():
+
+		# Loop through each parent table at the root of the inserts dicitionary
+		#	and iterate successively through each child record
+		inserts = request_data.get('inserts') or {}
+		for root_table_name, root_data_list in inserts.items():
+			for root_data in root_data_list:
+				root_table = tables[root_table_name]
+				values = root_data.get('values')
+				root_id = root_data.get('id')
+				# If there were values defined in the insert dict, 
+				#	this is a new record that needs to be inserted
+				if values:
+					root_row = root_table(**values)
+					session.add(root_row) # add as an INSERT
+					html_id = root_data.get('html_id')
+					if html_id:
+						inserted_rows[html_id] = root_row
+
+				# If there's an 'id' property, the parent already exists
+				elif root_id:
+					root_row = session.get(root_table, root_id)
+				else:
+					raise RuntimeError(f'No "values" or "id" in request for table "{root_table_name}"')
+
+				children = root_data.get('children') or {}
+
+				walk_inserts(children, root_row)
+
+		# If files were sent in the request but no attachment information was, raise
+		if len(attachments) == 0 and request.files:
+			raise RuntimeError('A file was sent to server but there was no attachment information')
+		
+		# Save attachments to server
+		for filename, html_id in attachments.items():
+			# Save the file
+			file_path = save_attachment_to_file(filename, request.files.get(filename))
+
+			# Set the value of the ORM attachment 
+			inserted_rows[html_id].file_path = file_path
+
+		# Save an updates to existing records
+		updates = request_data.get('updates') or {}
+		for table_name, update_data_dict in updates.items():
+			table = tables[table_name]
+			for update_id, update_data in update_data_dict.items():
+				session.query(table).where(table.id == update_id)\
+					.update(update_data)
+
+		# Send the changes to the DB. To get the foreign keys in the next *for* 
+		#	block, the data have to be flushed. The IDs also have to be retrieved 
+		# 	within the with/as block because the session has to still be active 
+		session.flush()
+
+		# Get the table name, HTML element ID, database ID, and foreign keys as a 
+		#	dictionary for each INSERTed row
+		html_ids = []
+		for html_id, row in inserted_rows.items():
+			table_name = row.__class__.__table__.name
+			foreign_keys = {
+				d['foreignTable']: getattr(row, d['column']) 
+				for d 
+				in foreign_columns.get(row.__class__.__table__.name) or []
+			}
+			html_ids.append({
+				'table_name': table_name, 
+				'html_id': html_id, 
+				'db_id': row.id,
+				'foreign_keys': foreign_keys
+			})
+		
+	
+	return {'data': html_ids}
+
+
+@app.route('/flask/db/delete/by_id', methods=['POST'])
+def delete_by_id():
+
+	request_data = request.get_json()
+
+	table_name = request_data.get('table_name')
+	if not table_name:
+		raise ValueError('table_name not specified in request data')
+
+	ids = request_data.get('db_ids')
+	if not ids:
+		raise ValueError('"db_ids" not specified in request data')
+	try:
+		id_list = (
+			# If it's a list, make sure they're all integers
+			[int(i) for i in ids] 
+			if isinstance(ids, list)
+			else [int(ids)] # otherwise, just make it a list of length 1
+		)
+	except ValueError:
+		raise ValueError('Invalid ID in id_list: ' + str(ids))
+
+	table = tables.get(table_name)
+	if not table:
+		raise ValueError(f'The table "{table_name}" does not exist')
+
+	returning = request_data.get('returning')
+
+	# For collecting values that would be in RETURNING clauses.
+	#	The dict is in the form { table_name: [{column: value}] }
+	returned = {}
+
+	# Execute deletes within a transaction so an error will ROLLBACK 
+	#	any would-be successful deletes
+	with WriteSession() as session, session.begin():
+		for table_id in id_list:
+			# Get the row by ID
+			row = session.get(table, table_id)	
+			# If a single ID was invalid, ROLLBACK the entire transaction
+			if not row:
+				raise RuntimeError(f'No {table_name} row with ID {table_id} found')
+			
+			if returning:
+				if not table_name in returned:
+					returned[table_name] = []
+				returned[table_name].append(
+					 {
+					 	column_name: climberdb_utils.sanitize_query_value(getattr(row, column_name)) 
+					 	for column_name in returning[table_name]
+					 } 
+				)
+			session.delete(row)
+
+	return jsonify({
+		'data': returned
+	})
+
+
+def get_next_permit_number(year: int) -> str:
+	"""
+	Generate the next permit number for a given year. 
+	"""
 	sql = sqlatext(f'''
 		SELECT 
-		max(expedition_members.permit_number) AS max_permit 
-		FROM expedition_members 
-		JOIN expeditions ON expedition_members.expedition_id=expeditions.id
+		max(m.permit_number) AS max_permit 
+		FROM {schema}.expedition_members m
+		JOIN {schema}.expeditions e ON m.expedition_id=e.id
 		WHERE 
 			extract(year FROM planned_departure_date)=:full_year AND
-			expedition_members.permit_number LIKE :permit_search_str
+			m.permit_number LIKE :permit_search_str
 	''')
-	with engine.connect() as conn:
-		cursor = conn.execute(sql, {'full_year': year, 'permit_search_str': f'TKA-{str(year)[-2:]}-%'})
+	with ReadSession() as session:
+		cursor = session.execute(sql, {'full_year': year, 'permit_search_str': f'TKA-{str(year)[-2:]}-%'})
 		row = cursor.first()
 		if row:
 			# Permit format: TKA-YY-####. Just return just the number + 1
@@ -877,18 +1477,43 @@ def get_next_permit_number():
 			raise RuntimeError('Failed to get next permit number')
 
 
+@app.route('/flask/next_permit_number', methods=['POST'])
+def request_next_permit_number():
+	
+	data = request.form
+	if not 'year' in data:
+		raise KeyError('Year not given in request data')
+	else:
+		year = int(data['year'])
+
+	return get_next_permit_number()
+
+
+
+
+def save_attachment_to_file(client_filename: str, uploaded_file: FileStorage) -> str:
+	"""
+	Save a file passed to the server
+	"""
+	client_basename, extension = os.path.splitext(client_filename)
+	server_filename = str(uuid4()) + extension	
+	file_path = os.path.join(get_content_dir('attachments'), server_filename)
+	request.files[client_filename].save(file_path)
+
+	return os.path.abspath(file_path)
+
+
 @app.route('/flask/attachments/add_expedition_member_files', methods=['POST'])
 def save_attachment():
 	
 	attachment_data = json.loads(request.form['attachment_data'])
-	engine = get_engine()
+	#engine = climberdb_utils.get_engine()
 	failed_files = []
 	attachment_ids = [] # return to set UI element .data() attributes
-	with engine.connect() as conn:
+	with write_engine.connect() as conn:
 		for filename, data in attachment_data.items():
 			try:
 				client_filename = data['client_filename']
-				uploaded_files = request.files[client_filename]
 				client_basename, extension = os.path.splitext(client_filename)
 				server_filename = str(uuid4()) + extension	
 				file_path = os.path.join(get_content_dir('attachments'), server_filename)
@@ -896,7 +1521,7 @@ def save_attachment():
 				request.files[client_filename].save(file_path)
 				sorted_columns = sorted(data.keys())
 				sql = f'''
-					INSERT INTO attachments ({','.join(sorted_columns)}) 
+					INSERT INTO {schema}.attachments ({','.join(sorted_columns)}) 
 					VALUES ({','.join([':' + k for k in sorted_columns])})
 					RETURNING id
 				'''
@@ -949,14 +1574,14 @@ def merge_climbers():
 	if not 'merge_climber_id' in data:
 		raise ValueError('selected_climber_id was not specified')
 	
-	engine = get_engine()
-	with engine.connect() as conn:
+	engine = climberdb_utils.get_engine()
+	with write_engine.connect() as conn:
 		# First, update the expedition_member records for the climber to merge. To prevent duplicate 
 		#	expedition member entries when someone tries to merge two climbers that are on at least
 		#	one expedition together, filter out expeditions they both belong to. In practice, this 
 		# 	shouldn't ever be the case but it is possible
 		update_result = conn.execute(
-			sqlatext(f'''
+			sqlatext('''
 				UPDATE expedition_members 
 				SET climber_id=:selected_climber_id 
 				WHERE 
@@ -970,7 +1595,7 @@ def merge_climbers():
 		# expedition_member records have now been transferred so the climber record to merge
 		#	can now be safely deleted
 		delete_result = conn.execute(
-			sqlatext(f'''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
+			sqlatext('''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
 			data
 		)
 

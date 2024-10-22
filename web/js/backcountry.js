@@ -24,7 +24,6 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		this.defaultMapCenter = [63, -150.9];
 		this.defaultMapZoom = 10;
 		this.maxInitialMapZoom = 12; // don't zoom in past this level when fitting map bounds to marker
-		this.locationCardIndexSelector = '#locations-accordion .card:not(.cloneable)';
 		return this;
 	}
 
@@ -492,163 +491,6 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	}
 
 
-	saveEdits() {
-		
-		var sqlStatements = [],
-			sqlParameters = [];
-
-		if (!this.validateEdits()) return; // Error message already shown in validateEdits()
-
-		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
-		const username = this.userInfo.ad_username;
-		
-		// collect info about inserts so attributes can be changes such that future edits are treated as updates
-		var inserts = [];
-
-		const attachmentsDeferred = this.processAttachments();
-
-		// determine if this is a new expedition or not
-		const expeditionID = $('#input-expedition_name').data('table-id') || null;
-		const isNewExpedition = expeditionID === undefined;
-
-		// get expedition table edits
-		var expeditionValues = [true]; 
-		var expeditionFields = ['is_backcountry']; 
-		for (const el of $('#expedition-data-container .input-field.dirty')) {
-			expeditionValues.push(this.getInputFieldValue($(el)));
-			expeditionFields.push(el.name);
-		}
-		if (expeditionValues.length) {
-			// If this is a new expedition, make sure group status gets saved
-			if (!expeditionID) $('#input-group_status').addClass('dirty');
-
-			let fieldValues = Object.fromEntries(expeditionFields.map((f, i) => [f, expeditionValues[i]]));
-			let [sql, parameters] = this.valuesToSQL(fieldValues, 'expeditions', now, username, {updateID: expeditionID || null});
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-
-			if (sql.startsWith('INSERT')) {
-				inserts.push({container: $('#expedition-data-container'), tableName: 'expeditions'})
-			}
-		}
-
-		// Transactions and routes might have edits without expedition members having any, so loop 
-		//	through each expedition member card, regardless of whether it has any dirty inputs
-		for (const el of $('#expedition-members-accordion .card:not(.cloneable)')) {
-			const $card = $(el);
-			const [statements, params] = this.getExpeditionMemberSQL($card, expeditionID, inserts, now, username);
-			sqlStatements = [...sqlStatements, ...statements];
-			sqlParameters = [...sqlParameters, ...params];
-		}
-
-		// Itinerary locations
-		for (const el of $(this.locationCardIndexSelector)) {
-			const $card = $(el);
-			const $inputs = $card.find('.input-field.dirty');
-			if ($inputs.length) {
-				const [sql, parameters] = this.inputsToSQL(
-					$card.find('.card-body'),
-					'itinerary_locations', 
-					now, 
-					username, 
-					{
-						updateID: $card.data('table-id') || null, 
-						foreignIDs: {
-							expeditions: expeditionID, 
-						},
-						insertArray: inserts
-					}
-				);
-				sqlStatements.push(sql);
-				sqlParameters.push(parameters);
-			}
-		}
-
-		// CMCs
-		for (const li of $('#cmc-list li.data-list-item:not(.cloneable)').has('.input-field.dirty')) {
-			const dbID = $(li).data('table-id');
-			const [sql, parameters] = this.inputsToSQL(
-				li, 
-				'cmc_checkout', 
-				now, 
-				username, 
-				{
-					updateID: dbID || null,
-					foreignIDs: {expeditions: expeditionID},
-					insertArray: inserts
-				}
-			);
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-		}
-		
-		// Comms
-		for (const li of $('#comms-list li.data-list-item:not(.cloneable)').has('.input-field.dirty')) {
-			const dbID = $(li).data('table-id');
-			$(li).find('.input-field[name=expedition_member_id]')
-				.addClass('dirty'); // force expedition_member_id field to appear in values so it isn't included in foregin table clauses
-			const [sql, parameters] = this.inputsToSQL(
-				li, 
-				'communication_devices', 
-				now, 
-				username, 
-				{
-					updateID: dbID || null,
-					foreignIDs: {expeditions: expeditionID},
-					insertArray: inserts
-				}
-			);
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-		}
-		
-		// Wait until attachments finish
-		return $.when(attachmentsDeferred).then(attachmentResponse => {
-			// If the only changes were new attachments, exit
-			if (!$('.dirty').length) {
-				hideLoadingIndicator();
-				const expeditionID = this.expeditionInfo.expeditions.id;
-				if (expeditionID) this.queryExpedition(expeditionID, {showOnLoadWarnings: false}); //suppress flagged expedition member warnings
-				return $.Deferred().resolve();
-			}
-			if (attachmentResponse.failed_files.length) {
-				hideLoadingIndicator();
-				return $.Deferred().reject();
-			}
-
-			return $.post({ 
-				url: 'climberdb.php',
-				data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
-				cache: false
-			}).done(queryResultString => {
-				if (climberDB.queryReturnedError(queryResultString)) { 
-					showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists.`, 'Unexpected error');
-					return;
-				} else {
-					const result = $.parseJSON(queryResultString)
-						.filter(row => row != null);
-					const expeditionID = this.setInsertedIDs(result, inserts);
-
-					// update in-memory data for each edited input
-					this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
-
-
-					// Hide the save button again since there aren't any edits
-					$('#save-expedition-button').ariaHide(true);
-					// but open the reports modal button since there's something to show
-					$('#open-reports-modal-button, #show-cache-tag-modal-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
-
-				}
-			}).fail((xhr, status, error) => {
-				showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-				// roll back in-memory data
-			}).always(() => {
-			 	this.hideLoadingIndicator();
-			});
-		})
-	}
-
-
 	/*
 	Thin wrapper for ClimberDBExpeditions to set the locations on the map and 
 	update card headers
@@ -683,34 +525,41 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		super.init().then(() => {
 			let lookupDeferreds = [];
 			lookupDeferreds.push(
-				this.queryDB(`TABLE ${this.dbSchema}.backcountry_location_codes`)
-					.done(result => {
-						// No need to check for errors
-						for (const {code, name, latitude, longitude} of $.parseJSON(result)) {
-							this.locationCoordinates[code] = {
-								name: name,
-								latitude: latitude, 
-								longitude: longitude
-							}
+				this.queryDB({
+					tables: ['backcountry_location_codes'], 
+					order_by: [{table_name: 'backcountry_location_codes', column_name: 'sort_order'}]
+				}).done(result => {
+					if (this.pythonReturnedError(result)) {
+						showModal('An error occurred while retrieving lookup values from the database: ' + result, 'Database Error');
+						return;
+					}
+					for (const {code, name, latitude, longitude} of result.data) {
+						this.locationCoordinates[code] = {
+							name: name,
+							latitude: latitude, 
+							longitude: longitude
 						}
-					})
+					}
+				})
 			);
 
 			lookupDeferreds.push(
-				this.queryDB(`SELECT code, name FROM ${this.dbSchema}.group_status_codes WHERE is_bc_status ORDER BY sort_order`)
-					.done(result => {
-						const $selects = $('.group-status-option-field')
-						
+				this.queryDB({
+					where: {group_status_codes: [{column_name: 'is_bc_status'}]},
+					orderBy: [{table_name: 'group_status_codes', column_name: 'sort_order'}]
+				}).done(result => {
+					const $selects = $('.group-status-option-field')
+					
+					$selects.append(
+						'<option value="">Party member status</option>'
+					);
+					for (const {code, name} of result.data) {
 						$selects.append(
-							'<option value="">Party member status</option>'
+							$(`<option value="${code}">${name}</option>`)
 						);
-						for (const {code, name} of $.parseJSON(result)) {
-							$selects.append(
-								$(`<option value="${code}">${name}</option>`)
-							);
-						}
+					}
 
-						$selects.val($selects.data('default-value'));
+					$selects.val($selects.data('default-value'));
 				})
 			)
 		})

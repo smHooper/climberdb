@@ -56,6 +56,7 @@ function runCmd($cmd) {
 		array('bypass_shell' => false)
 	);
 
+	$returnCode = proc_close($process);
 	if (is_resource($process)) {
 
 	    $stdout = stream_get_contents($pipes[1]);
@@ -64,7 +65,7 @@ function runCmd($cmd) {
 	    $stderr = stream_get_contents($pipes[2]);
 	    fclose($pipes[2]);
 
-	    $returnCode = proc_close($process);
+	    
 
 		return array(
 			"stdout" => $stdout,

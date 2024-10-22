@@ -1202,14 +1202,14 @@ class ClimberDBQuery extends ClimberDB {
 	Helper function to submit SQL and optionally show result. This needs to be separated from runQuery() so that custom 
 	query processing functions can still use the same code
 	*/
-	submitQuery(sql, {queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
-		return this.queryDB(sql.replace(/\{schema\}/g, this.dbSchema))
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
+	submitQuery(sql, {sqlParameters={}, queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
+		return this.queryDB({sql: sql.replace(/\{schema\}/g, this.dbSchema), sqlParameters: sqlParameters})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
 					const queryDisplayName = $('.query-option.selected').text();
-					showModal(`There was a problem with the '${queryDisplayName}' query: ${queryResultString}`, 'Unexpected Error');
+					showModal(`There was a problem with the '${queryDisplayName}' query: <br><br>${response}`, 'Unexpected Error');
 				} else if (showResult) {
-					this.result = $.parseJSON(queryResultString);
+					this.result = response.data || [];
 					this.ancillaryResult = [];
 					
 					const queryInfo = this.queries[queryName];
@@ -1227,7 +1227,7 @@ class ClimberDBQuery extends ClimberDB {
 	/*
 	Execut a simple query. Anything surrounded by {} is assumed to be a field name that should be replaced with the value of the field whose name attribute is field
 	*/
-	runQuery(queryName, {showResult=true}={}) {
+	runQuery(queryName, {sqlParameters={}, showResult=true}={}) {
 
 		if (!this.validateFields(queryName)) return;
 
@@ -1237,7 +1237,7 @@ class ClimberDBQuery extends ClimberDB {
 			sql = sql.replaceAll(`{${el.name}}`, this.getInputFieldValue($(el)));
 		}
 
-		return this.submitQuery(sql, {queryName: queryName, showResult: showResult});
+		return this.submitQuery(sql, {sqlParameters: sqlParameters, queryName: queryName, showResult: showResult});
 	}
 
 
@@ -1269,16 +1269,16 @@ class ClimberDBQuery extends ClimberDB {
 
 	queryGuidedClientStatus() {
 		this.runQuery('guide_company_client_status')
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					showModal('An unexpected error occurred: ' + queryResultString, 'Unexpected Error');
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					showModal('An unexpected error occurred: <br><br>' + response, 'Unexpected Error');
 				} else {
 
 					// If the user is exporting, the export needs briefings as well so just query it now
 					this.runQuery('guided_company_briefings', {showResult: false})
 						.done(queryResultString => {
 							try {
-								this.ancillaryResult = $.parseJSON(queryResultString);
+								this.ancillaryResult = response.data || [];
 							} catch {
 								print(`Failed to query briefings. Result: ${queryResultString.trim()}`)
 							}
@@ -1296,20 +1296,24 @@ class ClimberDBQuery extends ClimberDB {
 		const expeditionSearchOperator = $('#expedition_by_name_id-search_by').val();
 		const expeditionSearchString = $('#expedition_by_name_id-search_string').val();
 		
+		var params = {};
 		var where = [];
 		if (year) {
-			where.push('extract(year FROM planned_departure_date) = ' + year);
+			where.push('extract(year FROM planned_departure_date) = :year');
+			params.year = year;
 		}
+
 		if (expeditionSearchString.length) {
 			const searchString = 
 				expeditionSearchOperator === 'equals' ? expeditionSearchString : 
 				expeditionSearchOperator === 'starts' ? expeditionSearchString + '%' :
 				expeditionSearchOperator === 'ends'   ? '%' + expeditionSearchString :
 				'%' + expeditionSearchString + '%'; // contains
-			where.push(`expedition_name LIKE '${searchString}'`); 
+			where.push(`expedition_name LIKE :search_string`); 
+			params.search_string = searchString;
 		}
 
-		return where;
+		return [where, params];
 	}
 
 
@@ -1324,12 +1328,12 @@ class ClimberDBQuery extends ClimberDB {
 			.siblings()
 				.ariaHide(true);
 
-		const where = this.getExpeditionByNameIDWhere();
+		const [where, sqlParameters] = this.getExpeditionByNameIDWhere();
 		
 		const sql = `SELECT id FROM ${this.dbSchema}.expeditions ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id`;
-		this.queryDB(sql)
+		this.queryDB({sql: sql, sqlParameters: sqlParameters})
 			.done(response => {
-				if (this.queryReturnedError(response)) {
+				if (this.pythonReturnedError(response)) {
 					print('Error querying expedition IDs: '  + response)
 				} else {
 					const $select = $('#expedition_by_name_id-expedition_id');
@@ -1339,11 +1343,11 @@ class ClimberDBQuery extends ClimberDB {
 					
 					// clear previous options
 					$select.find('option').remove();
-					for (const {id} of $.parseJSON(response)) {
+					for (const {id} of response.data || []) {
 						$select.append(`<option value=${id}>${id}</option>`)
 					}
 					
-					// reset previous selection. Only IDs that exist with after the new 
+					// reset previous selection. Only IDs that exist after the new 
 					//	query will be selected
 					$select.val(currentSelection).change();
 				}
@@ -1365,18 +1369,21 @@ class ClimberDBQuery extends ClimberDB {
 	*/
 	queryExpeditionByNameOrID() {
 		const expeditionIDs = $('#expedition_by_name_id-expedition_id').val();
-		const whereClauses = this.getExpeditionByNameIDWhere();
-		const where = 
-			expeditionIDs.length ? ` WHERE expedition_id in (${expeditionIDs.join(',')})` :
-			whereClauses.length ? ' WHERE ' + whereClauses.join(' AND ') :
-			'';
+		let [whereClauses, sqlParameters] = this.getExpeditionByNameIDWhere();
+		let where = '';
+		if (expeditionIDs.length) {
+			where = ` WHERE expedition_id in (:expedition_id_str)`;
+			sqlParameters.expedition_id_str = expeditionIDs.join(',');
+		} else if (whereClauses.length) { 
+			where = ' WHERE ' + whereClauses.join(' AND ');
+		}
 		if (where.length == 0) {
 			showModal('You must enter an expedition name search string or select a year or expedition ID', 'No Query Parameters')
 			return;
 		}
 
 		const sql = this.queries.expedition_by_name_id.sql.replace('{where_clauses}', where);
-		this.submitQuery(sql, 'expedition_by_name_id');
+		this.submitQuery(sql, {sqlParameters: sqlParameters, queryName: 'expedition_by_name_id'});
 	}
 
 
@@ -1560,9 +1567,9 @@ class ClimberDBQuery extends ClimberDB {
 				queryName: 'count_climbers', 
 				showResult: !groupBySelectFields.length || !pivotField //only show the result with the default display function if the result shouldn't be pivoted (raw data or simple group-by)
 			}
-		).done(queryResultString => {
-			if (pivotField && !this.queryReturnedError(queryResultString)) {
-				const result = $.parseJSON(queryResultString);
+		).done(response => {
+			if (pivotField && !this.pythonReturnedError(response)) {
+				const result = response.data || [];
 				let groupValues = {};
 				let pivotValues = [];
 				for (const row of result) {
@@ -1621,11 +1628,11 @@ class ClimberDBQuery extends ClimberDB {
 				) AS year 
 			FROM ${this.dbSchema}.expeditions 
 			ORDER BY 1 DESC`;
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				if (!this.queryReturnedError(queryResultString)) {
+		return this.queryDB({sql: sql})
+			.done(response => {
+				if (!this.pythonReturnedError(response)) {
 					$('.year-select-field.nullable').append(`<option value=" IS NOT NULL">All</option>`);
-					for (const row of $.parseJSON(queryResultString)) {
+					for (const row of response.data || []) {
 						$('.year-select-field:not(.nullable)').append(`<option value=${row.year}>${row.year}</option>`);
 						$('.year-select-field.nullable').append(`<option value="= ${row.year}">${row.year}</option>`);
 					}
@@ -1760,12 +1767,15 @@ class ClimberDBQuery extends ClimberDB {
 				this.configureMainContent();
 
 				// Need guide company info for guide company query exports
-				this.queryDB(`SELECT * FROM ${this.dbSchema}.guide_company_codes WHERE sort_order IS NOT NULL`)
-					.done(queryResultString => {
-						if (this.queryReturnedError(queryResultString)) {
-							print('Failed to get guide company names. Returned result: ' + queryResultString)
+				this.queryDB({
+					where: {
+						guide_company_codes: [{column_name: 'sort_order', operator: 'IS NOT', comparand: 'NULL'}]
+					}
+				}).done(response => {
+						if (this.pythonReturnedError(response)) {
+							print('Failed to get guide company names. Returned result: ' + response)
 						} else {
-							for (const row of $.parseJSON(queryResultString)) {
+							for (const row of response.data || []) {
 								this.guideCompanies[row.code] = {...row}
 							}
 						}

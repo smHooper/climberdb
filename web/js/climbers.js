@@ -348,7 +348,7 @@ class ClimberForm {
 									<button class="generic-button add-card-button" data-target="#emergency-contacts-accordion" title="Add emergency contact">Add contact</button>
 								</div>
 								<div id="emergency-contacts-accordion" class="accordion" data-table-name="emergency_contacts">
-									<div class="card cloneable hidden" id="cloneable-card-emergency-contacts" data-label-template="first_name last_name, relationship">
+									<div class="card cloneable hidden" id="cloneable-card-emergency-contacts" data-table-name="emergency_contacts" data-label-template="first_name last_name, relationship">
 										<div class="card-header" id="cardHeader-emergency-contacts-cloneable">
 											<a class="card-link" data-toggle="collapse" href="#collapse-emergency-contacts-cloneable" data-target="collapse-emergency-contacts-cloneable">
 												<div class="card-link-content">
@@ -574,10 +574,12 @@ class ClimberForm {
 		});
 
 		$('#save-button').click(e => {
-			this.saveEdits()
+			this.saveEditsPython()
 		});
 
-		$('.climber-form .delete-card-button').click(this.onDeleteCardButtonClick);
+		$('.climber-form .delete-card-button').click(e => {
+			this.onDeleteCardButtonClick(e)
+		});
 
 		$('#disable-required-switch-container input[type=checkbox]').change(e => {
 			this.onToggleRequiredChange(e);
@@ -597,32 +599,19 @@ class ClimberForm {
 		// 	The constructor for the climber form is called syncronously so the DB schema
 		//	has not yet been queried. Since these are unlikely to differ from the default
 		//	schema (i.e., public), just query the default
-		$.post({
-			url: 'climberdb.php',
-			data: {
-				action: 'query',
-				queryString: `TABLE country_codes`,
-				db: 'climberdb'
-			}
-		}).done(queryResultString => {
-			for (const row of $.parseJSON(queryResultString)) {
-				// Need to get abbreviation from code for API call
-				this.countryCodes[row.code] = row.short_name;
-			};
-		});		
-		$.post({
-			url: 'climberdb.php',
-			data: {
-				action: 'query',
-				queryString: `TABLE state_codes`,
-				db: 'climberdb'
-			}
-		}).done(queryResultString => {
-			for (const row of $.parseJSON(queryResultString)) {
-				// Need to get code from abbreviation for API response
-				this.stateCodes[row.short_name] = row.code;
-			};
-		});
+		this._parent.queryDB({tables: ['country_codes']})
+			.done(response => {
+				for (const row of response.data || []) {
+					this.countryCodes[row.code] = row.short_name;
+				}
+			});	
+		this._parent.queryDB({tables: ['state_codes']})
+			.done(response => {
+				for (const row of response.data || []) {
+					// Need to get code from abbreviation for API response
+					this.stateCodes[row.short_name] = row.code;
+				}
+			});	
 
 	}
 
@@ -911,7 +900,7 @@ class ClimberForm {
 			$firstCollapse.closest('.card').find('.card-link').click();
 		}
 
-		this.queryClimberHistory(climberID);
+		this.queryClimberHistory(parseInt(climberID));
 
 		// Show the details pane
 		$formParent
@@ -936,8 +925,8 @@ class ClimberForm {
 		const now = new Date();
 		for (const i in climberHistory) {
 			const row = climberHistory[i];
-			const formattedDeparture = (new Date(row.actual_departure_date + ' 12:00')).toLocaleDateString(); //add a time otherwise the date will be a day before
-			const actualReturnDate = new Date(row.actual_return_date + ' 12:00');
+			const formattedDeparture = (new Date(row.actual_departure_date)).toLocaleDateString(); //add a time otherwise the date will be a day before
+			const actualReturnDate = new Date(row.actual_return_date);
 			const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
 			//TODO: handle routes that don't have a sort_order (and aren't in route_codes)
 			const cardTitle = `${this._parent.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}`;
@@ -978,7 +967,7 @@ class ClimberForm {
 					row.highest_elevation_ft >= this._parent.config.minimum_elevation_for_7_day || 10000
 				)
 
-			receivedProPin = receivedProPin || row.received_pro_pin === 't';
+			receivedProPin = receivedProPin || row.received_pro_pin;
 		}	
 
 		// Only show badges if this the climber form is NOT being shpwn as a modal and this is on the
@@ -995,26 +984,27 @@ class ClimberForm {
 		// Check if any of this climber's expeditions were solo. If so, mark them as such
 		if (climberHistory.length) {
 			const $newCards = $accordion.find('.card:not(.cloneable)');
-			const soloSQL = `SELECT * FROM ${this._parent.dbSchema}.solo_climbs_view WHERE climber_id=${climberHistory[0].climber_id}`;
-			const soloDeferred = this._parent.queryDB(soloSQL)
-				.done(resultString => {
-					if (this._parent.queryReturnedError(resultString)) {
-						console.log('could not get solo info because ' + resultString)
-					} else {
-						const result = $.parseJSON(resultString);
-						for (const row of result) {
-							// Mark the history card as a solo climb
-							const cardIndex = expeditionMemberIDs[row.expedition_member_id];
-							const $card = $newCards.eq(cardIndex);
-							$card.find('.card-link-label').text($card.find('.card-link').text() + ' - solo');
-
-							// Unhide the solo-climber badge
-						}
+			const soloDeferred = this._parent.queryDB({
+				where: {
+					solo_climbs_view: [
+						{column_name: 'climber_id', operator: '=', comparand: climberHistory[0].climber_id}
+					]
+				}
+			}).done(response => {
+				if (this._parent.pythonReturnedError(response)) {
+					console.log('could not get solo info because ' + response)
+				} else {
+					const result = response.data || [];
+					for (const row of result) {
+						// Mark the history card as a solo climb
+						const cardIndex = expeditionMemberIDs[row.expedition_member_id];
+						const $card = $newCards.eq(cardIndex);
+						$card.find('.card-link-label').text($card.find('.card-link').text() + ' - solo');
 					}
-				})
-				.fail((xhr, status, error) => {
-					showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
-				});
+				}
+			}).fail((xhr, status, error) => {
+				showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
+			});
 
 		}
 	}
@@ -1052,31 +1042,38 @@ class ClimberForm {
 
 	*/
 	queryClimberHistory(climberID) {
-		const historySQL = `SELECT * FROM ${this._parent.dbSchema}.climber_history_view WHERE climber_id=${climberID}`;
-		//`SELECT * FROM WHERE  climbers.id=${climberID} `
-		const contactsSQL = `SELECT * FROM ${this._parent.dbSchema}.emergency_contacts WHERE climber_id=${climberID}`;
-
-		const historyDeferred = this._parent.queryDB(historySQL)
-			.done(resultString => {
-				if (this._parent.queryReturnedError(resultString)) {
-					showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
+		const historyDeferred = this._parent.queryDB({
+				where: {
+					climber_history_view: [
+						{column_name: 'climber_id', operator: '=', comparand: climberID}
+					]
+				}
+			}).done(response => {
+				if (this._parent.pythonReturnedError(response)) {
+					showModal('Retrieving climber history from the database failed with the following error:<br>' + response, 'Database Error');
 				} else {
-					this.fillClimberHistory($.parseJSON(resultString));
+					this.fillClimberHistory(response.data || []);
 				}
 			})
 			.fail((xhr, status, error) => {
-				showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
+				showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
 			});
-		const contactsDeferred = this._parent.queryDB(contactsSQL)
-			.done(resultString => {
-				if (this._parent.queryReturnedError(resultString)) {
-					showModal('Retrieving emergency contact info from the database failed because because ' + resultString, 'Database Error');
+
+		const contactsDeferred = this._parent.queryDB({
+				where: {
+					emergency_contacts: [
+						{column_name: 'climber_id', operator: '=', comparand: climberID}
+					]
+				}
+			}).done(response => {
+				if (this._parent.pythonReturnedError(response)) {
+					showModal('Retrieving emergency contact info from the database failed because ' + response, 'Database Error');
 				} else {
-					this.fillEmergencyContacts($.parseJSON(resultString));
+					this.fillEmergencyContacts(response.data || []);
 				}
 			})
 			.fail((xhr, status, error) => {
-				showModal('Retrieving emergency contact info from the database failed because because ' + error, 'Database Error')
+				showModal('Retrieving emergency contact info from the database failed because ' + error, 'Database Error')
 			});
 
 
@@ -1115,27 +1112,21 @@ class ClimberForm {
 
 	/*
 	Save edits to climber info. Edits are either changes to a climber's information 
-	or related records (climber history or emergency contacts) or completely new 
+	or related records (i.e., emergency contacts) or completely new 
 	climber inserts (if the form is being shown as a modal)
 	*/
-	saveEdits({chainInserts=false}={}) {
+	saveEditsPython() {
 
-		showLoadingIndicator('saveEdits');
-
-		var sqlStatements = [];
-		var sqlParameters = [];
 		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
 		const userName = this._parent.userInfo.ad_username;
 		
-		// Deep copy to be able to roll back changes to in-memory data (climberDB.climberInfo)
-		const originalDataValues = deepCopy(this.selectedClimberInfo.climbers);
-		const currentIndex = $('.query-result-list-item.selected').index();
-		var climberInfo = {};
-		if (this._parent.climberInfo) { // will be undefined if this is a new climber
-			climberInfo = this._parent.climberInfo[currentIndex];
+		const inputSelector = '.input-field.dirty';
+		if ($(inputSelector).length === 0) {
+			showModal("You have not made any edits to save yet. Add or change this climber's information and then try to save it.", "No edits to save");
+			return $.Deferred().resolve('');
 		}
 
-		// If the user disabled required fields, still make validate first and last name fields. Otherwise, validate all
+		// If the user disabled required fields, still validate first and last name fields. Otherwise, validate all
 		const requiredFieldsDisabled = $('#disable-required-switch-container input[type=checkbox]').prop('checked');
 		const $editParents = requiredFieldsDisabled ? 
 			$('.input-field.always-required.dirty').closest('.field-container-row') : 
@@ -1152,150 +1143,115 @@ class ClimberForm {
 			if (requiredFieldsDisabled) message += 
 				' Even though you disabled required fields,' + 
 				' first and last name are always required.'
-			showModal(message, 'Required field is empty');
-			hideLoadingIndicator();
+			showModal(message, 'Required Field Is Empty');
 			return;
 		};
 
-		// collect inserts
-		let inserts = [];
-		for (const container of $('.climberdb-modal #climber-info-tab-content, .new-card:not(.cloneable)')) { 
-			let tableParameters = {}
-			for (const el of $(container).find('.input-field.dirty')) {
-				const $input = $(el);
-				const tableName = $input.data('table-name');
-				const fieldName = el.name;
+		showLoadingIndicator('saveEdits');
 
-				if (!(tableName in tableParameters)) tableParameters[tableName] = {fields: [], values: []};
-				tableParameters[tableName].fields.push(fieldName);
-				tableParameters[tableName].values.push(this.getInputFieldValue($input));
-			}
-			// Loop through tables in their insert order
-			let currvalClauseString = '';
-			let currvalCount = 0;
-			for (const tableName in this._parent.tableInfo.tables) {
-				// If the table doesn't have any fields that were edited, skip it
-				if (!(tableName in tableParameters)) continue;
-
-				const columnInfo = this._parent.tableInfo.tables[tableName].columns;
-				let values = tableParameters[tableName].values;
-				let fields = tableParameters[tableName].fields;
-				if ('entered_by' in columnInfo) {
-					values = values.concat([now, userName]);
-					fields = fields.concat(['entry_time', 'entered_by']);
-				}
-				if ('last_modified_by' in columnInfo) {
-					values = values.concat([now, userName]);
-					fields = fields.concat(['last_modified_time', 'last_modified_by']);
-				}
-				const foreignColumnInfo = this._parent.tableInfo.tables[tableName].foreignColumns || [];
-				if (foreignColumnInfo.length) {
-					// find the ID
-					for (const {foreignTable, column} of foreignColumnInfo) {
-						// Assume this is an insert whose parent (left-side) table is also being inserted.
-						//	In that case, the parent record should have already been inserted and currval would return its ID.
-						//	This only works, however, if only 1 record is being inserted into the parent table
-						var foreignID;//= ;
-						// Loop through all input fields and look for the parent ID in the input's .data().
-						//	If found, the parent record already exists and the ID can just be retrieved from
-						//	the .data()
-						for (const el of $('.input-field')) {
-							const $el = $(el);
-							if ($el.data('table-name') === foreignTable && $el.data('table-id') !== undefined) {
-								foreignID = parseInt($el.data('table-id')); // the ID is set on an input, meaning this field belongs to an existing record
-								break;
-							}
-						}
-						if (foreignID === undefined) {
-							// insert a value to get what will be the foreign table ID 
-							currvalClauseString += `, currval(pg_get_serial_sequence('${foreignTable}', 'id'))`;
-							currvalCount ++;
-							//showModal(`Foreign row ID could not be found for the table '${tableName}' and column '${column}' with foreign table '${foreignTable}'`, 'Database Error')
-							//return;
-						} else {
-							values.push(foreignID);
-						}
-						fields.push(column);
-						//}
-
-					}
-				}
-
-				let parametized = fields.map(f => '$' + (fields.indexOf(f) + 1))
-					.slice(0, fields.length - currvalCount) // drop the currvalClause parametized values
-					.join(', ');
-				sqlStatements.push(`INSERT INTO ${this._parent.dbSchema}.${tableName} (${fields.join(', ')}) VALUES (${parametized}${currvalClauseString}) RETURNING id`);
-				sqlParameters.push(values);
-				// Record so table-id data attribute can be set from RETURNING statement
-				inserts.push({container: container, tableName: tableName});
-			}
+		let inserts = {},
+			updates = {},
+			lastModifiedAttributes = {
+				last_modified_by: userName,
+				last_modified_time: now
+			},
+			climberEdits = {...lastModifiedAttributes};
+		// Get edits to climber
+		const $climberInputs = $(`#climber-info-tab-content ${inputSelector}`)
+		for (const el of $climberInputs) {
+			climberEdits[el.name] = this._parent.getInputFieldValue($(el));
 		}
 
-		// collect updates
-		const updates = this.edits.updates;
-		for (const tableName in updates) {
-			const columnInfo = this._parent.tableInfo.tables[tableName].columns;
-			const hasLastModifiedBy = 'last_modified_by' in columnInfo;
-			for (const id in updates[tableName]) {
-				let parameters = hasLastModifiedBy ? [now, userName] : [];
-				let parametized = hasLastModifiedBy ? ['last_modified_time=$1', 'last_modified_by=$2'] : [];
-				let hasUpdates = false;
-				for (const fieldName in updates[tableName][id]) {
-					const value = updates[tableName][id][fieldName];
-					parameters.push(value);
-					parametized.push(`${fieldName}=$${parametized.length + 1}`);
-
-					if (fieldName in climberInfo) climberInfo[fieldName] = value;
-					hasUpdates = true;
-				}
-				
-				if (hasUpdates) {
-					sqlStatements.push(`UPDATE ${this._parent.dbSchema}.${tableName} SET ${parametized.join(', ')} WHERE id=${id} RETURNING id`);
-					sqlParameters.push(parameters);
-				}
-			}
-		}
-
-
-		 if (!sqlStatements.length) {
-		 	showModal("You have not made any edits to save yet. Add or change this climber's information and then try to save it.", "No edits to save");
-		 	hideLoadingIndicator();
-		 	return $.Deferred().resolve('');
-		 }
-
-		return $.ajax({ 
-			url: 'climberdb.php',
-			method: 'POST',
-			data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
-			cache: false
-		}).done(queryResultString => {
-			if (this._parent.queryReturnedError(queryResultString)) { 
-				showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-				// roll back in-memory data
-				for (const dbID in updates.climbers) {
-					for (const fieldName in updates.climbers[dbID]) {
-						climberInfo[fieldName] = originalDataValues[dbID][fieldName];
-					}
-				}
-				return;
+		var climberID = $('#climber-info-tab-content').data('table-id');
+		const climberHasEdits = !!Object.keys(climberEdits).length;
+		if (climberHasEdits) {
+			if (climberID) {
+				updates.climbers = {[climberID]: climberEdits}
 			} else {
-				const returnedIDs = $.parseJSON(queryResultString);
-				for (const i in inserts) {
-					const id = returnedIDs[i].id;
-					if (id == null || id === '') continue;
+				inserts.climbers = [{
+					values: {
+						...climberEdits,
+						entered_by: userName,
+						entry_time: now
+					},
+					html_id: 'climber-info-tab-content',
+					children: {}
+				}]
+			}
+		}
+
+		// get edits to each emergency contact
+		for (const el of $('#emergency-contacts-accordion .card:not(.cloneable)').has(inputSelector)) {
+			const $card = $(el);
+			const $inputs = $card.find(inputSelector);
+			const dbID = $card.data('table-id');
+			var values = {...lastModifiedAttributes};
+			for (const el of $inputs) {
+				values[el.name] = this._parent.getInputFieldValue($(el));
+			}
+			
+			if (dbID) {
+				(updates.emergency_contacts = updates.emergency_contacts || {})[dbID] = values;
+			} else {
+				// if there were no edits to the climber info, inserts.climbers won't exist
+				if (!inserts.climbers) {
+					inserts.climbers = [{
+						id: climberID,
+						children: {emergency_contacts: []}
+					}]
+				}
+				// If this is the first emergency contact, create the array
+				(inserts.climbers[0].children.emergency_contacts = inserts.climbers[0].children.emergency_contacts || [])
+					// then add the changes for this contact
+					.push({
+						values: {
+							...values,
+							entered_by: userName,
+							entry_time: now
+						},
+						html_id: $card.attr('id')
+					})
+			}
+		}
+
+		const requestData = {
+			inserts: inserts,
+			updates: updates,
+			foreignColumns: this._parent.tableInfo.tables.emergency_contacts.foreignColumns
+		}
+		const formData = new FormData();
+		formData.append('data', JSON.stringify(requestData));
+
+		return $.post({
+			url: '/flask/db/save',
+			data: formData,
+			contentType: false,
+			processData: false
+		}).done(response => {
+			if (this._parent.pythonReturnedError(response)) {
+				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this._parent.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
+				
+				return false;
+			} else {
+				const result = response.data || [];
+				// add IDs to .data() attributes of HTML elements for each newly inserted record
+				for (const {table_name, html_id, db_id} of result) {
+					if (db_id == null || db_id === '') continue;
 
 					// Set the card's class and inputs' attributes so it changes will register as updates
-					const {container, tableName} = inserts[i];
-					const $container = $(container)
-						.removeClass('new-card');
+					//const {container, tableName} = inserts[i];
+					const $container = $('#' + html_id)
+						.removeClass('new-card')
+						.data('table-name', table_name)
+						.data('table-id', db_id);
 					$container
 						.find('.input-field')
-							.data('table-name', tableName)
-							.data('table-id', id);
-					if (!(tableName in this.selectedClimberInfo)) this.selectedClimberInfo[tableName] = {};
-					this.selectedClimberInfo[tableName][id] = {};
+							.data('table-name', table_name)
+							.data('table-id', db_id);
+					if (!(table_name in this.selectedClimberInfo)) this.selectedClimberInfo[table_name] = {};
+					this.selectedClimberInfo[table_name][db_id] = {};
 					for (const el of $container.find('.input-field')) {
-						this.selectedClimberInfo[tableName][id][el.name] = el.value;
+						this.selectedClimberInfo[table_name][db_id][el.name] = el.value;
 					}
 				}
 
@@ -1308,17 +1264,10 @@ class ClimberForm {
 					}
 				}
 
-
 				$('.climber-form .input-field.dirty').removeClass('dirty');
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-			// roll back in-memory data
-			for (const dbID in updates.climbers) {
-				for (const fieldName in updates.climbers[dbID]) {
-					climberInfo[dbID][fieldName] = updates.climbers[dbID];
-				}
-			}
 		}).always(() => {
 			this._parent.hideLoadingIndicator();
 		});
@@ -1341,7 +1290,7 @@ class ClimberForm {
 			});
 			$('#alert-modal .save-button').click(() => {
 				showLoadingIndicator();
-				this.saveEdits(); 
+				this.saveEditsPython(); 
 				afterActionCallback.call();
 			});
 		}
@@ -1373,38 +1322,25 @@ class ClimberForm {
 			$card.fadeOut(500, () => {$card.remove()})
 		} else {
 			showLoadingIndicator('deleteCard');
-			var tablesToDeleteFrom = [];
-			var deleteStatements = [];
-			for (const el of $card.find('.input-field')) {
-				const $input = $(el);
-				const tableName = $input.data('table-name');
-				const dbID = $input.data('table-id');
-				if (!tablesToDeleteFrom.includes(tableName) && tableName && dbID != undefined) {
-					tablesToDeleteFrom.push(tableName);
-					deleteStatements.push(`DELETE FROM ${this._parent.dbSchema}.${tableName} WHERE id=${parseInt(dbID)} RETURNING id, '${tableName}' AS table_name`);
-				}
+			const tableName = $card.data('table-name');
+			if (!tableName) {
+				print('No data-table-name attribute for #' + cardID);
+				return $.Deferred().resolve(false);
 			}
 
-			return this._parent.queryDB(deleteStatements)
-				.done(queryResultString => {
-					if (this._parent.queryReturnedError(queryResultString)) {
-						showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}.`, 'Unexpected error');
+			const dbID = $card.data('table-id');
+			if (!dbID) {
+				print('No data-table-id attribute for #' + cardID);
+				return $.Deferred().resolve(false);
+			}
+
+			return this._parent.deleteByID(tableName, dbID)
+				.done(response => {
+					if (this._parent.pythonReturnedError(response)) {
+						showModal('An unexpected error occurred while deleting data from the database: <br><br' + response, 'Unexpected error');
 						return;
 					} else {
-						const failedDeletes = [];
-						for (const {id, tableName} of $.parseJSON(queryResultString)) {
-							if (id == null) {
-								failedDeletes.push(tableName);
-							}
-						}
-						if (failedDeletes.length) {
-							showModal(
-								`There was a problem deleting objects from the table${failedDeletes.length > 1 ? 's' : ''} ${failedDeletes.join(', ')}.` +
-									`Contact your database adminstrator to resolve this issue.<br><br>Attempted SQL statements:<br>${deleteStatements.join('<br>')}`, 
-								'Database Error')
-						} else {
-							$card.fadeOut(500, () => {$card.remove()});
-						}
+						$card.fadeOut(500, () => {$card.remove()});
 					}
 				}).fail((xhr, status, error) => {
 					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
@@ -1421,26 +1357,27 @@ class ClimberForm {
 		const $button = $(e.target).closest('.delete-card-button');
 		const $card = $button.closest('.card');
 		const itemName = $button.data('item-name') || $card.data('item-name');
-		const onConfirmClick = `
-			climberDB.climberForm.deleteCard('${$card.attr('id')}');
-			${afterActionCallbackStr} 
-		`;
+		const onConfirmClickHandler = () => {
+			$('#alert-modal .confirm-button').click(() => {
+				this.deleteCard($card.attr('id'));
+			});
+		}
 		
 		const footerButtons = `
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
+			<button class="generic-button modal-button confirm-button danger-button close-modal" data-dismiss="modal">Yes</button>
 		`;
-		showModal(`Are you sure you want to delete this ${itemName}?`, `Delete ${itemName}?`, 'confirm', footerButtons);
+		showModal(`Are you sure you want to delete this ${itemName}?`, `Delete ${itemName}?`, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
 
 	}
 
 	/*
 	*/
 	deleteClimber(climberID) {
-		return this._parent.queryDB(`DELETE FROM ${this._parent.dbSchema}.climbers WHERE id=${parseInt(climberID)} RETURNING id`)
-			.done(queryResultString => {
-				if (this._parent.queryReturnedError(queryResultString)) {
-					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
+		return this._parent.deleteByID('climbers', climberID)
+			.done(response => {
+				if (this._parent.pythonReturnedError(response)) {
+					showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
 					return;
 				} 
 			}).fail((xhr, status, error) => {
@@ -1689,6 +1626,9 @@ class ClimberDBClimbers extends ClimberDB {
 
 		// Show the climber info tab
 		$('#climber-info-tab').click();
+
+		// clear the climber-id data attribute
+		$('#climber-info-tab-content').data('table-id', '');
 	}
 
 
@@ -1713,10 +1653,10 @@ class ClimberDBClimbers extends ClimberDB {
 	from.
 	*/
 	saveModalClimber() {
-		const deferred = this.climberForm.saveEdits();
+		const deferred = this.climberForm.saveEditsPython();
 		if (deferred) {	
-			deferred.done(resultString => {
-				if (!this.queryReturnedError(resultString) && resultString.length) {
+			deferred.done(response => {
+				if (!this.pythonReturnedError(response)) {
 					const firstName = $('#input-first_name').val();
 					const lastName = $('#input-last_name').val();
 					const climberName = `${firstName} ${lastName}`;
@@ -1724,10 +1664,13 @@ class ClimberDBClimbers extends ClimberDB {
 					// Uncheck the filters in case this climber was marked as not a guide
 					$('#7-day-only-filter, #guide-only-filter').prop('checked', false);
 
+					// query climbers by name. This will return multiple climbers, but one of them
+					//	will be the newly created climber
 					this.queryClimbers({searchString: climberName})
 						.done(() => {
-							// Select 
-							const climberID = $.parseJSON(resultString)[0].id;
+							// Select the new climber from the climber ID
+							//	The climber ID will always be the first returned ID
+							const climberID = response.data[0].db_id;
 							this.selectResultItem($(`#item-${climberID}`));
 							this.climberForm.closeClimberForm($('.climber-form button.close'));
 						});
@@ -1746,26 +1689,36 @@ class ClimberDBClimbers extends ClimberDB {
 		const middleName = $('#input-middle_name').val();
 		const lastName = $('#input-last_name').val();
 		const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
-		this.queryDB(`SELECT id FROM ${this.dbSchema}.climber_info_view WHERE full_name='${fullName}'`)
-			.done(resultString => {
-				if (!this.queryReturnedError(resultString)) {
-					const result = $.parseJSON(resultString);
-					const nClimbers = result.length;
-					if (nClimbers) {
-						// show modal
-						const message = `Are you sure you want to create another climber with this name. There ${nClimbers > 1 ? 'are' : 'is'} already ${nClimbers} climber${nClimbers > 1 ? 's' : ''} with this name in the database. If you click yes, make sure you are not creating a duplicate climber.`
-						const footerButtons = `
-							<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-							<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.saveModalClimber()">Yes</button>
-						`;
-						showModal(message, 'Possible Duplicate Climber', 'confirm', footerButtons);
-					} else {
-						this.saveModalClimber();
+		this.queryDB({
+			where: {
+				climber_info_view: [{
+					column_name: 'full_name', operator: '=', comparand: fullName
+				}]
+			}
+		}).done(response => {
+			if (!this.pythonReturnedError(response)) {
+				const result = response.data || [];
+				const nClimbers = result.length;
+				if (nClimbers) {
+					// show modal
+					const message = `Are you sure you want to create another climber with this name. There ${nClimbers > 1 ? 'are' : 'is'} already ${nClimbers} climber${nClimbers > 1 ? 's' : ''} with this name in the database. If you click yes, make sure you are not creating a duplicate climber.`
+					const footerButtons = `
+						<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+						<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal">Yes</button>
+					`;
+					const onConfirmClick = () => {
+						$('#alert-modal .danger-button').click(
+							() => {this.saveModalClimber()}
+						)
 					}
+					showModal(message, 'Possible Duplicate Climber', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClick});
 				} else {
 					this.saveModalClimber();
 				}
-			})
+			} else {
+				this.saveModalClimber();
+			}
+		})
 	}
 
 	onAddNewClimberClick(e) {
@@ -1783,7 +1736,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	saveEdits() {
-		this.climberForm.saveEdits();
+		this.climberForm.saveEditsPython();
 	}
 
 	/*
@@ -1894,6 +1847,8 @@ class ClimberDBClimbers extends ClimberDB {
 		const climberIndex = this.climberIDs[climberID];
 		const climberInfo = this.climberInfo[climberIndex];
 		this.climberForm.fillClimberForm(climberID, climberInfo);
+
+		$('#climber-info-tab-content').data('table-id', climberID);
 
 		// Make sure required fields are required
 		$('#disable-required-switch-container input[type=checkbox]').prop('checked', false).change();
@@ -2020,97 +1975,87 @@ class ClimberDBClimbers extends ClimberDB {
 		const withSearchString = searchString.length > 0;
 		var minIndex = minIndex; // not sure why but for some reason this needs to be used here to be defined later
 		
-		var whereClause = '';
-		if ($('#7-day-only-filter').prop('checked')) 
-			whereClause += ` WHERE ${this.dbSchema}.climber_info_view.id IN (SELECT climber_id FROM ${this.dbSchema}.seven_day_rule_view)`;
-		if ($('#guide-only-filter').prop('checked')) 
-			whereClause += whereClause ? ' AND is_guide' : ' WHERE is_guide';
-
-		const [sql, coreQuery] = this.getClimberQuerySQL({
-			searchString: searchString, 
-			minIndex: minIndex, 
-			climberID: climberID,
-			coreWhereClause: whereClause
-		});
-		return this.queryDB(sql, {returnTimestamp: true})
-		//return this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					// result was empty so let the user know
-					if (withSearchString) {
-						$('.query-result-list-item:not(.header-row)').remove()
-						$('.empty-result-message').ariaHide(false);
-						$('.hidden-on-invalid-result').ariaHide(true);
-						$('.result-details-pane').addClass('collapsed');
-					} else { // some other problem
-						showModal('Retrieving climber info from the database failed because because ' + queryResultString, 'Database Error');
-					}
-				} else {  
-					var result = $.parseJSON(queryResultString);
-					// Check if this result is older than the currently displayed result. This can happen if the user is 
-					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
-					//	since we don't want the older result to overwrite the newer one
-					const queryTime = result.queryTime;
-					if (queryTime < this.lastSearchQuery) {
-						return;
-					} else {
-						this.lastSearchQuery = queryTime;
-					}
-					result = result.data;
-					if (!result.length) {
-						$('.query-result-list-item:not(.header-row)').remove();
-						$('.empty-result-message').ariaHide(false);
-						$('.hidden-on-invalid-result').ariaHide(true);
-						$('.result-details-pane').addClass('collapsed');
-						return;
-					}
-
-					this.climberInfo = [...result];
-					for (const i in this.climberInfo) {
-						let id = this.climberInfo[i].id;
-						this.climberIDs[id] = i;
-					}
-					// Add climbers to the list. If a climberID was given, it will automatically be selected. 
-					//	If not, only select the first climber if there was no search string provided
-					this.fillResultList(this.climberInfo, {autoSelectID: selectClimberID || !withSearchString});
-
-					// Update index
-					if (isNaN(climberID)) {
-						const rowNumbers = this.climberInfo.map(i => parseInt(i.row_number));
-						minIndex = minIndex || Math.min(...rowNumbers);
-						let maxIndex = Math.max(...rowNumbers);
-						const countSQL = `SELECT count(*) FROM (${coreQuery}) t;`
-						this.queryDB(countSQL).done((resultString) => {
-							if (this.queryReturnedError(resultString)) {
-
-							} else {
-								const countResult = $.parseJSON(resultString);
-								if (countResult.length) {
-									// Show the currently loaded range of climber results
-									const count = countResult[0].count;
-									$('#min-record-index-span').text(minIndex);
-									$('#max-record-index-span').text(Math.min(maxIndex, count));
-									$('#total-records-span').text(count);
-									$('.result-index-label').ariaHide(false);
-									$('.show-next-result-set-button').prop('disabled', maxIndex === parseInt(count));
-									$('.show-previous-result-set-button').prop('disabled', minIndex === 1);
-								}
-
-							}
-						});
-					} else {
-						$('#min-record-index-span').text(1);
-						$('#max-record-index-span').text(1);
-						$('#total-records-span').text(1);
-						$('.result-index-label').ariaHide(false);
-						$('.show-next-result-set-button').prop('disabled', true);
-						$('.show-previous-result-set-button').prop('disabled', true);
-					}
-					
+		const returnCount = isNaN(climberID);
+		return $.post({
+			url: '/flask/db/select/climbers',
+			data: JSON.stringify({
+				search_string: searchString,
+				is_guide: $('#guide-only-filter').prop('checked'),
+				is_7_day: $('#7-day-only-filter').prop('checked'),
+				min_index: minIndex,
+				n_records: this.recordsPerSet,
+				climber_id: climberID,
+				queryTime: (new Date()).getTime(),
+				return_count: returnCount
+			}),
+			contentType: 'application/json'
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				// result was empty so let the user know
+				if (withSearchString) {
+					$('.query-result-list-item:not(.header-row)').remove()
+					$('.empty-result-message').ariaHide(false);
+					$('.hidden-on-invalid-result').ariaHide(true);
+					$('.result-details-pane').addClass('collapsed');
+				} else { // some other problem
+					showModal('Retrieving climber info from the database failed with the following error: <br>' + response, 'Database Error');
 				}
-			}).fail((xhr, status, error) => {
-				showModal('Retrieving climber info from the database failed because because ' + error, 'Database Error')
-			})
+			} else {  
+				var result = response.data || [];
+				// Check if this result is older than the currently displayed result. This can happen if the user is 
+				//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
+				//	since we don't want the older result to overwrite the newer one
+				const queryTime = response.queryTime;
+				if (queryTime < this.lastSearchQuery) {
+					return;
+				} else {
+					this.lastSearchQuery = queryTime;
+				}
+				if (!result.length) {
+					$('.query-result-list-item:not(.header-row)').remove();
+					$('.empty-result-message').ariaHide(false);
+					$('.hidden-on-invalid-result').ariaHide(true);
+					$('.result-details-pane').addClass('collapsed');
+					return;
+				}
+
+				this.climberInfo = [...result];
+				for (const i in this.climberInfo) {
+					let id = this.climberInfo[i].id;
+					this.climberIDs[id] = i;
+				}
+				// Add climbers to the list. If a climberID was given, it will automatically be selected. 
+				//	If not, only select the first climber if there was no search string provided
+				this.fillResultList(this.climberInfo, {autoSelectID: selectClimberID || !withSearchString});
+
+				// Update index
+				if (returnCount) {
+					const rowNumbers = this.climberInfo.map(i => parseInt(i.row_number));
+					minIndex = minIndex || Math.min(...rowNumbers);
+					let maxIndex = Math.max(...rowNumbers);
+					if (response.count) {
+						// Show the currently loaded range of climber results
+						const count = response.count;
+						$('#min-record-index-span').text(minIndex);
+						$('#max-record-index-span').text(Math.min(maxIndex, count));
+						$('#total-records-span').text(count);
+						$('.result-index-label').ariaHide(false);
+						$('.show-next-result-set-button').prop('disabled', maxIndex === parseInt(count));
+						$('.show-previous-result-set-button').prop('disabled', minIndex === 1);
+					}
+				} else {
+					$('#min-record-index-span').text(1);
+					$('#max-record-index-span').text(1);
+					$('#total-records-span').text(1);
+					$('.result-index-label').ariaHide(false);
+					$('.show-next-result-set-button').prop('disabled', true);
+					$('.show-previous-result-set-button').prop('disabled', true);
+				}
+				
+			}
+		}).fail((xhr, status, error) => {
+			showModal('Retrieving climber info from the database failed because ' + error, 'Database Error')
+		})
 	}
 
 
@@ -2246,96 +2191,105 @@ class ClimberDBClimbers extends ClimberDB {
 		$detailsContainer.find('.merge-climber-history-list').empty();
 
 		// Query the climber's info
-		this.queryDB(`SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=${parseInt(climberID)}`)
-			.done(queryResultString => {
-				const result = $.parseJSON(queryResultString);
-				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An error occurred while retreiving climbering info: ${queryResultString}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
-				} else {
-					if (result.length) {
-						const climberInfo = result[0];
-						const {
-							first_name,
-							middle_name,
-							last_name,
-							address, 
-							city, 
-							state_code, 
-							country_code, 
-							postal_code,
-							phone,
-							email_address,
-							dob,
-							age,
-							entered_by,
-							entry_time
-						} = {...climberInfo}
+		this.queryDB({
+			where: {
+				climber_info_view: [{column_name: 'id', operator: '=', comparand: parseInt(climberID)}]
+			}
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal(`An error occurred while retreiving climbering info: <br>${response}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
+			} else {
+				const result = response.data || [];
+				if (result.length) {
+					const climberInfo = result[0];
+					const {
+						first_name,
+						middle_name,
+						last_name,
+						address, 
+						city, 
+						state_code, 
+						country_code, 
+						postal_code,
+						phone,
+						email_address,
+						dob,
+						age,
+						entered_by,
+						entry_time
+					} = {...climberInfo}
 
-						// Fill in name
-						$detailsContainer.find('.merge-climber-name').text(
-							this.climberForm.getFullName(first_name, last_name, middle_name)
-						)
-						$detailsContainer.find('.merge-climber-entry-metadata-label').text(
-							`Entered by ${entered_by} on ${entry_time}`
-						)
-						// Completeness of address is highly variable so format defensively
-						const addressText = (address || '').trim() ? address + '<br>' : '';
-						const cityText = (city || '').trim() ? city : '';
-						const state = Object.keys(this.stateCodes[state_code] || {}).length ? 
-							(cityText ? ', ' : '') + this.stateCodes[state_code].short_name : 
-							'';
-						const country = this.climberForm.countryCodes[country_code] ? (cityText || state ? ', ' : '') + this.climberForm.countryCodes[country_code] : '';
-						const postalCode = postal_code ? ' ' + postal_code : '';
-						$detailsContainer.find('.merge-climber-address').html(
-							addressText + 
-							cityText + state + country + postalCode
-						)
+					// Fill in name
+					$detailsContainer.find('.merge-climber-name').text(
+						this.climberForm.getFullName(first_name, last_name, middle_name)
+					)
+					$detailsContainer.find('.merge-climber-entry-metadata-label').text(
+						`Entered by ${entered_by} on ${entry_time}`
+					)
+					// Completeness of address is highly variable so format defensively
+					const addressText = (address || '').trim() ? address + '<br>' : '';
+					const cityText = (city || '').trim() ? city : '';
+					const state = Object.keys(this.stateCodes[state_code] || {}).length ? 
+						(cityText ? ', ' : '') + this.stateCodes[state_code].short_name : 
+						'';
+					const country = this.climberForm.countryCodes[country_code] ? (cityText || state ? ', ' : '') + this.climberForm.countryCodes[country_code] : '';
+					const postalCode = postal_code ? ' ' + postal_code : '';
+					$detailsContainer.find('.merge-climber-address').html(
+						addressText + 
+						cityText + state + country + postalCode
+					)
 
-						// Fill phone and email
-						$detailsContainer.find('.merge-climber-phone-label')
-							.ariaHide(!phone)
-							.find('span')
-								.text(phone)
-						$detailsContainer.find('.merge-climber-email-label')
-							.ariaHide(!email_address)
-							.find('span')
-								.text(email_address)
-						
-						// Fill in D.O.B. and/or age
-						var dobText = '', 
-							ageText = '';
-						const yearsPlural = age > 1 ? 's' : '';
-						if (dob) {
-							dobText = 'D.O.B.: ' + dob;
-							if (age) ageText = ` (${age} year${yearsPlural} old)`;
-						} else {
-							if (age) ageText = `${age} year${yearsPlural} old`;
-						}
-						$detailsContainer.find('.merge-climber-dob-label').text(dobText + ageText)
-
-						// get climber hsitory
-						const $historyList = $detailsContainer.find('.merge-climber-history-list');
-						this.queryDB(`SELECT * FROM ${this.dbSchema}.climber_history_view WHERE climber_id=${climberID}`)
-							.done(resultString => {
-								if (this.queryReturnedError(resultString)) {
-									showModal('Retrieving climber history from the database failed because because ' + resultString, 'Database Error');
-								} else {
-									for (const row of $.parseJSON(resultString)) {
-										const formattedDeparture = (new Date(row.actual_departure_date + ' 12:00')).toLocaleDateString(); //add a time otherwise the date will be a day before
-										const actualReturnDate = new Date(row.actual_return_date + ' 12:00');
-										const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
-										$historyList.append(`<li><label>${this.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}</label></li>`);
-									}
-								}
-							})
-							.fail((xhr, status, error) => {
-								showModal('Retrieving climber history from the database failed because because ' + error, 'Database Error')
-							});
+					// Fill phone and email
+					$detailsContainer.find('.merge-climber-phone-label')
+						.ariaHide(!phone)
+						.find('span')
+							.text(phone)
+					$detailsContainer.find('.merge-climber-email-label')
+						.ariaHide(!email_address)
+						.find('span')
+							.text(email_address)
+					
+					// Fill in D.O.B. and/or age
+					var dobText = '', 
+						ageText = '';
+					const yearsPlural = age > 1 ? 's' : '';
+					if (dob) {
+						dobText = 'D.O.B.: ' + dob;
+						if (age) ageText = ` (${age} year${yearsPlural} old)`;
 					} else {
-						console.log('No climber found with ID ' + ClimberID);
+						if (age) ageText = `${age} year${yearsPlural} old`;
 					}
+					$detailsContainer.find('.merge-climber-dob-label').text(dobText + ageText)
+
+					// get climber hsitory
+					const $historyList = $detailsContainer.find('.merge-climber-history-list');
+					this.queryDB({
+						where: {
+							climber_history_view: [
+								{column_name: 'climber_id', operator: '=', comparand: climberID}
+							]
+						}
+					}).done(response => {
+						if (this.pythonReturnedError(response)) {
+							showModal('Retrieving climber history from the database failed with the following error: <br>' + response, 'Database Error');
+						} else {
+							const result = response.data || [];
+							for (const row of result) {
+								const formattedDeparture = (new Date(row.actual_departure_date)).toLocaleDateString(); //add a time otherwise the date will be a day before
+								const actualReturnDate = new Date(row.actual_return_date);
+								const formattedReturn = row.actual_return_date ? actualReturnDate.toLocaleDateString() : '';
+								$historyList.append(`<li><label>${this.routeCodes[row.route_code].name}: ${row.expedition_name},  ${formattedDeparture} - ${formattedReturn}</label></li>`);
+							}
+						}
+					})
+					.fail((xhr, status, error) => {
+						showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
+					});
+				} else {
+					console.log('No climber found with ID ' + ClimberID);
 				}
-			})
+			}
+		})
 
 	}
 
@@ -2458,28 +2412,28 @@ class ClimberDBClimbers extends ClimberDB {
 			const lookupDeferreds = this.fillAllSelectOptions();
 			if (Object.keys(this.stateCodes).length === 0) {
 				lookupDeferreds.push(
-					this.queryDB(`SELECT * FROM ${this.dbSchema}.state_codes`)
-						.done((queryResultString) => {
-							if (!this.queryReturnedError(queryResultString)) {
-								for (const state of $.parseJSON(queryResultString)) {
+					this.queryDB({tables: ['state_codes']})
+						.done(response => {
+							if (!this.pythonReturnedError(response)) {
+								for (const state of response.data || []) {
 									this.stateCodes[state.code] = {...state};
 								}
 							}
 						})
 				)
 			}
-			if (Object.keys(this.stateCodes).length === 0) {
+			if (Object.keys(this.routeCodes).length === 0) {
 				lookupDeferreds.push(
-					this.queryDB(`SELECT * FROM ${this.dbSchema}.route_codes`)
-						.done((queryResultString) => {
-							if (!this.queryReturnedError(queryResultString)) {
-								for (const route of $.parseJSON(queryResultString)) {
+					this.queryDB({tables: ['route_codes']})
+						.done(response => {
+							if (!this.pythonReturnedError(response)) {
+								for (const route of response.data || []) {
 									this.routeCodes[route.code] = {...route};
 								}
 							}
 						})
 				)
-			} 
+			}
 			return $.when(...lookupDeferreds)
 		}).then(() => {
 			var urlParams = this.parseURLQueryString();

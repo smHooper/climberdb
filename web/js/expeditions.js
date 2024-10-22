@@ -38,6 +38,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			payGovForm: 4,
 			other: 3
 		}
+		this.locationCardIndexSelector = '#locations-accordion .card:not(.cloneable)';
 
 		return this;
 	}
@@ -87,7 +88,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$('#save-expedition-button').click(e => {
 			showLoadingIndicator('saveEdits');
-			this.saveEdits();
+			this.saveEditsPython();
 		});
 
 		$('#delete-expedition-button').click(() => {
@@ -284,8 +285,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.onConfirmChangeExpeditionButtonClick();
 		})
 
-		// Fill with this year's expeditions to start
-		this.fillExpeditionSearchSelect({showExpeditionOptions: !this.parseURLQueryString()});
 		// ^^^^^^^^^ Query stuff ^^^^^^^^^^^^^^^^
 
 
@@ -732,9 +731,6 @@ class ClimberDBExpeditions extends ClimberDB {
 				dbValue = this.expeditionInfo.cmc_checkout.data[dbID][fieldName];
 			}
 
-			// If this is a checkbox, the new value needs to be converted to PostreSQL's boolean as intepreted by PHP
-			if ($input.is('.input-checkbox')) newValue = newValue ? 't' : 'f';
-
 		}
 
 		return valueChanged || dbValue != newValue;
@@ -1090,26 +1086,31 @@ class ClimberDBExpeditions extends ClimberDB {
 			if  (tableName === 'expedition_members') { 
 				onConfirmClickHandler = () => {
 					$('#alert-modal .confirm-button').click(() => {
-						this.queryDB(`DELETE FROM ${this.dbSchema}.expedition_members WHERE id=${dbID}`)
-							.done(() => {
-								delete this.expeditionInfo.expedition_members.data[dbID];
-								// remove member from in-memory .order
-								this.expeditionInfo.expedition_members.order = this.expeditionInfo.expedition_members.order.filter(id => id != dbID);
-								delete this.expeditionInfo.transactions[dbID];
-								const memberRoutes = this.expeditionInfo.expedition_member_routes.data;
-								for (const routeCode in memberRoutes) {
-									const thisRoute = memberRoutes[routeCode];
-									delete thisRoute[dbID];
+						this.deleteByID('expedition_members', dbID)
+							.done(response => {
+								if (this.pythonReturnedError(response)) {
+									showModal('The expedition member could not be deleted because of an unexpected error: <br><br>' + response, 'Unexpected Error');
+									return;
+								} else {
+									delete this.expeditionInfo.expedition_members.data[dbID];
+									// remove member from in-memory .order
+									this.expeditionInfo.expedition_members.order = this.expeditionInfo.expedition_members.order.filter(id => id != dbID);
+									delete this.expeditionInfo.transactions[dbID];
+									const memberRoutes = this.expeditionInfo.expedition_member_routes.data;
+									for (const routeCode in memberRoutes) {
+										const thisRoute = memberRoutes[routeCode];
+										delete thisRoute[dbID];
+									}
+
+									// remove expedition member from all route cards
+									const climberID = $card.data('climber-id');
+									$(`#routes-accordion .route-member-list .data-list-item[data-climber-id=${climberID}]`).remove();
+
+									 $card.fadeRemove();
+
+									 // Wait just over a half second for the card to be removed
+									 setTimeout(() => {this.updateExpeditionMemberCount(); this.updateCommsDeviceOwnerOptions()}, 550);
 								}
-
-								// remove expedition member from all route cards
-								const climberID = $card.data('climber-id');
-								$(`#routes-accordion .route-member-list .data-list-item[data-climber-id=${climberID}]`).remove();
-
-								 $card.fadeRemove();
-
-								 // Wait just over a half second for the card to be removed
-								 setTimeout(() => {this.updateExpeditionMemberCount(); this.updateCommsDeviceOwnerOptions()}, 550);
 							})
 							.fail((xhr, status, error) => {
 								console.log('delete failed because ' + error)
@@ -1124,21 +1125,20 @@ class ClimberDBExpeditions extends ClimberDB {
 				// get DB IDs for all member route records that are saved in the DB
 				const memberRouteIDs = $card.find('.route-member-list .data-list-item:not(.cloneable):not(.new-list-item)')
 					.map((_, el) => $(el).data('table-id'))
-					.get()
-					.join(', ');
+					.get();
 				const $routeCodeInput = $card.find('.route-code-header-input:not(.mountain-code-header-input)');
 				const routeCode = $routeCodeInput.val();
 				onConfirmClickHandler = () => {
 					$('#alert-modal .confirm-button').click(() => {
 						const sql = `DELETE FROM ${this.dbSchema}.expedition_member_routes WHERE id IN (${memberRouteIDs})`;
-						this.queryDB(sql)
-							.done(queryResultString => {
-								if (this.queryReturnedError(queryResultString)) {
+						this.deleteByID('expedition_member_routes', memberRouteIDs)
+							.done(response => {
+								if (this.pythonReturnedError(response)) {
 									showModal(
-										'And error occurred while attempting to delete this route: ' + queryResultString.trim() + 
-											'. Try again and contact your database adminstrator if the problem continues.', 
+										'And error occurred while attempting to delete this route: <br><br>' + response,
 										'Database Error'
 									);
+									return;
 								} else {
 									const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
 									if (routeDeleted) {
@@ -1148,7 +1148,10 @@ class ClimberDBExpeditions extends ClimberDB {
 									$card.fadeRemove();
 								}
 							}).fail((xhr, status, error) => {
-
+								showModal(
+									'And error occurred while attempting to delete this route: ' + error,
+									'Database Error'
+								);
 							})
 					})
 				}
@@ -1298,144 +1301,39 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	/*
-	Helper function to convert unordered parameters 
-	into pre-prepared SQL statement and params
-	*/
-	valuesToSQL(values, tableName, timestamp, username, {updateID=null, foreignIDs={}}={}) {
-
-		
-		var sortedFields = Object.keys(values).sort();
-		var parameters = sortedFields.map(f => values[f]);
-		
-		var returningClause = '', 
-			parametized = '',
-			currvalClauseString = '',
-			foreignColumnReturnString = '',
-			currvalCount = 0;
-
-		// Add edit meta fields if they exist in this table
-		const columnInfo = this.tableInfo.tables[tableName].columns;
-		if ('last_modified_by' in columnInfo) {
-			sortedFields = sortedFields.concat(['last_modified_by', 'last_modified_time']);
-			parameters = parameters.concat([username, timestamp]);
-		}
-
-		var sql;
-		if (updateID === null) { // it's an INSERT
-			// Add entry meta fields if the table has them
-			if ('entered_by' in columnInfo) {
-				sortedFields = sortedFields.concat(['entered_by', 'entry_time']);
-				parameters = parameters.concat([username, timestamp]);
-			}
-
-			// For tables that are related to other fields by a foreign key, make sure those foreign keys make it into the INSERT
-			//	Needs to be the last fields added so the currval() clause can be tacked onto the end of the VALUES in the SQL
-			const foreignColumnInfo = this.tableInfo.tables[tableName].foreignColumns || [];
-			if (foreignColumnInfo.length) {
-				// find the ID
-				for (const {foreignTable, column} of foreignColumnInfo) {
-					// Can't duplicate or the query will throw an SQL error (only a problem for cmc_id)
-					if (column in values) continue;
-
-					// if the foreignID is given, the parent db record already exists
-					const foreignID = foreignIDs[foreignTable];
-					if (foreignID) {
-						parameters.push(foreignID);
-					// if it doesn't, the ID value will have to be retrieved with a currval clause. This will only
-					//	work if the parent and child records are inserted in the proper order
-					} else {
-						// insert a value to get what will be the foreign table ID 
-						currvalClauseString += `, currval(pg_get_serial_sequence('${foreignTable}', 'id'))`;
-						currvalCount ++;
-					} 
-					// The foreign column will have to be returned for INSERTs so the in-memory data (expeditionInfo) can be updated
-					foreignColumnReturnString += `, ${column}`;
-					sortedFields.push(column);
-
-				}
-			}
-		
-
-			// Make the parametized SQL for an INSERT
-			let parametized = sortedFields.map(f => '$' + (sortedFields.indexOf(f) + 1))
-				.slice(0, sortedFields.length - currvalCount) // drop the currvalClause parametized values because they don't need to be parametized
-				.join(', ');
-			sql = `INSERT INTO ${this.dbSchema}.${tableName} (${sortedFields.join(', ')}) VALUES (${parametized}${currvalClauseString}) RETURNING id${foreignColumnReturnString}`;
-		} else {
-			// Just make the parametized SQL for an UPDATE
-			let parametized = sortedFields.map(f => `${f}=$${sortedFields.indexOf(f) + 1}`)
-				.slice(0, sortedFields.length)
-				.join(', ');
-			sql = `UPDATE ${this.dbSchema}.${tableName} SET ${parametized} WHERE id=${updateID}`;
-		}
-		
-
-		return [sql, parameters];
-
-	}
-
-
-	/* Thin wrapper for valuesToSQL that includes getting values from inputs*/
-	inputsToSQL(parentElement, tableName, timestamp, username, {updateID=null, foreignIDs={}, insertArray=null}={}) {
-		const $inputs = $(parentElement).find('.input-field.dirty');
-		const fieldValues = Object.fromEntries(
-			$inputs
-				.get() // get plain array of JS elements because jQuery's .map() returns flattened array
-				.map(el => [el.name, this.getInputFieldValue($(el))])
-		);
-
-		const [sql, parameters] = this.valuesToSQL(
-				fieldValues, 
-				tableName, 
-				timestamp, 
-				username, 
-				{
-					updateID: updateID || null, 
-					foreignIDs: foreignIDs
-				}
-			);
-		if (insertArray !== null && sql.startsWith('INSERT')) 
-			insertArray.push({container: parentElement, tableName: tableName});
-		
-		return [sql, parameters];
-	}
 
 	/*
 	Helper method to set attributes of inputs and their containers after successfully saving newly inserted data. 
 	The helper function is used after saving new attachments and after INSERTing other data. 
 	*/
-	setInsertedIDs(result, inserts) {
+	setInsertedIDsPython(insertedIDs) {
 
 		var expeditionID = this.expeditionInfo.expeditions.id;
-		for (const i in result) {
-			const returnedIDs = result[i];
-			const id = returnedIDs.id;
-			if (id == null || id === '') continue;
+		for (const {table_name, html_id, db_id, foreign_keys} of insertedIDs) {
+			if (db_id == null || db_id === '') continue;
 
-			const {container, tableName} = inserts[i];
-			if (tableName === 'expeditions') {
-				expeditionID = id;
+			if (table_name === 'expeditions') {
+				expeditionID = db_id;
 				
 				// this was a new expedition, so add the expedition to the URL history
 				this.updateURLHistory(expeditionID, $('#expedition-id-input'));
 			}
 
 			// Set the card's/list item's class and inputs' attributes so changes will register as updates
-			const $container = $(container).closest('.data-list-item, .card, .data-container');
-			const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
-			if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
+			const $container = $('#' + html_id);
+			// TODO: make sure parent-table-id isn't necessary for anything
+			// const parentTableID = (this.tableInfo.tables[tableName].foreignColumns[0] || {}).column;
+			// if ($container.is('.data-list-item')) $container.attr('data-parent-table-id', parentTableID); 
 			const $inputs = $container.closest('.data-list-item, .card')
 				.removeClass('new-card')
 				.removeClass('new-list-item')
-				.attr('data-table-id', id)
-				.attr('data-table-name', tableName)
+				.attr('data-table-id', db_id)
+				.attr('data-table-name', table_name)
 				.find('.input-field.dirty')
-					.attr('data-table-name', tableName)
-					.attr('data-table-id', id)
+					.attr('data-table-name', table_name)
+					.attr('data-table-id', db_id)
 					.removeClass('dirty');
-			const foreignIDs = Object.entries(returnedIDs).filter(([column, _]) => column !== 'id');
-			if (Object.keys(foreignIDs).length) $inputs.data('foreign-ids', Object.fromEntries(foreignIDs));
+			if (Object.keys(foreign_keys).length) $inputs.data('foreign-ids', foreign_keys);
 			
 		}
 
@@ -1478,7 +1376,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			.join('');
 
 			setTimeout(
-				() => {showModal(`The following fields are not filled. All required fields must be filled before you can save your edits:<ul>${errorFieldList}</ul>`, 'Required field is empty')},
+				() => {showModal(`The following fields are not filled. All required fields must be filled before you can save your edits:<ul>${errorFieldList}</ul>`, 'Required Field Is Empty')},
 				500
 			);
 			hideLoadingIndicator();
@@ -1486,358 +1384,296 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		return isValid;
 	}
+	
 
+	saveEditsPython() {
 
-	processAttachments() {
-		// Save new attachments before writing other changes to the DB because files need
-		//	to be saved to the server
-		var attachmentData = {},
-			attachmentItems = {},
-			attachmentInserts = [];
+		var dbInserts = {},
+			dbUpdates = {},
+			attachmentInserts = {},
+			inserts = []; // change this name to be more descriptive or somehow roll into dbInserts
 
-		// package the file up in a FormData instance because the file isn't within 
-		//	a <form> element
-		const formData = new FormData(); 
-		const $attachmentItems = $('#expedition-members-accordion .card:not(.cloneable) .attachments-tab-pane .data-list > .new-list-item:not(.cloneable)');
-		for (const li of $attachmentItems) {
-			const $li = $(li);
-			const fileInputID = $li.find('.attachment-input').attr('id');
-			const attachmentFile = this.attachments[fileInputID].file;
-			const filename = attachmentFile.name;
-			formData.append(filename, attachmentFile, filename)
-			attachmentData[filename] = {
-				expedition_member_id: $li.closest('.card').data('table-id'),
-				attachment_type_code: $li.find('.input-field[name=attachment_type_code]').val(),
-				date_received: $li.find('.input-field[name=date_received]').val(),
-				attachment_notes: $li.find('.input-field[name=attachment_notes]').val(),
-				client_filename: filename,
-				mime_type: attachmentFile.type,
-				file_size_kb: Math.ceil(attachmentFile.size / 1000),
-				entry_time: now,
-				entered_by: username,
-				last_modified_time: now,
-				last_modified_by: username
-			}
-			// Capture the filename/list-item relationship so .data() attributes can be set later
-			// attachmentItems[filename] = $li;
-
-			attachmentInserts.push({container: li, tableName: 'attachments'});
-		}
-		formData.append('attachment_data', JSON.stringify(attachmentData))
-		const failedUploadMessage = 
-			'Your edits could not be saved because uploading attachments' +
-			` failed with the error \n"{error}"\n. Make sure the file is valid` + 
-			` and try again. If this problem persists, ` + 
-			` <a href="mailto:${this.config.db_admin_email}">contact the` + 
-			` database adminstrator</a>.`;
-		const attachmentsDeferred =
-			$.post({
-				url: 'flask/attachments/add_expedition_member_files',
-				data: formData,
-				contentType: false,
-				processData: false,
-				dataType: 'json'
-			}).done(response => {
-				const failedFiles = response.failed_files;
-				if (this.pythonReturnedError(response)) {
-					showModal(failedUploadMessage.replace(/\{error\}/, response), 'Attachment Upload Failed');
-					hideLoadingIndicator();
-				} else if (failedFiles.length) {
-					if (Array.isArray(failedFiles) && (failedFiles.length)) {
-						const message = 'Your edits were not saved because the following files failed to upload:<ul>' +
-							failedFiles.map(({filename}) => `<li>${filename}</li>`).join('') + '</ul>';
-						showModal(message, 'Attachment Upload Failed');
-						print(response);
-						hideLoadingIndicator();
-					}
-				} else { // attachments all saved successfully
-					const returnedIDs = response.attachment_ids;
-					this.setInsertedIDs(returnedIDs, attachmentInserts)
-				}
-			}).fail((xhr, status, error) => {
-				showModal(failedUploadMessage.replace(/\{error\}/, error), 'Attachment Upload Failed');
-				hideLoadingIndicator()
-			})
-
-		return attachmentsDeferred			
-	}
-
-
-	// Make a convenience function to get SQL for expedition members because the method 
-	//	for doing so differs depending on whether the permit number needs to be filled 
-	//	for each individual expedition member in the for loop below. This needs to 
-	//	include transactions and route memebers so the SQL statements are in order. That is,
-	//	transactions and routes for an expedition member can't be INSERTed before the member
-	getExpeditionMemberSQL($card, expeditionID, insertArray, now, username) {
-		
-		const climberID = $card.data('climber-id');
-
-		var sqlStatements = [],
-			sqlParameters = [];
-
-		// members
-		if ($card.find('.card-header .input-field.dirty, .expedition-info-tab-pane .input-field.dirty').length) {
-			const [sql, parameters] = this.inputsToSQL(
-				$card.find('.expedition-info-tab-pane, .card-header'),
-				'expedition_members', 
-				now, 
-				username, 
-				{
-					updateID: $card.data('table-id') || null, 
-					foreignIDs: {
-						expeditions: expeditionID, 
-						climbers: climberID
-					},
-					insertArray: insertArray
-				}
-			);
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-		}
-
-		// transactions
-		const $transactionItems = $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)')
-			.has('.input-field.dirty');
-		for (const li of $transactionItems) {
-			const dbID = $(li).data('table-id');
-			const [sql, parameters] = this.inputsToSQL(
-				li, 
-				'transactions', 
-				now, 
-				username, 
-				{
-					updateID: dbID || null,
-					foreignIDs: {expedition_members: $(li).data('parent-table-id')},
-					insertArray: insertArray
-				}
-			);
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-		}
-
-		// attachment updates
-		const $attachmentItems = $card.find('.attachments-tab-pane .data-list > li.data-list-item:not(.cloneable, .new-list-item)')
-			.has('.input-field.dirty');
-		for (const li of $attachmentItems) {
-			const dbID = $(li).data('table-id');
-			const [sql, parameters] = this.inputsToSQL(
-				li, 
-				'attachments', 
-				now, 
-				username, 
-				{
-					updateID: dbID || null,
-					foreignIDs: {expedition_members: $(li).data('parent-table-id')},
-					insertArray: insertArray
-				}
-			);
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-		}
-
-		// Insert any routes with the corresponding expedition member so that the currval() clause will work 
-		//	when a new expedition member has been added
-		const memberRouteItems = $(`#routes-accordion .card:not(.cloneable) li.data-list-item[data-climber-id=${climberID}]`)
-			.has('.input-field.dirty');
-		for (const li of memberRouteItems) {
-			const dbID = $(li).data('table-id');
-			const [sql, parameters] = this.inputsToSQL(
-				li, 
-				'expedition_member_routes', 
-				now, 
-				username, 
-				{
-					updateID: dbID || null,
-					foreignIDs: {expedition_members: $(li).data('expedition-member-id')},
-					insertArray: insertArray
-				}
-			);
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-
-		}
-
-		return [sqlStatements, sqlParameters]
-	}
-
-
-	saveEdits() {
-		
-		var sqlStatements = [],
-			sqlParameters = [];
+		// Make a shallow reference to dbInserts. On the server, database objects are inserted/updated heirarchically so that foreign column values can be populated automatically. With this mutable reference, we can point to whatever the top-level 
+		var parentTable = dbInserts;
 
 		if (!this.validateEdits()) return; // Error message already shown in validateEdits()
 
 		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
 		const username = this.userInfo.ad_username;
+
+		showLoadingIndicator('saveEdits');
 		
-		// collect info about inserts so attributes can be changes such that future edits are treated as updates
-		var inserts = [], //{container: container, tableName: tableName}
-			attachmentInserts = []; 
-		
-		const attachmentsDeferred = this.processAttachments();
+		const inputSelector = '.input-field.dirty'
+
+		// get expedition table edits
+		var expeditionEdits = {}; 
+		for (const el of $(`#expedition-data-container ${inputSelector}`)) {
+			expeditionEdits[el.name] = this.getInputFieldValue($(el));
+		}
+
 
 		// determine if this is a new expedition or not
 		const expeditionID = $('#input-expedition_name').data('table-id') || null;
-		const isNewExpedition = expeditionID === undefined;
+		const isNewExpedition = expeditionID === null;
+		const expeditionsHasEdits = Object.keys(expeditionEdits).length;
+		if (expeditionsHasEdits) {
+			if (isNewExpedition) {
+				// if this is the backcountry page, set the is_backcountry field to true
+				if ($('#locations-accordion').length) expeditionEdits.is_backcountry = true;
 
-		// get expedition table edits
-		var expeditionValues = [];
-		var expeditionFields = []; 
-		for (const el of $('#expedition-data-container .input-field.dirty')) {
-			expeditionValues.push(this.getInputFieldValue($(el)));
-			expeditionFields.push(el.name);
-		}
-		if (expeditionValues.length) {
-			// If this is a new expedition, make sure group status gets saved
-			if (!expeditionID) $('#input-group_status').addClass('dirty');
-
-			let fieldValues = Object.fromEntries(expeditionFields.map((f, i) => [f, expeditionValues[i]]));
-			let [sql, parameters] = this.valuesToSQL(fieldValues, 'expeditions', now, username, {updateID: expeditionID || null});
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-
-			if (sql.startsWith('INSERT')) {
-				inserts.push({container: $('#expedition-data-container'), tableName: 'expeditions'})
+				dbInserts.expeditions = [{
+					values: expeditionEdits,
+					html_id: 'input-expedition_name',
+					children: {}
+				}];
+			} else {
+				dbUpdates.expeditions = {[expeditionID]: expeditionEdits}; 
+				dbInserts.expeditions = [
+					{
+						id: expeditionID,
+						children: {}
+					}
+				]
 			}
 		}
 
-		// Get expedition members and member transactions
-		const year = new Date($('#input-planned_departure_date').val()).getFullYear();
-		let permitCount;
-		const permitNumbersFilled = $('input[name=permit_number]').map((_, el) => el.value).get().every(v => v);
-		const permitCountDeferred = permitNumbersFilled ? 
-			$.Deferred().resolve() : // resolve the promise immediately so the SQL save request doesn't wait
-			$.post({
-				url: 'flask/next_permit_number',
-				data: {year: year}
-			}).done(response => {
-				if (this.pythonReturnedError(response)) {
-					print('Failed to get next permit number with error: ' + response);
-				} else {
-					permitCount = response;
-				}
-			}).fail((xhr, status, error) => {
-				print('Failed to get next permit number with error: ' + error)
-			});
+		var foreignColumns = {};
+		const getEdits = (dbID, $inputs, tableName, {htmlID='', additionalValues={} }={}) => {
+			var values = {
+				...Object.fromEntries(
+					$inputs.get().map(el => { return [ el.name, this.getInputFieldValue($(el)) ] } )
+				),
+				...additionalValues
+			}
 
+			const columnInfo = this.tableInfo.tables[tableName].columns;
+			if ('last_modified_by' in columnInfo) {
+				values.last_modified_by = username; 
+				values.last_modified_time = now;
+			}
+
+
+			// If the ID is defined, this is an update
+			if (dbID) {
+				// if this is the first update, create the object to store updates for this table
+				if (!dbUpdates[tableName]) dbUpdates[tableName] = {};
+				// updates are an object with keys as DB IDs
+				dbUpdates[tableName][dbID] = values;
+				
+				// Add to the parentTable reference so its children have 
+				//	something to be added to
+				if (!parentTable[tableName]) parentTable[tableName] = [];
+				parentTable[tableName].push(
+					{
+						id: dbID,
+						children: {}
+					}
+				)
+			// Otherwise, it's an insert
+			} else {
+				if (!parentTable[tableName]) parentTable[tableName] = [];
+				var insertValues = values;
+				if ('entered_by' in columnInfo) {
+					values.entered_by = username; 
+					values.entry_time = now;
+				}
+				parentTable[tableName].push(
+					{
+						values: insertValues, 
+						html_id: htmlID,
+						children: {}
+					}
+				)
+				foreignColumns[tableName] = this.tableInfo.tables[tableName].foreignColumns;
+			}
+		}
+
+		var parentTable,
+			formData = new FormData();
+
+		// Get itinerary locations from the backcountry page because this same class method is used 
+		//	on that page as well. On the expedition page, this will just be ignored since the itinerary
+		//	 locations accordion doesn't exist
+		for (const el of $(this.locationCardIndexSelector).has(inputSelector)) {
+			const $card = $(el);
+			const cardID = el.id;
+			const locationID = $card.data('table-id') || null;
+			const $inputs = $card.find(inputSelector);
+			// If this is an update, set the parent table to the root. Otherwise, it needs to descend
+			//	from the expeditions property
+			if (locationID) {
+				parentTable = dbInserts;
+			} else {
+				// if the expeditions property doesn't exist yet, add it
+				if ((dbInserts.expeditions || []).length === 0) {
+					dbInserts.expeditions = [{
+						id: expeditionID,
+						children: {}
+					}];
+				}
+				parentTable = dbInserts.expeditions[0].children;
+			}
+			getEdits(locationID, $inputs, 'itinerary_locations', {htmlID: cardID});
+		}
 
 		// Transactions and routes might have edits without expedition members having any, so loop 
 		//	through each expedition member card, regardless of whether it has any dirty inputs
-		for (const el of $('#expedition-members-accordion .card:not(.cloneable)')) {
+		for (const el of $('#expedition-members-accordion .card:not(.cloneable)').has(inputSelector)) {
+			
 			const $card = $(el);
+			const cardID = el.id;
+			const climberID = $card.data('climber-id');
+			const expeditionMemberID = $card.data('table-id') || null;
+			const $inputs = $card.find(`.card-header .input-field.dirty, .expedition-info-tab-pane ${inputSelector}`);
+			const nMemberInputEdits = $inputs.length;
 
-			// expedition member
-			const $permitNumberField = $card.find('input[name=permit_number]');
-			const permitNumberEmpty = !$permitNumberField.val();
-			// If the permit number field is empty, wait for the permit count request before getting SQL
-			if (permitNumberEmpty) {
-				permitCountDeferred.then(() => {
-					const thisPermitNumber = `TKA-${year.toString().slice(2,4)}-${String(permitCount).padStart(4, '0')}`;
-					$permitNumberField.val(thisPermitNumber)
-							.change();
-					permitCount ++; //increment for next permit
-					const [statements, params] = this.getExpeditionMemberSQL($card, expeditionID, inserts, now, username);
-					sqlStatements = [...sqlStatements, ...statements]
-					sqlParameters = [...sqlParameters, ...params]
-				})
-			} 
-			// Otherwise, if there are other edits, just get the SQL immediately
-			else {
-				const [statements, params] = this.getExpeditionMemberSQL($card, expeditionID, inserts, now, username);
-				sqlStatements = [...sqlStatements, ...statements];
-				sqlParameters = [...sqlParameters, ...params];
-			}
-
-		}
-
-		// CMCs
-		for (const li of $('#cmc-list li.data-list-item:not(.cloneable)').has('.input-field.dirty')) {
-			const dbID = $(li).data('table-id');
-			const [sql, parameters] = this.inputsToSQL(
-				li, 
-				'cmc_checkout', 
-				now, 
-				username, 
-				{
-					updateID: dbID || null,
-					foreignIDs: {expeditions: expeditionID},
-					insertArray: inserts
-				}
-			);
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-		}
-		
-		// Comms
-		for (const li of $('#comms-list li.data-list-item:not(.cloneable)').has('.input-field.dirty')) {
-			const dbID = $(li).data('table-id');
-			$(li).find('.input-field[name=expedition_member_id]')
-				.addClass('dirty'); // force expedition_member_id field to appear in values so it isn't included in foregin table clauses
-			const [sql, parameters] = this.inputsToSQL(
-				li, 
-				'communication_devices', 
-				now, 
-				username, 
-				{
-					updateID: dbID || null,
-					foreignIDs: {expeditions: expeditionID},
-					insertArray: inserts
-				}
-			);
-			sqlStatements.push(sql);
-			sqlParameters.push(parameters);
-		}
-		
-		// Make sure, if permit numbers had to be created, that the request was 
-		//	answered first. If it wasn't necessary, the permitCountDeferred was
-		//	resolved immediately and the request to save the data will fire 
-		//	immediately as well
-		return $.when(permitCountDeferred, attachmentsDeferred).then((permitCountResponse, attachmentResponse) => {
-			// If the only changes were new attachments, exit
-			if (!$('.dirty').length) {
-				hideLoadingIndicator();
-				const expeditionID = this.expeditionInfo.expeditions.id;
-				if (expeditionID) this.queryExpedition(expeditionID, {showOnLoadWarnings: false}); //suppress flagged expedition member warnings
-				return $.Deferred().resolve();
-			}
-			if (attachmentResponse[0].failed_files.length) {
-				hideLoadingIndicator();
-				return $.Deferred().reject();
-			}
-
-			return $.post({ 
-				url: 'climberdb.php',
-				data: {action: 'paramQuery', queryString: sqlStatements, params: sqlParameters},
-				cache: false
-			}).done(queryResultString => {
-				if (climberDB.queryReturnedError(queryResultString)) { 
-					showModal(`An unexpected error occurred while saving data to the database: ${queryResultString.trim()}. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists.`, 'Unexpected error');
-					return;
+			// Get edits if there were any
+			const nEditedMembers = Object.keys(parentTable.expedition_members || []).length;
+			if (nMemberInputEdits) {
+				// If this is an update, set the parent table to the root. Otherwise, it needs 
+				//	to descend from the expeditions property
+				if (expeditionMemberID) {
+					parentTable = dbInserts;
 				} else {
-					const result = $.parseJSON(queryResultString)
-						.filter(row => row != null);
-					const expeditionID = this.setInsertedIDs(result, inserts);
-
-					// update in-memory data for each edited input
-					this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
-
-
-					// Hide the save button again since there aren't any edits
-					$('#save-expedition-button').ariaHide(true);
-					// but open the reports modal button since there's something to show
-					$('#open-reports-modal-button, #show-cache-tag-modal-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
-
+					// if the expeditions property doesn't exist yet, add it
+					if ((dbInserts.expeditions || []).length === 0) {
+						dbInserts.expeditions = [{
+							id: expeditionID,
+							children: {}
+						}];
+					}
+					parentTable = dbInserts.expeditions[0].children;
 				}
-			}).fail((xhr, status, error) => {
-				showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-				// roll back in-memory data
-			}).always(() => {
+				
+				// Make sure the current parent table reference points to expedition_members
+				getEdits(expeditionMemberID, $inputs, 'expedition_members', {htmlID: cardID, additionalValues: {climber_id: climberID}});
+				parentTable = parentTable.expedition_members[nEditedMembers].children;
+			} else {
+				parentTable = dbInserts;
+			}
+
+			const $transactionItems = $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)')
+				.has(inputSelector);
+			const $attachmentItems = $card.find('.attachments-tab-pane .data-list > li.data-list-item:not(.cloneable)')
+				.has(inputSelector);
+			const $memberRouteItems = $(`#routes-accordion .card:not(.cloneable) li.data-list-item[data-climber-id=${climberID}]`)
+				.has(inputSelector);
+			// If there weren't any expedition_member edits and there were transaction/attachment
+			//	edits, make sure it's in the parentTable object so that the foreign key 
+			//	(expedition_member_id) is available for the server
+			const nExpeditionMembers = (parentTable.expedition_members || []).length;
+			const nMemberChildrenEdits = $([...$transactionItems, ...$attachmentItems, ...$memberRouteItems]).length;
+			if (nMemberChildrenEdits > 0 && nMemberInputEdits === 0) {
+				if (!nExpeditionMembers) parentTable.expedition_members = [];
+				parentTable.expedition_members.push(
+					{
+						id: expeditionMemberID,
+						children: {}
+					}
+				);
+				parentTable = parentTable.expedition_members[nEditedMembers].children;
+			}
+			
+			for (const li of $transactionItems) {
+				const transactionID = $(li).data('table-id') || null;
+				const $inputs = $(li).find(inputSelector);
+				getEdits(transactionID, $inputs, 'transactions', {htmlID: li.id})
+			}
+
+			// TODO: doesn't wind up in dbInserts
+			for (const li of $attachmentItems) {
+				const $li = $(li);
+				const attachmentID = $li.data('table-id') || null;
+				const $inputs = $(li).find(inputSelector);
+
+				const fileInputID = $li.find('.attachment-input').attr('id');
+				const attachmentFile = this.attachments[fileInputID].file;
+				const filename = attachmentFile.name;
+				var additionalValues = {};
+				if (!attachmentID) { // this is a new attachment
+					formData.append(filename, attachmentFile, filename)
+					additionalValues = {
+						client_filename: filename,
+						mime_type: attachmentFile.type,
+						file_size_kb: Math.ceil(attachmentFile.size / 1000)
+					}
+				}
+				
+				getEdits(attachmentID, $inputs, 'attachments', {htmlID: li.id, additionalValues: additionalValues});
+			}
+
+			for (const li of $memberRouteItems) {
+				const routeID = $(li).data('table-id') || null;
+				const $inputs = $(li).find(inputSelector);
+				getEdits(routeID, $inputs, 'expedition_member_routes', {htmlID: li.id})
+			}
+		}
+
+		const $cmcItems = $('#cmc-list li.data-list-item:not(.cloneable)').has(inputSelector);
+		const $commsItems = $('#comms-list li.data-list-item:not(.cloneable)').has(inputSelector);
+		// CMCs and Comms are related directly to expeditions. If there are CMC/Comms 
+		//	edits and expeditions has not yet been added to the inserts object, do so 
+		if ($([...$cmcItems, ...$commsItems]) && (dbInserts.expeditions || []).length === 0) {
+			dbInserts.expeditions = [
+				{
+					id: expeditionID,
+					children: {}
+				}
+			]
+		}
+
+		for (const li of $cmcItems) {
+			const cmcID = $(li).data('table-id') || null;
+			parentTable = cmcID === null ? dbInserts.expeditions[0].children : dbInserts;
+			const $inputs = $cmcItems.find(inputSelector);
+			getEdits(cmcID, $inputs, 'cmc_checkout', {htmlID: li.id})//
+		}
+		
+		for (const li of $commsItems) {
+			const commsID = $(li).data('table-id') || null;
+			parentTable =  commsID === null ? dbInserts.expeditions[0].children : dbInserts;
+			const $inputs = $commsItems.find(inputSelector);
+			getEdits(commsID, $inputs, 'communication_devices', {htmlID: li.id})//
+		}
+
+		formData.append('data', JSON.stringify({
+			inserts: dbInserts,
+			updates: dbUpdates,
+			year: new Date().getFullYear(),
+			foreign_columns: foreignColumns
+		}) )
+
+		return $.post({
+			url: '/flask/db/save',
+			data: formData,
+			contentType: false,
+			processData: false
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
+				return false;
+			} else {
+				const expeditionID = this.setInsertedIDsPython(response.data || {});
+
+				// update in-memory data for each edited input
+				this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
+
+				// Hide the save button again since there aren't any edits
+				$('#save-expedition-button').ariaHide(true);
+				// but open the reports modal button since there's something to show
+				$('#open-reports-modal-button, #show-cache-tag-modal-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
+
+			}
+		}).fail((xhr, status, error) => {
+			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+		}).always(() => {
 			 	this.hideLoadingIndicator();
 			});
-		})
+
+		//return [dbInserts, dbUpdates];
+
 	}
-	
+
 
 	discardEdits() {
 		
@@ -1960,24 +1796,27 @@ class ClimberDBExpeditions extends ClimberDB {
 			return $.Deferred().resolve(true);
 		} else {
 			showLoadingIndicator('deleteExpedition');
-			const sql = `DELETE FROM ${this.dbSchema}.expeditions WHERE id=${expeditionID} RETURNING id`;
-			return this.queryDB(sql).done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
-					return;
-				} else {
-					// Remove the expedition from the search bar (if it exists, i.e., is from the current year)
-					$(`#expedition-options-drawer .expedition-search-bar-option[data-expedition-id=${expeditionID}]`).remove();
-					this.createNewExpedition();
-				}
-			}).fail((xhr, status, error) => {
-				showModal(`An unexpected error occurred while deleting data from the database: ${error}.`, 'Unexpected error');
-			}).always(() => {
-				hideLoadingIndicator();
-			});
+			return this.deleteByID('expeditions', expeditionID)
+				.done( response => {
+					if (this.pythonReturnedError(response)) {
+						showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
+						return;
+					} else {
+						// Remove the expedition from the search bar (if it exists, i.e., is from the current year)
+						$(`#expedition-options-drawer .expedition-search-bar-option[data-expedition-id=${expeditionID}]`).remove();
+						this.createNewExpedition();
+					}
+				})
+				.fail((xhr, status, error) => {
+					showModal(`An unexpected error occurred while deleting data from the database: ${error}.`, 'Unexpected error');
+				})
+				.always(() => {
+					hideLoadingIndicator();
+				});
 
 		}
 	}
+
 
 	/*
 	Event handler for #delete-expedition-button
@@ -2045,10 +1884,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		// fill the select by default with all 
 		this.fillExpeditionSearchSelect({
 			$searchBar: $searchBar, 
-			queryStrings: {
-				planned_departure_date: `coalesce(planned_departure_date, actual_departure_date) >= '${new Date().getFullYear()}-01-01'`,
-				expedition_id: `expedition_id <> ${expeditionID}`
-			}
+			searchStartDate: `${new Date().getFullYear()}-1-1`,
+			where: [{
+				column_name: 'expedition_id', operator: '<>', comparand: parseInt(expeditionID)
+			}]
 		})
 		const expeditionMemberID = $card.data('table-id');
 		const memberInfo = this.expeditionInfo.expedition_members.data[expeditionMemberID];
@@ -2352,10 +2191,11 @@ class ClimberDBExpeditions extends ClimberDB {
 					'<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>'
 				const eventHandler = () => {
 					$('#alert-modal .confirm-button').click(() => {
-						this.queryDB(`DELETE FROM ${this.dbSchema}.briefings WHERE id=${briefingInfo.id} RETURNING id`)
-							.done(queryResultString => {
-								if (this.queryReturnedError(queryResultString)) {
-									showModal('Failed to delete briefing because ' + queryResultString, 'Unexpected Error')
+						this.deleteByID('briefings', briefingInfo.id)
+							.done(response => {
+								const briefingURL = $('#expedition-briefing-link').attr('href')
+								if (this.pythonReturnedError(response)) {
+									showModal(`The briefing could not be deleted because of an unexpected error. You will have to delete this briefing manually on the <a href=${briefingURL} target="_blank">briefings page</a>. Full error message: <br><br>` + response, 'Unexpected Error')
 								} else {
 									this.resetBriefingLink()
 								}
@@ -2376,6 +2216,8 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 	/*
+	Event handler for when the user clicks a dropdown option representing an 
+	expedition to move an expedition member to
 	*/
 	onModalExpeditionSearchOptionClick(e) {
 		const $option = $(e.target)
@@ -2386,37 +2228,44 @@ class ClimberDBExpeditions extends ClimberDB {
 		const expeditionID = $option.data('expedition-id');
 		const expeditionMemberID = $('#confirm-change-expedition-button').data('expedition-member-id');
 		const climberID = this.expeditionInfo.expedition_members.data[expeditionMemberID].climber_id;
-		this.queryDB(`SELECT * FROM ${this.dbSchema}.expedition_members WHERE expedition_id=${expeditionID} AND climber_id=${climberID}`)
-			.done(queryResultString => {
-				if (!this.queryReturnedError(queryResultString)) {
-					const result = $.parseJSON(queryResultString);
-					if (result.length) {
-						const climberName = $('#modal-expedition-search-bar-label > span').text();
-						showModal(`${climberName} is already a member of ${selectedExpeditionName}. If you think this is an error, check which expedition member record has the most complete or up-to-date information and delete the other one. Then change their expedition if necessary.`, 'Duplicate Expedition Member');
-					} else {
-						const $searchBar = $('#modal-expedition-search-bar');
-						
-						// Select the clicked option so that it can be easily located if the user clicks the 
-						//	confirm-change-expedition-button
-						$searchBar.siblings('.fuzzy-search-bar-drawer')
-							.find('.expedition-search-bar-option.selected').removeClass('selected');
-						$option.addClass('selected');
+		this.queryDB({
+			where: {
+				expedition_members: [
+					{column_name: 'expedition_id', operator: '=', comparand: expeditionID},
+					{column_name: 'climber_id', operator: '=', comparand: climberID}
+				]
+			}
+		}).done(response => {
+			if (!this.pythonReturnedError(response)) {
+				const result = response.data || [];
+				if (result.length) {
+					const climberName = $('#modal-expedition-search-bar-label > span').text();
+					showModal(`${climberName} is already a member of ${selectedExpeditionName}. If you think this is an error, check which expedition member record has the most complete or up-to-date information and delete the other one. Then change their expedition if necessary.`, 'Duplicate Expedition Member');
+				} else {
+					const $searchBar = $('#modal-expedition-search-bar');
+					
+					// Select the clicked option so that it can be easily located if the user clicks the 
+					//	confirm-change-expedition-button
+					$searchBar.siblings('.fuzzy-search-bar-drawer')
+						.find('.expedition-search-bar-option.selected').removeClass('selected');
+					$option.addClass('selected');
 
-						// Set the search bar value
-						$searchBar.val(selectedExpeditionName);
+					// Set the search bar value
+					$searchBar.val(selectedExpeditionName);
 
-						// If this is the modal search bar, show/hide the confirm button
-						$('#confirm-change-expedition-button').ariaHide(false);
-					}
+					// If this is the modal search bar, show/hide the confirm button
+					$('#confirm-change-expedition-button').ariaHide(false);
 				}
-			})
+			}
+		})
 		// Warn the user if this expedition is from a previous year
-		this.queryDB(`SELECT coalesce(planned_departure_date, actual_departure_date) AS planned_departure_date FROM ${this.dbSchema}.expeditions WHERE id=${expeditionID}`)
-			.done(queryResultString => {
-				if (!this.queryReturnedError(queryResultString)) {
-					const result = $.parseJSON(queryResultString);
+		this.queryDB({where:
+			{expeditions: [{column_name: 'id', operator: '=', comparand: expeditionID}]}
+		}).done(response => {
+				if (!this.pythonReturnedError(response)) {
+					const result = response.data || [];
 					if (result.length) {
-						const departureYear = new Date(result[0].planned_departure_date + ' 00:00').getFullYear();
+						const departureYear = new Date(result[0].planned_departure_date).getFullYear();
 						if (departureYear < new Date().getFullYear()) {
 							showModal(`You selected the expedition <strong>${selectedExpeditionName}</strong> which has a planned departure from <strong>${departureYear}</strong>. Make sure you selected the right expedition before confirming the expedition change.`, 'Selected Expedition From Previous Year')
 						}
@@ -2865,7 +2714,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	Update the source Excel file for Label Matrix server-side
 	*/
 	writeToLabelMatrix() {
-		let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === 't')
+		let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === true)
 		if (!tripLeaderInfo.length) {
 			showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
 			return;
@@ -2927,7 +2776,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Or if not, show the user a preview of the image
 		else {
 			// get cache tag data
-			let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === 't')
+			let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === true)
 			if (!tripLeaderInfo.length) {
 				showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
 				return;
@@ -3215,20 +3064,24 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Hide all badges
 		$('.climber-form .result-details-header-badge').ariaHide(true);
 		
-		this.queryDB(`SELECT * FROM ${this.dbSchema}.climber_info_view WHERE id=${parseInt(climberID)}`)
-			.done(queryResultString => {
-				const result = $.parseJSON(queryResultString);
-				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An error occurred while retreiving climbering info: ${queryResultString}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
+		this.queryDB({
+			where: {
+				climber_info_view: [{column_name: 'id', operator: '=', comparand: parseInt(climberID)}]
+			}
+		}).done(response => {
+				const result = response.data || [];
+				if (this.pythonReturnedError(response)) {
+					showModal(`An error occurred while retreiving climbering info: <br><br>${response}. <br><br>Make sure you're connected to the NPS network and try again.`, 'Database Error');
 				} else {
 					if (result.length) {
 						this.climberForm.fillClimberForm(climberID, result[0]);	
 						$('#edit-climber-info-button').attr('href', 'climbers.html?edit=true&id=' + climberID)
 							.collapse('show');
 					} else {
-						console.log('No climber found with ID ' + ClimberID);
+						print('No climber found with ID ' + ClimberID);
 					}
 				}
+			
 			})
 	}
 
@@ -3297,138 +3150,117 @@ class ClimberDBExpeditions extends ClimberDB {
 		$(e.target).siblings('.close-modal-button').click();
 	}
 
-
-	queryOptionToWhereClause(field, operatorValue, searchValue) {
-		
-		var searchString;
-		switch (operatorValue) {
-			case 'equals':
-				searchString = `${field} = '${searchValue}'`;
-				break;
-			case 'startsWith':
-				searchString = `${field} LIKE '${searchValue}%'`;
-				break;
-			case 'endsWith':
-				searchString = `${field} LIKE '%${searchValue}'`;
-				break;
-			case 'contains': 
-				searchString = `${field} LIKE '%${searchValue}'%`; 
-				break;
-			case 'BETWEEN':
-				searchString = `${field} BETWEEN '${searchValue[0]}' AND '${searchValue[1]}'`;
-				break;
-			default:
-				searchString = `${field} ${operatorValue} '${searchValue}'`
-		}
-		return searchString;
-	}
-
-
-	fillExpeditionSearchSelect({$searchBar='#expedition-search-bar', searchString=null, showExpeditionOptions=false, queryStrings={}}={}) {
+	
+	/*
+	Event handler for filling expedition search-selects. There are 2 search-selects in the expeditions page: the 
+	main one at the top and also one shown in the modal dialog shown when the user clicks the 'change-expedition' 
+	button to move a given expedition member to a different expedition
+	*/
+	fillExpeditionSearchSelect({$searchBar='#expedition-search-bar', searchString=null, showExpeditionOptions=false, where=[], searchStartDate=null}={}) {
 		
 		$searchBar = $($searchBar);
 
 		const $queryOptions = $searchBar.siblings('.search-options-container').find('.query-option-container'); //empty for modal
-		if (!Object.keys(queryStrings).length) {
+		if (!Object.keys(where).length) {
 			for (const el of $queryOptions ) {
 				const $container = $(el);
 				const $inputs = $container.find('*:not(.hidden) > .query-option-input-field:not(.hidden)');
 				const fieldName = $inputs.first().data('field-name');
 				let searchValues = $inputs.map((_, el) => {
-					const value = el.value;
-					if (value !== null && value.length > 0) return el.value
+					const value = $(el).val();
+					if (value !== null && value.length > 0) return value;
 				}).get();
+
+				// Skip if the value field is blank or the field was already captured
+				if (searchValues.length === 0 || fieldName in where) continue; 
+
+				// If there's no operator field, 
+				const operator = $inputs.is('.select2-no-tag') ?  
+					'in' : 
+					$container.find('.query-option-operator').val();
 				
-				if (searchValues.length === 0 || fieldName in queryStrings) continue; //2 value option (i.e. operaor === BETWEEN) and field already captured
-
-				const operator = $container.find('.query-option-operator').val();
-
-				if ($inputs.is('.datetime-query-option') && operator == 'BETWEEN') {
-					queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues));
-				} else if ($inputs.first().is('.string-match-query-option, .datetime-query-option')) {
-					queryStrings[fieldName] = (this.queryOptionToWhereClause(fieldName, operator, searchValues[0]));
-				} else if ($inputs.is('.select2-no-tag')) {
-					queryStrings[fieldName] = (`${fieldName} IN (${searchValues.join(',')})`)
-				}
+				const comparand = 
+					// if this is a multiple select, make sure the values have been converted to integers
+					$inputs.is('.select2-no-tag') ? 
+						searchValues.map(v => parseInt(v)) : 
+					// If it's a datetime option and the operator is BETWEEN, return values as an array
+					$inputs.is('.datetime-query-option') && operator == 'BETWEEN' ? 
+						searchValues :	  
+					// otherwise, just return the first (and only) value in the searchValues array
+					searchValues[0]; //$inputs.first().is('.string-match-query-option, .datetime-query-option')
+					
+				where.push(
+					{column_name: fieldName, operator: operator, comparand: comparand}
+				)
 			}
 		}
 
 		// If a search string is given and the expedition_name filter isn't filled, use Postgres trigram fuzzy search
 		if (searchString === null) searchString = $searchBar.val();
-		var orderBy, 
-			similarity = '';
-		if (searchString && !queryStrings.expedition_name) {
-			// Make sure options that start with the search string appear first
-			similarity = `
-				CASE 
-					WHEN expedition_name ILIKE '${searchString}%' THEN 1 + similarity(lower(expedition_name), lower('${searchString}'))
-					ELSE similarity(lower(expedition_name), lower('${searchString}'))
-				END`;
-			queryStrings.expedition_id = similarity + ' > 0.3';
-			orderBy = 'search_score DESC, expedition_name';
-		} else {
-			orderBy = 'expedition_name'
-		}
-		if (Object.keys(queryStrings).length === 0) {
-			queryStrings = {planned_departure_date: `coalesce(planned_departure_date, actual_departure_date) >= '${new Date().getFullYear()}-1-1'`}
-		};
-		if (!('expedition_id' in queryStrings)) {
+
+		// If searchStartDate isn't given, check if there are other parameters specified. If not, 
+		//	set the search date to prevent returning too many results
+		searchStartDate = searchStartDate || Object.keys(where).length === 0 ?
+			`${new Date().getFullYear()}-1-1` :
+			'';
+
+		if (!('expedition_id' in where)) {
 			// Exclude the current expedition. If this is a new expedition and table-id isn't set, 
 			//	ID should never = -1 so it will return everything
-			const currentExpeditionID = $('#input-expedition_name').data('table-id') || '-1';
-			queryStrings.expedition_id = `expedition_id <> ${currentExpeditionID}`;
+			const currentExpeditionID = parseInt($('#input-expedition_name').data('table-id') || '-1');
+			where.push({column_name: 'expedition_id', operator: '<>', comparand: currentExpeditionID});
 		}
 
 		// IF this is the expedition page, 
-		queryStrings.is_backcountry = window.location.pathname.match('backcountry.html') ? 
-			'is_backcountry' : 
-			'NOT is_backcountry';
+		where.push({
+			column_name: 'is_backcountry',
+			operator: '=',
+			comparand: !!window.location.pathname.match('backcountry.html') 
+		});
 
-		const whereClause = `WHERE ${Object.values(queryStrings).join(' AND ')}`;
+		const requestData = {
+			where: where,
+			search_string: searchString,
+			search_start_date: searchStartDate,
+			queryTime: (new Date()).getTime()
+		}
 
-		const sql = `
-			SELECT DISTINCT 
-				expedition_id, 
-				expedition_name,
-				group_status_code  
-				${similarity ? `, ${similarity} AS search_score` : ''} 
-			FROM ${this.dbSchema}.expedition_info_view 
-			${whereClause} 
-			ORDER BY ${orderBy}`;
-		return this.queryDB(sql, {returnTimestamp: true})
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-
+		return $.post({
+			url: '/flask/db/select/expeditions',
+			data: JSON.stringify(requestData),
+			contentType: 'application/json'
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				throw('expedition query failed with Python error: ' + response)
+			} else {
+				var result = response.data || [];
+				
+				// Check if this result is older than the currently displayed result. This can happen if the user is 
+				//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
+				//	since we don't want the older result to overwrite the newer one
+				const queryTime = result.queryTime;
+				if (queryTime < this.lastSearchQuery) {
+					return;
 				} else {
-					var result = $.parseJSON(queryResultString);
-					
-					// Check if this result is older than the currently displayed result. This can happen if the user is 
-					//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
-					//	since we don't want the older result to overwrite the newer one
-					const queryTime = result.queryTime;
-					if (queryTime < this.lastSearchQuery) {
-						return;
-					} else {
-						this.lastSearchQuery = queryTime;
-					}
-					result = result.data;
-
-					const $drawer = $searchBar.siblings('.expedition-options-container').empty();
-					if (result.length) {
-						//$drawer.append('<option value="">Click to select an expedition</option>')
-						for (const row of result) {
-							const cancelledClass = row.group_status_code == 6 ? 'cancelled' : '';
-							$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
-						}
-					} else {
-						$drawer.append('<div class="expedition-search-bar-option">No expeditions match your search</div>');
-					}
-					if (showExpeditionOptions) $drawer.collapse('show');
+					this.lastSearchQuery = queryTime;
 				}
-			})
-			.fail((xhr, status, error) => {
-				console.log('Failed to query expeditions for search select with sql ' + sql)
-			});
+
+				const $drawer = $searchBar.siblings('.expedition-options-container').empty();
+				if (result.length) {
+					//$drawer.append('<option value="">Click to select an expedition</option>')
+					for (const row of result) {
+						const cancelledClass = row.group_status_code == this.constants.groupStatusCodes.cancelled ? 'cancelled' : '';
+						$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
+					}
+				} else {
+					$drawer.append('<div class="expedition-search-bar-option">No expeditions match your search</div>');
+				}
+				if (showExpeditionOptions) $drawer.collapse('show');
+			}
+		})
+		.fail((xhr, status, error) => {
+			console.log('Failed to query expeditions for search select with sql ' + sql)
+		});
 		
 	}
 
@@ -3440,11 +3272,6 @@ class ClimberDBExpeditions extends ClimberDB {
 	createNewExpedition({triggerChange=true}={}) {
 		// Reset the search bar value to the default 
 		const $searchBar = $('#expedition-search-bar').val('');
-		// var $defaultOption = $searchBar.find('option[value=""]'); 
-		// if (!$defaultOption.length) {
-		// 	$defaultOption = $searchBar.prepend('<option value="">Select an expedition to view</option>')
-		// } 
-		// $searchBar.val('').addClass('default');
 		
 		$('#show-modal-climber-form-button').closest('.collapse').collapse('show');
 
@@ -3911,14 +3738,17 @@ class ClimberDBExpeditions extends ClimberDB {
 
 	queryExpedition(expeditionID, {showOnLoadWarnings=true, triggerChange=null}={}) {
 
-		const sql = `
-			SELECT 
-				*
-			FROM ${this.dbSchema}.expedition_info_view 
-			WHERE expedition_id=${expeditionID}
-		`
 		showLoadingIndicator('queryExpedition');
-
+		const expeditionQueryParams = {
+			where: {
+				expedition_info_view: [{column_name: 'expedition_id', operator: '=', comparand: expeditionID}]
+			}
+		}
+		const commsQueryParams = {
+			where: {
+				communication_devices: [{column_name: 'expedition_id', operator: '=', comparand: expeditionID}]
+			}
+		}
 		// Query comms separate from all other expedition info because expedition_member_id 
 		//	needs to be optional and, therefore, potentially null. This means that comms are 
 		//	only related to other data by expedition_id. Using this relationship to join 
@@ -3926,205 +3756,210 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	records in the result without any way of determining which is right record. 
 		//	Querying them separately eliminates this issue
 		return $.when(
-			this.queryDB(sql),
-			this.queryDB(`SELECT * FROM ${this.dbSchema}.communication_devices WHERE expedition_id=${expeditionID} ORDER BY entry_time, id`)
-		).done( (expeditionInfoResult, commsResult) => {
-				if (this.queryReturnedError(expeditionInfoResult)) {
-					showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: ${expeditionInfoResult.trim()}.`, 'Unexpected error');
-					return;
-				} else if (this.queryReturnedError(commsResult)) {
-					showModal(`An unexpected error occurred while querying the comms info with ID ${expeditionID}: ${commsResult.trim()}.`, 'Unexpected error');
-					return;
+			this.queryDB(expeditionQueryParams),
+			this.queryDB(commsQueryParams)
+		).done( (expeditionInfoResponse, commsResponse) => {
+			// $.when responses are returned as [response, status], but all we care about
+			//	is the response
+			expeditionInfoResponse = expeditionInfoResponse[0];
+			commsResponse = commsResponse[0];
+			
+			if (this.pythonReturnedError(expeditionInfoResponse)) {
+				showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: <br><br>${expeditionInfoResponse}.`, 'Unexpected error');
+				return;
+			} else if (this.pythonReturnedError(commsResponse)) {
+				showModal(`An unexpected error occurred while querying the comms info with ID ${expeditionID}: <br><br>${commsResponse}.`, 'Unexpected error');
+				return;
+			} else {
+				const expeditionResult = expeditionInfoResponse.data;
+
+				// Gather IDs of open cards and tabs in case this is being reloaded after the user saves. 
+				//	Get the IDs, in particular, because .clearExpeditionInfo() wipes the cards and jQuery 
+				//	references go with them. The element IDs will be the same once the data are reloaded, 
+				//	though, so use those to re-reference the elements
+				const $openCards = $('.card:not(.cloneable) .card-collapse.show');
+				const openCardIDs = '#' + $openCards.map((_, el) => el.id).get().join(',#');
+				const $activeTabs = $('.card:not(.cloneable) .nav-tabs .nav-link.active');
+				const activeTabIDs = '#' + $activeTabs.map((_, el) => el.id).get().join(',#');
+				
+				// Get expedition info
+				if (expeditionResult.length) {
+					this.clearExpeditionInfo(
+						// don't hide expedition buttons when reloading data. Toggling edits for other cases will happen otherwise
+						{hideEditButtons: showOnLoadWarnings} 
+					);  
+
+					// Prevent the user from loading backcountry expeditions on the Expeditions page and vice versa
+					const pageName = window.location.pathname;
+					const isBackcountry = expeditionResult[0].is_backcountry;
+					if (pageName.match('expedition') && isBackcountry) {
+						const message = `You're trying to view a Backcountry group on the Expedition page. View this group on <a href="backcountry.html?id=${expeditionID}">the Backcountry page</a> instead.`;
+						showModal(message, 'Invalid Expedition');
+						return;
+					} else if (pageName.match('backcountry') && !isBackcountry) {
+						const message = `You're trying to view a Denali or Foraker expedition on the Backcountry page. View this group on <a href="expeditions.html?id=${expeditionID}">the Expeditons page</a> instead.`;
+						showModal(message, 'Invalid Backcountry Group');
+						return;
+					}
+
+					const firstRow = expeditionResult[0];//there should only be one
+					for (const fieldName in this.tableInfo.tables.expeditions.columns) {
+						const queryField = this.entryMetaFields.includes(fieldName) ? 'expeditions_' + fieldName : fieldName;
+						this.expeditionInfo.expeditions[fieldName] = firstRow[queryField];
+					}
+					this.expeditionInfo.expeditions.id = firstRow.expedition_id;
 				} else {
-					const expeditionResult = $.parseJSON(expeditionInfoResult[0]);
+					const footerButton = '<button class="generic-button modal-button close-modal" onclick="climberDB.createNewExpedition()" data-dismiss="modal">Close</button>';
+					showModal(`There are no expeditions with the database ID '${expeditionID}'. This expedition was either deleted or the URL you are trying to use is invalid.`, 'Invalid Expedition ID', 'alert', footerButton);
+				}
 
-					// Gather IDs of open cards and tabs in case this is being reloaded after the user saves. 
-					//	Get the IDs, in particular, because .clearExpeditionInfo() wipes the cards and jQuery 
-					//	references go with them. The element IDs will be the same once the data are reloaded, 
-					//	though, so use those to re-reference the elements
-					const $openCards = $('.card:not(.cloneable) .card-collapse.show');
-					const openCardIDs = '#' + $openCards.map((_, el) => el.id).get().join(',#');
-					const $activeTabs = $('.card:not(.cloneable) .nav-tabs .nav-link.active');
-					const activeTabIDs = '#' + $activeTabs.map((_, el) => el.id).get().join(',#');
-					
-					// Get expedition info
-					if (expeditionResult.length) {
-						this.clearExpeditionInfo(
-							// don't hide expedition buttons when reloading data. Toggling edits for other cases will happen otherwise
-							{hideEditButtons: showOnLoadWarnings} 
-						);  
-
-						// Prevent the user from loading backcountry expeditions on the Expeditions page and vice versa
-						const pageName = window.location.pathname;
-						const isBackcountry = expeditionResult[0].is_backcountry;
-						if (pageName.match('expedition') && isBackcountry === 't') {
-							const message = `You're trying to view a Backcountry group on the Expedition page. View this group on <a href="backcountry.html?id=${expeditionID}">the Backcountry page</a> instead.`;
-							showModal(message, 'Invalid Expedition');
-							return;
-						} else if (pageName.match('backcountry') && isBackcountry === 'f') {
-							const message = `You're trying to view a Denali or Foraker expedition on the Backcountry page. View this group on <a href="expeditions.html?id=${expeditionID}">the Expeditons page</a> instead.`;
-							showModal(message, 'Invalid Backcountry Group');
-							return;
+				// Get data for right-side tables
+				let members = this.expeditionInfo.expedition_members;
+				let locations = this.expeditionInfo.itinerary_locations;
+				let transactions = this.expeditionInfo.transactions;
+				let attachments = this.expeditionInfo.attachments;
+				let routes = this.expeditionInfo.expedition_member_routes;
+				let cmcs = this.expeditionInfo.cmc_checkout;
+				let briefingInfo = this.expeditionInfo.briefings;
+				for (const row of expeditionResult) {
+					// get expedition members
+					const memberID = row.expedition_member_id;
+					if (!(memberID in members.data) && memberID != null) {
+						members.data[memberID] = {};
+						members.order.push(memberID);
+						transactions[memberID] = {data: {}, order: []};
+						attachments[memberID] = {data: {}, order: []};
+						for (const fieldName in this.tableInfo.tables.expedition_members.columns) {
+							const queryField = this.entryMetaFields.includes(fieldName) ? 'expedition_members_' + fieldName : fieldName;
+							members.data[memberID][fieldName] = row[queryField];
 						}
-
-						const firstRow = expeditionResult[0];//there should only be one
-						for (const fieldName in this.tableInfo.tables.expeditions.columns) {
-							const queryField = this.entryMetaFields.includes(fieldName) ? 'expeditions_' + fieldName : fieldName;
-							this.expeditionInfo.expeditions[fieldName] = firstRow[queryField];
+						members.data[memberID].first_name = row.first_name;
+						members.data[memberID].last_name = row.last_name;
+						this.climberInfo[row.climber_id] = {
+							firstName: row.first_name,
+							lastName: row.last_name,
+							isCommercialGuide: row.is_guide
 						}
-						this.expeditionInfo.expeditions.id = firstRow.expedition_id;
-					} else {
-						const footerButton = '<button class="generic-button modal-button close-modal" onclick="climberDB.createNewExpedition()" data-dismiss="modal">Close</button>';
-						showModal(`There are no expeditions with the database ID '${expeditionID}'. This expedition was either deleted or the URL you are trying to use is invalid.`, 'Invalid Expedition ID', 'alert', footerButton);
 					}
-
-					// Get data for right-side tables
-					let members = this.expeditionInfo.expedition_members;
-					let locations = this.expeditionInfo.itinerary_locations;
-					let transactions = this.expeditionInfo.transactions;
-					let attachments = this.expeditionInfo.attachments;
-					let routes = this.expeditionInfo.expedition_member_routes;
-					let cmcs = this.expeditionInfo.cmc_checkout;
-					let briefingInfo = this.expeditionInfo.briefings;
-					for (const row of expeditionResult) {
-						// get expedition members
-						const memberID = row.expedition_member_id;
-						if (!(memberID in members.data) && memberID != null) {
-							members.data[memberID] = {};
-							members.order.push(memberID);
-							transactions[memberID] = {data: {}, order: []};
-							attachments[memberID] = {data: {}, order: []};
-							for (const fieldName in this.tableInfo.tables.expedition_members.columns) {
-								const queryField = this.entryMetaFields.includes(fieldName) ? 'expedition_members_' + fieldName : fieldName;
-								members.data[memberID][fieldName] = row[queryField];
+					const locationID = row.itinerary_location_id;
+					if (!(locationID in locations.data) && locationID != null) {
+						locations.data[locationID] = {};
+						locations.order.push(locationID);
+						for (const fieldName in this.tableInfo.tables.itinerary_locations.columns) {
+							const queryField = this.entryMetaFields.includes(fieldName) ? 'itinerary_locations_' + fieldName : fieldName;
+							locations.data[locationID][fieldName] = row[queryField];
+						}
+					}
+					const transactionID = row.transaction_id;
+					if (transactionID != null) {
+						if (!(transactionID in transactions[memberID].data)) {
+							transactions[memberID].data[transactionID] = {};
+							transactions[memberID].order.push(transactionID);
+							for (const fieldName in this.tableInfo.tables.transactions.columns) {
+								const queryField = this.entryMetaFields.includes(fieldName) ? 'transactions_' + fieldName : fieldName;
+								//transactions[memberID].data[transactionID][fieldName] = row[queryField];
+								transactions[memberID].data[transactionID][fieldName] = 
+									queryField === 'transaction_value' ? 
+									row[queryField].replace(/\(/, '-').replace(/[$)]/g, '') :
+									row[queryField];
 							}
-							members.data[memberID].first_name = row.first_name;
-							members.data[memberID].last_name = row.last_name;
-							this.climberInfo[row.climber_id] = {
-								firstName: row.first_name,
-								lastName: row.last_name,
-								isCommercialGuide: row.is_guide
-							}
-						}
-						const locationID = row.itinerary_location_id;
-						if (!(locationID in locations.data) && locationID != null) {
-							locations.data[locationID] = {};
-							locations.order.push(locationID);
-							for (const fieldName in this.tableInfo.tables.itinerary_locations.columns) {
-								const queryField = this.entryMetaFields.includes(fieldName) ? 'itinerary_locations_' + fieldName : fieldName;
-								locations.data[locationID][fieldName] = row[queryField];
-							}
-						}
-						const transactionID = row.transaction_id;
-						if (transactionID != null) {
-							if (!(transactionID in transactions[memberID].data)) {
-								transactions[memberID].data[transactionID] = {};
-								transactions[memberID].order.push(transactionID);
-								for (const fieldName in this.tableInfo.tables.transactions.columns) {
-									const queryField = this.entryMetaFields.includes(fieldName) ? 'transactions_' + fieldName : fieldName;
-									//transactions[memberID].data[transactionID][fieldName] = row[queryField];
-									transactions[memberID].data[transactionID][fieldName] = 
-										queryField === 'transaction_value' ? 
-										row[queryField].replace(/\(/, '-').replace(/[$)]/g, '') :
-										row[queryField];
-								}
-							}
-						}
-
-						const attachmentID = row.attachment_id;
-						if (attachmentID != null) {
-							if (!(attachmentID in attachments[memberID].data)) {
-								attachments[memberID].data[attachmentID] = {};
-								attachments[memberID].order.push(attachmentID);
-								for (const fieldName in this.tableInfo.tables.attachments.columns) {
-									const queryField = this.entryMetaFields.includes(fieldName) ? 'attachments_' + fieldName : fieldName;
-									attachments[memberID].data[attachmentID][fieldName] = row[queryField];
-								}
-							}
-						}
-
-						/* this.expeditionInfo.expedition_member_routes = {
-							data: {
-								routeCode: {
-									memberID: {...}
-								}
-							},
-							order: [
-								routeID
-							]
-						}
-						*/
-						const routeCode = row.route_code;
-						if (!(routeCode in routes.data) && routeCode != null) {
-							routes.data[routeCode] = {};
-							routes.order.push(routeCode);
-						}
-						if (memberID !== null && routeCode in routes.data && !(memberID in routes.data[routeCode])) { 
-							routes.data[routeCode][memberID] = {};
-							for (const fieldName in this.tableInfo.tables.expedition_member_routes.columns) {
-								routes.data[routeCode][memberID][fieldName] = row[fieldName];
-							}
-							routes.data[routeCode][memberID].expedition_member_route_id = row.expedition_member_route_id;
-						}
-
-						const cmcCheckoutID = row.cmc_checkout_id;
-						if (!(cmcCheckoutID in cmcs.data) && row.cmc_id !== null) {
-							cmcs.data[cmcCheckoutID] = {};
-							cmcs.order.push(cmcCheckoutID);
-							for (const fieldName in this.tableInfo.tables.cmc_checkout.columns) {
-								cmcs.data[cmcCheckoutID][fieldName] = row[fieldName];
-							}
-						}
-						
-						if (row.briefing_date && !briefingInfo.briefing_date) {
-							briefingInfo.id = row.briefing_id;
-							briefingInfo.briefing_date = row.briefing_date;
-							briefingInfo.briefing_time = row.briefing_time;
-							briefingInfo.briefing_datetime = row.briefing_datetime;
 						}
 					}
 
-					// Process comms results
-					let comms = this.expeditionInfo.communication_devices;
-					for (const row of $.parseJSON(commsResult[0])) {
-						comms.data[row.id] = {...row};
-						comms.order.push(row.id);
+					const attachmentID = row.attachment_id;
+					if (attachmentID != null) {
+						if (!(attachmentID in attachments[memberID].data)) {
+							attachments[memberID].data[attachmentID] = {};
+							attachments[memberID].order.push(attachmentID);
+							for (const fieldName in this.tableInfo.tables.attachments.columns) {
+								const queryField = this.entryMetaFields.includes(fieldName) ? 'attachments_' + fieldName : fieldName;
+								attachments[memberID].data[attachmentID][fieldName] = row[queryField];
+							}
+						}
+					}
+
+					/* this.expeditionInfo.expedition_member_routes = {
+						data: {
+							routeCode: {
+								memberID: {...}
+							}
+						},
+						order: [
+							routeID
+						]
+					}
+					*/
+					const routeCode = row.route_code;
+					if (!(routeCode in routes.data) && routeCode != null) {
+						routes.data[routeCode] = {};
+						routes.order.push(routeCode);
+					}
+					if (memberID !== null && routeCode in routes.data && !(memberID in routes.data[routeCode])) { 
+						routes.data[routeCode][memberID] = {};
+						for (const fieldName in this.tableInfo.tables.expedition_member_routes.columns) {
+							routes.data[routeCode][memberID][fieldName] = row[fieldName];
+						}
+						routes.data[routeCode][memberID].expedition_member_route_id = row.expedition_member_route_id;
+					}
+
+					const cmcCheckoutID = row.cmc_checkout_id;
+					if (!(cmcCheckoutID in cmcs.data) && row.cmc_id !== null) {
+						cmcs.data[cmcCheckoutID] = {};
+						cmcs.order.push(cmcCheckoutID);
+						for (const fieldName in this.tableInfo.tables.cmc_checkout.columns) {
+							cmcs.data[cmcCheckoutID][fieldName] = row[fieldName];
+						}
 					}
 					
-					this.fillFieldValues(false);//don't trigger change
-					// If the data are being re-loaded after a save, show the cards and tabs that were open before
-					if (!showOnLoadWarnings && $openCards.length) {
-						$(openCardIDs).addClass('show');
-						//$('.nav-tabs .nav-link.active').removeClass('active');
-						$(activeTabIDs).click();
-					}
-
-					// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
-					const $searchBar = $('#expedition-search-bar');
-					const $idInput = $('#expedition-id-input').val(expeditionID)
-						.data('current-value', expeditionID)
-						.change();
-
-					//$select.toggleClass('default', $select.val() === '');
-
-					// If there are any expedition members that aren't assigned to a route, show that .add-expedition-route-member-button 
-					const nMembers = this.expeditionInfo.expedition_members.order.length;
-					for (const el of $('#routes-accordion .card:not(.cloneable)') ) {
-						const $card = $(el);
-						$card.find( $('.add-expedition-route-member-button') ).ariaHide(
-							$card.find('.route-member-list .data-list-item:not(.cloneable)').length === nMembers 
-						)
-					}
-
-					hideLoadingIndicator('queryExpedition');
-
-					// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
-					if (showOnLoadWarnings) {
-						this.showFlaggedMemberWarning();
-						this.show60DayWarning();
+					if (row.briefing_date && !briefingInfo.briefing_date) {
+						briefingInfo.id = row.briefing_id;
+						briefingInfo.briefing_date = row.briefing_date;
+						briefingInfo.briefing_time = row.briefing_time;
+						briefingInfo.briefing_datetime = row.briefing_datetime;
 					}
 				}
-			});
+
+				// Process comms results
+				let comms = this.expeditionInfo.communication_devices;
+				for (const row of commsResponse.data) {
+					comms.data[row.id] = {...row};
+					comms.order.push(row.id);
+				}
+				
+				this.fillFieldValues(false);//don't trigger change
+				// If the data are being re-loaded after a save, show the cards and tabs that were open before
+				if (!showOnLoadWarnings && $openCards.length) {
+					$(openCardIDs).addClass('show');
+					//$('.nav-tabs .nav-link.active').removeClass('active');
+					$(activeTabIDs).click();
+				}
+
+				// if the expedition is from this year, then set the value of the search bar. If it's not, it won't exist in the select's options so set it to the null option
+				const $searchBar = $('#expedition-search-bar');
+				const $idInput = $('#expedition-id-input').val(expeditionID)
+					.data('current-value', expeditionID)
+					.change();
+
+				//$select.toggleClass('default', $select.val() === '');
+
+				// If there are any expedition members that aren't assigned to a route, show that .add-expedition-route-member-button 
+				const nMembers = this.expeditionInfo.expedition_members.order.length;
+				for (const el of $('#routes-accordion .card:not(.cloneable)') ) {
+					const $card = $(el);
+					$card.find( $('.add-expedition-route-member-button') ).ariaHide(
+						$card.find('.route-member-list .data-list-item:not(.cloneable)').length === nMembers 
+					)
+				}
+
+				hideLoadingIndicator('queryExpedition');
+
+				// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
+				if (showOnLoadWarnings) {
+					this.showFlaggedMemberWarning();
+					this.show60DayWarning();
+				}
+			}
+		});
 	}
 
 
@@ -4137,29 +3972,19 @@ class ClimberDBExpeditions extends ClimberDB {
 			return $.Deferred().resolve(true);
 		}
 		this.showLoadingIndicator('deleteListItem');
-		var sql = `DELETE FROM ${this.dbSchema}.${tableName} WHERE id=${parseInt(tableID)} RETURNING id, '${tableName}' AS table_name`;
-		return this.queryDB(sql)
+
+		return this.deleteByID(tableName, tableID)
 			.always(() => {
 				this.hideLoadingIndicator();
-			}).then(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
-					showModal(`An unexpected error occurred while deleting data from the database: ${queryResultString.trim()}.`, 'Unexpected error');
-					return false;
-				} else {
-					const failedDeletes = [];
-					for (const {id, tableName} of $.parseJSON(queryResultString)) {
-						if (id == null) {
-							failedDeletes.push(tableName);
-						}
-					}
-					if (failedDeletes.length) {
-						showModal(
-							`There was a problem deleting objects from the table '${tableName}'.` +
-								` Contact your database adminstrator to resolve this issue.<br><br>Attempted SQL:<br>${sql}`, 
-							'Database Error');
+			}).then(
+				response => {
+					if (this.pythonReturnedError(response)) {
+						showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
 						return false;
 					} else {
-						
+						// Delete the in-memory data here rather than in deleteTransactionItem() 
+						//	because this .then callback might be called first, and $listItem
+						//	might have already been removed from the DOM
 						if (tableName === 'transactions') {
 							const parentID = $listItem.data('parent-table-id');
 							delete this.expeditionInfo[tableName][parentID].data[tableID];
@@ -4167,10 +3992,11 @@ class ClimberDBExpeditions extends ClimberDB {
 						$listItem.fadeRemove();
 						return true;
 					}
+				}, 
+				(xhr, status, error) => {
+					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
 				}
-			}, (xhr, status, error) => {
-				showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
-			})
+			);
 	}
 
 
@@ -4234,7 +4060,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const dbID = $listItem.data('table-id');
 		// If the delete succeeds, update the transaction balance 
 		this.deleteListItem($listItem, 'transactions', dbID)
-			.then(success => {
+			.then(() => {
 				// If this was a refund, remove the associated refund post
 				if ($relatedTransactionItem.length) {
 					$relatedTransactionItem.remove();
@@ -4287,7 +4113,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		$select.closest('.data-list-item')
 			.find('.input-field[name=payment_method_code]')
 				.closest('.collapse')
-					.collapse(info.is_payment === 't' ? 'show' : 'hide');
+					.collapse(info.is_payment === true ? 'show' : 'hide');
 
 		// if this was a refund, remove the refund post
 		if (previousTransactionType === 3 || previousTransactionType === 26) {
@@ -4334,7 +4160,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $transactionTypeField = $valueField.closest('li').find('.transaction-type-field');
 		const transactionType = parseInt($transactionTypeField.val());
 		if (!transactionType) return;
-		const isCredit = this.defaultTransactionFees[transactionType].is_credit === 't';
+		const isCredit = this.defaultTransactionFees[transactionType].is_credit;
 		if (isCredit && amount > 0) {
 			$valueField.val(amount * -1);
 		} else if (!isCredit && amount < 0) {
@@ -4363,11 +4189,16 @@ class ClimberDBExpeditions extends ClimberDB {
 			const message = `Are you sure you want to delete this <strong>${transactionType}</strong>` + 
 				` ${chargeType} of <strong>$${Math.abs(transactionValue)}</strong>? Clicking 'OK' will` +
 				' permanently delete this transaction record, which cannot be undone.';
+			const onConfirmClickHandler = () => {
+				$('#alert-modal .confirm-button').click(() => {
+					this.deleteTransactionItem($li);
+				});
+			}
 			const footerButtons = `
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.deleteTransactionItem('#${$li.attr('id')}')">OK</button>
+				<button class="generic-button modal-button danger-button confirm-button close-modal" data-dismiss="modal">OK</button>
 			`
-			showModal(message, 'Permanently Delete Transaction?', 'confirm', footerButtons);
+			showModal(message, 'Permanently Delete Transaction?', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
 		}
 	}
 
@@ -4753,9 +4584,20 @@ class ClimberDBExpeditions extends ClimberDB {
 		;`
 		const $select = $('#input-cmc_id') // this is the select from the .cloneable <li>
 			.append(`<option class="" value="">CMC #</option>`); 
-		return this.queryDB(sql)
-			.done(queryResultString => {
-				for (const row of $.parseJSON(queryResultString)) {
+		return this.queryDB({
+			tables: ['cmc_inventory'],
+			joins: [{left_table: 'cmc_inventory', left_table_column: 'id', right_table: 'cmc_checkout', right_table_column: 'cmc_id', is_left: true}],
+			where: {
+				cmc_checkout: [{column_name: 'return_date', operator: 'IS NOT', comparand: 'NULL'}]
+			},
+			orderBy: [{table_name: 'cmc_inventory', column_name: 'id'}]
+		})
+			.done(response => {
+				if (this.pythonReturnedError(response)) {
+					print('Error while querying CMC inventory: ' + response);
+					return;
+				}
+				for (const row of response.data || []) {
 					this.cmcInfo.cmcCanIDs[row.id] = row.cmc_can_identifier;
 					this.cmcInfo.rfidTags[row.rfid_taf_id] = row.id;
 					$select.append(`<option class="" value="${row.id}">${row.cmc_can_identifier}</option>`);
@@ -4893,47 +4735,54 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		initDeferred.then(() => {
 
+			// Fill with this year's expeditions to start. Do this after super.init() get's the schema
+			this.fillExpeditionSearchSelect({showExpeditionOptions: !this.parseURLQueryString()});
+
 			// Get route codes first if they haven't been queried yet.
 			const lookupDeferreds = [this.getCMCInfo()];
 			if (Object.keys(this.routeCodes).length === 0) {
 				lookupDeferreds.push(
-					this.queryDB(`SELECT * FROM ${this.dbSchema}.route_codes WHERE sort_order IS NOT NULL`)
-						.done(queryResultString => {
-							const $select = $('.route-code-header-input:not(.mountain-code-header-input)');
-							if (!this.queryReturnedError(queryResultString)) {
-								for (const route of $.parseJSON(queryResultString)) {
-									this.routeCodes[route.code] = {...route};
-									$select.append($(`<option value="${route.code}">${route.name}</option>`));
-								}
+					this.queryDB({
+						where: {
+							route_codes: [{column_name: 'sort_order', operator: 'IS NOT',  comparand: 'NULL'}]
+						}
+					}).done(response => {
+						const $select = $('.route-code-header-input:not(.mountain-code-header-input)');
+						if (!this.pythonReturnedError(response)) {
+							for (const route of response.data || []) {
+								this.routeCodes[route.code] = {...route};
+								$select.append($(`<option value="${route.code}">${route.name}</option>`));
 							}
-						})
+						}
+					})
 				)
 			} 
 			lookupDeferreds.push(
-				this.queryDB(`SELECT * FROM ${this.dbSchema}.mountain_codes`)
-					.done(queryResultString => {
-						for (const row of $.parseJSON(queryResultString)) {
+				this.queryDB({tables: ['mountain_codes']})
+					.done(response => {
+						for (const row of response.data || []) {
 							this.mountainCodes[row.code] = {...row};
 						}
 					})
 			);
 			lookupDeferreds.push(
-				this.queryDB(`SELECT code, default_fee, is_credit, is_payment FROM ${this.dbSchema}.transaction_type_view`)
-					.done(queryResultString => {
-						if (!this.queryReturnedError(queryResultString)) {
-							for (const row of $.parseJSON(queryResultString)) {
-								this.defaultTransactionFees[row.code] = {
-									default_fee: row.default_fee,
-									is_credit: row.is_credit,
-									is_payment: row.is_payment
+				this.queryDB({selects: 
+					{transaction_type_view: ['code', 'default_fee', 'is_credit', 'is_payment']}
+				}).then(response => {
+						if (!this.pythonReturnedError(response)) {
+							for (const {code, default_fee, is_credit, is_payment} of response.data || []) {
+								this.defaultTransactionFees[code] = {
+									default_fee: default_fee,
+									is_credit: is_credit,
+									is_payment: is_payment
 								};
 							}
 						}
 					})
 			);
 
-			return $.when(...this.fillAllSelectOptions(), lookupDeferreds);
-		}).then(() => {
+			return $.when(...lookupDeferreds, ...this.fillAllSelectOptions());
+		}).then( () => {
 			const params = this.parseURLQueryString();
 			// if the URL specifies a specific expedition (id) to load, do so
 			if ('id' in params) {
