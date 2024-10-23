@@ -1229,7 +1229,7 @@ def query_expeditions():
 		).order_by(
 			*order_by
 		).distinct()
-	
+
 	with ReadSession() as session: 
 		result = session.execute(statement)
 

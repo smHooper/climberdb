@@ -574,7 +574,7 @@ class ClimberForm {
 		});
 
 		$('#save-button').click(e => {
-			this.saveEditsPython()
+			this.saveEdits()
 		});
 
 		$('.climber-form .delete-card-button').click(e => {
@@ -1115,7 +1115,7 @@ class ClimberForm {
 	or related records (i.e., emergency contacts) or completely new 
 	climber inserts (if the form is being shown as a modal)
 	*/
-	saveEditsPython() {
+	saveEdits() {
 
 		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
 		const userName = this._parent.userInfo.ad_username;
@@ -1290,7 +1290,7 @@ class ClimberForm {
 			});
 			$('#alert-modal .save-button').click(() => {
 				showLoadingIndicator();
-				this.saveEditsPython(); 
+				this.saveEdits(); 
 				afterActionCallback.call();
 			});
 		}
@@ -1653,7 +1653,7 @@ class ClimberDBClimbers extends ClimberDB {
 	from.
 	*/
 	saveModalClimber() {
-		const deferred = this.climberForm.saveEditsPython();
+		const deferred = this.climberForm.saveEdits();
 		if (deferred) {	
 			deferred.done(response => {
 				if (!this.pythonReturnedError(response)) {
@@ -1736,7 +1736,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	saveEdits() {
-		this.climberForm.saveEditsPython();
+		this.climberForm.saveEdits();
 	}
 
 	/*
@@ -2062,7 +2062,7 @@ class ClimberDBClimbers extends ClimberDB {
 	queryClimberByID(climberID) {
 		const deferred = this.queryClimbers({climberID: climberID})
 			.done(queryResultString => {
-				if (!this.queryReturnedError(queryResultString)) {
+				if (!this.pythonReturnedError(queryResultString)) {
 					this.currentRecordSetIndex = 1;
 				}
 			});
@@ -2097,7 +2097,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 		this.climberForm.deleteClimber(climberID)
 			.done(queryResultString => {
-				if (!this.queryReturnedError(queryResultString)) {
+				if (!this.pythonReturnedError(queryResultString)) {
 					const $item = $(`#item-${climberID}`);
 					const deletedClimberIsSelected = $item.is('.selected');
 					const $nextItem = $item.next().length ? $item.next() : $item.prev();
@@ -2333,7 +2333,7 @@ class ClimberDBClimbers extends ClimberDB {
 					showLoadingIndicator('mergeClimbers');
 					this.deleteClimber(mergeClimberID)
 						.done(response => {
-							if (!this.queryReturnedError(response)) {
+							if (!this.pythonReturnedError(response)) {
 								// Update .climber-select
 								this.onMergeClimberSearchKeyup();
 								$('.merge-climber-details-container').collapse('hide');

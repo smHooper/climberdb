@@ -236,7 +236,7 @@ class ClimberDBBriefings extends ClimberDB {
 		});
 
 		$('#save-button').click(e => {
-			this.saveEditsPython();
+			this.saveEdits();
 		})
 
 		$('#delete-button').click(e => {
@@ -577,7 +577,7 @@ class ClimberDBBriefings extends ClimberDB {
 	}
 
 
-	saveEditsPython() {
+	saveEdits() {
 		showLoadingIndicator('saveEdits');
 
 		if (!$('.appointment-details-drawer .input-field.dirty').length) {
