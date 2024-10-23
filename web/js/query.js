@@ -1642,17 +1642,17 @@ class ClimberDBQuery extends ClimberDB {
 
 
 	queryRouteCodes() {
-		return this.queryDB(`
+		return this.queryDB({sql: `
 			SELECT route_codes.*, mountain_codes.name AS mountain_name 
 			FROM ${this.dbSchema}.route_codes 
 				JOIN ${this.dbSchema}.mountain_codes ON mountain_codes.code=route_codes.mountain_code 
 			WHERE route_codes.sort_order IS NOT NULL
 			ORDER BY mountain_codes.sort_order, route_codes.sort_order
-		`).done(queryResultString => {
+		`}).done(response => {
 			const $routeSelects = $('.route-code-parameter-input');
 			const $mountainSelects = $('.mountain-code-parameter-input');
-			if (!this.queryReturnedError(queryResultString)) {
-				for (const route of $.parseJSON(queryResultString)) {
+			if (!this.pythonReturnedError(response)) {
+				for (const route of response.data || []) {
 					this.routeCodes[route.code] = {...route};
 					$routeSelects.append($(`<option value="${route.code}">${route.name}</option>`));
 				

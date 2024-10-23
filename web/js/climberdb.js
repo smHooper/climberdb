@@ -247,7 +247,7 @@ class ClimberDB {
 			data: urlParams.testClientSecret ? {client_secret: urlParams.testClientSecret} : {},
 			cache: false
 		}).done((resultString) => {
-			if (this.queryReturnedError(resultString)) {
+			if (this.pythonReturnedError(resultString)) {
 				throw 'User role query failed: ' + resultString;
 			} else {
 				const result = typeof resultString === 'object' ? resultString : $.parseJSON(resultString);

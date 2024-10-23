@@ -88,7 +88,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		$('#save-expedition-button').click(e => {
 			showLoadingIndicator('saveEdits');
-			this.saveEditsPython();
+			this.saveEdits();
 		});
 
 		$('#delete-expedition-button').click(() => {
@@ -1386,7 +1386,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 	
 
-	saveEditsPython() {
+	saveEdits() {
 
 		var dbInserts = {},
 			dbUpdates = {},
@@ -1422,7 +1422,10 @@ class ClimberDBExpeditions extends ClimberDB {
 				if ($('#locations-accordion').length) expeditionEdits.is_backcountry = true;
 
 				dbInserts.expeditions = [{
-					values: expeditionEdits,
+					values: {
+						is_backcountry: !!window.location.pathname.match('backcountry.html'), 
+						...expeditionEdits
+					},
 					html_id: 'input-expedition_name',
 					children: {}
 				}];
@@ -2363,9 +2366,22 @@ class ClimberDBExpeditions extends ClimberDB {
 		const expeditionMemberID = $('#confirm-change-expedition-button').data('expedition-member-id');
 
 		const sql = `UPDATE ${this.dbSchema}.expedition_members SET expedition_id=${selectedExpeditionID} WHERE id=${expeditionMemberID} RETURNING expedition_id`;
-		this.queryDB(sql)
-			.done(queryResultString => {
-				if (this.queryReturnedError(queryResultString)) {
+		var formData = new FormData();
+		formData.append('data', JSON.stringify({
+			updates: {
+				expedition_members: {
+					[expeditionMemberID]: {expedition_id: selectedExpeditionID}
+				}
+			}
+		}) );
+		
+		$.post({
+			url: '/flask/db/save',
+			data: formData,
+			contentType: false,
+			processData: false
+		}).done(queryResultString => {
+				if (this.pythonReturnedError(queryResultString)) {
 					showModal('The expedition member could not be moved to a new expedition. Error: ' + queryResultString, 'Database Error');
 				} else {
 					this.loadExpedition(selectedExpeditionID);

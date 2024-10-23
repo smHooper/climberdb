@@ -382,13 +382,6 @@ class ClimberDBUsers extends ClimberDB {
 
 		showLoadingIndicator('saveEdits');
 
-		// Gather fields and values
-		// var values = [], 
-		// 	fields = [];
-		// for (const el of $inputs) {
-		// 	values.push(el.value);
-		// 	fields.push(el.name);
-		// }
 		var values = Object.fromEntries(
 			$inputs.map( (_, el) => [[el.name, this.getInputFieldValue($(el))]] ).get()
 		)
@@ -433,11 +426,11 @@ class ClimberDBUsers extends ClimberDB {
 				// update in-memory data
 				const userInfo = (this.users[userID] = this.users[userID] || {});
 				for (const [field, value] of Object.entries(values)) {
-					userInfo[field = value;
+					userInfo[field] = value;
 				}
 
 				if (isInsert) { 
-					result = ( response.data || [] )[0]
+					const result = ( response.data || [] )[0]
 					$tr.attr('data-table-id', (result || {}).db_id)
 						.removeClass('new-user')
 						
@@ -545,16 +538,38 @@ class ClimberDBUsers extends ClimberDB {
 		} else {
 			// an already saved user in no-login table
 			// update status to disabled in case there are any briefing records with this user assigned to it
-			this.queryDB(`UPDATE users SET user_status_code=-1 WHERE id=${parseInt($userRow.data('table-id'))} RETURNING id`)
-				.done(response => {
-					if (this.queryReturnedError(response)) {
-						showModal('Database Error', 'The user could not be disabled because the system encountered an unexpected error: ' + response)
-					} else {
-						$userRow.fadeRemove()
+			const id = $userRow.data('table-id');
+			if (!id) {
+				const message = 'An unexpected error occurred while saving data to the database:' + 
+					' Make sure you\'re still connected to the NPS network and try again.' +
+					` <a href="mailto:${this.config.db_admin_email}">Contact your database` +
+					` adminstrator</a> if the problem persists. Full error: <br><br>Could not ` +
+					` save edits because table-id is null`;
+				showModal(message, 'Unexpected error');
+				return;
+			}
+			const formData = new FormData()
+			formData.append('data', JSON.stringify({
+				updates: {
+					users: {
+						[parseInt(id)]: {user_status_code: -1}
 					}
-				}).fail((xhr, status, error) => {
-					showModal('Database Error', 'The user could not be disabled because the system encountered an unexpected error: ' + error)
-				});
+				}
+			}))
+			$.post({
+				url: '/flask/db/save',
+				data: formData,
+				contentType: false,
+				processData: false
+			}).done(response => {
+				if (this.pythonReturnedError(response)) {
+					showModal('Database Error', 'The user could not be disabled because the system encountered an unexpected error: <br><br>' + response)
+				} else {
+					$userRow.fadeRemove()
+				}
+			}).fail((xhr, status, error) => {
+				showModal('Database Error', 'The user could not be disabled because the system encountered an unexpected error: <br><br>' + error)
+			});
 		}
 	}
 
