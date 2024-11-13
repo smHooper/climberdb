@@ -39,3 +39,35 @@
 .money-field-container > .input-field {
 	text-indent: 15px;
 }
+.uneditable .input-field {
+	margin-bottom: 0;
+	background-color: #ffffff00;
+}
+
+.uneditable .icon-button {
+	opacity: 0;
+	pointer-events: none;
+	transition: 0.3s all;
+	margin-right: 20px;
+}
+.climberdb-data-table tr:hover .edit-button,
+.edit-button:focus {/* add focus for tabbing*/
+	opacity: 1;
+	pointer-events: all;
+}
+.edit-button-table-cell {
+	width: 70px;
+}
+/*.main-content-wrapper {
+	padding-top: 0;
+}
+#save-button-container {
+	position: sticky;
+	top: 0;
+	padding-top: 10px;
+}*/
+#save-button {
+	/*make save button darker because gradient background 
+	doesn't provide enough contrast*/
+	color: #007497;
+}

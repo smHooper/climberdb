@@ -4,9 +4,10 @@ CREATE DATABASE climbing_permits;
 CREATE TABLE IF NOT EXISTS attachment_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS backcountry_location_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS backcountry_location_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER, latitude NUMERIC(10, 7), longitude NUMERIC(10, 7));
-CREATE TABLE IF NOT EXISTS country_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS cmc_status_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS communication_device_type_codes (id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS country_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS cua_company_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS state_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS sex_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS frostbite_severity_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
@@ -101,6 +102,7 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	actual_departure_date DATE,
 	actual_return_date DATE,
 	guide_company_code INTEGER REFERENCES guide_company_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT DEFAULT -1,
+	cua_company_code INTEGER REFERENCES cua_company_code(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	air_taxi_code INTEGER REFERENCES air_taxi_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT -1,
 	entered_by VARCHAR(50),
 	entry_time TIMESTAMP,
@@ -451,6 +453,7 @@ CREATE VIEW expedition_info_view AS
 		expeditions.actual_departure_date,
 		expeditions.actual_return_date,
 		expeditions.guide_company_code,
+		expeditions.cua_company_code,
 		expeditions.air_taxi_code,
 		expeditions.entered_by,
 		expeditions.entry_time,
