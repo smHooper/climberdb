@@ -1433,6 +1433,7 @@ def save_config():
 			orm_to_dict(row) 
 			for row  
 			in session.query(codes)
+				.where(codes.name != 'None') # exclude from sort_order update
 		]
 	
 	sort_order_update = {} # for inserts, use this dict to relate DB IDs, html IDs, and codes
@@ -1510,7 +1511,7 @@ def save_config():
 		names[row_name] = insert_id['db_id']
 		response['data'].append({'html_id': html_id, 'code': sort_order_update[html_id]['code']})
 
-	# re-enabled rows are were already added to names when looping through the results list
+	# re-enabled rows were already added to names when looping through the results list
 	#	but they need to be added to the response so the code can be set as the data-table-id
 	for update in enabled_updates:
 		# html_id = update['html_id']
@@ -1519,7 +1520,7 @@ def save_config():
 		response['data'].append({'html_id': update['html_id'], 'code': update['code']})
 
 	with WriteSession() as session, session.begin():
-		current_sort_order = 1
+		current_sort_order = 2 # start at 2 because sort_order for 'None' is always 1
 		# Loop through the names in sorted order and update the sort_order incrementally
 		for sorted_name in sorted(names.keys(), key=str.casefold): #str.casefold to ignore case
 			row_id = names[sorted_name]

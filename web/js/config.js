@@ -240,6 +240,15 @@ class ClimberDBConfig extends ClimberDB {
 		for (const el of $cuaInputs) {
 			const $el = $(el);
 			const inputValue = $el.val();
+			if (inputValue == 'None') {
+				hideLoadingIndicator();
+				showModal(
+					'The CUA company code option for "None" is always included by default.' +
+					' Delete this row to save any other edits or additions.', 
+					'Invalid CUA Company Name'
+				);
+				return;
+			}
 			const id = $el.data('table-id');
 			if (!id) {
 				cuaInserts.push({html_id: el.id, name: inputValue});
