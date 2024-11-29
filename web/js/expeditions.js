@@ -4749,7 +4749,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Do additional synchronous initialization stuff
 		this.configureMainContent();
 
-		initDeferred.then(() => {
+		// return the final deferred, which is modified with each .then() call
+		return initDeferred.then(() => {
 
 			// Fill with this year's expeditions to start. Do this after super.init() get's the schema
 			this.fillExpeditionSearchSelect({showExpeditionOptions: !this.parseURLQueryString()});
@@ -4820,6 +4821,15 @@ class ClimberDBExpeditions extends ClimberDB {
 				$('.expedition-content, .hide-when-content-hidden').ariaHide(true);
 			}
 
+			// load only expedition mountains (Denali and Foraker) as options
+			const $mountainCodeInput = $('[name=mountain_code]');
+			const expeditionMountains = Object.values(this.mountainCodes).filter(({is_backcountry}) => !is_backcountry);
+			for (const {code, name} of expeditionMountains) {
+				$mountainCodeInput.append(
+					$(`<option value="${code}">${name}</option>`)
+				)
+			}
+
 			// Initialize select2s after select options have been filled
 			$('.select2-no-tag').select2({
 				width: '100%'
@@ -4830,7 +4840,5 @@ class ClimberDBExpeditions extends ClimberDB {
 		}).always(() => {
 			hideLoadingIndicator()
 		});
-
-		return initDeferred;
 	}
 }

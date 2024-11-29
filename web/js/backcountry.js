@@ -562,6 +562,15 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 					$selects.val($selects.data('default-value'));
 				})
 			)
+
+			// load only backcountry mountains as options
+			const $mountainCodeInput = $('[name=mountain_code]');
+			const backcountryMountains = Object.values(this.mountainCodes).filter(({is_backcountry}) => is_backcountry);
+			for (const {code, name} of backcountryMountains) {
+				$mountainCodeInput.append(
+					$(`<option value="${code}">${name}</option>`)
+				)
+			}
 		})
 
 	}
