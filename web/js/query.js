@@ -281,6 +281,7 @@ class ClimberDBQuery extends ClimberDB {
 				sql : `
 				SELECT
 					expedition_id,
+					CASE WHEN is_backcountry THEN 'backcountry' ELSE 'expeditions' END AS page_name,
 					expedition_name AS "Group Name",
 					planned_return_date AS "Planned Return",
 					COUNT(climber_id) AS "Climber Count"
@@ -293,6 +294,7 @@ class ClimberDBQuery extends ClimberDB {
 					group_status_code = 4
 				GROUP BY
 					expedition_members.expedition_id,
+					page_name,
 					"Group Name",
 					"Planned Return"
 				ORDER BY
@@ -304,9 +306,11 @@ class ClimberDBQuery extends ClimberDB {
 					'Planned Return'
 				],
 				hrefs: {
-					'Group Name': 'expeditions.html?id={expedition_id}'
+					'Group Name': '{page_name}.html?id={expedition_id}'
+				},
+				cssColumnClasses: {
+					'Group Name': 'justify-content-start',
 				}
-
 			},
 			pro_pins: {
 				sql: `
