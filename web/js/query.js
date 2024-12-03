@@ -543,9 +543,6 @@ class ClimberDBQuery extends ClimberDB {
 			this.onSortDataButtonClick(e);
 		});
 
-		//query button to find the all expeditions with past due dates
-		$(document).on('click')
-
 		$('#climbers-per-mountain-query-button').click(e => {
 			this.onClimbersPerMountainButtonClick()
 		});
@@ -597,6 +594,9 @@ class ClimberDBQuery extends ClimberDB {
 		$('.query-parameters-container[data-query-name="expedition_by_name_id"] .update-expedition-id-option').change(() => {
 			this.updateExpeditionIDOptions();
 		});
+		$('#count_climbers-is_backcountry_yes_no').change(e => {
+			$('.backcountry-only-field').ariaHide(e.target.value != "'Yes'")
+		})
 
 		//$(window).resize(e => {onWindowResize(e)})
 		

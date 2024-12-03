@@ -693,14 +693,21 @@ CREATE VIEW all_climbs_view AS
 		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
 		actual_return_date - actual_departure_date AS trip_length_days,
 		extract(year FROM planned_departure_date) AS year,
-		to_char(planned_departure_date, 'Month') AS month
+		to_char(planned_departure_date, 'Month') AS month,
+		expeditions.is_backcountry,
+		CASE WHEN expeditions.is_backcountry THEN 'Yes' ELSE 'No' END AS is_backcountry_yes_no,
+		itinerary_locations.backcountry_location_type_code,
+		itinerary_locations.backcountry_location_code,
+		itinerary_locations.location_start_date,
+		itinerary_locations.location_end_date
 	FROM expeditions
 		JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
 		JOIN climbers ON expedition_members.climber_id = climbers.id
 		JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 		JOIN route_codes ON expedition_member_routes.route_code = route_codes.code
 		JOIN mountain_codes ON route_codes.mountain_code = mountain_codes.code
-		LEFT JOIN expedition_status_view ON expeditions.id = expedition_status_view.expedition_id;
+		LEFT JOIN expedition_status_view ON expeditions.id = expedition_status_view.expedition_id
+		LEFT JOIN itinerary_locations ON expeditions.id = itinerary_locations.expedition_id;
 
 
 CREATE VIEW registered_climbs_view AS

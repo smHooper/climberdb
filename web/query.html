@@ -300,7 +300,8 @@
 								<div class="show-query-parameter-button" role="button" data-field-name="group_status_code">Group status</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="reservation_status_code">Expedition member status</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="special_group_type_code">Special group type</div>
-								<div class="show-query-parameter-button" role="button" data-field-name="guide_company_code">Guide company</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="guide_company_code">Guide/CUA company</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="is_backcountry_yes_no">Backcountry (yes/no)</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="mountain_code">Mountain</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="route_code">Route</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="summited">Summited (yes/no)</div>
@@ -314,6 +315,10 @@
 								<div class="show-query-parameter-button" role="button" data-field-name="planned_return_date">Planned return</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="actual_departure_date">Actual departure</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="actual_return_date">Actual return</div>
+								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="backcountry_location_type_code">BC location type</div>
+								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="backcountry_location_type_code">BC location</div>
+								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="backcountry_location_type_code">BC location start date</div>
+								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="backcountry_location_type_code">BC location end date</div>
 							</div>
 
 							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
@@ -345,8 +350,19 @@
 								<button class="icon-button hide-query-parameter-button">
 									<i class="fas fa-lg fa-times"></i>
 								</button>
-								<label class="field-label" for="count_climbers-guide_company">Guide company</label>
+								<label class="field-label" for="count_climbers-guide_company">Guide/CUA company</label>
 								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-is_backcountry_yes_no" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field" name="is_backcountry_yes_no"required>
+									<option value="">Backcountry (yes/no)</option>
+									<option value="'Yes'">Yes</option>
+									<option value="'No'">No</option>
+								</select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-is_backcountry_yes_no">Backcountry (yes/no)</label>
 							</div>
 							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 								<select id="count_climbers-mountain" class="input-field default climberdb-select2 is-empty where-clause-field" name="mountain_code" multiple="multiple" placeholder="Mountain" title="Mountain filter" required></select>
@@ -518,6 +534,63 @@
 								</button>
 								<label class="field-label" for="count_climbers-actual_return_date_operator">Actual return</label>
 							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse backcountry-only-field hidden" aria-hidden="true">
+								<select id="count_climbers-backcountry_location_type_code" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="backcountry_location_type_code" placeholder="BC location type" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-country_code">BC location type</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse backcountry-only-field hidden" aria-hidden="true">
+								<select id="count_climbers-backcountry_location_code" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="backcountry_location_code" placeholder="BC location" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-country_code">BC location</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse backcountry-only-field hidden" aria-hidden="true">
+								<div class="where-clause-date-field-container col d-flex">
+									<select id="count_climbers-location_start_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+										<option value="=" selected>equals</option>
+										<option value="<=">is before</option>
+										<option value=">=">is after</option>
+										<option value="BETWEEN">is between</option>
+									</select>
+									<input id="count_climbers-location_start_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="location_start_date" name="location_start_date" data-validation-field-name="BC location start date">
+									<div class="query-option-double-value-container hidden">
+										<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="location_start_date" data-validation-field-name="BC location start date" aria-hidden="true" required>
+										<span>and</span>
+										<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="location_start_date" data-validation-field-name="BC location start date" aria-hidden="true" required>
+									</div>
+								</div>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-location_start_date_operator">BC location start date</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse backcountry-only-field hidden" aria-hidden="true">
+								<div class="where-clause-date-field-container col d-flex">
+									<select id="count_climbers-location_end_date_operator" class="input-field query-option-operator datetime-query-operator" value="equals">
+										<option value="=" selected>equals</option>
+										<option value="<=">is before</option>
+										<option value=">=">is after</option>
+										<option value="BETWEEN">is between</option>
+									</select>
+									<input id="count_climbers-location_end_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="location_end_date" name="location_end_date" data-validation-field-name="BC location end date">
+									<div class="query-option-double-value-container hidden">
+										<input class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="location_end_date" data-validation-field-name="BC location end date" aria-hidden="true" required>
+										<span>and</span>
+										<input class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="location_end_date" data-validation-field-name="BC location end date" aria-hidden="true" required>
+									</div>
+								</div>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-location_end_date_operator">BC location end date</label>
+							</div>
+							
 							<!--<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 								<select id="count_climbers-frostbite" class="input-field query-option-input-field default no-option-fill keep-default-option where-clause-field medical-query-field" name="frostbite" required>
 									<option value="">Frostbite?</option>
