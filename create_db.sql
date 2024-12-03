@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	is_acclimatizing BOOLEAN,
 	bump_flights TEXT,
 	itinerary_description TEXT,
+	cmc_count INTEGER, -- alternative to checking out individual CMCs
 	last_modified_by VARCHAR(50),
 	last_modified_time TIMESTAMP
 );
@@ -470,6 +471,7 @@ CREATE VIEW expedition_info_view AS
 		expeditions.is_acclimatizing,
 		expeditions.bump_flights,
 		expeditions.itinerary_description,
+		expeditions.cmc_count,
 		expeditions.last_modified_by,
 		expeditions.last_modified_time,
 		itinerary_locations.id AS itinerary_location_id,
