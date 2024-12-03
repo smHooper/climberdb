@@ -1521,7 +1521,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Transactions and routes might have edits without expedition members having any, so loop 
 		//	through each expedition member card, regardless of whether it has any dirty inputs
-		for (const el of $('#expedition-members-accordion .card:not(.cloneable)').has(inputSelector)) {
+		for (const el of $('#expedition-members-accordion .card:not(.cloneable)')) {
 			
 			const $card = $(el);
 			const cardID = el.id;
