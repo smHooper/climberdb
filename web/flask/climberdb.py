@@ -1602,7 +1602,7 @@ def get_next_permit_number(year: int) -> str:
 		FROM {schema}.expedition_members m
 		JOIN {schema}.expeditions e ON m.expedition_id=e.id
 		WHERE 
-			extract(year FROM planned_departure_date)=:full_year AND
+			extract(year FROM coalesce(planned_departure_date, actual_departure_date))=:full_year AND
 			m.permit_number LIKE :permit_search_str
 	''')
 	with ReadSession() as session:
