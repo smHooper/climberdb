@@ -67,6 +67,9 @@
 						<li id="count-nps-by-gender-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="nps, gender, female, women">Count NPS patrollers by gender</li>
 						<li id="count-summits-per-month-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, month">Count summits per month</li>
 						<li id="count-summits-per-day-query-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="summit, day">Count summits per day</li>
+						<li id="bc-groups-on-mountain-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="backcountry, active, on mountain, bc">Backcountry groups on mountain</li>
+						<li id="current-bc-groups" class="query-option" role="button" data-query-name="current_bc_groups" data-tags="backcountry, active, bc">Backcountry Groups By Year</li>
+						<li id="count-bc-groups-by-location-button" class="query-option" role="button" data-query-name="count_climbers" data-tags="count, backcountry, bc, active, on mountain, itinerary, location"> Count backcountry groups by location/status</li>
 						<li class="query-option" role="button" data-query-name="pro_pins" data-tags="climber, epeditions, pro, pro pin">Query Pro Pins</li>
 						<li id="medical-query-button" class="query-option" role="button" data-query-name="medical_issues" data-tags="medical, altitude, illness, injury, frostbite, hace, hape, sickness">Medical issues</li>
 					</ul>
@@ -230,10 +233,11 @@
 							<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
 								<select id="count_climbers-count_field" class="input-field no-option-fill" name="count_climbers-count_field" title="Count expedition members, climbers, or climbs?" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
 									<option value="climbers" selected>Climbers</option>
+									<option value="expeditions">Expeditions</option>
 									<option value="members">Expedition member</option>
 									<option value="climbs">Climbs</option>
 								</select>
-								<label class="field-label" for="count_per_guide_company-count_field">Count climbers, exp. members, or climbs?</label>
+								<label class="field-label" for="count_per_guide_company-count_field">Count climbers, expeditions, exp. members, or climbs?</label>
 							</div>
 							<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
 								<select id="count_climbers-group_by_fields" class="input-field no-option-fill climberdb-select2 is-empty" multiple="multiple" name="group_by_fields" placeholder="Group rows by" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
@@ -248,6 +252,7 @@
 									<option value="state_code">State</option>
 									<option value="route_name">Route</option>
 									<option value="mountain_name">Mountain</option>
+									<option value="backcountry_location_code">Backcountry location</option>
 									<option value="planned_departure_date">Planned departure</option>
 									<option value="planned_return_date">Planned return</option>
 									<option value="actual_departure_date">Actual departure</option>
@@ -274,6 +279,7 @@
 									<option value="state_code">State</option>
 									<option value="route_code">Route</option>
 									<option value="mountain_code">Mountain</option>
+									<option value="backcountry_location_code">Backcountry location</option>
 									<option value="planned_departure_date">Planned departure</option>
 									<option value="planned_return_date">Planned return</option>
 									<option value="actual_departure_date">Actual departure</option>
@@ -316,9 +322,9 @@
 								<div class="show-query-parameter-button" role="button" data-field-name="actual_departure_date">Actual departure</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="actual_return_date">Actual return</div>
 								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="backcountry_location_type_code">BC location type</div>
-								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="backcountry_location_type_code">BC location</div>
-								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="backcountry_location_type_code">BC location start date</div>
-								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="backcountry_location_type_code">BC location end date</div>
+								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="backcountry_location_code">BC location</div>
+								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="location_start_date">BC location start date</div>
+								<div class="show-query-parameter-button backcountry-only-field hidden" role="button" aria-hidden="true" data-field-name="location_end_date">BC location end date</div>
 							</div>
 
 							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
@@ -661,6 +667,26 @@
 										<label class="field-label" for="count_climbers-country_code">Statistic</label>
 									</div>
 								</div>
+							</div>
+						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="current_bc_groups">
+							<h4 class="w-100 mb-3">Backcountry Groups By Year</h4>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3">
+								<select id="current_bc_groups-year" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field no-option-fill year-select-field" multiple="multiple" name="year" placeholder="Year" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="current_bc_groups-year">Year</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3">
+								<select id="current_bc_groups-group_status" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field include-dsiabled-options" multiple="multiple" name="group_status_code" title="Group status" placeholder="Group status" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="current_bc_groups-group_status">Group status</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 							</div>
 						</div>
 
