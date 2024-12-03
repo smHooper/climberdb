@@ -126,8 +126,8 @@ CREATE TABLE IF NOT EXISTS expeditions (
 
 CREATE TABLE IF NOT EXISTS expedition_members (
 	id SERIAL PRIMARY KEY,
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
-	climber_id INTEGER REFERENCES climbers(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	climber_id INTEGER NOT NULL REFERENCES climbers(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	permit_number VARCHAR(50) UNIQUE,
 	datetime_reserved TIMESTAMP,
 	datetime_cancelled TIMESTAMP,
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 
 CREATE TABLE IF NOT EXISTS attachments (
 	id SERIAL PRIMARY KEY,
-	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_member_id INTEGER NOT NULL REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	attachment_type_code INTEGER REFERENCES attachment_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	date_received DATE,
 	attachment_notes TEXT, 
@@ -176,7 +176,7 @@ CREATE TABLE IF NOT EXISTS attachments (
 
 CREATE TABLE IF NOT EXISTS expedition_member_routes (
 	id SERIAL PRIMARY KEY,
-	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_member_id INTEGER NOT NULL REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	route_code INTEGER REFERENCES route_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	route_order INTEGER,
 	route_was_summited BOOLEAN, --a null summit_date could indicate that the route wasn't climbed, but I don't think you could rely on it
@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS expedition_member_routes (
 
 CREATE TABLE IF NOT EXISTS transactions (
 	id SERIAL PRIMARY KEY,
-	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_member_id INTEGER NOT NULL REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	transaction_type_code INTEGER REFERENCES transaction_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	payment_method_code INTEGER REFERENCES payment_method_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	transaction_value MONEY,
@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 -- I think most of the actual calendar building can happen in the app. This table just stores the breifing info
 CREATE TABLE IF NOT EXISTS briefings (
 	id SERIAL PRIMARY KEY,
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	briefing_start TIMESTAMP,
 	briefing_end TIMESTAMP,
 	briefing_ranger_user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -219,8 +219,8 @@ CREATE TABLE IF NOT EXISTS cmc_inventory (
 
 CREATE TABLE IF NOT EXISTS cmc_checkout (
 	id SERIAL PRIMARY KEY, 
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
-	cmc_id INTEGER REFERENCES cmc_inventory(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	cmc_id INTEGER NOT NULL REFERENCES cmc_inventory(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	issued_by VARCHAR(50),
 	checkout_date DATE,
 	checked_in_by VARCHAR(50),
@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS cmc_checkout (
 
 CREATE TABLE IF NOT EXISTS communication_devices (
 	id SERIAL PRIMARY KEY,
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE, --expedition_member_id is optional field in app, so persistent foreign key is necessary
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE, --expedition_member_id is optional field in app, so persistent foreign key is necessary
 	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	communication_device_type_code INTEGER REFERENCES communication_device_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	number_or_address VARCHAR(255),
@@ -241,7 +241,7 @@ CREATE TABLE IF NOT EXISTS communication_devices (
 
 CREATE TABLE IF NOT EXISTS itinerary_locations (
 	id SERIAL PRIMARY KEY,
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	backcountry_location_type_code INTEGER REFERENCES backcountry_location_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	backcountry_location_code INTEGER REFERENCES backcountry_location_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	location_start_date DATE,
@@ -692,7 +692,7 @@ CREATE VIEW all_climbs_view AS
 		CASE WHEN is_guiding OR is_interpreter THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
 		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
 		actual_return_date - actual_departure_date AS trip_length_days,
-		extract(year FROM planned_departure_date) AS year,
+		extract(year FROM coalesce(planned_departure_date, actual_departure_date)) AS year, --for bc groups, planned_departure is null
 		to_char(planned_departure_date, 'Month') AS month,
 		expeditions.is_backcountry,
 		CASE WHEN expeditions.is_backcountry THEN 'Yes' ELSE 'No' END AS is_backcountry_yes_no,
