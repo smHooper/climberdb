@@ -918,7 +918,7 @@ def query_db():
 				else param 
 				for name, param in (request_data.get('params') or {}).items()
 			}
-			result = session.execute(sql, params)
+			result = session.execute(sql.replace('{schema}', schema), params)
 			
 			response_data = select_result_to_dict(result)
 
