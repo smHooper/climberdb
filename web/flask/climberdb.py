@@ -912,7 +912,12 @@ def query_db():
 	# If raw SQL was passed, execute it
 	with ReadSession() as session:
 		if sql:
-			params = request_data.get('params') or None
+			# List parameters have to be tuples
+			params = {
+				name: tuple(param) if isinstance(param, list) 
+				else param 
+				for name, param in (request_data.get('params') or {}).items()
+			}
 			result = session.execute(sql, params)
 			
 			response_data = select_result_to_dict(result)

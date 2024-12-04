@@ -187,6 +187,39 @@ class ClimberDBQuery extends ClimberDB {
 					'Guide Company': 'justify-content-start'
 				}
 			},
+			cua_backcountry_groups: {
+				sql: `
+					SELECT 
+						expedition_id,
+						expedition_name AS "Group Name",
+						cua_company_codes.name AS "CUA Company",
+						count(expedition_members.id) AS "Group Size"
+					FROM 
+						{schema}.expeditions 
+						JOIN {schema}.expedition_members ON expeditions.id=expedition_id
+						JOIN {schema}.cua_company_codes ON expeditions.cua_company_code=cua_company_codes.code
+					WHERE 
+						is_backcountry AND 
+						coalesce(cua_company_code, -1) <> -1 AND  -- -1 = None 
+						extract(year FROM actual_departure_date) = {year}  
+						{cua_company_clause}
+					GROUP BY 
+						expedition_id, 
+						"Group Name",
+						"CUA Company"
+					ORDER BY 
+						"CUA Company",
+						"Group Name"
+				`,
+				columns: [
+					"Group Name",
+					"CUA Company",
+					"Group Size"
+				],
+				hrefs: {
+					"Group Name": `backcountry.html?id={expedition_id}`
+				}
+			},
 			count_climbers: {
 				sql: `
 					SELECT {outer_select}
@@ -1483,6 +1516,19 @@ class ClimberDBQuery extends ClimberDB {
 		this.submitQuery(sql, {sqlParameters: sqlParameters, queryName: 'expedition_by_name_id'});
 	}
 
+	/*
+	CUA Backcountry Groups query has a string substitution for cua_company_code because it 
+	only needs to be a non-empty sting if the user has selected any CUA Companies to filter with
+	*/
+	queryCUABackcountryGroups() {
+		const cuaCompanies = $('#cua_backcountry_groups-cua_company').val();
+		const cuaClause = cuaCompanies.length ? ` AND cua_company_code IN :cua_company_codes` : '';
+		const year = $('#cua_backcountry_groups-year').val();
+		const sql = this.queries.cua_backcountry_groups.sql
+			.replace('{cua_company_clause}', cuaClause)
+			.replace('{year}', year);
+		this.submitQuery(sql, {sqlParameters: {cua_company_codes: cuaCompanies}, queryName: 'cua_backcountry_groups'})
+	}
 
 	fieldToSelectAlias([field, alias]) {
 		return field.endsWith('_code') ? `${field}s.name AS "${alias}"` : `${field} AS "${alias}"`;
@@ -1707,6 +1753,8 @@ class ClimberDBQuery extends ClimberDB {
 			this.queryCountClimbers();
 		} else if (queryName === 'expedition_by_name_id') {
 			this.queryExpeditionByNameOrID();
+		} else if (queryName === 'cua_backcountry_groups') {
+			this.queryCUABackcountryGroups();
 		} else {
 			this.runQuery(queryName);
 		}
@@ -1885,21 +1933,23 @@ class ClimberDBQuery extends ClimberDB {
 				]
 			})
 			.then(() => {
-				// Initialize select2s individually because the width needs to be set depending on the type of select
-				for (const el of $('.climberdb-select2')) {
-					const $select = $(el);
-					$select.select2({
-						width: $select.siblings('.hide-query-parameter-button').length ? 'calc(100% - 28px)' : '100%',
-						placeholder: $select.attr('placeholder')
-					});
-					// .select2 removes the .default class for some reason
-					$select.addClass('default');
-				}
 
 				// Remove the "None" option for guide company accounting queries
 				setTimeout(() => {
-					$('.remove-null-guide-option option[value=-1]').remove()
+					// Remove/add any select options before calling select2()
+					$('.remove-null-guide-option option[value=-1]').remove();
 					$('.has-null-option').append('<option value="null">Null</option>');
+
+					// Initialize select2s individually because the width needs to be set depending on the type of select
+					for (const el of $('.climberdb-select2')) {
+						const $select = $(el);
+						$select.select2({
+							width: $select.siblings('.hide-query-parameter-button').length ? 'calc(100% - 28px)' : '100%',
+							placeholder: $select.attr('placeholder')
+						});
+						// .select2 removes the .default class for some reason
+						$select.addClass('default');
+					}
 				}, 500);
 				
 				$('#query-option-list .query-option').first().click();
