@@ -6,6 +6,16 @@ class ClimberDBDashboard extends ClimberDB {
 		this.soloClimberInfo = [];
 		this.missingPaymentOrSUPInfo = [];
 		this.overduePartiesInfo = [];
+		this.maps = {
+			main: {
+				map: null,
+				layers: []
+			},
+			// modal: {
+			// 	map: null,
+			// 	layers: {}
+			// }
+		};
 		return this;
 	}
 
@@ -681,6 +691,44 @@ class ClimberDBDashboard extends ClimberDB {
 
 	}
 
+
+	configureBCMap() {
+
+		const queryDeferred = this.queryDB({tables: ['current_backcountry_groups_view']})
+		return $.when(
+			this.configureMap('bc-groups-map', this.maps.main),
+			queryDeferred
+		).done((_, [queryResponse]) => { // ignore .configureMap() response
+			if (this.pythonReturnedError(queryResponse)) {
+				showModal('Backcountry groups could not be queried because there was an unexpected error: <br><br>' + queryResponse, 'Unexpected Error')
+			} else {
+				const icon = L.icon({
+					iconUrl: '../imgs/camp_icon_50px.png',
+					iconSize: [35, 35],
+				});
+				const result = queryResponse.data || [];
+				const markerCluster = L.markerClusterGroup({
+					spiderLegPolylineOptions: {color: '#fff'},
+					showCoverageOnHover: false
+				});
+				for (const {expedition_id, latitude, longitude} of result) {
+					const marker = L.marker([latitude, longitude], {icon: icon})
+						.on('click', () => {
+							// when clicked, open the backcountry page for that group in a new tab
+							window.open(`backcountry.html?id=${expedition_id}`, '_blank')
+						});
+					markerCluster.addLayer(marker);
+					this.maps.main.layers.push(marker);
+				}
+				markerCluster.addTo(this.maps.main.map);
+				this.fitMapBoundsToLocations(this.maps.main);
+			}
+		}).fail(() => {
+			showModal('There was a problem loading backcountry group data', 'Database Error')
+		})
+	}
+
+
 	init() {
 		// Call super.init()
 		this.showLoadingIndicator('init');
@@ -696,7 +744,8 @@ class ClimberDBDashboard extends ClimberDB {
 				this.configureFlaggedGroups(),
 				this.configureSoloClimbers(),
 				this.configureMisingPaymentOrSUP(),
-				this.configureOverdueParties()
+				this.configureOverdueParties(),
+				this.configureBCMap()
 			)
 		}).always(() => {
 			hideLoadingIndicator();

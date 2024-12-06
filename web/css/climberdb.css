@@ -21,7 +21,7 @@ html, body {
   color: var(--ui-primary-text-color);
 }
 body a {
-  color: #219ebc;
+  color: var(--ui-primary-color);
   font-weight: bold;
 }
 
@@ -1739,9 +1739,21 @@ input[type=number] {
 }
 
 /**** leaflet stuff *****/
-
 .leaflet-popup .leaflet-popup-content-wrapper {
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Lato', sans-serif;
+}
+.leaflet-tooltip-point-label {
+  background-color: #00000000; /*make bg transparent*/
+  font-weight: bold;
+  font-size: 20px;
+  color: white;
+  border: none;
+  /* add drop shadow for the text*/
+  text-shadow: 3px 3px 5px #000000CC;
+  box-shadow: none;
+}
+.leaflet-tooltip-point-label:before { /*hide the tooltip arrow*/
+  display: none !important;
 }
 
 

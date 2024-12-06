@@ -26,6 +26,7 @@ VIEW_PRIMARY_KEYS = {
 	'climber_info_view': 'id',
 	'briefings_view': 'id',
 	'briefings_expedition_info_view': 'expedition_id',
+	'current_backcountry_groups_view': 'expedition_id',
 	'expedition_status_view': 'expedition_id',
 	'missing_sup_or_payment_dashboard_view': 'expedition_id',
 	'overdue_parties_view': 'expedition_id',

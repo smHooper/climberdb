@@ -855,6 +855,23 @@ FROM transaction_type_codes AS codes JOIN (
 WHERE sort_order IS NOT NULL 
 ORDER BY sort_order;
 
+CREATE VIEW current_backcountry_groups_view AS 
+	WITH today AS (
+	  SELECT now(), extract(year FROM now()) AS year
+	)
+	SELECT 
+	  itinerary_locations.expedition_id, 
+	  latitude, 
+	  longitude 
+	FROM 
+	  itinerary_locations 
+	    JOIN expeditions ON expeditions.id=itinerary_locations.expedition_id 
+	    JOIN expedition_status_view ON expedition_status_view.expedition_id=itinerary_locations.expedition_id 
+	    JOIN today ON today.now BETWEEN coalesce(location_start_date, (today.year || '-1-1')::date) AND coalesce(location_end_date, (today.year || '-12-31')::date)
+	WHERE 
+	  expedition_status = 4 AND 
+	  actual_departure_date < today.now
+	;
 
 CREATE MATERIALIZED VIEW table_info_matview AS 
    SELECT 

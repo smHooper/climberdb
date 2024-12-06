@@ -36,19 +36,6 @@
 	50% { opacity: 1; }
 	100% { opacity: 0.25; }
 }
-.leaflet-tooltip-point-label {
-	background-color: #00000000; /*make bg transparent*/
-	font-weight: bold;
-	font-size: 20px;
-	color: white;
-	border: none;
-	/* add drop shadow for the text*/
-	text-shadow: 3px 3px 5px #000000CC;
-	box-shadow: none;
-}
-.leaflet-tooltip-point-label:before { /*hide the tooltip arrow*/
-  display: none !important;
-}
 
 .backcountry-location-list-item {
 	background: var(--ui-secondary-highlight-color);
