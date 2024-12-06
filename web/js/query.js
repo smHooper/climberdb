@@ -9,6 +9,7 @@ class ClimberDBQuery extends ClimberDB {
 		this.ancillaryResult = []; // for things like briefings that go along with 
 		this.countClimbersBySelectMap = { // mapping #count_climbers-count_field values to SELECT statements for readability
 			climbers: `SELECT DISTINCT ON (climber_id) * FROM {schema}.all_climbs_view`,
+			expeditions: `SELECT DISTINCT ON (expedition_id) * FROM {schema}.all_climbs_view`,
 			members:  `SELECT DISTINCT ON (expedition_member_id) * FROM {schema}.all_climbs_view`,
 			climbs:   `SELECT * FROM {schema}.all_climbs_view`,
 		}
@@ -186,6 +187,39 @@ class ClimberDBQuery extends ClimberDB {
 					'Guide Company': 'justify-content-start'
 				}
 			},
+			cua_backcountry_groups: {
+				sql: `
+					SELECT 
+						expedition_id,
+						expedition_name AS "Group Name",
+						cua_company_codes.name AS "CUA Company",
+						count(expedition_members.id) AS "Group Size"
+					FROM 
+						{schema}.expeditions 
+						JOIN {schema}.expedition_members ON expeditions.id=expedition_id
+						JOIN {schema}.cua_company_codes ON expeditions.cua_company_code=cua_company_codes.code
+					WHERE 
+						is_backcountry AND 
+						coalesce(cua_company_code, -1) <> -1 AND  -- -1 = None 
+						extract(year FROM actual_departure_date) = {year}  
+						{cua_company_clause}
+					GROUP BY 
+						expedition_id, 
+						"Group Name",
+						"CUA Company"
+					ORDER BY 
+						"CUA Company",
+						"Group Name"
+				`,
+				columns: [
+					"Group Name",
+					"CUA Company",
+					"Group Size"
+				],
+				hrefs: {
+					"Group Name": `backcountry.html?id={expedition_id}`
+				}
+			},
 			count_climbers: {
 				sql: `
 					SELECT {outer_select}
@@ -281,6 +315,7 @@ class ClimberDBQuery extends ClimberDB {
 				sql : `
 				SELECT
 					expedition_id,
+					CASE WHEN is_backcountry THEN 'backcountry' ELSE 'expeditions' END AS page_name,
 					expedition_name AS "Group Name",
 					planned_return_date AS "Planned Return",
 					COUNT(climber_id) AS "Climber Count"
@@ -293,6 +328,7 @@ class ClimberDBQuery extends ClimberDB {
 					group_status_code = 4
 				GROUP BY
 					expedition_members.expedition_id,
+					page_name,
 					"Group Name",
 					"Planned Return"
 				ORDER BY
@@ -304,9 +340,11 @@ class ClimberDBQuery extends ClimberDB {
 					'Planned Return'
 				],
 				hrefs: {
-					'Group Name': 'expeditions.html?id={expedition_id}'
+					'Group Name': '{page_name}.html?id={expedition_id}'
+				},
+				cssColumnClasses: {
+					'Group Name': 'justify-content-start',
 				}
-
 			},
 			pro_pins: {
 				sql: `
@@ -397,6 +435,48 @@ class ClimberDBQuery extends ClimberDB {
 					'Users',
 					'User Nights'
 				]
+			},
+			current_bc_groups: {
+				sql: `
+					SELECT 
+						expedition_id,
+						expedition_name AS "BC Group Name",
+						string_agg(DISTINCT mountain_name, ', ' ORDER BY mountain_name) AS "Mountains/Locations",
+						group_status_name AS "Group Status",
+						count(expedition_member_id) AS "Party Size"
+					FROM
+						(
+							SELECT DISTINCT ON (expedition_member_id) 
+								*, 
+								group_status_codes.name AS group_status_name
+							FROM {schema}.all_climbs_view 
+							JOIN {schema}.group_status_codes ON group_status_codes.code=group_status_code
+							WHERE 
+								extract(year FROM actual_departure_date) = {year} AND 
+								group_status_code IN ({group_status_code}) AND 
+								route_code IS NOT NULL AND 
+								is_backcountry
+						) _
+					GROUP BY
+						expedition_id,
+						"BC Group Name",
+						"Group Status"
+					ORDER BY 
+						"BC Group Name",
+						"Mountains/Locations"
+				`,
+				columns: [
+					'BC Group Name',
+					'Group Status',
+					'Mountains/Locations',
+					'Party Size'
+				],
+				hrefs: {
+					"BC Group Name": `backcountry.html?id={expedition_id}`
+				},
+				cssColumnClasses: {
+					'BC Group Name': 'justify-content-start'
+				}
 			},
 			average_trip_length: {
 				sql: `
@@ -539,9 +619,6 @@ class ClimberDBQuery extends ClimberDB {
 			this.onSortDataButtonClick(e);
 		});
 
-		//query button to find the all expeditions with past due dates
-		$(document).on('click')
-
 		$('#climbers-per-mountain-query-button').click(e => {
 			this.onClimbersPerMountainButtonClick()
 		});
@@ -590,10 +667,18 @@ class ClimberDBQuery extends ClimberDB {
 		$('#count-summits-per-day-query-button').click(e => {
 			this.onSummitsPerDayClick()
 		});
+		$('#bc-groups-on-mountain-button').click(e => {
+			this.onBackcountryOnMOuntainClick()
+		});
+		$('#count-bc-groups-by-location-button').click(e => {
+			this.onBCGroupsByLocationClick()
+		});
 		$('.query-parameters-container[data-query-name="expedition_by_name_id"] .update-expedition-id-option').change(() => {
 			this.updateExpeditionIDOptions();
 		});
-
+		$('#count_climbers-is_backcountry_yes_no').change(e => {
+			$('.backcountry-only-field').ariaHide(e.target.value != "'Yes'")
+		});
 		//$(window).resize(e => {onWindowResize(e)})
 		
 		// Record current value for .revertable inputs so the value can be reverted after a certain event
@@ -927,6 +1012,44 @@ class ClimberDBQuery extends ClimberDB {
 		$('#count_climbers-group_by_fields').val(['summit_date']).change();
 	}
 
+	onBackcountryOnMOuntainClick() {
+		this.setCountClimbersOrClimbsParameters({queryTarget:'expeditions'});
+		const $container = $('.query-parameters-container[data-query-name="count_climbers"]');
+		$container.find(
+			'.show-query-parameter-button[data-field-name=is_backcountry_yes_no],' +
+			'.show-query-parameter-button[data-field-name=group_status_code],' +
+			'.show-query-parameter-button[data-field-name=backcountry_location_code]'
+		).click();
+
+		$('#count_climbers-is_backcountry_yes_no')
+			.val("'Yes'")
+			.change(); // show other BC fields
+		$('#count_climbers-group_status')
+			.val(4) //on mountain
+			.change();
+		$('#count_climbers-backcountry_location_code')
+			.siblings('.add-remove-all-multiselect-options-button')
+			.click();
+	}
+
+	onBCGroupsByLocationClick() {
+		this.setCountClimbersOrClimbsParameters({
+			queryTarget:'summary', 
+			countBy: 'expeditions', 
+			groupByFields: ['backcountry_location_code'],
+			pivotField: 'group_status_code'
+		});
+		const $container = $('.query-parameters-container[data-query-name="count_climbers"]');
+		$container.find(
+			'.show-query-parameter-button[data-field-name=is_backcountry_yes_no],' +
+			'.show-query-parameter-button[data-field-name=group_status_code]' 
+		).click();
+
+		$('#count_climbers-group_status')
+			.val([4, 5]) //on mountain and off mountain
+			.change();
+	}
+
 	/*
 	When the window is resized, set inline CSS height because some queries need to to make scrolling work properly
 	*/
@@ -970,8 +1093,9 @@ class ClimberDBQuery extends ClimberDB {
 
 
 	/*
-	When a user changes the gorup by or pivot field, make sure that 
-	the values of each field DO NOT overlap
+	When a user changes the gorup by or pivot field, make sure that the values of each field 
+	DO NOT overlap. Also, when the group by or pivot field is backcountry_location_codes, 
+	make sure is_backcountry_yes_no is set
 	*/
 	onGroupByPivotFieldChange(e) {
 		const $target = $(e.target);
@@ -992,6 +1116,12 @@ class ClimberDBQuery extends ClimberDB {
 			const message = `The "${otherLabelText}" field ${targetIsGroupBy ? 'is already set to' : 'already includes'} "${otherValueText}". Either` + 
 				` choose a different "${targetLabelText}" value or change the "${otherLabelText}" value.`;
 			showModal(message, `Invalid ${targetLabelText} value`);
+		}
+
+		// when the group by or pivot field is backcountry_location_codes, make sure is_backcountry_yes_no is set
+		if (targetValue.includes('backcountry_location_code')) {
+			$('.show-query-parameter-button[data-field-name=is_backcountry_yes_no]').click();
+			$('#count_climbers-is_backcountry_yes_no').val("'Yes'").change();
 		}
 
 		// If either Day or Day of year was selected, show the actual departure/return fields
@@ -1386,6 +1516,19 @@ class ClimberDBQuery extends ClimberDB {
 		this.submitQuery(sql, {sqlParameters: sqlParameters, queryName: 'expedition_by_name_id'});
 	}
 
+	/*
+	CUA Backcountry Groups query has a string substitution for cua_company_code because it 
+	only needs to be a non-empty sting if the user has selected any CUA Companies to filter with
+	*/
+	queryCUABackcountryGroups() {
+		const cuaCompanies = $('#cua_backcountry_groups-cua_company').val();
+		const cuaClause = cuaCompanies.length ? ` AND cua_company_code IN :cua_company_codes` : '';
+		const year = $('#cua_backcountry_groups-year').val();
+		const sql = this.queries.cua_backcountry_groups.sql
+			.replace('{cua_company_clause}', cuaClause)
+			.replace('{year}', year);
+		this.submitQuery(sql, {sqlParameters: {cua_company_codes: cuaCompanies}, queryName: 'cua_backcountry_groups'})
+	}
 
 	fieldToSelectAlias([field, alias]) {
 		return field.endsWith('_code') ? `${field}s.name AS "${alias}"` : `${field} AS "${alias}"`;
@@ -1610,6 +1753,8 @@ class ClimberDBQuery extends ClimberDB {
 			this.queryCountClimbers();
 		} else if (queryName === 'expedition_by_name_id') {
 			this.queryExpeditionByNameOrID();
+		} else if (queryName === 'cua_backcountry_groups') {
+			this.queryCUABackcountryGroups();
 		} else {
 			this.runQuery(queryName);
 		}
@@ -1788,21 +1933,23 @@ class ClimberDBQuery extends ClimberDB {
 				]
 			})
 			.then(() => {
-				// Initialize select2s individually because the width needs to be set depending on the type of select
-				for (const el of $('.climberdb-select2')) {
-					const $select = $(el);
-					$select.select2({
-						width: $select.siblings('.hide-query-parameter-button').length ? 'calc(100% - 28px)' : '100%',
-						placeholder: $select.attr('placeholder')
-					});
-					// .select2 removes the .default class for some reason
-					$select.addClass('default');
-				}
 
 				// Remove the "None" option for guide company accounting queries
 				setTimeout(() => {
-					$('.remove-null-guide-option option[value=-1]').remove()
+					// Remove/add any select options before calling select2()
+					$('.remove-null-guide-option option[value=-1]').remove();
 					$('.has-null-option').append('<option value="null">Null</option>');
+
+					// Initialize select2s individually because the width needs to be set depending on the type of select
+					for (const el of $('.climberdb-select2')) {
+						const $select = $(el);
+						$select.select2({
+							width: $select.siblings('.hide-query-parameter-button').length ? 'calc(100% - 28px)' : '100%',
+							placeholder: $select.attr('placeholder')
+						});
+						// .select2 removes the .default class for some reason
+						$select.addClass('default');
+					}
 				}, 500);
 				
 				$('#query-option-list .query-option').first().click();

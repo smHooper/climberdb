@@ -31,15 +31,15 @@
 		<div class="main-container-with-sidebar">
 			<!--main content -->
 			<div class="main-content-wrapper">
+				<div id="save-button-container" class="col d-flex justify-content-end">
+					<button id="save-button" class="expedition-edit-button icon-button save-edits-button transparent" type="button" aria-label="Save edits" title="Save edits" aria-hidden="true">
+						<i class="fas fa-2x fa-save"></i>
+						<label class="icon-button-label ">save</label>
+					</button>
+				</div>
 				<div id="main-table-wrapper" class="climberdb-data-table-wrapper">
-					<div class="col d-flex justify-content-end">
-						<button id="save-button" class="expedition-edit-button icon-button save-edits-button transparent" type="button" aria-label="Save edits" title="Save edits" aria-hidden="true">
-							<i class="fas fa-2x fa-save"></i>
-							<label class="icon-button-label ">save</label>
-						</button>
-					</div>
 					<div class="page-break w-100"></div>
-					<table id="main-data-table" class="climberdb-data-table col">
+					<table id="config-values-table" class="climberdb-data-table col">
 						<thead>
 							<tr>
 								<th>Configuration Option</th>
@@ -48,6 +48,19 @@
 						</thead>
 						<tbody></tbody>
 					</table>
+					<div class="col">
+						<table id="cua-holder-table" class="climberdb-data-table col">
+							<thead>
+								<tr>
+									<th>CUA Holders</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+						<div class='w-100 d-flex justify-content-center mt-2'>
+							<button id="add-cua-holder-button" class="generic-button">Add CUA holder</button>
+						</div>
+					</div>
 				</div>
 			</div><!--main-content-->
 		</div>

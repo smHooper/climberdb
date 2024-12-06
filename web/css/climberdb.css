@@ -21,7 +21,7 @@ html, body {
   color: var(--ui-primary-text-color);
 }
 body a {
-  color: #219ebc;
+  color: var(--ui-primary-color);
   font-weight: bold;
 }
 
@@ -32,7 +32,7 @@ body a {
   line-height: 40px;
   text-align: center;
   border: none;
-  background-color: #219EBC;/*#f28100;*/ 
+  background-color: var(--ui-primary-color);/*#f28100;*/ 
   color: white;
   border-radius: 12px;
   -moz-box-shadow:    0px 4px 6px 1px rgb(0 0 0 / 15%);
@@ -83,7 +83,7 @@ body a {
 .icon-button, 
 .text-only-button {
   background-color: rgba(0,0,0,0);
-  color: #219EBC;
+  color: var(--ui-primary-color);
   border: none;
   -moz-box-shadow:    none;
   -webkit-box-shadow: none;
@@ -169,14 +169,14 @@ button > img {
   height: 25px;
   width: 25px;
   background-color: none;
-  border: 3px solid #219EBC;
+  border: 3px solid var(--ui-primary-color);
   vertical-align: center;
   horizontal-align: center;
   transition: 0.2s all;
 }
 /*When the checkbox is checked, fill in background*/ 
 .checkmark-container input:checked ~ .checkmark {
-  background-color: #219EBC;
+  background-color: var(--ui-primary-color);
   border: none;
 }
 /* Create the checkmark/indicator (hidden when not checked) */
@@ -1739,9 +1739,21 @@ input[type=number] {
 }
 
 /**** leaflet stuff *****/
-
 .leaflet-popup .leaflet-popup-content-wrapper {
-  font-family: 'Barlow', sans-serif;
+  font-family: 'Lato', sans-serif;
+}
+.leaflet-tooltip-point-label {
+  background-color: #00000000; /*make bg transparent*/
+  font-weight: bold;
+  font-size: 20px;
+  color: white;
+  border: none;
+  /* add drop shadow for the text*/
+  text-shadow: 3px 3px 5px #000000CC;
+  box-shadow: none;
+}
+.leaflet-tooltip-point-label:before { /*hide the tooltip arrow*/
+  display: none !important;
 }
 
 

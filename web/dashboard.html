@@ -24,6 +24,17 @@
 	<!-- chart.js -->
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.2.0/chart.min.js"></script>
 
+	<!-- Leaflet -->
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+		integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+		crossorigin=""/>
+	<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+		integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+		crossorigin=""></script>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"/>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"/>
+	<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" ></script>
+		
 	<link rel="stylesheet" href="css/climberdb.css">
 	<link rel="stylesheet" href="css/dashboard.css">
 
@@ -51,85 +62,27 @@
 									</thead>
 									<tbody></tbody>
 								</table>
-							</div>
-						</div>
-					</div>
-					<!-- flagged and solo expeditions -->
-					<div id="flagged-group-card-container" class="col card-container half-height-card">
-						<div id="flagged-groups-card" class="card dashboard-card ">
-							<h4 class="dashboard-card-header">Flagged Expeditions <span class="table-row-counter"></span></h4>
-							<div class="dashboard-card-body mt-0">
-								<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
+								<div class="w-100"></div>
+								<h5 class="w-100 mt-3 mb-1">Backcountry Users</h5>
+								<table class="climberdb-dashboard-table climberdb-data-table bc-stats-table">
 									<thead>
 										<tr>
-											<th>
-												<button class="text-only-button sort-column-button" data-field-name="expedition_name">
-													<span>Expedition</span>
-													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
-												</button>
-											</th>
-											<th>
-												<button class="text-only-button sort-column-button sorted" data-field-name="departure">
-													<span>Departure</span>
-													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
-												</button>
-											</th>
-											<th>Commments</th>
+											<th>On Mountain</th>
+											<th>Done and Off Mountain</th>
 										</tr>
 									</thead>
-									<tbody>
-										<tr class="cloneable hidden">
-											<td><a href="expeditions.html?id={expedition_id}" target="_blank">{expedition_name}</a></td>
-											<td class="centered-text">{departure}</td>
-											<td>{flagged_comments}</td>
-										</tr>
-									</tbody>
+									<tbody></tbody>
 								</table>
 							</div>
 						</div>
 					</div>
-					<div id="solo-climbers-card-container" class="col card-container half-height-card">
-						<div id="solo-climbers-card" class="card dashboard-card ">
-							<h4 class="dashboard-card-header">Confirmed Solo Climbers <span class="table-row-counter"></span></h4>
-							<div class="dashboard-card-body mt-0">
-								<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
-									<thead>
-										<tr>
-											<th>
-												<button class="text-only-button sort-column-button" data-field-name="climber_name">
-													<span>Name</span>
-													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
-												</button>
-											</th>
-											<th>
-												<button class="text-only-button sort-column-button" data-field-name="status">
-													<span>Status</span>
-													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
-												</button>
-											</th>
-											<th>
-												<button class="text-only-button sort-column-button sorted" data-field-name="departure">
-													<span>Departure</span>
-													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
-												</button>
-											</th>
-											<th>
-												<button class="text-only-button sort-column-button sorted" data-field-name="planned_return">
-													<span class="text-nowrap">Planned return</span> <!-- force to single row-->
-													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
-												</button>
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										<tr class="cloneable hidden">
-											<td><a href="expeditions.html?id={expedition_id}" target="_blank">{climber_name}</a></td>
-											<td class=>{status}</td>
-											<td class="centered-text">{departure}</td>
-											<td class="centered-text">{planned_return}</td>
-										</tr>
-									</tbody>
-								</table>
+
+					<!-- current bc parties map -->
+					<div class="col card-container">
+						<div id="bc-groups-map-card" class="card dashboard-card">
+							<h4 class="dashboard-card-header">Current Backcountry Parties</h4>
+							<div class="dashboard-card-body">
+								<div id="bc-groups-map" class="col map-container"></div>
 							</div>
 						</div>
 					</div>
@@ -308,6 +261,86 @@
 										<tr class="cloneable hidden">
 											<td><a href="{page_name}.html?id={expedition_id}" target="_blank">{expedition_name}</a></td>
 											<td class="centered-text">{days_overdue}</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+
+					<!-- flagged and solo expeditions -->
+					<div id="flagged-group-card-container" class="col card-container half-height-card">
+						<div id="flagged-groups-card" class="card dashboard-card ">
+							<h4 class="dashboard-card-header">Flagged Expeditions <span class="table-row-counter"></span></h4>
+							<div class="dashboard-card-body mt-0">
+								<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
+									<thead>
+										<tr>
+											<th>
+												<button class="text-only-button sort-column-button" data-field-name="expedition_name">
+													<span>Expedition</span>
+													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+												</button>
+											</th>
+											<th>
+												<button class="text-only-button sort-column-button sorted" data-field-name="departure">
+													<span>Departure</span>
+													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+												</button>
+											</th>
+											<th>Commments</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr class="cloneable hidden">
+											<td><a href="expeditions.html?id={expedition_id}" target="_blank">{expedition_name}</a></td>
+											<td class="centered-text">{departure}</td>
+											<td>{flagged_comments}</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+					<div id="solo-climbers-card-container" class="col card-container half-height-card">
+						<div id="solo-climbers-card" class="card dashboard-card ">
+							<h4 class="dashboard-card-header">Confirmed Solo Climbers <span class="table-row-counter"></span></h4>
+							<div class="dashboard-card-body mt-0">
+								<table class="climberdb-dashboard-table climberdb-data-table tight-layout">
+									<thead>
+										<tr>
+											<th>
+												<button class="text-only-button sort-column-button" data-field-name="climber_name">
+													<span>Name</span>
+													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+												</button>
+											</th>
+											<th>
+												<button class="text-only-button sort-column-button" data-field-name="status">
+													<span>Status</span>
+													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+												</button>
+											</th>
+											<th>
+												<button class="text-only-button sort-column-button sorted" data-field-name="departure">
+													<span>Departure</span>
+													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+												</button>
+											</th>
+											<th>
+												<button class="text-only-button sort-column-button sorted" data-field-name="planned_return">
+													<span class="text-nowrap">Planned return</span> <!-- force to single row-->
+													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
+												</button>
+											</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr class="cloneable hidden">
+											<td><a href="expeditions.html?id={expedition_id}" target="_blank">{climber_name}</a></td>
+											<td class=>{status}</td>
+											<td class="centered-text">{departure}</td>
+											<td class="centered-text">{planned_return}</td>
 										</tr>
 									</tbody>
 								</table>

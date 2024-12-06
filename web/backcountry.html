@@ -191,9 +191,9 @@
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
 									<div class="field-container col-md-6 col-lg-3">
-										<select id="input-guide_company" class="input-field filled-by-default needs-filled-by-default" name="guide_company_code" data-table-name="expeditions" title="Guide company" type="text" autocomplete="__never" data-default-value="-1"></select>
+										<select id="input-cua_company" class="input-field filled-by-default needs-filled-by-default" name="cua_company_code" data-table-name="expeditions" title="Guide company" type="text" autocomplete="__never" data-default-value="-1"></select>
 										<span class="required-indicator">*</span>
-										<label class="field-label" for="input-guide_company">Guide company</label>
+										<label class="field-label" for="input-guide_company">CUA holder/guide</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
 								</div>
@@ -206,11 +206,16 @@
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
 									<div class="field-container col-md-6 col-lg-3">
+										<input id="input-cmc_count" class="input-field default filled-by-default " name="cmc_count" data-table-name="expeditions" placeholder="# of CMCs" title="# of CMCs" type="number">
+										<label class="field-label" for="input-bump_flights"># of CMCs</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>
+									<div class="field-container checkbox-field-container col-md-6">	
 										<input id="input-bump_flights" class="input-field default filled-by-default " name="bump_flights" data-table-name="expeditions" placeholder="Bump flights" title="Bump flights" type="text">
 										<label class="field-label" for="input-bump_flights">Bump flights</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
-									<div class="field-container checkbox-field-container col-md-6">	
+									<div class="field-container checkbox-field-container col">	
 										<label class="checkmark-container">
 											<input id="input-is_acclimitizing" class="input-field input-checkbox" type="checkbox" name="is_acclimatizing" data-table-name="expeditions">
 											<span class="checkmark data-input-checkmark"></span>
@@ -553,8 +558,6 @@
 													<div class="data-list-item data-list-item-header">
 														<label class="data-list-col data-list-header-label col-4 route-member-name-column"></label>
 														<label class="data-list-col data-list-header-label col-2 text-center route-summited-column">Summited?</label>
-														<label class="data-list-col data-list-header-label col-3 text-center route-summit-date-column">Summit date</label>
-														<label class="data-list-col data-list-header-label col-2 route-highest-elevation-column">Highest elevation (ft)</label>
 														<label class="data-list-col data-list-header-label col"></label>
 													</div>
 													<ul id="route-member-list" class="data-list route-member-list">
@@ -571,16 +574,6 @@
 																	<input id="input-route_summited" class="input-field input-checkbox route-summited-checkbox" type="checkbox" name="route_was_summited" data-table-name="expedition_member_routes" title="Route summitted?">
 																	<span class="checkmark data-input-checkmark"></span>
 																</label>
-															</div>
-															<div class="col-3 route-summit-date-column">
-																<div class="field-container collapse">
-																	<input id="input-summit_date" class="input-field text-center" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
-																</div>
-															</div>
-															<div class="col-2 route-highest-elevation-column">
-																<div class="field-container ">
-																	<input id="input-highest_elevation" class="input-field" name="highest_elevation_ft" type="number" data-table-name="expedition_member_routes" title="Highest elevation in feet"> 
-																</div>
 															</div>
 															<div class="col list-item-delete-button-container">
 																<button class="icon-button delete-button delete-route-member-button show-on-parent-hover" title="Delete expedition member route">

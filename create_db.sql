@@ -4,9 +4,10 @@ CREATE DATABASE climbing_permits;
 CREATE TABLE IF NOT EXISTS attachment_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS backcountry_location_type_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS backcountry_location_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER, latitude NUMERIC(10, 7), longitude NUMERIC(10, 7));
-CREATE TABLE IF NOT EXISTS country_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS cmc_status_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS communication_device_type_codes (id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS country_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
+CREATE TABLE IF NOT EXISTS cua_company_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS state_codes(id SERIAL PRIMARY KEY, short_name CHAR(2), name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS sex_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS frostbite_severity_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
@@ -101,6 +102,7 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	actual_departure_date DATE,
 	actual_return_date DATE,
 	guide_company_code INTEGER REFERENCES guide_company_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT DEFAULT -1,
+	cua_company_code INTEGER REFERENCES cua_company_code(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	air_taxi_code INTEGER REFERENCES air_taxi_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT -1,
 	entered_by VARCHAR(50),
 	entry_time TIMESTAMP,
@@ -118,14 +120,15 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	is_acclimatizing BOOLEAN,
 	bump_flights TEXT,
 	itinerary_description TEXT,
+	cmc_count INTEGER, -- alternative to checking out individual CMCs
 	last_modified_by VARCHAR(50),
 	last_modified_time TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS expedition_members (
 	id SERIAL PRIMARY KEY,
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
-	climber_id INTEGER REFERENCES climbers(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	climber_id INTEGER NOT NULL REFERENCES climbers(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	permit_number VARCHAR(50) UNIQUE,
 	datetime_reserved TIMESTAMP,
 	datetime_cancelled TIMESTAMP,
@@ -158,7 +161,7 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 
 CREATE TABLE IF NOT EXISTS attachments (
 	id SERIAL PRIMARY KEY,
-	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_member_id INTEGER NOT NULL REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	attachment_type_code INTEGER REFERENCES attachment_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	date_received DATE,
 	attachment_notes TEXT, 
@@ -174,7 +177,7 @@ CREATE TABLE IF NOT EXISTS attachments (
 
 CREATE TABLE IF NOT EXISTS expedition_member_routes (
 	id SERIAL PRIMARY KEY,
-	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_member_id INTEGER NOT NULL REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	route_code INTEGER REFERENCES route_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	route_order INTEGER,
 	route_was_summited BOOLEAN, --a null summit_date could indicate that the route wasn't climbed, but I don't think you could rely on it
@@ -184,7 +187,7 @@ CREATE TABLE IF NOT EXISTS expedition_member_routes (
 
 CREATE TABLE IF NOT EXISTS transactions (
 	id SERIAL PRIMARY KEY,
-	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_member_id INTEGER NOT NULL REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	transaction_type_code INTEGER REFERENCES transaction_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	payment_method_code INTEGER REFERENCES payment_method_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	transaction_value MONEY,
@@ -199,7 +202,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 -- I think most of the actual calendar building can happen in the app. This table just stores the breifing info
 CREATE TABLE IF NOT EXISTS briefings (
 	id SERIAL PRIMARY KEY,
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	briefing_start TIMESTAMP,
 	briefing_end TIMESTAMP,
 	briefing_ranger_user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -217,8 +220,8 @@ CREATE TABLE IF NOT EXISTS cmc_inventory (
 
 CREATE TABLE IF NOT EXISTS cmc_checkout (
 	id SERIAL PRIMARY KEY, 
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
-	cmc_id INTEGER REFERENCES cmc_inventory(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	cmc_id INTEGER NOT NULL REFERENCES cmc_inventory(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	issued_by VARCHAR(50),
 	checkout_date DATE,
 	checked_in_by VARCHAR(50),
@@ -227,7 +230,7 @@ CREATE TABLE IF NOT EXISTS cmc_checkout (
 
 CREATE TABLE IF NOT EXISTS communication_devices (
 	id SERIAL PRIMARY KEY,
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE, --expedition_member_id is optional field in app, so persistent foreign key is necessary
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE, --expedition_member_id is optional field in app, so persistent foreign key is necessary
 	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	communication_device_type_code INTEGER REFERENCES communication_device_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	number_or_address VARCHAR(255),
@@ -239,7 +242,7 @@ CREATE TABLE IF NOT EXISTS communication_devices (
 
 CREATE TABLE IF NOT EXISTS itinerary_locations (
 	id SERIAL PRIMARY KEY,
-	expedition_id INTEGER REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	backcountry_location_type_code INTEGER REFERENCES backcountry_location_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	backcountry_location_code INTEGER REFERENCES backcountry_location_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	location_start_date DATE,
@@ -451,6 +454,7 @@ CREATE VIEW expedition_info_view AS
 		expeditions.actual_departure_date,
 		expeditions.actual_return_date,
 		expeditions.guide_company_code,
+		expeditions.cua_company_code,
 		expeditions.air_taxi_code,
 		expeditions.entered_by,
 		expeditions.entry_time,
@@ -467,6 +471,7 @@ CREATE VIEW expedition_info_view AS
 		expeditions.is_acclimatizing,
 		expeditions.bump_flights,
 		expeditions.itinerary_description,
+		expeditions.cmc_count,
 		expeditions.last_modified_by,
 		expeditions.last_modified_time,
 		itinerary_locations.id AS itinerary_location_id,
@@ -689,15 +694,22 @@ CREATE VIEW all_climbs_view AS
 		CASE WHEN is_guiding OR is_interpreter THEN 'Yes' ELSE 'No' END AS is_guiding_yes_no,
 		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
 		actual_return_date - actual_departure_date AS trip_length_days,
-		extract(year FROM planned_departure_date) AS year,
-		to_char(planned_departure_date, 'Month') AS month
+		extract(year FROM coalesce(planned_departure_date, actual_departure_date)) AS year, --for bc groups, planned_departure is null
+		to_char(planned_departure_date, 'Month') AS month,
+		expeditions.is_backcountry,
+		CASE WHEN expeditions.is_backcountry THEN 'Yes' ELSE 'No' END AS is_backcountry_yes_no,
+		itinerary_locations.backcountry_location_type_code,
+		itinerary_locations.backcountry_location_code,
+		itinerary_locations.location_start_date,
+		itinerary_locations.location_end_date
 	FROM expeditions
 		JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
 		JOIN climbers ON expedition_members.climber_id = climbers.id
 		JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 		JOIN route_codes ON expedition_member_routes.route_code = route_codes.code
 		JOIN mountain_codes ON route_codes.mountain_code = mountain_codes.code
-		LEFT JOIN expedition_status_view ON expeditions.id = expedition_status_view.expedition_id;
+		LEFT JOIN expedition_status_view ON expeditions.id = expedition_status_view.expedition_id
+		LEFT JOIN itinerary_locations ON expeditions.id = itinerary_locations.expedition_id;
 
 
 CREATE VIEW registered_climbs_view AS
@@ -843,6 +855,23 @@ FROM transaction_type_codes AS codes JOIN (
 WHERE sort_order IS NOT NULL 
 ORDER BY sort_order;
 
+CREATE VIEW current_backcountry_groups_view AS 
+	WITH today AS (
+	  SELECT now(), extract(year FROM now()) AS year
+	)
+	SELECT 
+	  itinerary_locations.expedition_id, 
+	  latitude, 
+	  longitude 
+	FROM 
+	  itinerary_locations 
+	    JOIN expeditions ON expeditions.id=itinerary_locations.expedition_id 
+	    JOIN expedition_status_view ON expedition_status_view.expedition_id=itinerary_locations.expedition_id 
+	    JOIN today ON today.now BETWEEN coalesce(location_start_date, (today.year || '-1-1')::date) AND coalesce(location_end_date, (today.year || '-12-31')::date)
+	WHERE 
+	  expedition_status = 4 AND 
+	  actual_departure_date < today.now
+	;
 
 CREATE MATERIALIZED VIEW table_info_matview AS 
    SELECT 

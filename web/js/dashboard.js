@@ -6,6 +6,16 @@ class ClimberDBDashboard extends ClimberDB {
 		this.soloClimberInfo = [];
 		this.missingPaymentOrSUPInfo = [];
 		this.overduePartiesInfo = [];
+		this.maps = {
+			main: {
+				map: null,
+				layers: []
+			},
+			// modal: {
+			// 	map: null,
+			// 	layers: {}
+			// }
+		};
 		return this;
 	}
 
@@ -74,7 +84,7 @@ class ClimberDBDashboard extends ClimberDB {
 			 	(
 				 	SELECT DISTINCT 
 						expedition_member_id
-					FROM ${this.dbSchema}.registered_climbs_view
+					FROM {schema}.registered_climbs_view
 					WHERE planned_departure_date BETWEEN :start_date AND :end_date
 				) t
 			;
@@ -277,15 +287,52 @@ class ClimberDBDashboard extends ClimberDB {
 					<td>${rowData['Denali']}</td>
 					<td>${rowData['Foraker']}</td>
 				</tr>
-			`).appendTo($('#season-mountain-stats-card .climberdb-dashboard-table tbody'))
+			`).appendTo($('#season-mountain-stats-card .mountain-stats-table tbody'))
 		}
+
+		// Query BC stas
+		const bcSQL = `
+			SELECT
+				group_status_code,
+				count(*)
+			FROM (
+				SELECT DISTINCT  
+					expedition_member_id, group_status_code 
+				FROM {schema}.expedition_info_view 
+				WHERE 
+					group_status_code IN :status_codes AND 
+					extract(year FROM actual_departure_date) = extract(year FROM now()) AND
+					is_backcountry 
+			) _
+			GROUP BY group_status_code
+		`;
+		const statusCodes = this.constants.groupStatusCodes;
+		const bcDeferred = this.queryDB({
+			sql: bcSQL, 
+			sqlParameters: {status_codes: [statusCodes.onMountain, statusCodes.offMountain]} 
+		}).done(response => {
+			if (this.pythonReturnedError(response)) {
+				showModal('There was an error while query backcountry stats to date.', 'Database Error')
+				return;
+			} else {
+				const result = response.data || []
+				$('#season-mountain-stats-card .bc-stats-table tbody').append(`
+					<tr>
+						<td>${(result.filter(({group_status_code}) => group_status_code == statusCodes.onMountain)[0] || {}).count || 0}</td>
+						<td>${(result.filter(({group_status_code}) => group_status_code == statusCodes.offMountain)[0] || {}).count || 0}</td>
+					</tr>
+				`)
+			}
+		})
+
 		return $.when(
 			totalClimbersDeferred,
 			registeredDeferred, 
 			onMountainDeferred, 
 			offMountainDeferred, 
 			summitedDeferred,
-			cancelledDeferred
+			cancelledDeferred,
+			bcDeferred
 		).then(() => {
 			// Add summit percentage
 			tableData.summitPercent = {displayName: 'Summit percentage', data: {}};
@@ -308,6 +355,7 @@ class ClimberDBDashboard extends ClimberDB {
 			}
 
 		});
+
 	}
 
 
@@ -643,6 +691,44 @@ class ClimberDBDashboard extends ClimberDB {
 
 	}
 
+
+	configureBCMap() {
+
+		const queryDeferred = this.queryDB({tables: ['current_backcountry_groups_view']})
+		return $.when(
+			this.configureMap('bc-groups-map', this.maps.main),
+			queryDeferred
+		).done((_, [queryResponse]) => { // ignore .configureMap() response
+			if (this.pythonReturnedError(queryResponse)) {
+				showModal('Backcountry groups could not be queried because there was an unexpected error: <br><br>' + queryResponse, 'Unexpected Error')
+			} else {
+				const icon = L.icon({
+					iconUrl: '../imgs/camp_icon_50px.png',
+					iconSize: [35, 35],
+				});
+				const result = queryResponse.data || [];
+				const markerCluster = L.markerClusterGroup({
+					spiderLegPolylineOptions: {color: '#fff'},
+					showCoverageOnHover: false
+				});
+				for (const {expedition_id, latitude, longitude} of result) {
+					const marker = L.marker([latitude, longitude], {icon: icon})
+						.on('click', () => {
+							// when clicked, open the backcountry page for that group in a new tab
+							window.open(`backcountry.html?id=${expedition_id}`, '_blank')
+						});
+					markerCluster.addLayer(marker);
+					this.maps.main.layers.push(marker);
+				}
+				markerCluster.addTo(this.maps.main.map);
+				this.fitMapBoundsToLocations(this.maps.main);
+			}
+		}).fail(() => {
+			showModal('There was a problem loading backcountry group data', 'Database Error')
+		})
+	}
+
+
 	init() {
 		// Call super.init()
 		this.showLoadingIndicator('init');
@@ -658,7 +744,8 @@ class ClimberDBDashboard extends ClimberDB {
 				this.configureFlaggedGroups(),
 				this.configureSoloClimbers(),
 				this.configureMisingPaymentOrSUP(),
-				this.configureOverdueParties()
+				this.configureOverdueParties(),
+				this.configureBCMap()
 			)
 		}).always(() => {
 			hideLoadingIndicator();

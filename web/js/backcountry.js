@@ -21,110 +21,12 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			3: '../imgs/plane_icon_50px.png'
 		}
 		this.campCardClass = 'camp-location-card';
-		this.defaultMapCenter = [63, -150.9];
-		this.defaultMapZoom = 10;
-		this.maxInitialMapZoom = 12; // don't zoom in past this level when fitting map bounds to marker
 		return this;
 	}
 
 	// onAddClimberToExpeditionClick(e) {
 
 	// }
-
-
-	/*
-	Configure a Leaflet map given a div HTML ID
-	*/
-	configureMap(divID, mapObject) {
-
-		var map = L.map(divID, {
-			editable: true,
-			scrollWheelZoom: false,
-			center: this.defaultMapCenter,
-			zoom: this.defaultMapZoom
-		});
-
-		const baseMaps = {
-			'USGS Topos': L.tileLayer(
-				'https://services.arcgisonline.com/ArcGIS/rest/services/USA_Topo_Maps/MapServer/tile/{z}/{y}/{x}', 
-				{
-					attribution: `Tiles &copy; Esri &mdash; Source: <a href="http://goto.arcgisonline.com/maps/USA_Topo_Maps" target="_blank">Esri</a>, ${new Date().getFullYear()}`
-				}
-			).addTo(map),
-			'Satellite':  L.tileLayer(
-				'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
-				{
-					attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-				}
-			)
-		};
-		const layerControl = L.control.layers(baseMaps).addTo(map);
-
-		// Helper function to load geojson data to avoid repeating
-		const onGeoJSONLoad = function(geojson, defaultStyle, layerName, {tooltipHandler={}, hoverStyle={}}={}) {
-			const onMouseover = (e) => {
-				let layer = e.target;
-
-				layer.setStyle(hoverStyle)
-
-				if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-					layer.bringToFront();
-				}
-			}
-			const onMouseout = (e) => {
-				layer.resetStyle(e.target);
-			}
-			const onEachFeature = (feature, layer) => {
-				layer.on({
-					mouseover: onMouseover,
-					mouseout: onMouseout
-				})
-			}
-
-			let geojsonOptions = {
-				style: defaultStyle,
-				onEachFeature: onEachFeature //add mouseover and mouseout listeners
-			}
-
-			var layer; // define before calling L.geoJSON() so onMouseout event can reference
-			layer = L.geoJSON(geojson, geojsonOptions)
-				.bindTooltip(
-					tooltipHandler,
-					{
-						sticky: true
-					}
-				).addTo(map);
-			layerControl.addOverlay(layer, layerName);
-
-			return layer;
-		}
-
-		$.get({url: 'assets/backcountry_units.json'})
-			.done(geojson => {
-				const defaultStyle = {
-					color: '#000',
-					opacity: 0.2,
-					fillColor: '#000',
-					fillOpacity: 0.15 
-				}
-				const hoverStyle = {
-					color: '#000',
-					opacity: 0.4,
-					fillColor: '#000',
-					fillOpacity: 0.05 
-				}
-				const tooltipHandler = layer => layer.feature.properties.Unit + ': ' + layer.feature.properties.Name;
-				onGeoJSONLoad(geojson, defaultStyle, 'Backcountry Units', {tooltipHandler: tooltipHandler, hoverStyle: hoverStyle})
-			}).fail((xhr, error, status) => {
-				console.log('BC unit geojson read failed: ' + error);
-			})
-
-		// Make the encounter marker drag/droppable onto the map
-		// $('#encounter-marker-img').draggable({opacity: 0.7, revert: true});//helper: 'clone'});
-		// $('#encounter-location-map').droppable({drop: this.markerDroppedOnMap});
-
-		mapObject.map = map;
-	}
 
 
 	/*
@@ -147,25 +49,6 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		const index = $card.index(this.locationCardIndexSelector);
 		const mainMap = this.maps.main;
 		mainMap.map.flyTo(mainMap.layers[index].getLatLng())//, {maxZoom: this.maxInitialMapZoom});
-	}
-
-
-	/*
-	Helper method to zoom/pan to all BC locations only if one or more of them is
-	outside the vurrent view 
-	*/
-	fitMapBoundsToLocations(mapObject) {
-		// check if the all layers are inside the current view
-		const mapBounds = mapObject.map.getBounds();
-		const outsideCurrentView = mapObject.layers.filter(layer => !mapBounds.contains(layer.getLatLng()));
-		
-		// If so, move the map
-		if (outsideCurrentView.length) {
-			mapObject.map.fitBounds(
-				(new L.featureGroup(mapObject.layers)).getBounds(), 
-				{maxZoom: this.maxInitialMapZoom}
-			);
-		}
 	}
 
 
@@ -562,6 +445,15 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 					$selects.val($selects.data('default-value'));
 				})
 			)
+
+			// load only backcountry mountains as options
+			const $mountainCodeInput = $('[name=mountain_code]');
+			const backcountryMountains = Object.values(this.mountainCodes).filter(({is_backcountry}) => is_backcountry);
+			for (const {code, name} of backcountryMountains) {
+				$mountainCodeInput.append(
+					$(`<option value="${code}">${name}</option>`)
+				)
+			}
 		})
 
 	}
