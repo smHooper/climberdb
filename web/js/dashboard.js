@@ -722,6 +722,10 @@ class ClimberDBDashboard extends ClimberDB {
 				}
 				markerCluster.addTo(this.maps.main.map);
 				this.fitMapBoundsToLocations(this.maps.main);
+
+				// Fill row counter
+				$('#bc-groups-map-card > .dashboard-card-header > .table-row-counter')
+					.text(result.length);
 			}
 		}).fail(() => {
 			showModal('There was a problem loading backcountry group data', 'Database Error')
