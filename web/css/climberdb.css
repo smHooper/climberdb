@@ -24,6 +24,9 @@ body a {
   color: var(--ui-primary-color);
   font-weight: bold;
 }
+.color-primary-text {
+  color: var(--ui-primary-text-color) !important;
+}
 
 .generic-button {
   display: block; /*makes <a> tag buttons respect height/width*/

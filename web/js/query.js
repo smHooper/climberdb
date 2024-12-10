@@ -690,6 +690,10 @@ class ClimberDBQuery extends ClimberDB {
 		$('#count_climbers-group_by_fields, #count_climbers-pivot_field').change(e => {
 			this.onGroupByPivotFieldChange(e);
 		})
+
+		$('#copy-query-link-button').click(() => {
+			this.onCopyQueryLinkButtonClick()
+		})
 	}
 
 	/*
@@ -1783,6 +1787,7 @@ class ClimberDBQuery extends ClimberDB {
 					}
 				}
 			})
+
 	}
 
 
@@ -1903,6 +1908,91 @@ class ClimberDBQuery extends ClimberDB {
 		})
 	}
 
+
+	/*
+	Load query parameters from the URL query parameters
+	*/
+	loadQueryFromURL() {
+		const urlParams = this.parseURLQueryString();
+
+		// If neither the queryName or queryID were given, exit
+		if (!('queryName' in urlParams || 'queryID' in urlParams)) return;
+
+		const $queryButton = $(`[data-query-name="${urlParams.queryName}"],#${urlParams.queryID}`)
+			.first();
+
+		// If neither the queryName or the queryID were valid, just exit
+		if ($queryButton.length === 0) return;
+
+		$queryButton.click();
+
+		// query params are a JSON string, so parse it
+		const queryParams = $.parseJSON(urlParams.queryParams);
+		
+		// Loop through each query param and set the associated input-field value
+		for (const id in queryParams) {
+			let paramValue = queryParams[id];
+			const $paramInput = $('#' + id);
+			// If this is a select with potentially multiple selected options,
+			//	the value from the URL will be a CSV string
+			if ($paramInput.is('[multiple]')) {
+				paramValue = paramValue.split(',').map(s => s.trim());
+			}
+			$paramInput.val(paramValue).change();
+
+			const fieldName = $paramInput.attr('name');
+			$(`.show-query-parameter-button[data-field-name=${fieldName}]`).click();
+		}
+
+	}
+
+
+	/*
+	Save query parameters as a URL for the query page
+	*/
+	queryToURL() {
+
+		var urlParams = {};
+		const $selectedQuery = $('#query-option-list > .query-option.selected');
+		const queryID = $selectedQuery.attr('id');
+		const queryName = $selectedQuery.attr('data-query-name');
+
+		const $container = $(`.query-parameters-container[data-query-name="${queryName}"]`)
+		// find inputs that have a value entered/selected and that aren't hidden
+		var queryParams = {};
+		for (const el of $container.find('.input-field:not(:placeholder-shown):not(.default)')) {
+			const $input = $(el);
+			
+			// If the param field isn't visible, skip it
+			if ($input.closest('.hidden,.collapse:not(.show)').length) continue;
+			
+			const inputID = $input.attr('id');
+			const rawValue = $input.val();
+			
+			// if this is a select with potentially multiple options selected, join them
+			//	all as a CSV string
+			const paramValue = $input.is('[multiple]') ? rawValue.join(',') : rawValue;
+			queryParams[inputID] = paramValue;
+		}
+		urlParams.queryParams = JSON.stringify(queryParams);
+		
+		// make the query params into a JSON string
+		return encodeURI(
+			window.location.href.split('?')[0] +
+			`?queryName=${queryName}&queryParams=${JSON.stringify(queryParams)}`
+		)
+	}
+
+
+	/*
+	Event handler for copy-query-link-button click
+	*/
+	onCopyQueryLinkButtonClick() {
+		const url = this.queryToURL();
+		this.copyToClipboard(url, `Permalink for this query successfully copied to clipboard`);
+	}
+
+
 	init() {
 		// Call super.init()
 		this.showLoadingIndicator('init');
@@ -1926,11 +2016,11 @@ class ClimberDBQuery extends ClimberDB {
 						}
 					})
 
-				return [
+				return $.when(
 					...this.fillAllSelectOptions(),
 					this.fillYearSelects(),
 					this.queryRouteCodes()
-				]
+				)
 			})
 			.then(() => {
 
@@ -1950,6 +2040,11 @@ class ClimberDBQuery extends ClimberDB {
 						// .select2 removes the .default class for some reason
 						$select.addClass('default');
 					}
+
+					// Parse the URL query string if there is one and load a query from the URL.
+					//	If there isn't a query string, this method does nothing
+					this.loadQueryFromURL();
+
 				}, 500);
 				
 				$('#query-option-list .query-option').first().click();
