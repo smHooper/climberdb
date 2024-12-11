@@ -1739,6 +1739,7 @@ class ClimberDBClimbers extends ClimberDB {
 		this.climberForm.saveEdits();
 	}
 
+
 	/*
 	Helper method to get the display value of a code-value pair from a select using the 
 	given code value
@@ -1749,7 +1750,6 @@ class ClimberDBClimbers extends ClimberDB {
 			.filter((_, el) => el.value == code) // user css [value=""]
 			.text();
 	}
-
 
 
 	/*
@@ -1765,9 +1765,13 @@ class ClimberDBClimbers extends ClimberDB {
 			this.currentRecordSetIndex = (state.recordSetIndex || 1) - 1;
 			if (!climberID) {
 				// If this is just the base climbers.html url (no custom state with a climber ID)
-				//	just load the default climber result set
+				//	or the climber doesn't exist, just load the default climber result set
 				$('#climber-search-bar').val('');
 				this.getResultSet();
+
+				// If there is a query string in the URL, reset it to the base URL
+				if (window.location.search) this.resetURL();
+
 			} else {
 				// Otherwise, load the specific climber
 				// Set the search string to whatever it was when the URL changed
@@ -1807,8 +1811,7 @@ class ClimberDBClimbers extends ClimberDB {
 		const url = new URL(window.location);
 		url.searchParams.set('id', climberID);
 		
-		// Push the new entry here because loadExpedition() is also called when the user clicks the back or forward button, and adding a history entry then will muck up the history sequence 
-		this.historyBuffer.push(climberID);
+		// Add the climber's URL to the history
 		const state = {
 			id: climberID, 
 			historyIndex: this.currentHistoryIndex, 
@@ -1997,11 +2000,20 @@ class ClimberDBClimbers extends ClimberDB {
 					$('.empty-result-message').ariaHide(false);
 					$('.hidden-on-invalid-result').ariaHide(true);
 					$('.result-details-pane').addClass('collapsed');
-				} else { // some other problem
+				} else if (response.match(`No climber with ID ${climberID} found`)){ 
+					showModal(
+						`There is no climber with the database ID '${climberID}'. This climber was either deleted or the URL you are trying to use is invalid.`, 
+						'Invalid Climber ID'
+					);
+					// Reset URL, then load the default result set but don't add a new history entry because it would duplicate the base URL in the history
+					this.resetURL();
+					this.getResultSet({newHistoryEntry: false});
+				} else {
 					showModal('Retrieving climber info from the database failed with the following error: <br>' + response, 'Database Error');
 				}
 			} else {  
 				var result = response.data || [];
+				
 				// Check if this result is older than the currently displayed result. This can happen if the user is 
 				//	typing quickly and an older result happens to get returned after a newer result. If so, exit 
 				//	since we don't want the older result to overwrite the newer one
@@ -2117,6 +2129,9 @@ class ClimberDBClimbers extends ClimberDB {
 						} else { // This was the last climber so get the next result set
 							$('.empty-result-message').ariaHide(false);
 							this.getResultSet();
+
+							// Set URL to base climbers.html without search
+							this.resetURL();
 						}
 					}
 				}
