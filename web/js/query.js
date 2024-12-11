@@ -1206,7 +1206,11 @@ class ClimberDBQuery extends ClimberDB {
 	}
 
 
-	onAddNumericStatButtonClick() {
+	/*
+	Helper method to either add a stat field when the button is clicked 
+	or when loading a query from a URL
+	*/
+	addNumericStatField() {
 		const $cloneable = $('.stat-field-row.cloneable');
 		const $row = $cloneable.clone(true);
 		$row.removeClass('cloneable')
@@ -1215,7 +1219,13 @@ class ClimberDBQuery extends ClimberDB {
 		$row.find('.input-field[name=numeric_stat_field]')
 			.attr('id', '')
 			.focus();
-		$row.find('')
+
+		return $row;
+	}
+
+
+	onAddNumericStatButtonClick() {
+		this.addNumericStatField();
 	}
 
 	onRemoveNumericStatButtonClick(e) {
@@ -1783,6 +1793,9 @@ class ClimberDBQuery extends ClimberDB {
 					$('.year-select-field.nullable').append(`<option value=" IS NOT NULL">All</option>`);
 					for (const row of response.data || []) {
 						$('.year-select-field:not(.nullable)').append(`<option value=${row.year}>${row.year}</option>`);
+						// .nullable fields have to include everything except the left side of the expression 
+						//	(e.g., just " IS NOT NULL" of "year IS NOT NULL"), so the value of each <option>
+						//	is actually "= <year>"
 						$('.year-select-field.nullable').append(`<option value="= ${row.year}">${row.year}</option>`);
 					}
 				}
@@ -1931,6 +1944,15 @@ class ClimberDBQuery extends ClimberDB {
 		// query params are a JSON string, so parse it
 		const queryParams = $.parseJSON(urlParams.queryParams);
 		
+		for (const {fieldName, statistic} of queryParams.statFields || {}) {
+			const $row = this.addNumericStatField();
+			$row.find('.numeric-stat-field-name').val(fieldName).change();
+			$row.find('.numeric-stat-name').val(statistic).change();
+		}
+
+		// Remove since the key isn't an ID
+		delete queryParams.statFields;
+
 		// Loop through each query param and set the associated input-field value
 		for (const id in queryParams) {
 			let paramValue = queryParams[id];
@@ -1942,10 +1964,16 @@ class ClimberDBQuery extends ClimberDB {
 			}
 			$paramInput.val(paramValue).change();
 
-			const fieldName = $paramInput.attr('name');
+			const fieldName = (
+				$paramInput.is('.double-value-field.datetime-query-option') ? 
+					$paramInput.closest('.where-clause-date-field-container')
+						.find('.single-value-field.datetime-query-option') :
+					$paramInput
+			).attr('name');
 			$(`.show-query-parameter-button[data-field-name=${fieldName}]`).click();
 		}
 
+		return urlParams.queryName || urlParams.queryID;
 	}
 
 
@@ -1965,8 +1993,8 @@ class ClimberDBQuery extends ClimberDB {
 		for (const el of $container.find('.input-field:not(:placeholder-shown):not(.default)')) {
 			const $input = $(el);
 			
-			// If the param field isn't visible, skip it
-			if ($input.closest('.hidden,.collapse:not(.show)').length) continue;
+			// If the param field isn't visible or it's a stat field, skip it
+			if ($input.closest('.hidden,.collapse:not(.show),.stat-field-row').length) continue;
 			
 			const inputID = $input.attr('id');
 			const rawValue = $input.val();
@@ -1976,6 +2004,18 @@ class ClimberDBQuery extends ClimberDB {
 			const paramValue = $input.is('[multiple]') ? rawValue.join(',') : rawValue;
 			queryParams[inputID] = paramValue;
 		}
+
+		// collect stat fields as an array of objects
+		queryParams.statFields = [];
+		for (const el of $('.stat-field-row:not(.cloneable)')) {
+			const $row = $(el);
+			queryParams.statFields.push({
+				fieldName: $row.find('.numeric-stat-field-name').val(),
+				statistic: $row.find('.numeric-stat-name').val()
+			})
+		}
+
+
 		urlParams.queryParams = JSON.stringify(queryParams);
 		
 		// make the query params into a JSON string
@@ -2027,29 +2067,30 @@ class ClimberDBQuery extends ClimberDB {
 			.then(() => {
 
 				// Remove the "None" option for guide company accounting queries
-				setTimeout(() => {
-					// Remove/add any select options before calling select2()
-					$('.remove-null-guide-option option[value=-1]').remove();
-					$('.has-null-option').append('<option value="null">Null</option>');
+				//setTimeout(() => {
+				// Remove/add any select options before calling select2()
+				$('.remove-null-guide-option option[value=-1]').remove();
+				$('.has-null-option').append('<option value="null">Null</option>');
 
-					// Initialize select2s individually because the width needs to be set depending on the type of select
-					for (const el of $('.climberdb-select2')) {
-						const $select = $(el);
-						$select.select2({
-							width: $select.siblings('.hide-query-parameter-button').length ? 'calc(100% - 28px)' : '100%',
-							placeholder: $select.attr('placeholder')
-						});
-						// .select2 removes the .default class for some reason
-						$select.addClass('default');
-					}
+				// Initialize select2s individually because the width needs to be set depending on the type of select
+				for (const el of $('.climberdb-select2')) {
+					const $select = $(el);
+					$select.select2({
+						width: $select.siblings('.hide-query-parameter-button').length ? 'calc(100% - 28px)' : '100%',
+						placeholder: $select.attr('placeholder')
+					});
+					// .select2 removes the .default class for some reason
+					$select.addClass('default');
+				}
 
-					// Parse the URL query string if there is one and load a query from the URL.
-					//	If there isn't a query string, this method does nothing
-					this.loadQueryFromURL();
+				// Parse the URL query string if there is one and load a query from the URL.
+				//	If there isn't a query string, this method does nothing. In that case,
+				//	just select the first query option
+				this.loadQueryFromURL() || $('#query-option-list .query-option').first().click();
 
-				}, 500);
+				//}, 500);
 				
-				$('#query-option-list .query-option').first().click();
+				
 			})
 			.always(() => {
 				hideLoadingIndicator();
