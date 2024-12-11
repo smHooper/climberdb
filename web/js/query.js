@@ -1831,7 +1831,8 @@ class ClimberDBQuery extends ClimberDB {
 				query_data: JSON.stringify(this.result),
 				ancillary_data: JSON.stringify(this.ancillaryResult),
 				excel_start_row: queryInfo.excelStartRow || 0,
-				excel_write_columns: queryInfo.excelWriteColumns || false
+				excel_write_columns: queryInfo.excelWriteColumns || false,
+				query_url: this.queryToURL()
 			}
 		})
 	}
@@ -1865,7 +1866,8 @@ class ClimberDBQuery extends ClimberDB {
 				client_status_columns: JSON.stringify(this.queries.guide_company_client_status.columns),
 				briefing_columns: JSON.stringify(this.queries.guided_company_briefings.columns),
 				title_text: `Client Status for ${guideCompanyName} as of ${dateString}`,
-				columns: JSON.stringify(this.queries.guide_company_client_status.columns)
+				columns: JSON.stringify(this.queries.guide_company_client_status.columns),
+				query_url: this.queryToURL()
 			}
 		})
 	}

@@ -695,18 +695,36 @@ def export_special_use_permit():
 
 
 # Default 
-def write_query_to_excel(query_data, query_name, excel_path, excel_start_row=0, write_columns=True):
+def write_query_to_excel(
+		query_data, 
+		query_name, 
+		excel_path, 
+		excel_start_row=0, 
+		write_columns=True, 
+		write_mode='a', 
+		query_url=''
+	):
 
 	# Write to the excel file
-	with ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-		query_data.to_excel(writer, startrow=excel_start_row, header=write_columns, index=False)
+	if_sheet_exists = 'overlay' if write_mode == 'a' else None
+	with ExcelWriter(excel_path, engine='openpyxl', mode=write_mode, if_sheet_exists=if_sheet_exists) as writer:
+		query_data.to_excel(writer, sheet_name='data', startrow=excel_start_row, header=write_columns, index=False)
+
+		# Microsoft doesn't support URLs longer than 255 in the HYPERLINK function so 
+		#	just don't include them at all
+		# Add the query URL as a hyperlink
+		# if query_url and len(query_url) < 255:
+		# 	workbook = writer.book
+		# 	# Note that the below code is valid for the openpyxl engine
+		# 	sheet = workbook.create_sheet('Query URL')
+		# 	sheet['A1'] = f'=HYPERLINK("{query_url}", "Click to open query")'
 
 
 # Handle guide_company_client_status and guide_company_briefings queries
-def write_guided_company_query_to_excel(client_status, briefings, excel_path, title_text):
+def write_guided_company_query_to_excel(client_status, briefings, excel_path, title_text, query_url):
 
 	with ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-		workbook = writer.book
+		workbook = writer.book #openpyxl Workbook
 
 		if len(client_status):
 			client_status.to_excel(writer, sheet_name='Client Status', startrow=2, header=False, index=False)
@@ -718,6 +736,12 @@ def write_guided_company_query_to_excel(client_status, briefings, excel_path, ti
 			briefings.to_excel(writer, sheet_name='Briefings', startrow=1, header=False, index=False)
 
 		workbook['Client Status']['A1'] = title_text
+
+		# Microsoft doesn't support URLs longer than 255 in the HYPERLINK function so 
+		#	just don't include them at all
+		# if query_url and len(query_url) < 255:
+		# 	sheet = workbook.create_sheet('Query URL')
+		# 	sheet['A1'] = f'=HYPERLINK("{query_url}", "Click to open query")'
 
 
 # Export results of predefined queries
@@ -750,14 +774,10 @@ def export_query():
 		excel_filename =  data['base_filename'] + '.xlsx' if 'base_filename' in data else f'{query_name}_{random_string}.xlsx'
 		excel_path = os.path.join(get_content_dir('exports'), excel_filename)
 		excel_template_path = os.path.join(os.path.dirname(__file__), 'templates', f'{query_name}.xlsx')
+		excel_write_mode = 'w' # default to write a new file
 		if os.path.isfile(excel_template_path):
 			shutil.copy(excel_template_path, excel_path)
-		# If not, just write the file without using a template and return
-		else:
-			# maybe set up a default file
-			query_data = DataFrame(data['query_data']).reindex(columns=data['columns'])
-			query_data.to_excel(excel_path, index=False)
-			return 'exports/' + excel_filename
+			excel_write_mode = 'a' # to keep style in template, write in append mode
 
 		if query_name == 'guide_company_client_status' or query_name == 'guide_company_briefings':
 			query_data = data['query_data']
@@ -767,16 +787,19 @@ def export_query():
 				client_status, 
 				briefings, 
 				excel_path,
-				data['title_text']
+				data['title_text'],
+				data['query_url']
 			)
 		else:
-			query_data = DataFrame(data['query_data']).reindex(data['columns'])
+			query_data = DataFrame(data['query_data']).reindex(columns=data['columns'])
 			write_query_to_excel(
 				query_data, 
 				query_name, 
 				excel_path, 
-				excel_start_row=data['excel_start_row'],
-				write_columns=data['excel_write_columns']
+				excel_start_row=int(data.get('excel_start_row') or 0),
+				write_columns=data['excel_write_columns'],
+				query_url=data.get('query_url') or '',
+				write_mode=excel_write_mode
 			)
 
 		return 'exports/' + excel_filename

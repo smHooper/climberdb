@@ -5,7 +5,10 @@
 body { 
 	font-family: 'Lato', sans-serif;
 }
-
+.export-header {
+	display: flex;
+	justify-content: space-between;
+}
 .export-query-table {
 	width: 100%;
 	border-collapse: collapse;
