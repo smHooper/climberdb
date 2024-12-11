@@ -1284,6 +1284,15 @@ class ClimberDB {
 
 
 	/*
+	Helper method to reset a URL to its base url (without search or hash)
+	*/
+	resetURL() {
+		const url = new URL(window.location.origin + window.location.pathname);
+		window.history.replaceState({}, '', url);
+	}
+
+
+	/*
 	Helper function to reset the values/classes of all inputs within a given parent to their defaults
 	*/
 	clearInputFields({parent='body', triggerChange=true}={}) {
