@@ -1482,41 +1482,42 @@ class ClimberDBBriefings extends ClimberDB {
 				]
 			}
 		}).done(response => {
-				if (this.pythonReturnedError(response)) {
-					console.error('query failed because ' + response)
-				} else {
-					const briefings = response.data || [];
-					// organize briefings by date
-					for (const row of briefings) {
-						// row.briefing_date needs to be returned as YYYY-mm-dd 00:00, so safely chop off the time
-						const briefingDate = getFormattedTimestamp(new Date(row.briefing_date));
-						// If this date hasn't been added to the briefings object, add it
-						if (!(briefingDate in this.briefings)) {
-							this.briefings[briefingDate] = {};
-						}
-						
-						const expeditionInfo = this.expeditionInfo.expeditions[row.expedition_id];
-						if (!expeditionInfo) continue;
-						row.routes = expeditionInfo.routes || '<em>none</em>';
-						this.briefings[briefingDate][row.id] = row;
+			if (this.pythonReturnedError(response)) {
+				console.error('query failed because ' + response)
+			} else {
+				const briefings = response.data || [];
+				// organize briefings by date
+				for (const row of briefings) {
+					// row.briefing_date needs to be returned as YYYY-mm-dd 00:00, so safely chop off the time
+					const briefingDate = getFormattedTimestamp(new Date(row.briefing_date));
+					// If this date hasn't been added to the briefings object, add it
+					if (!(briefingDate in this.briefings)) {
+						this.briefings[briefingDate] = {};
 					}
-
-					this.fillCalendarBriefings();
 					
-					// Select today
-					//const today = new Date((new Date()).toDateString()); // need to trim time to midnight
-					const today = window.location.search.length ? this.getBriefingDateFromURL() : new Date();
-					this.selectCalendarCellByDate(today);//year === today.getFullYear() ? today : new Date($('.calendar-cell:not(.disabled)').first().data('date')));
-
-					const briefingID = this.urlQueryParams.id;
-					if (briefingID) {
-						$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`).click()
-					}
+					const expeditionInfo = this.expeditionInfo.expeditions[row.expedition_id];
+					if (!expeditionInfo) continue;
+					row.routes = expeditionInfo.routes || '<em>none</em>';
+					this.briefings[briefingDate][row.id] = row;
 				}
-			})
-			.fail((xhr, status, error) => {
-				console.error('query failed because ' + error)
-			});
+
+				this.fillCalendarBriefings();
+				
+				// Select today
+				//const today = new Date((new Date()).toDateString()); // need to trim time to midnight
+				const today = window.location.search.length ? this.getBriefingDateFromURL() : new Date();
+				this.selectCalendarCellByDate(today);//year === today.getFullYear() ? today : new Date($('.calendar-cell:not(.disabled)').first().data('date')));
+
+				const briefingID = this.urlQueryParams.id;
+				if (briefingID) {
+					$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`).click()
+				}
+			}
+		})
+		.fail((xhr, status, error) => {
+			console.error('query failed because ' + error)
+		})
+		.always(() => {hideLoadingIndicator()});
 	}
 
 
@@ -1671,6 +1672,9 @@ class ClimberDBBriefings extends ClimberDB {
 	}
 
 	init() {
+
+		showLoadingIndicator('init');
+
 		// Call super.init()
 		var initDeferreds = super.init();
 		
