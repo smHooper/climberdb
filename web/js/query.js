@@ -2067,7 +2067,6 @@ class ClimberDBQuery extends ClimberDB {
 			.then(() => {
 
 				// Remove the "None" option for guide company accounting queries
-				//setTimeout(() => {
 				// Remove/add any select options before calling select2()
 				$('.remove-null-guide-option option[value=-1]').remove();
 				$('.has-null-option').append('<option value="null">Null</option>');
@@ -2087,9 +2086,6 @@ class ClimberDBQuery extends ClimberDB {
 				//	If there isn't a query string, this method does nothing. In that case,
 				//	just select the first query option
 				this.loadQueryFromURL() || $('#query-option-list .query-option').first().click();
-
-				//}, 500);
-				
 				
 			})
 			.always(() => {
