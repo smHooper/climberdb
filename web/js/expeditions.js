@@ -4555,7 +4555,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					.change();
 			if ($card.is('.new-card')) {
 				$card.find('.data-list-item:not(.cloneable) .input-field:not(.route-code-header-input)[name="route_order"]')
-						.val($card.index() - 1) // -1 because .cloneable card is 0th
+						.val($card.index())
 						.change();
 			}
 		}

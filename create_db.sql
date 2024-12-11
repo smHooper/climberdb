@@ -558,6 +558,7 @@ CREATE VIEW expedition_info_view AS
 		transactions.transaction_date, 
 		transactions.id,
 		itinerary_locations.display_order,
+		expedition_member_routes.route_order,
 		attachments.id;
 
 
@@ -1262,10 +1263,29 @@ ALTER FUNCTION clone_schema(text, text, boolean)
   OWNER TO postgres;
 
 
-select clone_schema('public', 'dev', true);
-GRANT USAGE ON SCHEMA dev TO climberdb_read;
-GRANT SELECT ON ALL TABLES IN SCHEMA dev TO climberdb_read;
-GRANT SELECT ON ALL SEQUENCES IN SCHEMA dev TO climberdb_read;
-GRANT USAGE ON SCHEMA dev TO climberdb_admin;
-GRANT ALL ON ALL TABLES IN SCHEMA dev TO climberdb_admin;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA dev TO climberdb_admin;
+-- create a convenience function for granting permissions after re-creating 
+--	schemas or views
+CREATE OR REPLACE FUNCTION grant_permissions() 
+	RETURNS void AS
+$BODY$
+	BEGIN
+		GRANT USAGE ON SCHEMA public TO climberdb_read;
+		GRANT SELECT ON ALL TABLES IN SCHEMA public TO climberdb_read;
+		GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO climberdb_read;
+		GRANT USAGE ON SCHEMA public TO climberdb_admin;
+		GRANT ALL ON ALL TABLES IN SCHEMA public TO climberdb_admin;
+		GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO climberdb_admin;
+
+		GRANT USAGE ON SCHEMA dev TO climberdb_read;
+		GRANT SELECT ON ALL TABLES IN SCHEMA dev TO climberdb_read;
+		GRANT SELECT ON ALL SEQUENCES IN SCHEMA dev TO climberdb_read;
+		GRANT USAGE ON SCHEMA dev TO climberdb_admin;
+		GRANT ALL ON ALL TABLES IN SCHEMA dev TO climberdb_admin;
+		GRANT ALL ON ALL SEQUENCES IN SCHEMA dev TO climberdb_admin;
+	END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
+
+--SELECT clone_views('public', 'dev'), grant_permissions();
+SELECT clone_schema('public', 'dev', true), grant_permissions();
