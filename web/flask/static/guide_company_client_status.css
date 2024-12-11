@@ -1,6 +1,6 @@
 .title-text {
 	width: 100%;
-	text-align: center;
+/*	text-align: center;*/
 }
 .export-query-table {
 	table-layout: fixed; /*otherwise % column widths are ignored*/
