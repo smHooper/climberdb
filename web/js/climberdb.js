@@ -1397,13 +1397,15 @@ class ClimberDB {
 					.map(s => {
 						const match = s.match(/=/)
 						if (!match) {
-							return s
+							// Even if there's no value, .fromEntries() needs [key, value]
+							//	so just set the value equal to true
+							return [s, true];
 						} else {
 							// Need to return [key, value]
 							return [
 								s.slice(0, match.index), 
 								s.slice(match.index + 1, s.length) //+1 to skip the = separator
-							]
+							];
 						}
 					}
 				)
