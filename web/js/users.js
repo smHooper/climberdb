@@ -110,6 +110,7 @@ class ClimberDBUsers extends ClimberDB {
 	original database value
 	*/
 	onInputChange(e) {
+		
 		const $input = $(e.target);
 		const $tr = $input.closest('tr');
 		const userID = $tr.data('table-id');
@@ -121,6 +122,9 @@ class ClimberDBUsers extends ClimberDB {
 			isDirty = dbValue != $input.val();
 		}
 		$input.toggleClass('dirty', isDirty);
+
+		// Toggle beforeunload event depending on whethe there are any dirty inputs
+		this.toggleBeforeUnload($('.input-field.dirty:not(.filled-by-default)').length);
 	}
 
 
@@ -423,6 +427,8 @@ class ClimberDBUsers extends ClimberDB {
 				$inputs.removeClass('dirty');
 				$tr.addClass('uneditable');
 
+				this.toggleBeforeUnload(false);
+
 				// update in-memory data
 				const userInfo = (this.users[userID] = this.users[userID] || {});
 				for (const [field, value] of Object.entries(values)) {
@@ -493,6 +499,9 @@ class ClimberDBUsers extends ClimberDB {
 
 		$('.input-field.dirty').removeClass('dirty');
 		$tr.addClass('uneditable');
+
+		// turn off beforeunload event listener
+		this.toggleBeforeUnload(false);
 	}
 
 	/*

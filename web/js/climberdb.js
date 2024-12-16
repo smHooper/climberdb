@@ -195,6 +195,53 @@ function toggleCollapseEventHandlers(selector, toggleOn=true) {
 	}
 }
 
+
+function isNull(value) {
+
+	return (
+		value === null ||
+		value === undefined ||
+		value === ''
+	);
+
+}
+
+
+/*
+Check if two values are equal. For this purpose, null, undefined, and '' are all null and 
+therefore equal. This is important because getting element.value or $element.val() will 
+both return '' regardless of the data type. When saving a value to the database, this will 
+throw an error for non-string database fields
+*/
+function valuesAreEqual(value1, value2) {
+
+	const value1NotNUll = !isNull(value1);
+	const value2NotNull = !isNull(value2);
+	const nullSum = value1NotNUll + value2NotNull;
+	// Check if both values are null-y
+	if (nullSum === 0) {
+		return true;
+	}
+	// One of them is null but the other isn't
+	else if (nullSum === 1) {
+		// if one of the values is null and one of them is false, consider them equal
+		return [value1, value2].includes(false);
+	} 
+	// neither is null-y so compare their string representations
+	else {
+		// check if they're both objects. If so, toString() will return '[object Object]'
+		//	which would yeild a false positive from the comparison
+		if (typeof(value1) === 'object' && typeof(value2) === 'object') return false;
+
+		// if either is an array, sort them first
+		if (Array.isArray(value1)) value1 = value1.sort();
+		if (Array.isArray(value2)) value2 = value2.sort();
+		
+		return value1.toString() === value2.toString();
+	}
+}
+
+
 /* ClimberDB base class*/
 class ClimberDB {
 	constructor() {
@@ -1309,9 +1356,17 @@ class ClimberDB {
 			if ($el.is('.input-checkbox')) {
 				$el.prop('checked', defaultValue || false); 
 			} else if ($el.is('select')) {
-					el.value = defaultValue || '';
-					$el.toggleClass('default', !defaultValue);
-						//.change();
+				// add the default option back in
+				const placeholderText = $el.attr('placeholder')
+				if (placeholderText && !$el.find('option[value=""]').length) {
+					$(`<option value="">${placeholderText}</option>`)
+						.insertBefore(
+							$el.find('option:first-child')
+						);
+				}
+				el.value = defaultValue || '';
+				$el.toggleClass('default', !defaultValue);
+					//.change();
 			} else {
 				el.value = defaultValue || null;
 			}
@@ -1610,7 +1665,7 @@ class ClimberDB {
 		const isCheckbox = $el.is('.input-checkbox');
 		const fieldName = el.name.replace(/-\d+$/g, '');
 		const value = values[fieldName];
-		const valueIsNull = value == null;
+		const valueIsNull = isNull(value);
 		if (fieldName in values) {
 			if (isCheckbox) {
 				$el.prop('checked', value);
@@ -1904,14 +1959,36 @@ class ClimberDB {
 	}
 
 
-
+	/*
+	Most modern browsers don't allow you to customize this event handler so the code inside 
+	it is basically irrelevant. To trigger the canned alert only at the appropriate times, 
+	the event listener needs to be registered or deregistered appropriately
+	*/
 	beforeUnloadEventHandler(e) {
-		if ($('.input-field.dirty:not(.filled-by-default)').length) {
-			const message = 'You have unsaved edits. Are you sure you want to leave this page?';
-			e.returnValue = message;
-			return message;
+		
+		//if ($('.input-field.dirty:not(.filled-by-default)').length) {
+		e.preventDefault();
+		const message = 'You have unsaved edits. Are you sure you want to leave this page?';
+		e.returnValue = message;
+		//return message;
+		//}
+	}
+
+
+	/*
+	Since modern browsers don't allow you to customize the beforeunload alert message,
+	the event listener needs to be turned on and off as appropriate. This method
+	isn't explicitly used in this base class, but each subclass can call it if necessary
+	*/	
+	toggleBeforeUnload(shouldTurnOn=false) {
+
+		if (shouldTurnOn) {
+			$(window).on('beforeunload', (e) => {this.beforeUnloadEventHandler(e)});
+		} else {
+			$(window).off('beforeunload');
 		}
 	}
+
 
 	/*
 	Prevent multiple tabs with the same URL from opening by sending message on a channel with 
@@ -2005,7 +2082,7 @@ class ClimberDB {
 		});
 
 		// Warn the user before they leave the page if they have unsaved edits
-		$(window).on('beforeunload', (e) => {return this.beforeUnloadEventHandler(e)});
+		//$(window).on('beforeunload', (e) => {return this.beforeUnloadEventHandler(e)});
 
 		// Show the right sidebar nav item as selected
 		$('.sidebar-nav-group > .nav-item.selected').removeClass('selected');

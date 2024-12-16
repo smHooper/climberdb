@@ -647,7 +647,10 @@ class ClimberForm {
 	When an input field changes, 
 	*/
 	onInputChange(e) {
+
 		const $input = $(e.target).addClass('dirty').removeClass('error');
+
+		this._parent.toggleBeforeUnload(true);
 
 		// This is an insert if it's a descendant of either a .new-card or modal .climber-form. In that case,
 		//	changes will be captured when the save button is clicked
@@ -661,7 +664,7 @@ class ClimberForm {
 		const editObject = this.edits.updates; // get reference for shorthand
 		const dbValue = this.selectedClimberInfo[tableName][dbID][fieldName];
 		// If the input value matches the DB value, remove the edit and the .dirty class
-		if (dbValue == $input.val()) {
+		if (valuesAreEqual(dbValue, $input.val())) {
 			$input.removeClass('dirty');
 			if (editObject[tableName]) {
 				if (editObject[tableName][dbID]) {
@@ -676,6 +679,11 @@ class ClimberForm {
 			if (!(tableName in editObject)) editObject[tableName] = {};
 			if (!(dbID in editObject[tableName])) editObject[tableName][dbID] = {};
 			editObject[tableName][dbID][fieldName] = this.getInputFieldValue($input);
+		}
+
+		// If there are no more dirty inputs, toggle beforeunload event
+		if (!$('.input-field.dirty:not(.filled-by-default)').length) {
+			this._parent.toggleBeforeUnload(false);
 		}
 	}
 
@@ -1107,6 +1115,8 @@ class ClimberForm {
 		// Reset edits
 		this.edits.updates = {};
 
+		// turn off the beforeunload event listener
+		this._parent.toggleBeforeUnload(false);
 	}
 
 
@@ -1265,6 +1275,9 @@ class ClimberForm {
 				}
 
 				$('.climber-form .input-field.dirty').removeClass('dirty');
+
+				// turn off the beforeunload event listener
+				this._parent.toggleBeforeUnload(false);
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');

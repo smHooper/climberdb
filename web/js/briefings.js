@@ -704,6 +704,7 @@ class ClimberDBBriefings extends ClimberDB {
 				}
 
 				$('.input-field.dirty').removeClass('dirty');
+				this.toggleBeforeUnload(false);
 
 			}
 		}).fail((xhr, status, error) => {
@@ -751,6 +752,8 @@ class ClimberDBBriefings extends ClimberDB {
 		// Hide the details drawer
 		$('.appointment-details-drawer').removeClass('show');
 		$('.briefing-appointment-container.selected').removeClass('selected');
+
+		this.toggleBeforeUnload(false);
 	}
 
 	/*
@@ -812,6 +815,7 @@ class ClimberDBBriefings extends ClimberDB {
 		//	matter if it happens when it's enabled too
 		this.edits = {};
 		$('.input-field.dirty').removeClass('dirty');
+		this.toggleBeforeUnload(false);
 	}
 
 	/*
@@ -934,6 +938,7 @@ class ClimberDBBriefings extends ClimberDB {
 	Record value changes in the .edits property
 	*/
 	onInputChange(e) {
+
 		const input = e.target;
 		const fieldName = input.name;
 		const inputValue = input.value;
@@ -941,6 +946,8 @@ class ClimberDBBriefings extends ClimberDB {
 		const $input = $(input);
 		$input.addClass('dirty');
 		
+		this.toggleBeforeUnload(true)
+
 		// If this is a new briefing, there's no in-memory data to compare to
 		const $selectedAppointment = $('.briefing-appointment-container.selected');
 		if ($selectedAppointment.is('.new-briefing')) return;
@@ -951,9 +958,13 @@ class ClimberDBBriefings extends ClimberDB {
 		const dbValue = this.briefings[dateString][briefingID][fieldName];
 		if (inputValue == dbValue) {
 			$input.removeClass('dirty');
-			delete this.edits[fieldName];
+			delete this.edits[fieldName];		
 		}
-		
+
+		// If there are no more dirty inputs, toggle beforeunload event
+		if (!$('.input-field.dirty:not(.filled-by-default)').length) {
+			this.toggleBeforeUnload(false);
+		}
 	}
 
 
