@@ -47,6 +47,7 @@ class ClimberDBConfig extends ClimberDB {
 	original database value
 	*/
 	onInputChange(e) {
+
 		const $input = $(e.target);
 		// check if the value is different from the in-memory value
 		let isDirty = false;
@@ -56,6 +57,7 @@ class ClimberDBConfig extends ClimberDB {
 			isDirty = true;
 		}
 		$input.toggleClass('dirty', isDirty);
+		this.toggleBeforeUnload($('.input-field.dirty').length);
 		$('#save-button').ariaTransparent($('.input-field.dirty').length);
 	}
 
@@ -295,6 +297,9 @@ class ClimberDBConfig extends ClimberDB {
 
 				$([...$configInputs, ...$cuaInputs]).removeClass('dirty');
 				$('#save-button').ariaTransparent();
+
+				// turn off beforeunload event listener
+				this.toggleBeforeUnload(false);
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Unexpected error');

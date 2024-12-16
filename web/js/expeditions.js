@@ -168,9 +168,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	clicks the save button. The .filled-by-default utility is used to distinguish between changes the user 
 		//	actually made and .change events manually tirggered by the app. If the input is .filled-by-default 
 		//	still, that means the user didn't make the change.
-		$('.filled-by-default').change(e => {
-			if (e.isTrigger) $(e.target).removeClass('filled-by-default');
-		})
+		//	*** this get's handled in onInputChange() now
+		// $('.filled-by-default').change(e => {
+		// 	if (e.isTrigger) $(e.target).removeClass('filled-by-default');
+		// })
 
 		window.onpopstate = (e) => {
 			this.onPopState(e)
@@ -686,7 +687,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		})
 		// ^^^^^ Climber form stuff ^^^^^^
 	}
-
+	
 	/*
 	Helper function to determine if the value of an input field changed
 	*/
@@ -733,11 +734,12 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		}
 
-		return valueChanged || dbValue != newValue;
+		return valueChanged || !valuesAreEqual(dbValue, newValue);
 	}
 
 
 	onInputChange(e) {
+
 		const $input = $(e.target);
 
 		if ($input.is('.ignore-changes') || $input.closest('.uneditable').length) return;
@@ -745,10 +747,17 @@ class ClimberDBExpeditions extends ClimberDB {
 		const valueDidChange = this.inputValueDidChange($input);
 		$input.toggleClass('dirty', valueDidChange)
 		
+		// If the value is different from the default value, remove the filled-by-default class
+		if (!valuesAreEqual($input.data('default-value'), this.getInputFieldValue($input))) {
+			$input.removeClass('filled-by-default');
+		}
 		// If the class was marked as invalid when the user tried to save, remove the error class
 		if (valueDidChange) $input.removeClass('error');
 
 		$('#save-expedition-button').ariaHide(!$('.input-field.dirty').length);
+
+		// Toggle beforeunload event depending on whethe there are any dirty inputs
+		this.toggleBeforeUnload($('.input-field.dirty:not(.filled-by-default)').length);
 
 	}
 
@@ -1308,7 +1317,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	Helper method to set attributes of inputs and their containers after successfully saving newly inserted data. 
 	The helper function is used after saving new attachments and after INSERTing other data. 
 	*/
-	setInsertedIDsPython(insertedIDs) {
+	setInsertedIDs(insertedIDs) {
 
 		var expeditionID = this.expeditionInfo.expeditions.id;
 		for (const {table_name, html_id, db_id, foreign_keys} of insertedIDs) {
@@ -1658,7 +1667,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
 				return false;
 			} else {
-				const expeditionID = this.setInsertedIDsPython(response.data || {});
+				const expeditionID = this.setInsertedIDs(response.data || {});
 
 				// update in-memory data for each edited input
 				this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
@@ -3759,6 +3768,9 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// reset briefing link
 		this.resetBriefingLink();
+
+		// turn the beforeunload event listener off
+		this.toggleBeforeUnload(false);
 	}
 
 
