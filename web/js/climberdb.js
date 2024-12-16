@@ -969,13 +969,13 @@ class ClimberDB {
 				
 				let sqlArgs = {orderBy: [{table_name: lookupTableName, column_name: 'sort_order'}]};
 				if ($el.is('.include-disabled-options')) { 
+					sqlArgs.tables = [lookupTableName];
+				} else {
 					sqlArgs.where = {[lookupTableName]: [{
 						column_name: 'sort_order', 
 						operator: 'IS NOT', 
 						comparand: 'NULL'}
 					]};
-				} else {
-					sqlArgs.tables = [lookupTableName];
 				}
 
 				return this.fillSelectOptions(id, sqlArgs);
