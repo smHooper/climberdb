@@ -1191,7 +1191,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						</select>
 				</div>
 			`;
-			const onClickHander = () => {
+			const onClickHandler = () => {
 				// For just adding the selected member
 				$('#alert-modal .add-selected-button').click(() => {
 					const climberID = $('#modal-add-route-member').val();
@@ -1223,7 +1223,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				'Select expedition member(s) to add', 
 				'confirm', 
 				footerButtons,
-				{eventHandlerCallable: onClickHander});
+				{eventHandlerCallable: onClickHandler});
 		}
 	} 
 
@@ -1745,7 +1745,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	confirmSaveEdits({afterActionCallback=()=>{}, afterCancelCallback=()=>{}}={}) {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
 		
-		const onClickHander = () => { 
+		const onClickHandler = () => { 
 			
 			$('#alert-modal .cancel-button').click(() => {
 				afterCancelCallback();
@@ -1777,7 +1777,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			'Save edits?',
 			'alert',
 			footerButtons,
-			{eventHandlerCallable: onClickHander}
+			{eventHandlerCallable: onClickHandler}
 		);
 	}
 

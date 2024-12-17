@@ -514,7 +514,7 @@ class ClimberDBUsers extends ClimberDB {
 	confirmSaveEdits({afterActionCallback=()=>{}, afterCancelCallback=()=>{}}={}) {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
 		
-		const onClickHander = () => { 
+		const onClickHandler = () => { 
 			
 			$('#alert-modal .cancel-button').click(() => {
 				afterCancelCallback();
@@ -546,7 +546,7 @@ class ClimberDBUsers extends ClimberDB {
 			'Save edits?',
 			'alert',
 			footerButtons,
-			{eventHandlerCallable: onClickHander}
+			{eventHandlerCallable: onClickHandler}
 		);
 	}
 
