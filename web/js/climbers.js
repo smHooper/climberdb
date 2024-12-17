@@ -2162,23 +2162,32 @@ class ClimberDBClimbers extends ClimberDB {
 		// If this isn't an admin, check if the climber belongs to any expeditions
 		if (!this.userInfo.isAdmin) {
 			if (climberInfo.expedition_name) { // will be null if climber isn't/wasn't on any expeditions
-				showModal(`You can't delete ${climberInfo.first_name} ${climberInfo.last_name}'s climber profile because they are a member of at least one expedition. You must remove them from all expeditions they're a member of before their profile can be deleted.`, 'Invalid Operation')
+				showModal(
+					`You can't delete ${climberInfo.first_name} ${climberInfo.last_name}'s climber profile` + 
+						' because they are a member of at least one expedition. You must remove them from all' + 
+						' expeditions they\'re a member of before their profile can be deleted.', 
+					'Invalid Operation'
+				);
 				return;
 			}
 		}
 
 		const climberID = $('.query-result-list-item.selected').attr('id').replace('item-','');
-		const onConfirmClick = `
-			climberDB.deleteClimber(${climberID});
-		`;
-		
+		const onConfirmClickHandler = () => {
+			$('#alert-modal .confirm-button').click(() => {
+				this.deleteClimber(climberID);
+			});
+		}
 		const footerButtons = `
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
+			<button class="generic-button modal-button danger-button close-modal confirm-button" data-dismiss="modal">Yes</button>
 		`;
 		let message = `Are you sure you want to <strong>permanently delete this climber</strong>? This action cannot be undone`;
-		if (climberInfo.expedition_name) message += ' and all information about their climbs will be delete including transaction history, medical issues, and whether or not they summited.'
-		showModal(message, `Delete climber?`, 'confirm', footerButtons);
+		if (climberInfo.expedition_name) {
+			message += ' and all information about their climbs will be delete including transaction history,' + 
+				' medical issues, and whether or not they summited.';
+		}
+		showModal(message, `Delete climber?`, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
 	}
 
 

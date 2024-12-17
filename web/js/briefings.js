@@ -761,17 +761,7 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	confirmSaveEdits({afterActionCallback=()=>{}}={}) {
 		//@param afterActionCallback: a callable function to be called after either the Save or Discard button is clicked
-
-		// const onConfirmClick = `
-		// 	showLoadingIndicator('saveEdits');
-		// 	climberDB.saveEdits() 
-		// `;
-		
-		// const footerButtons = `
-		// 	<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-		// 	<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.discardEdits();${afterActionCallbackStr};${afterDiscardCallbackStr}">Discard</button>
-		// 	<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick};${afterActionCallbackStr};${afterSaveCallbackStr}">Save</button>
-		// `;		
+	
 		const footerButtons = `
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
 			<button class="generic-button modal-button danger-button discard-button close-modal" data-dismiss="modal">Discard</button>
