@@ -97,8 +97,10 @@ class ClimberDBUsers extends ClimberDB {
 
 		if ($('.input-field.dirty').length) {
 			this.confirmSaveEdits({
-				afterActionCallbackStr: `climberDB.toggleEditing( $('tr[data-table-id=${userID}]'), ${allowEdits})`}
-			);
+				afterActionCallback: () => {
+					this.toggleEditing( $(`tr[data-table-id=${userID}]`), allowEdits)
+				}
+			});
 		} else {
 			this.toggleEditing($tr, allowEdits);
 		}
@@ -361,7 +363,9 @@ class ClimberDBUsers extends ClimberDB {
 		}
 		// If the user is currently editing
 		if ($table.find('.input-field.dirty').length) {
-			this.confirmSaveEdits({afterActionCallbackStr: 'climberDB.addNewUserRow()'})
+			this.confirmSaveEdits({
+				afterActionCallback: () => {this.addNewUserRow($table)}
+			})
 		} else {
 			// If the user is currently editing a row (but hasn't made any unsaved changes), 
 			//	turn off editing before adding the new row
@@ -507,25 +511,42 @@ class ClimberDBUsers extends ClimberDB {
 	/*
 	Ask the user to confirm/discard edits
 	*/
-	confirmSaveEdits({afterActionCallbackStr='', afterCancelCallbackStr=''}={}) {
+	confirmSaveEdits({afterActionCallback=()=>{}, afterCancelCallback=()=>{}}={}) {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
+		
+		const onClickHander = () => { 
+			
+			$('#alert-modal .cancel-button').click(() => {
+				afterCancelCallback();
+			});
 
-		const onConfirmClick = `
-			showLoadingIndicator('saveEdits');
-			climberDB.saveEdits(); 
-		`;
+			$('#alert-modal .discard-button').click(() => {
+				// happens synchronously so no need to wait to call afterActionCallback
+				this.discardEdits();
+				afterActionCallback()
+			});
+
+			$('#alert-modal .confirm-button').click(() => {
+				showLoadingIndicator('saveEdits');
+				this.saveEdits()
+					.done(() => {
+						afterActionCallback();
+					})
+			});
+		}
 		
 		const footerButtons = `
-			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal" onclick="${afterCancelCallbackStr}">Cancel</button>
-			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.discardEdits();${afterActionCallbackStr}">Discard</button>
-			<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}${afterActionCallbackStr}">Save</button>
+			<button class="generic-button modal-button secondary-button cancel-button close-modal" data-dismiss="modal">Cancel</button>
+			<button class="generic-button modal-button danger-button discard-button close-modal" data-dismiss="modal">Discard</button>
+			<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal">Save</button>
 		`;
 
 		showModal(
 			`You have unsaved edits to this user. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this user.`,
 			'Save edits?',
 			'alert',
-			footerButtons
+			footerButtons,
+			{eventHandlerCallable: onClickHander}
 		);
 	}
 

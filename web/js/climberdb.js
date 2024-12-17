@@ -23,7 +23,7 @@ function print(i) {
 
 function getDefaultModalFooterButtons(modalType) {
 	return  modalType === 'confirm' ? 
-			'<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>' +
+			'<button class="generic-button secondary-button modal-button close-modal confirm-button" data-dismiss="modal">Close</button>' +
 			'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
 		  :
 		'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
@@ -691,16 +691,24 @@ class ClimberDB {
 	*/
 	confirmLogout() {
 		// Set the expiration for the current user's session to now if they confirm. Then go to the sign-in page
-		const onConfirmClick = `
-			climberDB.loginInfo.expiration = ${new Date().getTime()};
-			window.localStorage.login = JSON.stringify(climberDB.loginInfo);
-			window.location.href='index.html';
-		`;
+		const onConfirmClickHandler = () => {
+			$('#alert-modal .confirm-button').click(() => {
+				this.loginInfo.expiration = new Date().getTime();
+				window.localStorage.login = JSON.stringify(this.loginInfo);
+				window.location.href = 'index.html';
+			});
+		}
 		const footerButtons = `
-			<button class="generic-button modal-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
+			<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">Yes</button>
 			<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>';
 		`;
-		showModal('Are you sure you want to log out? Any unsaved data will be lost', 'Log out?', 'confirm', footerButtons);
+		showModal(
+			'Are you sure you want to log out? Any unsaved data will be lost', 
+			'Log out?', 
+			'confirm', 
+			footerButtons,
+			{eventHandlerCallable: onConfirmClickHandler}
+		);
 	}
 
 
@@ -2100,8 +2108,22 @@ class ClimberDB {
 					if (this.loginInfo.username !== username || this.loginInfo.expiration < new Date().getTime()) {
 						$('#climberdb-main-content').empty();
 						hideLoadingIndicator();
-						const footerButtons = `<button class="generic-button modal-button close-modal" data-dismiss="modal" onclick="window.location.href='index.html?referer=${encodeURI(window.location.href)}'">OK</button>`;
-						showModal('Your session has expired. Click OK to log in again.', 'Session expired', 'alert', footerButtons, {dismissable: false});
+						const onConfirmClickHandler = () => {
+							$('#alert-modal .modal-button').click(() => {
+								window.location.href = `index.html?referer=${encodeURI(window.location.href)}`
+							})
+						}
+						const footerButtons = `<button class="generic-button modal-button close-modal" data-dismiss="modal">OK</button>`;
+						showModal(
+							'Your session has expired. Click OK to log in again.', 
+							'Session expired', 
+							'alert', 
+							footerButtons, 
+							{	
+								eventHandlerCallable: onConfirmClickHandler,
+								dismissable: false
+							}
+						);
 					}
 				}
 				if (window.location.pathname !== '/index.html' && this.userInfo.user_status_code != 2) {

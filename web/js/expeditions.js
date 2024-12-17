@@ -98,8 +98,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('#open-reports-modal-button').click(e => {
 			// Check if there are unsaved edits and ask the user to confirm
 			if ($('.input-field.dirty:not(#input-export_type, .filled-by-default)').length) {
-				const afterActionCallbackStr = `$('#exports-modal').modal();`
-				this.confirmSaveEdits({afterActionCallbackStr: afterActionCallbackStr});
+				const afterActionCallback = () => {$('#exports-modal').modal()}
+				this.confirmSaveEdits({afterActionCallback: afterActionCallback});
 			} else {
 				$('#exports-modal').modal();
 			}
@@ -259,18 +259,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			this.onExpeditionSearchOptionKeydown(e);
 		});
 
-		// When a user selects an option in the main search bar, load the expedition
 		$(document).on('click', '#expedition-options-drawer .expedition-search-bar-option', e => {
-			const expeditionID = $(e.target).data('expedition-id');
-			if ($('.input-field.dirty:not(.filled-by-default)').length) {
-				const targetID = '#expedition-id-input';//e.target.id;
-				this.confirmSaveEdits({
-					afterActionCallbackStr: `climberDB.onExpeditionOptionClick( {target: $('.expedition-search-bar-option[data-expedition-id=${expeditionID}]')} )`,
-					afterCancelCallbackStr: `$('#expedition-id-input').val($('#expedition-id-input').data('current-value'))`
-				});
-			} else {
-				this.onExpeditionOptionClick(e);
-			}
+			this.onExpeditionSearchOptionClick(e)
 		})
 
 		// Set the search bar value to the expedition name
@@ -512,16 +502,28 @@ class ClimberDBExpeditions extends ClimberDB {
 			} else {
 				const $cmcSelect = $li.find('select');
 				const dbID = $li.data('table-id');
-				const onConfirmClick = `climberDB.deleteListItem($('#${$li.attr('id')}'), 'expedition_member_routes', ${dbID})`;
 				const footerButtons = `
 					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-					<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
+					<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal">Yes</button>
 				`;
+				const onConfirmClickHandler = () => {
+					$('#alert-modal .danger-button').click(() => {
+						this.deleteListItem($li, 'expedition_member_routes', dbID)
+					})
+				}
 				const {first_name, last_name} = this.expeditionInfo.expedition_members.data[$li.data('expedition-member-id')];
 				const memberName = first_name + ' ' + last_name;
 				const $routeInput = $li.closest('.card').find('.route-code-header-input:not(.mountain-code-header-input)');
 				const routeName = $routeInput.find(`option[value=${$routeInput.val()}]`).text();//this.routeCodes[$li.find('.input-field[name="route_code"]').val()].name;
-				showModal(`Are you sure you want to remove <strong>${memberName}</strong> from the <strong>${routeName}</strong> route?`, 'Remove expedition member from this route?', 'alert', footerButtons);
+				showModal(
+					`Are you sure you want to remove <strong>${memberName}</strong> from the <strong>${routeName}</strong> route?`, 
+					'Remove expedition member from this route?', 
+					'alert', 
+					footerButtons,
+					{
+						eventHandlerCallable: onConfirmClickHandler
+					}
+				);
 			}
 		})
 
@@ -543,28 +545,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// ask user to confirm removing CMC only if the cmc_checkout record already exists in the DB
 		$(document).on('click', '.delete-cmc-button', e => {
-			const $li = $(e.target).closest('li');
-			const $cmcSelect = $li.find('select');
-			const cmcID = $cmcSelect.val();
-			if ($li.is('.new-list-item')) {
-				$li.fadeRemove();
-			} else {
-				
-				const dbID = $cmcSelect.data('table-id');
-				const tableName = $cmcSelect.data('table-name');
-				const onConfirmClick = `climberDB.deleteListItem($('#${$li.attr('id')}'), '${tableName}', ${dbID})`
-				const footerButtons = `
-					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-					<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
-				`;
-				showModal(`Are you sure you want to delete this checkout record for CMC ${cmcID}?`, 'Delete CMC?', 'alert', footerButtons);
-			}
-
-			// Add this cmc back to other selects as a selectable option
-			if (cmcID) {
-				const cmcCanIdentifier = $cmcSelect.find(`option[value=${cmcID}]`).html();
-				this.insertCMCOption(cmcID, cmcCanIdentifier);
-			}
+			this.onDeleteCMCButtonClick(e);
 		});
 
 		$(document).on('change', '.input-field[name=cmc_id]', e => {
@@ -625,22 +606,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// ask user to confirm removing CMC only if the cmc_checkout record already exists in the DB
 		$(document).on('click', '.delete-comms-button', e => {
-			const $li = $(e.target).closest('li');
-			if ($li.is('.new-list-item')) {
-				$li.fadeRemove();
-			} else {
-				const dbID = $li.data('table-id');
-				const $deviceTypeSelect = $li.find('select[name=communication_device_type_code]');
-				const tableName = $deviceTypeSelect.data('table-name');
-				const deviceType = $deviceTypeSelect.find('option:selected').text();
-				const onConfirmClick = `climberDB.deleteListItem($('#${$li.attr('id')}'), '${tableName}', ${dbID})`;
-				const expeditionName = this.expeditionInfo.expeditions.expedition_name; // has to be set since this list item is already saved
-				const footerButtons = `
-					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-					<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">OK</button>
-				`;
-				showModal(`Are you sure you want to delete this ${deviceType} from ${expeditionName}'s communication device list?`, 'Delete Comms Device?', 'alert', footerButtons);
-			}
+			this.onDeleteCommsButtonClick(e);
 		})
 		// ^^^^^^^^^^^ Comms ^^^^^^^^^^^^^^^
 
@@ -831,12 +797,15 @@ class ClimberDBExpeditions extends ClimberDB {
 			if ($('.input-field.dirty').length) this.discardEdits();
 		} else {
 			allowEdits = allowEdits === null ? $content.is('.uneditable') : allowEdits;
+			// If editing should be disabled and there are edits made, as the user to save or 
+			//	discard them
 			if (!allowEdits && $('.input-field.dirty:not(.filled-by-default)').length) {
-				const afterActionCallbackStr = `
+				
+				const callback = () => {
 					$('.expedition-content').addClass('uneditable');
 					$('#delete-expedition-button').ariaHide(true);
-				`;
-				this.confirmSaveEdits({afterActionCallbackStr: afterActionCallbackStr});
+				}
+				this.confirmSaveEdits({afterActionCallback: callback});
 			} else {
 				$content.toggleClass('uneditable', !allowEdits);
 				$('#delete-expedition-button').ariaHide(!allowEdits);
@@ -870,15 +839,24 @@ class ClimberDBExpeditions extends ClimberDB {
 			// ask user to confirm/discard edits if there are any
 			if ($('.input-field.dirty:not(.filled-by-default)').length) {
 				this.confirmSaveEdits({
-					afterActionCallbackStr: `
-						climberDB.loadExpedition(${state.id});
-						climberDB.currentHistoryIndex = ${state.historyIndex};
-					`,
-					afterCancelCallbackStr: `
+					afterActionCallback: () => {
+						this.loadExpedition(state.id);
+						this.currentHistoryIndex = state.historyIndex;
+					},
+					afterCancelCallback: () => {
+						// this doesn't work exactly as intended but it's not that important.
+						//	For more info: https://github.com/smHooper/climberdb/issues/84
 						const currentExpeditionID = $('#expedition-id-input').val();
-						const historyIndex = climberDB.historyBuffer.indexOf(currentExpeditionID);
-						window.history.pushState({id: currentExpeditionID, historyIndex: historyIndex}, '', window.location.href)
-					`});
+						const historyIndex = this.historyBuffer.indexOf(parseInt(currentExpeditionID));
+						// reset URL to the current expedition since the user isn't navigating
+						//	away
+						window.history.pushState(
+							{id: currentExpeditionID, historyIndex: historyIndex}, 
+							'', 
+							window.location.pathname + `?id=${currentExpeditionID}` 
+						)
+					}
+				});
 			} else {
 				this.loadExpedition(state.id);
 				this.currentHistoryIndex = state.historyIndex;
@@ -1213,32 +1191,39 @@ class ClimberDBExpeditions extends ClimberDB {
 						</select>
 				</div>
 			`;
+			const onClickHander = () => {
+				// For just adding the selected member
+				$('#alert-modal .add-selected-button').click(() => {
+					const climberID = $('#modal-add-route-member').val();
+					const climberName = $(`#modal-add-route-member option[value="${climberID}"]`).text();
+					const memberData = this.expeditionInfo.expedition_members.data;
+					const memberID = Object.keys(memberData).filter(id => parseInt(memberData[id].climber_id) === parseInt(climberID)).pop();
+					this.addRouteMember($list, climberName, climberID, {expeditionMemberID: memberID});
+				});
 
-			// Snippet for when the user wants to add just the currently selected climber
-			const onAddSelectedConfirm = `
-				const climberID = $('#modal-add-route-member').val();
-				const climberName = $('#modal-add-route-member option[value=' + climberID + ']').text();
-				const memberData = climberDB.expeditionInfo.expedition_members.data;
-				const memberID = Object.keys(memberData).filter(id => parseInt(memberData[id].climber_id) === parseInt(climberID)).pop()
-				climberDB.addRouteMember('#${$list.attr('id')}', climberName, climberID, {expeditionMemberID: memberID});
-			`;
-			// Snippet to add all unassigned climbers
-			const onAddAllConfirm = `
-				const listID = '#${$list.attr('id')}';
-				const memberData = climberDB.expeditionInfo.expedition_members.data;
-				for (const el of $('#modal-add-route-member option')) {
-					const climberID = el.value;
-					const climberName = el.innerHTML;
-					const memberID = Object.keys(memberData).filter(id => parseInt(memberData[id].climber_id) === parseInt(climberID)).pop()
-					climberDB.addRouteMember(listID, climberName, climberID, {expeditionMemberID: memberID});
-				}
-			`;
+				// For when the user clicks the button to add all exp. members
+				$('#alert-modal .add-all-button').click(() => {
+					const memberData = this.expeditionInfo.expedition_members.data;
+					for (const el of $('#modal-add-route-member option')) {
+						const climberID = el.value;
+						const climberName = el.innerHTML;
+						const memberID = Object.keys(memberData).filter(id => parseInt(memberData[id].climber_id) === parseInt(climberID)).pop()
+						climberDB.addRouteMember($list, climberName, climberID, {expeditionMemberID: memberID});
+					}
+				})
+			}
+
 			const footerButtons = `
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-				<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onAddSelectedConfirm}">Add selected</button>
-				<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onAddAllConfirm}">Add All</button>
+				<button class="generic-button modal-button primary-button close-modal add-selected-button" data-dismiss="modal">Add selected</button>
+				<button class="generic-button modal-button primary-button close-modal add-all-button" data-dismiss="modal">Add All</button>
 			`;
-			showModal(message, 'Select expedition member(s) to add', 'confirm', footerButtons);
+			showModal(
+				message, 
+				'Select expedition member(s) to add', 
+				'confirm', 
+				footerButtons,
+				{eventHandlerCallable: onClickHander});
 		}
 	} 
 
@@ -1662,21 +1647,20 @@ class ClimberDBExpeditions extends ClimberDB {
 			data: formData,
 			contentType: false,
 			processData: false
-		}).done(response => {
+		}).then(response => {
 			if (this.pythonReturnedError(response)) {
 				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
 				return false;
 			} else {
 				const expeditionID = this.setInsertedIDs(response.data || {});
 
-				// update in-memory data for each edited input
-				this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
-
 				// Hide the save button again since there aren't any edits
 				$('#save-expedition-button').ariaHide(true);
 				// but open the reports modal button since there's something to show
 				$('#open-reports-modal-button, #show-cache-tag-modal-button, #edit-expedition-button, #delete-expedition-button').ariaHide(false);
 
+				// update in-memory data for each edited input
+				return this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
 			}
 		}).fail((xhr, status, error) => {
 			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
@@ -1758,38 +1742,34 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Ask the user to confirm/discard edits
 	*/
-	confirmSaveEdits({afterActionCallbackStr='', afterCancelCallbackStr='', afterActionCallback=()=>{}}={}) {
+	confirmSaveEdits({afterActionCallback=()=>{}, afterCancelCallback=()=>{}}={}) {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
-
-		const onConfirmClick = `
-			showLoadingIndicator('saveEdits');
-			climberDB.saveEdits(); 
-		`;
 		
-		// will have to update each confirmSaveEdsits call
-		// const onConfirmEventHandler = () => { 
-		// 		$('#alert-modal .confirm-button').click(
-		// 			() => {
-		// 				showLoadingIndicator('saveEdits');
-		// 				this.saveEdits()
-		// 					.done(() => {
-		// 						afterActionCallback();
-		// 					})
-		// 			}
-		// 		)
-		// 		$('#alert-modal .discard-button').click(
-		// 			() => {
-		// 				// happens synchronously so no need to wait to call afterActionCallback
-		// 				this.discardEdits();
-		// 				afterActionCallback()
-		// 			}
-		// 		)
-		// 	}
+		const onClickHander = () => { 
+			
+			$('#alert-modal .cancel-button').click(() => {
+				afterCancelCallback();
+			});
+
+			$('#alert-modal .discard-button').click(() => {
+				// happens synchronously so no need to wait to call afterActionCallback
+				this.discardEdits();
+				afterActionCallback()
+			});
+
+			$('#alert-modal .confirm-button').click(() => {
+				showLoadingIndicator('saveEdits');
+				this.saveEdits()
+					.done(() => {
+						afterActionCallback();
+					})
+			});
+		}
 
 		const footerButtons = `
-			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal" onclick="${afterCancelCallbackStr}">Cancel</button>
-			<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="climberDB.discardEdits();${afterActionCallbackStr}">Discard</button>
-			<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}${afterActionCallbackStr}">Save</button>
+			<button class="generic-button modal-button secondary-button cancel-button close-modal" data-dismiss="modal">Cancel</button>
+			<button class="generic-button modal-button danger-button discard-button close-modal" data-dismiss="modal">Discard</button>
+			<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal">Save</button>
 		`;
 
 		showModal(
@@ -1797,7 +1777,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			'Save edits?',
 			'alert',
 			footerButtons,
-			{eventHandlerCallable: afterActionCallback}
+			{eventHandlerCallable: onClickHander}
 		);
 	}
 
@@ -2231,6 +2211,32 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	/*
+	When a user selects an option in the main search bar, load the expedition
+	*/
+	onExpeditionSearchOptionClick(e) {
+		const expeditionID = $(e.target).data('expedition-id');
+		if ($('.input-field.dirty:not(.filled-by-default)').length) {
+			
+			const discardOrSaveCallback = () => {
+				this.onExpeditionOptionClick({
+					target: $(`.expedition-search-bar-option[data-expedition-id=${expeditionID}]`)
+				})
+			}
+			const cancelCallback = () => {
+				const resetID = $('#expedition-id-input').data('current-value');
+				$('#expedition-id-input').val(resetID);
+			}
+			this.confirmSaveEdits({
+				afterActionCallback: discardOrSaveCallback,
+				afterCancelCallback: cancelCallback
+			});
+		} else {
+			this.onExpeditionOptionClick(e);
+		}
+	}
+
+
+	/*
 	When the user types anything in the modal search bar, hide the confirm button because it should only be shown when a user clicks an expedition option
 	*/
 	onModalSearchBarInputKeyUp(e) {
@@ -2422,7 +2428,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	onConfirmChangeExpeditionButtonClick() {
 		// Confirm edits if there are any
 		if ($('.input-field.dirty:not(.filled-by-default)').length) {
-			this.confirmSaveEdits({afterActionCallbackStr: `climberDB.moveExpeditionMember()`});
+			this.confirmSaveEdits({afterActionCallback: () => {this.moveExpeditionMember()}});
 		} 
 		// Otherwise just do the move
 		else {
@@ -2804,7 +2810,6 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// If there are unsaved edits, prompt the user to either save or discard them
 		if ($('.dirty').length) {
-			//this.confirmSaveEdits({afterActionCallback: () => {this.writeToLabelMatrix()} })
 			showModal(`You have unsaved edits. Either click the <strong>Save</strong> button to keep your edits or click the <strong>Edit</strong> button and choose <strong>Discard</strong> to undo your edits. Then you can print cache tags.`, 'Unsaved Edits')
 			return;
 		} 
@@ -3341,7 +3346,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		if (!this.showDenyEditPermissionsMessage()) return;
 
 		if ($('.input-field.dirty:not(.filled-by-default)').length) {
-			this.confirmSaveEdits({afterActionCallbackStr: 'climberDB.createNewExpedition();'})
+			this.confirmSaveEdits({afterActionCallback: () => {this.createNewExpedition()}})
 		} else {
 			this.createNewExpedition()
 		}
@@ -4035,6 +4040,77 @@ class ClimberDBExpeditions extends ClimberDB {
 					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
 				}
 			);
+	}
+
+
+	/*
+	Event handler for delete-cmc-button
+	*/
+	onDeleteCMCButtonClick(e) {
+		const $li = $(e.target).closest('li');
+		const $cmcSelect = $li.find('select');
+		const cmcID = $cmcSelect.val();
+		if ($li.is('.new-list-item')) {
+			$li.fadeRemove();
+		} else {
+			
+			const dbID = $cmcSelect.data('table-id');
+			const tableName = $cmcSelect.data('table-name');
+			const onConfirmClickHandler = () => {
+				$('#alert-modal .danger-button').click(() => {
+					this.deleteListItem($li, 'cmc_checkout', dbID)
+				});
+			}
+			const footerButtons = `
+				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal">OK</button>
+			`;
+			showModal(
+				`Are you sure you want to delete this checkout record for CMC ${cmcID}?`, 
+				'Delete CMC?', 
+				'alert', 
+				footerButtons,
+				{eventHandlerCallable: onConfirmClickHandler}
+			);
+		}
+
+		// Add this cmc back to other selects as a selectable option
+		if (cmcID) {
+			const cmcCanIdentifier = $cmcSelect.find(`option[value=${cmcID}]`).html();
+			this.insertCMCOption(cmcID, cmcCanIdentifier);
+		}
+	}
+
+
+
+	onDeleteCommsButtonClick(e) {
+		const $li = $(e.target).closest('li');
+		if ($li.is('.new-list-item')) {
+			$li.fadeRemove();
+		} else {
+			const dbID = $li.data('table-id');
+			const $deviceTypeSelect = $li.find('select[name=communication_device_type_code]');
+			const tableName = $deviceTypeSelect.data('table-name');
+			const deviceType = $deviceTypeSelect.find('option:selected').text();
+			//const onConfirmClick = `climberDB.deleteListItem($('#${$li.attr('id')}'), '${tableName}', ${dbID})`;
+			const onConfirmClickHandler = () => {
+				$('#alert-modal .danger-button').click(() => {
+					this.deleteListItem($li, 'communication_devices', dbID)
+				});
+			}
+			const expeditionName = this.expeditionInfo.expeditions.expedition_name; // has to be set since this list item is already saved
+			const footerButtons = `
+				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
+				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal">OK</button>
+			`;
+			showModal(
+				`Are you sure you want to delete this ${deviceType} from ${expeditionName}'s communication device list?`, 
+				'Delete Comms Device?', 
+				'alert', 
+				footerButtons,
+				{eventHandlerCallable: onConfirmClickHandler}
+			);
+		}
 	}
 
 
