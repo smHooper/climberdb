@@ -1303,8 +1303,14 @@ def save_db_edits(request_data):
 	# For collecting filenames from INSERTS to save files later
 	attachments = {}
 
+	# Permit number won't increment with each expedition member since we insert all of 
+	#	the data at once. Get the permit number independent of the transaction and
+	#	manually increment it. Note that permit_number is defined outside of walk_inserts()
+	#	but is modified within it
+	permit_number = int(get_next_permit_number(year))
+
 	# Helper function to recursively create inserts
-	def walk_inserts(data, parent_row):
+	def walk_inserts(data, parent_row, session):
 		# data should be dictionary with items as {table_name: [values]}
 		for table_name, table_data_list in data.items():
 			
@@ -1322,7 +1328,10 @@ def save_db_edits(request_data):
 				if table_name == 'expedition_members' and not 'permit_number' in values:
 					if not year:
 						raise ValueError('Year not specified in request data but permit number was not in insert data')
-					values['permit_number'] = f'TKA-{str(year)[-2:]}-{get_next_permit_number(year)}'
+					# Declare that we're using the permit_number var from the parent scope
+					nonlocal permit_number
+					values['permit_number'] = f'TKA-{str(year)[-2:]}-{permit_number}'
+					permit_number += 1 # manually increment
 				
 				if table_name == 'attachments':
 					filename = values.get('client_filename')
@@ -1344,7 +1353,7 @@ def save_db_edits(request_data):
 				inserted_rows[html_id] = child_row
 
 				# recurse through the tree
-				walk_inserts(table_data.get('children') or {}, child_row)
+				walk_inserts(table_data.get('children') or {}, child_row, session)
 
 
 	with WriteSession() as session, session.begin():
@@ -1374,7 +1383,7 @@ def save_db_edits(request_data):
 
 				children = root_data.get('children') or {}
 
-				walk_inserts(children, root_row)
+				walk_inserts(children, root_row, session)
 
 		# If files were sent in the request but no attachment information was, raise
 		if len(attachments) == 0 and request.files:
@@ -1622,7 +1631,10 @@ def delete_by_id():
 
 def get_next_permit_number(year: int) -> str:
 	"""
-	Generate the next permit number for a given year. 
+	Generate the next permit number for a given year.
+
+	@param: year - year to generate the permit for. Permits are numbered sequentially 
+		within a year
 	"""
 	sql = sqlatext(f'''
 		SELECT 
