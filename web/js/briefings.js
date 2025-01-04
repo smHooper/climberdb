@@ -611,7 +611,7 @@ class ClimberDBBriefings extends ClimberDB {
 			if (el.id.endsWith('_time')) {
 				values[el.name.replace(/_time$/, '')] = `${briefingDate} ${el.value}`;
 			} else {
-				values[el.name] = el.value;
+				values[el.name] = el.value === '' ? null : el.value;
 			}
 		}
 
