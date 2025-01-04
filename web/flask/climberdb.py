@@ -527,7 +527,7 @@ def get_registration_card(expedition_id):
 	for prop in data:
 		if prop.endswith('_date') and data[prop]:
 			data[prop] = datetime.strptime(
-					data[prop], '%Y-%m-%d'
+					data[prop], '%Y-%m-%d %H:%M'
 				).strftime('%#m/%#d/%Y')
 	data['checkmark_character'] = '\u2714';
 
