@@ -1638,7 +1638,7 @@ def get_next_permit_number(year: int) -> str:
 	"""
 	sql = sqlatext(f'''
 		SELECT 
-		max(m.permit_number) AS max_permit 
+		max(substring(m.permit_number, '\\d+$')::INTEGER) AS max_permit  
 		FROM {schema}.expedition_members m
 		JOIN {schema}.expeditions e ON m.expedition_id=e.id
 		WHERE 
@@ -1650,7 +1650,7 @@ def get_next_permit_number(year: int) -> str:
 		row = cursor.first()
 		if row:
 			# Permit format: TKA-YY-####. Just return just the number + 1
-			return str(int((row.max_permit or '0000').split('-')[-1]) + 1)
+			return str((row.max_permit or 0) + 1)
 		else:
 			raise RuntimeError('Failed to get next permit number')
 
