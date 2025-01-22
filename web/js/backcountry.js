@@ -338,7 +338,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 
 	configureMainContent() {
 		super.configureMainContent();
-		this.configureMap('main-map', this.maps.main);
+		this.configureMap('main-map', {mapObject: this.maps.main});
 
 		// Location handlers
 		$('#add-location-button').click(() => {

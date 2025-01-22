@@ -533,7 +533,7 @@ class ClimberDB {
 	/*
 	Configure a Leaflet map given a div HTML ID
 	*/
-	configureMap(divID, mapObject={}) {
+	configureMap(divID, {mapObject={}, showBackcountryUnits=true}={}) {
 
 		var map = L.map(divID, {
 			editable: true,
@@ -558,66 +558,73 @@ class ClimberDB {
 		};
 		const layerControl = L.control.layers(baseMaps).addTo(map);
 
-		// Helper function to load geojson data to avoid repeating
-		const onGeoJSONLoad = function(geojson, defaultStyle, layerName, {tooltipHandler={}, hoverStyle={}}={}) {
-			const onMouseover = (e) => {
-				let layer = e.target;
-
-				layer.setStyle(hoverStyle)
-
-				if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-					layer.bringToFront();
-				}
-			}
-			const onMouseout = (e) => {
-				layer.resetStyle(e.target);
-			}
-			const onEachFeature = (feature, layer) => {
-				layer.on({
-					mouseover: onMouseover,
-					mouseout: onMouseout
-				})
-			}
-
-			let geojsonOptions = {
-				style: defaultStyle,
-				onEachFeature: onEachFeature //add mouseover and mouseout listeners
-			}
-
-			var layer; // define before calling L.geoJSON() so onMouseout event can reference
-			layer = L.geoJSON(geojson, geojsonOptions)
-				.bindTooltip(
-					tooltipHandler,
-					{
-						sticky: true
-					}
-				).addTo(map);
-			layerControl.addOverlay(layer, layerName);
-
-			return layer;
-		}
-
 		mapObject.map = map;
 
-		return $.get({url: 'assets/backcountry_units.json'})
-			.done(geojson => {
-				const defaultStyle = {
-					color: '#000',
-					opacity: 0.2,
-					fillColor: '#000',
-					fillOpacity: 0.15 
+		// if not showing backcountry units, set the  return value to be a resolved promise
+		var deferred = $.Deferred().resolve();
+		if (showBackcountryUnits) {
+			// Helper function to load geojson data to avoid repeating
+			const onGeoJSONLoad = function(geojson, defaultStyle, layerName, {tooltipHandler={}, hoverStyle={}}={}) {
+				const onMouseover = (e) => {
+					let layer = e.target;
+
+					layer.setStyle(hoverStyle)
+
+					if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+						layer.bringToFront();
+					}
 				}
-				const hoverStyle = {
-					color: '#000',
-					opacity: 0.4,
-					fillColor: '#000',
-					fillOpacity: 0.05 
+				const onMouseout = (e) => {
+					layer.resetStyle(e.target);
 				}
-				const tooltipHandler = layer => layer.feature.properties.Unit + ': ' + layer.feature.properties.Name;
-				onGeoJSONLoad(geojson, defaultStyle, 'Backcountry Units', {tooltipHandler: tooltipHandler, hoverStyle: hoverStyle})
-			}).fail((xhr, error, status) => {
-				console.log('BC unit geojson read failed: ' + error);
-			})
+				const onEachFeature = (feature, layer) => {
+					layer.on({
+						mouseover: onMouseover,
+						mouseout: onMouseout
+					})
+				}
+
+				let geojsonOptions = {
+					style: defaultStyle,
+					onEachFeature: onEachFeature //add mouseover and mouseout listeners
+				}
+
+				var layer; // define before calling L.geoJSON() so onMouseout event can reference
+				layer = L.geoJSON(geojson, geojsonOptions)
+					.bindTooltip(
+						tooltipHandler,
+						{
+							sticky: true
+						}
+					).addTo(map);
+				layerControl.addOverlay(layer, layerName);
+
+				return layer;
+			}
+
+			
+			deferred = $.get({url: 'assets/backcountry_units.json'})
+				.done(geojson => {
+					const defaultStyle = {
+						color: '#000',
+						opacity: 0.2,
+						fillColor: '#000',
+						fillOpacity: 0.15 
+					}
+					const hoverStyle = {
+						color: '#000',
+						opacity: 0.4,
+						fillColor: '#000',
+						fillOpacity: 0.05 
+					}
+					const tooltipHandler = layer => layer.feature.properties.Unit + ': ' + layer.feature.properties.Name;
+					onGeoJSONLoad(geojson, defaultStyle, 'Backcountry Units', {tooltipHandler: tooltipHandler, hoverStyle: hoverStyle})
+				}).fail((xhr, error, status) => {
+					console.log('BC unit geojson read failed: ' + error);
+				})
+		}
+
+		return deferred;
 	}
 
 
