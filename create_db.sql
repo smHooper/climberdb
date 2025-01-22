@@ -862,8 +862,9 @@ CREATE VIEW current_backcountry_groups_view AS
 	)
 	SELECT 
 	  itinerary_locations.expedition_id, 
+	  expeditions.expedition_name,
 	  latitude, 
-	  longitude 
+	  longitude
 	FROM 
 	  itinerary_locations 
 	    JOIN expeditions ON expeditions.id=itinerary_locations.expedition_id 
@@ -871,7 +872,8 @@ CREATE VIEW current_backcountry_groups_view AS
 	    JOIN today ON today.now BETWEEN coalesce(location_start_date, (today.year || '-1-1')::date) AND coalesce(location_end_date, (today.year || '-12-31')::date)
 	WHERE 
 	  expedition_status = 4 AND 
-	  actual_departure_date < today.now
+	  actual_departure_date < today.now AND 
+	  today.year = extract(year FROM actual_departure_date)
 	;
 
 CREATE MATERIALIZED VIEW table_info_matview AS 

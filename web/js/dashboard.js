@@ -290,7 +290,7 @@ class ClimberDBDashboard extends ClimberDB {
 			`).appendTo($('#season-mountain-stats-card .mountain-stats-table tbody'))
 		}
 
-		// Query BC stas
+		// Query BC stats
 		const bcSQL = `
 			SELECT
 				group_status_code,
@@ -696,7 +696,7 @@ class ClimberDBDashboard extends ClimberDB {
 
 		const queryDeferred = this.queryDB({tables: ['current_backcountry_groups_view']})
 		return $.when(
-			this.configureMap('bc-groups-map', this.maps.main),
+			this.configureMap('bc-groups-map', {mapObject: this.maps.main, showBackcountryUnits: false}),
 			queryDeferred
 		).done((_, [queryResponse]) => { // ignore .configureMap() response
 			if (this.pythonReturnedError(queryResponse)) {
@@ -711,8 +711,9 @@ class ClimberDBDashboard extends ClimberDB {
 					spiderLegPolylineOptions: {color: '#fff'},
 					showCoverageOnHover: false
 				});
-				for (const {expedition_id, latitude, longitude} of result) {
+				for (const {expedition_id, expedition_name, latitude, longitude} of result) {
 					const marker = L.marker([latitude, longitude], {icon: icon})
+						.bindTooltip(expedition_name)
 						.on('click', () => {
 							// when clicked, open the backcountry page for that group in a new tab
 							window.open(`backcountry.html?id=${expedition_id}`, '_blank')
