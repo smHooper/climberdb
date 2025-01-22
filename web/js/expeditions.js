@@ -1606,6 +1606,9 @@ class ClimberDBExpeditions extends ClimberDB {
 				const $inputs = $(li).find(inputSelector);
 				getEdits(routeID, $inputs, 'expedition_member_routes', {htmlID: li.id})
 			}
+
+			// reset for next exp. member
+			parentTable = dbInserts;
 		}
 
 		const $cmcItems = $('#cmc-list li.data-list-item:not(.cloneable)').has(inputSelector);
