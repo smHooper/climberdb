@@ -3811,7 +3811,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			commsResponse = commsResponse[0];
 			
 			if (this.pythonReturnedError(expeditionInfoResponse)) {
-				showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: <br><br>${expeditionInfoResponse}.`, 'Unexpected error');
+				showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: <br><br>${expeditionInfoResponse}.`, 'Unexpected Error');
 				return;
 			} else if (this.pythonReturnedError(commsResponse)) {
 				showModal(`An unexpected error occurred while querying the comms info with ID ${expeditionID}: <br><br>${commsResponse}.`, 'Unexpected error');
@@ -4005,7 +4005,14 @@ class ClimberDBExpeditions extends ClimberDB {
 					this.show60DayWarning();
 				}
 			}
-		});
+		}).fail(() => {
+			const message = 
+				'An unexpected error occurred while querying this expedition.' +
+				' Try reloading the page and contact your <a href="mailto:' + 
+				`${this.config.db_admin_email}">Contact your database adminstrator</a>` + 
+				' if the problem persists';
+			showModal(message, 'Database Error');
+		}).always(() => {hideLoadingIndicator()});
 	}
 
 
