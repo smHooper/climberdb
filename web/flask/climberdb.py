@@ -493,7 +493,7 @@ def get_confirmation_letter(expedition_id):
 	data['climbers'] = json.loads(data['climbers'])
 	# Reformat date to be more human-readable
 	data['planned_departure_date'] = datetime.strptime(
-			data['planned_departure_date'], '%Y-%m-%d'
+			data['planned_departure_date'], '%Y-%m-%d %H:%M'
 		).strftime('%B %#d, %Y')
 	
 	# Get HTML string
