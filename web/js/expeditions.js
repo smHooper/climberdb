@@ -2634,6 +2634,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			// Get briefing time
 			const briefingInfo = this.expeditionInfo.briefings;
 			if (briefingInfo.briefing_date && briefingInfo.briefing_time) {
+				// drop the 00:00 hour/minute
+				const briefingDate = getFormattedTimestamp(new Date(briefingInfo.briefing_date))
 				const options = {
 					weekday: 'long',
 					year: 'numeric',
@@ -2642,7 +2644,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					hour: 'numeric',
 					minute: 'numeric'
 				};
-				pdfData.briefing_time = new Date(`${briefingInfo.briefing_date} ${briefingInfo.briefing_time}`)
+				pdfData.briefing_time = new Date(`${briefingDate} ${briefingInfo.briefing_time}`)
 					.toLocaleString('en-US', options);
 			}
 		}
