@@ -1052,7 +1052,9 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	onDeleteCardButtonClick(e) {
-		e.stopPropagation(); // don't close or open the card
+		// don't close or open the card
+		e.stopPropagation(); 
+		e.preventDefault(); 
 
 		const $card = $(e.target).closest('.card');
 		const $accordion = $card.closest('.accordion');
