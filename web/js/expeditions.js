@@ -1515,7 +1515,13 @@ class ClimberDBExpeditions extends ClimberDB {
 			getEdits(locationID, $inputs, 'itinerary_locations', {htmlID: cardID});
 		}
 
-		// Transactions and routes might have edits without expedition members having any, so loop 
+		// make a helper function to get a reference to dbInserts.expeditions[0].children
+		//	with fallback values within the expedition members for-loop. The fallback values
+		//	are necessary because if there aren't any expedition edits, the .children
+		//	won't be set until there's a new expedition member to insert
+		const getExpeditionChildren = ()=>((dbInserts.expeditions || [])[0] || {}).children;
+
+		// Routes might have edits without expedition members having any, so loop 
 		//	through each expedition member card, regardless of whether it has any dirty inputs
 		for (const el of $('#expedition-members-accordion .card:not(.cloneable)')) {
 			
@@ -1527,7 +1533,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const nMemberInputEdits = $inputs.length;
 
 			// Get edits if there were any
-			const nEditedMembers = Object.keys(parentTable.expedition_members || []).length;
+			const nEditedMembers = ((getExpeditionChildren() || {}).expedition_members || []).length;
 			if (nMemberInputEdits) {
 				// If this is an update, set the parent table to the root. Otherwise, it needs 
 				//	to descend from the expeditions property
@@ -1548,7 +1554,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				getEdits(expeditionMemberID, $inputs, 'expedition_members', {htmlID: cardID, additionalValues: {climber_id: climberID}});
 				parentTable = parentTable.expedition_members[nEditedMembers].children;
 			} else {
-				parentTable = dbInserts;
+				parentTable = getExpeditionChildren() || dbInserts;
 			}
 
 			const $transactionItems = $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)')
@@ -1560,7 +1566,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// If there weren't any expedition_member edits and there were transaction/attachment
 			//	edits, make sure it's in the parentTable object so that the foreign key 
 			//	(expedition_member_id) is available for the server
-			const nExpeditionMembers = (parentTable.expedition_members || []).length;
+			const nExpeditionMembers = ((parentTable || {}).expedition_members || []).length;
 			const nMemberChildrenEdits = $([...$transactionItems, ...$attachmentItems, ...$memberRouteItems]).length;
 			if (nMemberChildrenEdits > 0 && nMemberInputEdits === 0) {
 				if (!nExpeditionMembers) parentTable.expedition_members = [];
@@ -1608,7 +1614,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 			// reset for next exp. member
-			parentTable = dbInserts;
+			parentTable = getExpeditionChildren();
 		}
 
 		const $cmcItems = $('#cmc-list li.data-list-item:not(.cloneable)').has(inputSelector);
