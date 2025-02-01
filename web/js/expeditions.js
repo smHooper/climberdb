@@ -1517,11 +1517,14 @@ class ClimberDBExpeditions extends ClimberDB {
 			getEdits(locationID, $inputs, 'itinerary_locations', {htmlID: cardID});
 		}
 
-		// make a helper function to get a reference to dbInserts.expeditions[0].children
+		// make helper functions to get a reference to dbInserts.expeditions[0].children
+		// 	and to get the number of exp. members from either expedition children or dbInserts
 		//	with fallback values within the expedition members for-loop. The fallback values
 		//	are necessary because if there aren't any expedition edits, the .children
 		//	won't be set until there's a new expedition member to insert
-		const getExpeditionChildren = ()=>((dbInserts.expeditions || [])[0] || {}).children;
+		const getExpeditionMemberRoot = () => ((dbInserts.expeditions || [])[0] || {}).children;
+		const getEditedMemberCount = () => 
+			((getExpeditionMemberRoot() || {}).expedition_members || dbInserts.expedition_members || []).length;
 
 		// Routes might have edits without expedition members having any, so loop 
 		//	through each expedition member card, regardless of whether it has any dirty inputs
@@ -1535,7 +1538,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			const nMemberInputEdits = $inputs.length;
 
 			// Get edits if there were any
-			const nEditedMembers = ((getExpeditionChildren() || {}).expedition_members || []).length;
 			if (nMemberInputEdits) {
 				// If this is an update, set the parent table to the root. Otherwise, it needs 
 				//	to descend from the expeditions property
@@ -1554,9 +1556,9 @@ class ClimberDBExpeditions extends ClimberDB {
 				
 				// Make sure the current parent table reference points to expedition_members
 				getEdits(expeditionMemberID, $inputs, 'expedition_members', {htmlID: cardID, additionalValues: {climber_id: climberID}});
-				parentTable = parentTable.expedition_members[nEditedMembers].children;
+				parentTable = parentTable.expedition_members[getEditedMemberCount() - 1].children;
 			} else {
-				parentTable = getExpeditionChildren() || dbInserts;
+				parentTable = getExpeditionMemberRoot() || dbInserts;
 			}
 
 			const $transactionItems = $card.find('.transactions-tab-pane .data-list > li.data-list-item:not(.cloneable)')
@@ -1578,7 +1580,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						children: {}
 					}
 				);
-				parentTable = parentTable.expedition_members[nEditedMembers].children;
+				parentTable = parentTable.expedition_members[getEditedMemberCount() - 1].children;
 			}
 			
 			for (const li of $transactionItems) {
@@ -1616,7 +1618,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 			// reset for next exp. member
-			parentTable = getExpeditionChildren();
+			parentTable = getExpeditionMemberRoot();
 		}
 
 		const $cmcItems = $('#cmc-list li.data-list-item:not(.cloneable)').has(inputSelector);
