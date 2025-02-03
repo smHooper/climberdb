@@ -1302,6 +1302,42 @@ class ClimberDB {
 
 
 	/*
+	When the user changes the a date .input-field, make sure the date is from the current year.
+	If entering the date via keyboard, people often want to enter a 2-digit year, which results 
+	in a date from the first century AD. Also make sure that dates aren't for more than a year 
+	into the future. Only date fields with the associated utility class will trigger a warning
+	*/
+	onDateFieldChange(e) {
+		// only do stuff if the user triggered the change directly, not via .change()
+		if (!e.originalEvent) return;
+
+		const $input = $(e.target);
+		const isoDateString = $input.val();
+		// Only check the value if it's not a null string
+		if (!isoDateString) return;
+		
+		// javascript can't handle years between 0-100 AD correctly
+		var [year, month, day] = isoDateString.split('-'); // get year parts
+		year = parseInt(year);
+		const date = new Date(year, month - 1, day); // create a date
+		date.setFullYear(year); // set the year directly
+
+		const now = new Date();
+
+		const prettyDateString = date.toLocaleDateString('en-US', {year: 'numeric', month: 'long', day: 'numeric'});
+		var message = `You entered the date ${prettyDateString} for the year <strong>${year}</strong>.`;
+		if ($input.is('.warn-future-year-date') && (now.getFullYear() + 1) < year) {
+			message += ' Make sure this is the correct date before saving your edits.';
+			showModal(message, 'WARNING: Date Entered for the Year ' + year);
+		} else if ($input.is('.warn-previous-year-date') && year < now.getFullYear()) {
+			message += ' If entering a date using the keyboard, <strong>you must enter the full 4-digit year</strong>.';
+			showModal(message, 'WARNING: Date Entered for Previous Year');
+		}
+		
+	}
+
+
+	/*
 	Generic event handler for selects
 	*/
 	onSelectChange(e) {
@@ -2096,6 +2132,12 @@ class ClimberDB {
 			this.onCheckboxChange(e);
 		});
 
+		// check for valid date when date field loses focus
+		$(document).on('blur', '.input-field[type=date]', e => {
+			if ($(e.target).closest('.cloneable').length) return;
+			this.onDateFieldChange(e);
+		});
+		
 		// Warn the user before they leave the page if they have unsaved edits
 		//$(window).on('beforeunload', (e) => {return this.beforeUnloadEventHandler(e)});
 

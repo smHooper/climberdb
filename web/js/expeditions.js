@@ -133,11 +133,11 @@ class ClimberDBExpeditions extends ClimberDB {
 			if ($(e.target).closest('.cloneable').length) return;
 			this.onInputChange(e);
 		});
-		// check for valid date when date field loses focus
-		$(document).on('blur', '.input-field[type=date]', e => {
-			if ($(e.target).closest('.cloneable').length) return;
-			this.onDateFieldChange(e);
-		});
+		// // check for valid date when date field loses focus
+		// $(document).on('blur', '.input-field[type=date]', e => {
+		// 	if ($(e.target).closest('.cloneable').length) return;
+		// 	this.onDateFieldChange(e);
+		// });
 
 		// Record current value for .revertable inputs so the value can be reverted after a certain event
 		$(document).on('focus', '.input-field.revertable', e => {
@@ -725,32 +725,6 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Toggle beforeunload event depending on whethe there are any dirty inputs
 		this.toggleBeforeUnload($('.input-field.dirty:not(.filled-by-default)').length);
 
-	}
-
-	/*
-	When the user changes the a date .input-field, make sure the date is from the current year.
-	If entering the date via keyboard, people often want to enter a 2-digit year, which results 
-	in a date from the first century AD
-	*/
-	onDateFieldChange(e) {
-		// only do stuff if the user triggered the change directly, not via .change()
-		if (e.originalEvent) {
-			const $input = $(e.target);
-			const isoDateString = $input.val();
-			// Only check the value if it's not a null string
-			if (isoDateString) {
-				// javascript can't handle years between 0-100 AD correctly
-				const [year, month, day] = isoDateString.split('-'); // get year parts
-				const date = new Date(year, month - 1, day); // create a date
-				date.setFullYear(year); // set the year directly
-				
-				if (year < new Date().getFullYear()) {
-					const prettyDateString = date.toLocaleDateString('en-US', {year: 'numeric', month: 'long', day: 'numeric'});
-					const message = `You entered the date ${prettyDateString} for the year <strong>${year}</strong>. If entering a date using the keyboard, <strong>you must enter the full 4-digit year</strong>.`;
-					showModal(message, 'WARNING: Date Entered for Previous Year')
-				}
-			}
-		}
 	}
 
 

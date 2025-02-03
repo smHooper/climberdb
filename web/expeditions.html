@@ -174,13 +174,13 @@
 							<div class="expedition-data-content-body">
 								<div class="field-container-row">
 									<div class="field-container col-6">
-										<input id="input-planned_departure_date" class="input-field" name="planned_departure_date" data-table-name="expeditions" placeholder="Planned departure" title="Planned departure" type="date" autocomplete="__never" required="">
+										<input id="input-planned_departure_date" class="input-field warn-previous-year-date warn-future-year-date" name="planned_departure_date" data-table-name="expeditions" placeholder="Planned departure" title="Planned departure" type="date" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-planned_departure_date">Planned departure</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
 									<div class="field-container col-6">
-										<input id="input-planned_return_date" class="input-field" name="planned_return_date" data-table-name="expeditions" placeholder="Planned return" title="Planned return" type="date" autocomplete="__never" required="">
+										<input id="input-planned_return_date" class="input-field warn-previous-year-date warn-future-year-date" name="planned_return_date" data-table-name="expeditions" placeholder="Planned return" title="Planned return" type="date" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-planned_return_date">Planned return</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -188,13 +188,13 @@
 								</div>
 								<div class="field-container-row collapse">
 									<div class="field-container col-6">
-										<input id="input-actual_departure_date" class="input-field" name="actual_departure_date" data-table-name="expeditions" placeholder="Actual departure" title="Actual departure" type="date" data-dependent-target="#input-group_status" data-dependent-value="3|4|5" autocomplete="__never" required="">
+										<input id="input-actual_departure_date" class="input-field warn-previous-year-date warn-future-year-date" name="actual_departure_date" data-table-name="expeditions" placeholder="Actual departure" title="Actual departure" type="date" data-dependent-target="#input-group_status" data-dependent-value="3|4|5" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
-										<label class="field-label" for="input-actual_departure_date">Actual departure</label>
+										<label class="field-label" for="input-actual_departure_date warn-previous-year-date warn-future-year-date">Actual departure</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
 									<div class="field-container col-6">
-										<input id="input-actual_return_date" class="input-field" name="actual_return_date" data-table-name="expeditions" placeholder="Actual return" title="Actual return" type="date" autocomplete="__never" required="">
+										<input id="input-actual_return_date" class="input-field warn-previous-year-date warn-future-year-date" name="actual_return_date" data-table-name="expeditions" placeholder="Actual return" title="Actual return" type="date" autocomplete="__never" required="">
 										<span class="required-indicator">*</span>
 										<label class="field-label" for="input-actual_return_date">Actual return</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
@@ -387,7 +387,7 @@
 																<span class="null-input-indicator">&lt; null &gt;</span>
 															</div>
 															<div class="field-container collapse col-6">
-																<input id="input-datetime_cancelled" class="input-field" name="datetime_cancelled" data-table-name="expedition_members" placeholder="Date cancelled" title="Date cancelled" type="date" data-dependent-target="#input-reservation_status" data-dependent-value="6" autocomplete="__never">
+																<input id="input-datetime_cancelled" class="input-field warn-previous-year-date warn-future-year-date" name="datetime_cancelled" data-table-name="expedition_members" placeholder="Date cancelled" title="Date cancelled" type="date" data-dependent-target="#input-reservation_status" data-dependent-value="6" autocomplete="__never">
 																<label class="field-label" for="input-datetime_cancelled">Date cancelled</label>
 																<span class="null-input-indicator">&lt; null &gt;</span>
 															</div>
@@ -506,7 +506,7 @@
 																		<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
 																	</div>
 																	<div class="col-2 d-flex transaction-date-column">
-																		<input id="input-transaction_date" class="input-field" type="date" name="transaction_date" data-table-name="transactions"> 
+																		<input id="input-transaction_date" class="input-field warn-previous-year-date warn-future-year-date" type="date" name="transaction_date" data-table-name="transactions"> 
 																	</div>
 																	<div class="col d-flex transaction-notes-column">
 																		<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
@@ -560,7 +560,7 @@
 																		<span class="required-indicator">*</span>
 																	</div>
 																	<div class="col-2 attachment-received-column">
-																		<input id="input-date_received" class="input-field" name="date_received" type="date" data-table-name="attachments"title="Payment method" aria-labelledby="date-received-attachment-header" required="">
+																		<input id="input-date_received" class="input-field warn-previous-year-date warn-future-year-date" name="date_received" type="date" data-table-name="attachments"title="Payment method" aria-labelledby="date-received-attachment-header" required="">
 																		<span class="required-indicator">*</span>
 																	</div>
 																	<div class="col col-4 file-name-column">
@@ -675,7 +675,7 @@
 														</div>
 														<div class="col-3 route-summit-date-column">
 															<div class="field-container collapse">
-																<input id="input-summit_date" class="input-field text-center" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
+																<input id="input-summit_date" class="input-field text-center warn-previous-year-date warn-future-year-date" name="summit_date" type="date" data-table-name="expedition_member_routes" title="Summit date"  data-dependent-target="#input-route_summited" data-dependent-value="true"> 
 															</div>
 														</div>
 														<div class="col-2 route-highest-elevation-column">
@@ -729,11 +729,11 @@
 											<span class="required-indicator">*</span>
 										</div>
 										<div class="cmc-col col-4">
-											<input id="input-checkout_date" class="input-field" name="checkout_date" type="date" data-table-name="cmc_checkout" title="CMC Checkout Date" required="required"> 
+											<input id="input-checkout_date" class="input-field warn-previous-year-date warn-future-year-date" name="checkout_date" type="date" data-table-name="cmc_checkout" title="CMC Checkout Date" required="required"> 
 											<span class="required-indicator">*</span>
 										</div>
 										<div class="cmc-col col-4">
-											<input id="input-return_date" class="input-field" name="return_date" type="date" data-table-name="cmc_checkout" title="CMC Return Date"> 
+											<input id="input-return_date" class="input-field warn-previous-year-date warn-future-year-date" name="return_date" type="date" data-table-name="cmc_checkout" title="CMC Return Date"> 
 										</div>
 										<div class="col-1 list-item-delete-button-container">
 											<button class="icon-button delete-button delete-cmc-button show-on-parent-hover" title="Delete CMC">
