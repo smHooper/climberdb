@@ -210,7 +210,7 @@ class ClimberDBBriefings extends ClimberDB {
 			}
 		});
 
-		$('.input-field').change(e => {
+		$('.appointment-details-body .input-field').change(e => {
 			this.onInputChange(e);
 		});
 
@@ -1669,8 +1669,21 @@ class ClimberDBBriefings extends ClimberDB {
 	onExportBriefingsClick() {
 		const startDateStr = $('#input-export_start_date').val();
 		const endDateStr = $('#input-export_end_date').val();
+
+		// Check that the export doesn't span more than a year
+		const startDate = new Date(startDateStr);
+		const endDate = new Date(endDateStr);
+		const rangeLengthDays = (endDate - startDate) / this.constants.millisecondsPerDay;
+		if (rangeLengthDays > 366) {
+			const message = 'You entered a date range of more than one year. Change either' + 
+				' the start or the end date so that the total range is less than one year.'
+			showModal(message, 'Date Range Too Large');
+			return;
+		}
+
 		this.exportBriefingSchedule(startDateStr, endDateStr);
 	}
+
 
 	init() {
 
