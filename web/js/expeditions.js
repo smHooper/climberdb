@@ -1396,13 +1396,22 @@ class ClimberDBExpeditions extends ClimberDB {
 				dbInserts.expeditions = [{
 					values: {
 						is_backcountry: !!window.location.pathname.match('backcountry.html'), 
+						entered_by: username,
+						entry_time: now,
+						last_modified_by: username,
+						last_modified_time: now,
 						...expeditionEdits
 					},
 					html_id: 'input-expedition_name',
 					children: {}
 				}];
 			} else {
-				dbUpdates.expeditions = {[expeditionID]: expeditionEdits}; 
+				dbUpdates.expeditions = {[expeditionID]: {
+						...expeditionEdits,
+						last_modified_by: username,
+						last_modified_time: now
+					}
+				}; 
 				dbInserts.expeditions = [
 					{
 						id: expeditionID,

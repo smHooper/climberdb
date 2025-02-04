@@ -314,7 +314,7 @@ END$$;
 
 -- VIEWS/MAT VIEWS
 -- climber info
-CREATE VIEW climber_info_view AS
+CREATE OR REPLACE VIEW climber_info_view AS
 	SELECT DISTINCT ON (climbers.first_name, middle_name, climbers.last_name, climbers.id)
 	 	climbers.first_name || ' ' || climbers.last_name AS full_name,
 	    climbers.id,
@@ -359,7 +359,7 @@ CREATE VIEW climber_info_view AS
 
 
 -- climber history view
-CREATE VIEW climber_history_view AS 
+CREATE OR REPLACE VIEW climber_history_view AS 
 	SELECT 
 		row_number() over(),
 		expeditions.expedition_name, 
@@ -415,7 +415,7 @@ CREATE VIEW climber_history_view AS
 		expedition_member_routes.route_order ASC;
 
 
-CREATE VIEW expedition_status_view AS 
+CREATE OR REPLACE VIEW expedition_status_view AS 
 	SELECT 
 		expedition_id,
 		min(reservation_status_code) AS expedition_status
@@ -424,7 +424,7 @@ CREATE VIEW expedition_status_view AS
 	GROUP BY expedition_id;
 
 
-CREATE VIEW expedition_info_view AS 
+CREATE OR REPLACE VIEW expedition_info_view AS 
 	SELECT 
 		row_number() over(),
 		expedition_member_routes.id AS expedition_member_route_id,
@@ -434,8 +434,8 @@ CREATE VIEW expedition_info_view AS
 		climbers.is_guide,
 		to_char(expeditions.entry_time, 'Mon DD, YYYY'::text) AS expeditions_entry_time,
 		expeditions.entered_by AS expeditions_entered_by,
-		to_char(expeditions.entry_time, 'Mon DD, YYYY'::text) AS expeditions_last_modified_time,
-		expeditions.entered_by AS expeditions_last_modified_by,
+		to_char(expeditions.last_modified_time, 'Mon DD, YYYY'::text) AS expeditions_last_modified_time,
+		expeditions.last_modified_by AS expeditions_last_modified_by,
 		to_char(expedition_members.entry_time, 'Mon DD, YYYY'::text) AS expedition_members_entry_time,
 		expedition_members.entered_by AS expedition_members_entered_by,
 		to_char(transactions.entry_time, 'Mon DD, YYYY'::text) AS transactions_entry_time,
@@ -562,7 +562,7 @@ CREATE VIEW expedition_info_view AS
 		attachments.id;
 
 
-CREATE VIEW special_use_permit_view AS
+CREATE OR REPLACE VIEW special_use_permit_view AS
 	SELECT
 		expedition_members.id AS expedition_member_id,
 		climbers.first_name || ' ' || climbers.last_name AS climber_name,
@@ -586,7 +586,7 @@ CREATE VIEW special_use_permit_view AS
 
 
 --TODO: once BC routes/area are added to route table, check that BC groups don't get included in 7-day rule
-CREATE VIEW seven_day_rule_view AS 
+CREATE OR REPLACE VIEW seven_day_rule_view AS 
 	SELECT DISTINCT climber_id FROM 
 	climber_history_view 
 	WHERE 
@@ -597,7 +597,7 @@ CREATE VIEW seven_day_rule_view AS
 	;
 
 
-CREATE VIEW briefings_view AS
+CREATE OR REPLACE VIEW briefings_view AS
 	SELECT briefings.id,
 	  briefings.expedition_id,
 	  briefings.briefing_start,
@@ -622,7 +622,7 @@ CREATE VIEW briefings_view AS
 	   	JOIN expeditions ON t.expedition_id = expeditions.id
 	  	LEFT JOIN users ON users.id = briefings.briefing_ranger_user_id;
 
-CREATE VIEW briefings_expedition_info_view AS 
+CREATE OR REPLACE VIEW briefings_expedition_info_view AS 
 	SELECT 
 	 	gb.expedition_id,
 		CASE 
@@ -662,7 +662,7 @@ CREATE VIEW briefings_expedition_info_view AS
 	LEFT JOIN expedition_status_view ON expedition_status_view.expedition_id = expeditions.id;
 
 
-CREATE VIEW all_climbs_view AS 
+CREATE OR REPLACE VIEW all_climbs_view AS 
 	SELECT 
 		row_number() over(),
 		climbers.first_name || ' ' || climbers.last_name AS climber_name,
@@ -713,13 +713,13 @@ CREATE VIEW all_climbs_view AS
 		LEFT JOIN itinerary_locations ON expeditions.id = itinerary_locations.expedition_id;
 
 
-CREATE VIEW registered_climbs_view AS
+CREATE OR REPLACE VIEW registered_climbs_view AS
 	SELECT * FROM all_climbs_view
 	WHERE 
 		reservation_status_code <> 6 AND 
 		group_status_code <> 6; 
 
-CREATE VIEW solo_climbs_view AS 
+CREATE OR REPLACE VIEW solo_climbs_view AS 
 	SELECT 
 		row_number() over(),
 		t.expedition_id,
@@ -759,7 +759,7 @@ CREATE VIEW solo_climbs_view AS
 	WHERE t.count = 1 AND (expeditions.actual_departure_date IS NOT NULL OR expedition_status_view.expedition_status = 3);
 
 
-CREATE VIEW missing_sup_or_payment_dashboard_view AS 
+CREATE OR REPLACE VIEW missing_sup_or_payment_dashboard_view AS 
 	SELECT 
 		expedition_id,
 		expedition_name,
@@ -814,7 +814,7 @@ CREATE VIEW missing_sup_or_payment_dashboard_view AS
 		missing_sup > 0 OR missing_payment > 0
 	ORDER BY days_to_departure, expedition_name;
 
-CREATE VIEW overdue_parties_view AS
+CREATE OR REPLACE VIEW overdue_parties_view AS
 	SELECT 
 		CASE WHEN is_backcountry THEN 'backcountry' ELSE 'expeditions' END AS page_name,
 		expedition_name,
@@ -832,7 +832,7 @@ CREATE VIEW overdue_parties_view AS
 		planned_return_date
 
 
-CREATE VIEW transaction_type_view AS 
+CREATE OR REPLACE VIEW transaction_type_view AS 
 SELECT 
 	codes.id,
 	name,
@@ -856,7 +856,7 @@ FROM transaction_type_codes AS codes JOIN (
 WHERE sort_order IS NOT NULL 
 ORDER BY sort_order;
 
-CREATE VIEW current_backcountry_groups_view AS 
+CREATE OR REPLACE VIEW current_backcountry_groups_view AS 
 	WITH today AS (
 	  SELECT now(), extract(year FROM now()) AS year
 	)
@@ -1054,7 +1054,7 @@ $BODY$
 		ORDER BY sort_order, table_name
 	LOOP
 		view_name := dest_schema || '.' || quote_ident(record_.table_name);
-		EXECUTE 'DROP VIEW IF EXISTS ' || view_name || ' CASCADE; CREATE OR REPLACE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
+		EXECUTE 'DROP VIEW IF EXISTS ' || view_name || ' CASCADE; CREATE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
 	END LOOP;
   
 	RETURN; 
