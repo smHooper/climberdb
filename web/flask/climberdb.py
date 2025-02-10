@@ -622,10 +622,10 @@ def export_special_use_permit():
 	expedition_member_id_string = ','.join(expedition_member_ids)
 	statement = sqlatext('''
 		SELECT * FROM special_use_permit_view 
-		WHERE expedition_member_id IN (:expedition_member_ids)
+		WHERE expedition_member_id IN :expedition_member_ids
 	''')
 	with read_engine.connect():
-		cursor = read_engine.execute(statement, {'expedition_member_ids': expedition_member_id_string})
+		cursor = read_engine.execute(statement, {'expedition_member_ids': expedition_member_ids})
 		
 		sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
 		pdf_path = os.path.join(os.path.dirname(__file__), 'assets', sup_permit_filename)
