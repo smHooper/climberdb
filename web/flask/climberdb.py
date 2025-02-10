@@ -618,25 +618,24 @@ def export_special_use_permit():
 
 	# Query data from DB
 	expedition_member_ids = permit_data.keys()
-	#engine = climberdb_utils.get_engine()
-	expedition_member_id_string = ','.join(expedition_member_ids)
-	statement = sqlatext('''
-		SELECT * FROM special_use_permit_view 
-		WHERE expedition_member_id IN (:expedition_member_ids)
-	''')
-	with read_engine.connect():
-		cursor = read_engine.execute(statement, {'expedition_member_ids': expedition_member_id_string})
-		
+	with ReadSession() as session:
+		view = tables['special_use_permit_view']
+		result = (
+			session.query(view)
+				.where(
+					view.expedition_member_id.in_(expedition_member_ids)
+				)
+		)
 		sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
 		pdf_path = os.path.join(os.path.dirname(__file__), 'assets', sup_permit_filename)
 
 		output_pdfs = []	
-		for row in cursor:
+		for row in result:
 			member_id = str(row.expedition_member_id)
 			form_prefix = f'id_{member_id}'
 
 			# Combine the client-side and DB data
-			member_data = dict(**permit_data[member_id], **row)
+			member_data = dict(**permit_data[member_id], **orm_to_dict(row))
 			
 			reader = PdfReader(pdf_path)
 			writer = PdfWriter()
