@@ -85,15 +85,23 @@ class ClimberDBBriefings extends ClimberDB {
 	}
 
 
+	/*
+	If a date was given in the query params of the URL, return the JS Date. 
+	Date formats must have a valid ISO date format before the first space. 
+	Anything after that space is ignored.
+	*/
 	getBriefingDateFromURL() {
 
 		// Default to today
 		var date = new Date();
 
-		const params = Object.keys(this.urlQueryParams).length ? this.urlQueryParams : this.parseURLQueryString();
+		const params = Object.keys(this.urlQueryParams).length ? 
+			this.urlQueryParams : 
+			this.parseURLQueryString();
 
-		// Try to create the date from the given params
-		const paramDate = new Date(params.date + ' 00:00'); //** not robust -- FIX
+		// Try to create the date from the given params. Accept dates in both
+		//	YYYY-mm-dd and YYYY-mm-dd HH:MM formats
+		const paramDate = new Date(params.date.split(' ')[0] + ' 00:00');
 
 		// Check that the date is valid. If it's not, return today
 		if (paramDate instanceof Date && !isNaN(paramDate.valueOf())) {
