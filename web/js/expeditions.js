@@ -2525,7 +2525,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Most of the necessary data will be in these two objects
 		var pdfData = {
 			...this.expeditionInfo.expeditions, 
-			...this.config
+			...this.config,
+			expedition_id: this.expeditionInfo.expeditions.id
 		};
 		
 		// Get human-readable values from selects
