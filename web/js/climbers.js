@@ -1612,7 +1612,12 @@ class ClimberDBClimbers extends ClimberDB {
 		$('.result-details-pane')
 			.removeClass('uneditable')
 			.addClass('collapsed');
-		this.clearInputFields({parent: $climberForm, triggerChange: false});
+		this.clearInputFields({
+			parent: $climberForm, 
+			triggerChange: false, 
+			removeAccordionCards: true
+		});
+
 
 		// Make sure required fields are not required for new climbers because
 		//	all the info isn't given at first
@@ -1966,7 +1971,7 @@ class ClimberDBClimbers extends ClimberDB {
 				const $first = $('.query-result-list-item:not(.header-row)').first();
 				this.selectResultItem($first, {updateURLHistory: false});
 				$first[0].scrollIntoView();
-			} else {
+			} else if (autoSelectID !== false){
 				// Otherwise, select the specified climber
 				const $item = $(`.query-result-list-item[data-climber-id=${autoSelectID}]`)
 				// Don't update the window.history because this function could be called from onpopstate, which would create a duplicate entry. 
@@ -2051,7 +2056,13 @@ class ClimberDBClimbers extends ClimberDB {
 				}
 				// Add climbers to the list. If a climberID was given, it will automatically be selected. 
 				//	If not, only select the first climber if there was no search string provided
-				this.fillResultList(this.climberInfo, {autoSelectID: selectClimberID || !withSearchString});
+				const autoSelectID = 
+					climberID || // called by queryClimberByID() so, yes, select
+					selectClimberID || // explicitly called with directive to select
+					(withSearchString ? // if the user is searching...
+						false : // don't auto-select
+						!isNull(selectClimberID)); // otherwise, if selectClimberID is null, don't select
+				this.fillResultList(this.climberInfo, {autoSelectID: autoSelectID});
 
 				// Update index
 				if (returnCount) {
@@ -2476,7 +2487,8 @@ class ClimberDBClimbers extends ClimberDB {
 			var urlParams = this.parseURLQueryString();
 			const queryDeferred = urlParams.id  ?
 				this.queryClimberByID(urlParams.id) :
-				this.getResultSet({selectClimberID: -1});// select the first climber
+				// select the first climber unless addClimber is in urlParams
+				this.getResultSet({selectClimberID: urlParams.addClimber ? null : -1});
 
 			queryDeferred.always(() => {
 				if (urlParams.id) {
