@@ -104,6 +104,11 @@ class ClimberDBExpeditions extends ClimberDB {
 				$('#exports-modal').modal();
 			}
 		});
+		// The .error class will already be removed on change by the delegated change 
+		//	event handler in climberdb.js, but also hide the message
+		$('#input-export_type').change(() => {
+			$('#export-type-null-error-message').hide();
+		})
 
 		$('#create-pdf-button').click(e => {
 			this.onCreatePDFButtonClick();
@@ -2473,10 +2478,17 @@ class ClimberDBExpeditions extends ClimberDB {
 	Check conditions before calling makePDF
 	*/
 	onCreatePDFButtonClick() {
-		const exportType = $('#input-export_type').val();
+		const $exportTypeField = $('#input-export_type');
+		const exportType = $exportTypeField.val();
 		const nMembers = $('#expedition-members-accordion .card:not(.cloneable):not(.cancelled)').length;
 		const nRoutes = $('#routes-accordion .card:not(.cloneable)').length;
 		const groupStatus = $('#input-group_status').val();
+		
+		if (!exportType) {
+			$('#export-type-null-error-message').show();
+			$exportTypeField.addClass('error');
+			return;
+		}
 		if (nMembers === 0) {
 			showModal(
 				'There are no active members of this expedition. You must add at least one member or' +
