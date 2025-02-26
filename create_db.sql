@@ -740,7 +740,11 @@ CREATE OR REPLACE VIEW solo_climbs_view AS
 		) AS departure,
 		coalesce(actual_departure_date, planned_departure_date) AS departure_date,
 		to_char(expeditions.planned_return_date, 'Mon DD') AS planned_return,
-		planned_return_date
+		planned_return_date,
+		CASE 
+			WHEN is_backcountry THEN 'backcountry' 
+			ELSE 'expeditions' 
+		END AS page_name
 	FROM expeditions
 	JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
 	JOIN climbers ON expedition_members.climber_id = climbers.id
