@@ -4813,7 +4813,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const departureDate = new Date($('#input-planned_departure_date').val() + ' 00:00');
 		const now = new Date();
 		const daysToDeparture = (departureDate - now) / this.constants.millisecondsPerDay;
-		const isGuided = $('#input-guide_company').val() !== '';
+		const isGuided = parseInt($('#input-guide_company').val() || -1) !== -1;
 		// If this expedition's departure has already passed or it's more than 60 days away, do nothing
 		if (isGuided || daysToDeparture < 0 || daysToDeparture > 60) {
 			return;
