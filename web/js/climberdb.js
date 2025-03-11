@@ -1530,16 +1530,56 @@ class ClimberDB {
 	}
 
 
-	pythonReturnedError(resultString) {
+	pythonReturnedError(resultString, {errorExplanation=''}={}) {
 		resultString = String(resultString); // force as string in case it's something else
 		if (resultString.startsWith('ERROR: Internal Server Error')) {
 			// almost all Python excetions have a class anme in the form *Error (e.g., ValueError).
 			//	That's not a hard and fast rule, however, and so if the match is null, return something generic
-			const pythonException = resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/) || ['unknown custom exception thrown'];
-			return pythonException[0].trim()
+			const pythonException = (resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/) || ['unknown custom exception thrown']
+			)[0].trim();
+			
+			// Show the 
+			if (errorExplanation !== '') {
+				const messageBody = `
+					${errorExplanation}  
+					<div class="w-100 d-flex justify-content-between">
+						<button 
+							role="button"
+							class="text-only-button pl-0" 
+							type="button" 
+							data-toggle="collapse" data-target=".modal-error-details-target" aria-expanded="false" aria-controls="modal-error-details-collapse"
+						>
+							Error details
+						</button>
+						<button 
+							role="button"
+							class="text-only-button modal-error-details-target copy-error-text-button collapse"
+							data-toggle="tooltip"
+							data-placement="bottom"
+						>
+							Copy error text
+						</button>
+					</div>
+					<p id="modal-error-details-collapse" class="collapse modal-error-details-target modal-error-text-container">
+						${resultString}
+					</p>`;
+				showModal(messageBody, 'Unexpected Error');
+			}
+
+			return pythonException;
 		} else {
 			return false;
 		}
+	}
+
+
+	onCopyErrorButtonClick(e) {
+		const $button = $(e.target).closest('button');
+		const error = $button
+			.closest('.modal-body')
+			.find('.modal-error-text-container')
+			.text();
+		this.copyToClipboard(error, {triggeringElement: $button})
 	}
 
 
@@ -1576,16 +1616,32 @@ class ClimberDB {
 	/*
 	Copy specified text to the clipboard
 	*/
-	copyToClipboard(text, modalMessage='') {
+	copyToClipboard(text, {modalMessage='', triggeringElement=null, tooltipContainer='body'}={}) {
 		const clipboard = navigator.clipboard;
 		if (!clipboard) {
 			showModal(`Your browser refused access to the clipboard. This feature only works with a HTTPS connection. Right-click and copy from <a href="${text}">this link</a> instead.`, 'Clipboard access denied');
 			return;
 		}
+		const $trigger = $(triggeringElement);
 		clipboard
 			.writeText(text)
 			.then(() => {
-				showModal(modalMessage || `Successfully copied ${text} to clipboard`, 'Copy successful');
+				if (modalMessage) {
+					showModal(modalMessage || `Successfully copied ${text} to clipboard`, 'Copy successful');
+				} 
+				// check if 'tooltip' is in the triggering element's data-toggle 
+				//	(if the attribute is defined)
+				else if (($trigger.data('toggle') || '').match('tooltip')) {
+					// Show it
+					$trigger.tooltip({
+						title: 'Copied!',
+						container: tooltipContainer,
+						trigger: 'focus'
+					}).tooltip('show');
+					// Then remove it after a set amount of time
+					setTimeout(() => {$trigger.tooltip('dispose')}, 2000);
+
+				}
 			})
 			.catch((err) => {
 				console.error(`Error copying text to clipboard: ${err}`);
@@ -2179,6 +2235,10 @@ class ClimberDB {
 			if ($(e.target).closest('.cloneable').length) return;
 			this.onDateFieldChange(e);
 		});
+
+		$(document).on('click', '#alert-modal .copy-error-text-button', e => {
+			this.onCopyErrorButtonClick(e);
+		})
 		
 		// Warn the user before they leave the page if they have unsaved edits
 		//$(window).on('beforeunload', (e) => {return this.beforeUnloadEventHandler(e)});

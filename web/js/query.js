@@ -691,8 +691,8 @@ class ClimberDBQuery extends ClimberDB {
 			this.onGroupByPivotFieldChange(e);
 		})
 
-		$('#copy-query-link-button').click(() => {
-			this.onCopyQueryLinkButtonClick()
+		$('#copy-query-link-button').click(e => {
+			this.onCopyQueryLinkButtonClick(e)
 		})
 	}
 
@@ -2029,9 +2029,13 @@ class ClimberDBQuery extends ClimberDB {
 	/*
 	Event handler for copy-query-link-button click
 	*/
-	onCopyQueryLinkButtonClick() {
+	onCopyQueryLinkButtonClick(e) {
 		const url = this.queryToURL();
-		this.copyToClipboard(url, `Permalink for this query successfully copied to clipboard`);
+		this.copyToClipboard(
+			url, 
+			{
+				modalMessage: `Permalink for this query successfully copied to clipboard`
+			});
 	}
 
 
