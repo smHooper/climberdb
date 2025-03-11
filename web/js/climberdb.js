@@ -31,71 +31,85 @@ function getDefaultModalFooterButtons(modalType) {
 }
 
 
-function showModal(message, title, modalType='alert', footerButtons='', {dismissable=true, eventHandlerCallable=()=>{}}={}) {
+function showModal(
+    message, 
+    title, 
+    modalType = 'alert', 
+    footerButtons = '', 
+    {
+        dismissable = true, 
+        eventHandlerCallable = () => {}
+    } = {}
+) {
+    const $modal = $('#alert-modal');
 
-	const $modal = $('#alert-modal');
+    // Modal queue to store pending messages
+    window.modalQueue = window.modalQueue || [];
 
-	// If the modal is currently being shown, wait until it's done to show this message
-	if ($modal.is('.showing')) {
-		$modal.on('hidden.bs.modal', () => {
-			const $returnedModal = showModal(message, title, modalType, footerButtons, dismissable);
-			if ($returnedModal) $modal.off('hidden.bs.modal');
-		})
-		return;
-	}
+    // Add the current modal request to the queue
+    window.modalQueue.push({ message, title, modalType, footerButtons, dismissable, eventHandlerCallable });
 
-	$modal.addClass('showing');
+    // If modal is already showing, let it close naturally, then show the next modal in queue
+    if ($modal.hasClass('showing')) {
+        return;
+    }
 
-	if (!footerButtons) footerButtons = getDefaultModalFooterButtons(modalType);
+    function processQueue() {
+        if (window.modalQueue.length === 0) return;
 
-	// expired session modal should not be dismissable so only add this if dismissable is false
-	const closeButton = `
-		<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
-			<span aria-hidden="true">&times;</span>
-		</button>
-	`;
-	const innerHTML = `
-	  <div class="modal-dialog" role="document">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <h5 class="modal-title">${title}</h5>
-	        	${dismissable ? closeButton : ''}
-	      </div>
-	      <div class="modal-body">
-	        <p>${message}</p>
-	      </div>
-	      <div class="modal-footer">
-	      	${footerButtons}
-	      </div>
-	    </div>
-	  </div>
-	`;
-	const options = dismissable ? {} : {backdrop: 'static', keyboard: false};
-	$modal.empty()
-		.append($(innerHTML))
-		.modal(options);
-	
-	$modal.find('.close-modal').click(() => {$modal.modal('hide')});
+        // Get the next modal request
+        const { message, title, modalType, footerButtons, dismissable, eventHandlerCallable } = window.modalQueue.shift();
+        
+        $modal.addClass('showing');
 
-	// Remove class that indicates the modal is being shown
-	$modal.on('hide.bs.modal', () => {
-		$modal.removeClass('showing')
-	})
+        const finalFooterButtons = footerButtons || getDefaultModalFooterButtons(modalType);
 
-	eventHandlerCallable.call();
+        const closeButton = `
+            <button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        `;
 
-	return $modal;
+        const innerHTML = `
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                        ${dismissable ? closeButton : ''}
+                    </div>
+                    <div class="modal-body">
+                        <p>${message}</p>
+                    </div>
+                    <div class="modal-footer">
+                        ${finalFooterButtons}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const options = dismissable ? {} : { backdrop: 'static', keyboard: false };
+
+        $modal.html(innerHTML).modal(options);
+
+        // Ensure clicking close button hides the modal
+        $modal.find('.close-modal').click(() => {
+            $modal.modal('hide');
+        });
+
+        // Ensure we remove the 'showing' class and process the next modal in queue
+        $modal.one('hidden.bs.modal', () => {
+            $modal.removeClass('showing');
+            processQueue(); // Show the next modal if any
+        });
+
+        // Call external event handler
+        eventHandlerCallable.call();
+    }
+
+    // Process the queue immediately if no modal is currently displayed
+    processQueue();
 }
 
-// var _$modalSuper = $.fn.modal;
-// _$modalSuper.Constructor.prototype.addModal = function (message, title, {modalType='alert', footerButtons='', dismissable=true}={}) {
-// 	const $modal = this;
-// 	return $modal.on('hidden.bs.modal', () => {
-// 		$modal.find('.modal-title').html(title);
-// 		$modal.find('.modal-body').html('<p>' + message + '</p>');
-// 		$modal.find('.modal-footer').html(footerButtons || getDefaultModalFooterButtons(modalType));
-// 	});
-// }
 
 
 function showLoadingIndicator(caller, timeout=15000) {
@@ -171,7 +185,7 @@ function deepCopy(inObject) {
 /*
 Helper function to debug issues with collapses
 */
-function toggleCollapseEventHandlers(selector, toggleOn=true) {
+function toggleCollapseEventMonitoring(selector, toggleOn=true) {
 	const $collapse = $(selector).closest('.collapse');
 
 	if (toggleOn) {
@@ -192,6 +206,34 @@ function toggleCollapseEventHandlers(selector, toggleOn=true) {
 		$collapse.off('shown.bs.collapse');
 		$collapse.off('hide.bs.collapse');
 		$collapse.off('hidden.bs.collapse');
+	}
+}
+
+
+/*
+Helper function to turn modal event monitoting on or off
+*/
+function toggleModalEventMonitoring(toggleOn=true) {
+	const $modal = $('#alert-modal');
+
+	if (toggleOn) {
+		$modal.on('show.bs.modal', e => {
+			print('modal show')
+		});
+		$modal.on('shown.bs.modal', e => {
+			print('modal shown')
+		});
+		$modal.on('hide.bs.modal', e => {
+			print('modal hide')
+		});
+		$modal.on('hidden.bs.modal', e => {
+			print('modal hidden')
+		});
+	} else {
+		$modal.off('show.bs.collapse');
+		$modal.off('shown.bs.collapse');
+		$modal.off('hide.bs.collapse');
+		$modal.off('hidden.bs.collapse');
 	}
 }
 
