@@ -1057,14 +1057,12 @@ class ClimberForm {
 					]
 				}
 			}).done(response => {
-				if (this._parent.pythonReturnedError(response)) {
-					showModal('Retrieving climber history from the database failed with the following error:<br>' + response, 'Database Error');
-				} else {
+				if (!this._parent.pythonReturnedError(response, {errorExplanation: 'Retrieving climber history from the database failed.'})) {
 					this.fillClimberHistory(response.data || []);
 				}
 			})
 			.fail((xhr, status, error) => {
-				showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
+				showModal('Retrieving climber history from the database failed.' + this._parent.getDBContactMessage(), 'Database Error')
 			});
 
 		const contactsDeferred = this._parent.queryDB({
@@ -1074,14 +1072,12 @@ class ClimberForm {
 					]
 				}
 			}).done(response => {
-				if (this._parent.pythonReturnedError(response)) {
-					showModal('Retrieving emergency contact info from the database failed because ' + response, 'Database Error');
-				} else {
+				if (!this._parent.pythonReturnedError(response, {errorExplanation: 'Retrieving emergency contacts from the database failed.'})) {
 					this.fillEmergencyContacts(response.data || []);
 				}
 			})
 			.fail((xhr, status, error) => {
-				showModal('Retrieving emergency contact info from the database failed because ' + error, 'Database Error')
+				showModal('Retrieving emergency contact info from the database failed.' + this._parent.getDBContactMessage(), 'Database Error')
 			});
 
 
@@ -1238,9 +1234,8 @@ class ClimberForm {
 			contentType: false,
 			processData: false
 		}).done(response => {
-			if (this._parent.pythonReturnedError(response)) {
-				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this._parent.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
-				
+			const errorMessage = 'An unexpected error occurred while saving data to the database.';
+			if (this._parent.pythonReturnedError(response, {errorExplanation: errorMessage})) {
 				return false;
 			} else {
 				const result = response.data || [];
@@ -1349,14 +1344,11 @@ class ClimberForm {
 
 			return this._parent.deleteByID(tableName, dbID)
 				.done(response => {
-					if (this._parent.pythonReturnedError(response)) {
-						showModal('An unexpected error occurred while deleting data from the database: <br><br' + response, 'Unexpected error');
-						return;
-					} else {
+					if (!this._parent.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while deleting data from the database.'})) {
 						$card.fadeOut(500, () => {$card.remove()});
 					}
 				}).fail((xhr, status, error) => {
-					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+					showModal(`An unexpected error occurred while deleting data from the database: ${error}.${this._parent.getDBContactMessage()}`, 'Unexpected error');
 				}).always(() => {
 					hideLoadingIndicator();
 				});
@@ -1389,8 +1381,7 @@ class ClimberForm {
 	deleteClimber(climberID) {
 		return this._parent.deleteByID('climbers', climberID)
 			.done(response => {
-				if (this._parent.pythonReturnedError(response)) {
-					showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
+				if (this._parent.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while deleting data from the database.'})) {
 					return;
 				} 
 			}).fail((xhr, status, error) => {
@@ -2122,7 +2113,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 		this.climberForm.deleteClimber(climberID)
 			.done(queryResultString => {
-				if (!this.pythonReturnedError(queryResultString)) {
+				if (!this.pythonReturnedError(queryResultString, {errorExplanation: 'The climber could not be deleted because of an unexpected error.'})) {
 					const $item = $(`#item-${climberID}`);
 					const deletedClimberIsSelected = $item.is('.selected');
 					const $nextItem = $item.next().length ? $item.next() : $item.prev();
@@ -2233,9 +2224,7 @@ class ClimberDBClimbers extends ClimberDB {
 				climber_info_view: [{column_name: 'id', operator: '=', comparand: parseInt(climberID)}]
 			}
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal(`An error occurred while retreiving climbering info: <br>${response}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
-			} else {
+			if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while retrieving climbering info.'})) {
 				const result = response.data || [];
 				if (result.length) {
 					const climberInfo = result[0];
@@ -2307,9 +2296,7 @@ class ClimberDBClimbers extends ClimberDB {
 							]
 						}
 					}).done(response => {
-						if (this.pythonReturnedError(response)) {
-							showModal('Retrieving climber history from the database failed with the following error: <br>' + response, 'Database Error');
-						} else {
+						if (!this.pythonReturnedError(response, {errorExplanation: 'Retrieving climber history from the database failed.'})) {
 							const result = response.data || [];
 							for (const row of result) {
 								const formattedDeparture = (new Date(row.actual_departure_date)).toLocaleDateString(); //add a time otherwise the date will be a day before
@@ -2320,7 +2307,9 @@ class ClimberDBClimbers extends ClimberDB {
 						}
 					})
 					.fail((xhr, status, error) => {
-						showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
+						const message = 'Retrieving climber history from the database' + 
+							` failed with the error ${error}.${this.getDBContactMessage()}`;
+						showModal(message, 'Database Error')
 					});
 				} else {
 					console.log('No climber found with ID ' + ClimberID);
@@ -2397,8 +2386,8 @@ class ClimberDBClimbers extends ClimberDB {
 						merge_climber_id: mergeClimberID
 					}
 				}).done(response => {
-					if (this.pythonReturnedError(response)) {
-						showModal('An error occurred while trying to merge climber profiles: ' + response, 'Unexpected Error');
+					if (this.pythonReturnedError(response, {errorExplanation: 'An error occurred while trying to merge climber profiles.'})) {
+						return;
 					} else if ('update_result' in response) {
 						const nExpeditions = response.update_result.length;
 						const message = 'The two climber profiles were successfully merged.' + 
@@ -2421,10 +2410,13 @@ class ClimberDBClimbers extends ClimberDB {
 						// Hide the details because the selected climber to merge should no longer exist
 						$('.merge-climber-details-container').collapse('hide');
 					} else {
-						showModal('An unkown error occurred while trying to merge climber profiles.', 'Unexpected Error');
+						showModal('An unkown error occurred while trying to merge climber profiles.' + this.getDBContactMessage(), 'Unexpected Error');
 					}
 				}).fail((xhr, status, error) => {
-					showModal('An error occurred while trying to merge climber profiles: ' + error, 'Unexpected Error');
+					const message = 
+						'An error occurred while trying to merge climber' + 
+						` profiles: ${error}.${this.getDBContactMessage()}`;
+					showModal(message, 'Unexpected Error');
 				}).always(() => {hideLoadingIndicator()})
 			})
 		}

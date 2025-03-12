@@ -423,11 +423,7 @@ class ClimberDBUsers extends ClimberDB {
 			contentType: false,
 			processData: false
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
-				return false;
-			} else {
-
+			if (!this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while saving data to the database.'})) {
 				$inputs.removeClass('dirty');
 				$tr.addClass('uneditable');
 
@@ -477,7 +473,7 @@ class ClimberDBUsers extends ClimberDB {
 				}
 			}
 		}).fail((xhr, status, error) => {
-			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Unexpected error');
+			showModal(`An unexpected error occurred while saving data to the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
 			// roll back in-memory data
 		}).always(() => {
 		 	climberDB.hideLoadingIndicator();
@@ -592,9 +588,7 @@ class ClimberDBUsers extends ClimberDB {
 				contentType: false,
 				processData: false
 			}).done(response => {
-				if (this.pythonReturnedError(response)) {
-					showModal('Database Error', 'The user could not be disabled because the system encountered an unexpected error: <br><br>' + response)
-				} else {
+				if (!this.pythonReturnedError(response, {errorExplanation: 'The user could not be disabled because the system encountered an unexpected error.'})) {
 					$userRow.fadeRemove()
 				}
 			}).fail((xhr, status, error) => {
@@ -616,10 +610,7 @@ class ClimberDBUsers extends ClimberDB {
 			},
 			cache: false
 		}).done(resultString => {
-			const pythonError = this.pythonReturnedError(resultString);
-			if (pythonError !== false) {
-				showModal(`Password reset email failed to send with the error:\n${pythonError.trim()}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')
-			} else {
+			if (!this.pythonReturnedError(resultString, {errorExplanation: 'The password reset email failed to send because of an unexpected error.'})) {
 				showModal(`A password reset email was sent to ${email_address}. The user's account will be inactive until they change their password.`, 'Password reset email sent');
 				$(`tr[data-table-id=${userID}]`).addClass('inactive')
 					.find('.input-field[name=user_status_code]')
@@ -628,7 +619,7 @@ class ClimberDBUsers extends ClimberDB {
 						//.change(); 
 			}
 		}).fail((xhr, status, error) => { 
-			showModal(`Password reset email failed to send with the error: ${error}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')
+			showModal(`Password reset email failed to send with the error: ${error}.${this.getDBContactMessage()}`, 'Email Server Error')
 		});
 	}
 
@@ -712,23 +703,21 @@ class ClimberDBUsers extends ClimberDB {
 				{table_name: 'users', column_name: 'last_name'},
 			]
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal('An error occurred while loading users: <br><br>' + response, 'Unexpected Error');
-				return false;
-			}
-			const result = response.data || [];
-			const noLoginRoles = this.config.no_login_user_roles;
-			for (const row of result) {
-				// Save in-memory data for rolling back edits
-				this.users[row.id] = {...row};
-				const $tr = noLoginRoles.includes(parseInt(row.user_role_code)) ? 
-					this.addNoLoginRow({data: row}) : 
-					this.addUserRow({data: row});
-				$tr.find('select[name="user_role_code"]')
-					.val(row.user_role_code);
-				$tr.find('select[name="user_status_code"]')
-					.val(row.user_status_code);
-				if (row.user_status_code == -1) $tr.ariaHide(true);
+			if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while loading users.'})) {
+				const result = response.data || [];
+				const noLoginRoles = this.config.no_login_user_roles;
+				for (const row of result) {
+					// Save in-memory data for rolling back edits
+					this.users[row.id] = {...row};
+					const $tr = noLoginRoles.includes(parseInt(row.user_role_code)) ? 
+						this.addNoLoginRow({data: row}) : 
+						this.addUserRow({data: row});
+					$tr.find('select[name="user_role_code"]')
+						.val(row.user_role_code);
+					$tr.find('select[name="user_status_code"]')
+						.val(row.user_status_code);
+					if (row.user_status_code == -1) $tr.ariaHide(true);
+				}
 			}
 			
 		});

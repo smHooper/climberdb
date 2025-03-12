@@ -401,8 +401,8 @@ class ClimberDB {
 		return $.post({
 			url: '/flask/config'
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal('Invalid Configuration', 'There was a problem retrieving the app configuration: ' + response);
+			if (this.pythonReturnedError(response, {errorExplanation: 'There was a problem retrieving the app configuration.'})) {
+				return;
 			} else {
 				this.config = {...response}
 			}
@@ -1530,6 +1530,13 @@ class ClimberDB {
 	}
 
 
+	getDBContactMessage() {
+		return ' Make sure you\'re still connected to the NPS network and try again.' +
+			` <a href="mailto:${this.config.db_admin_email}">Contact your database` +
+			' adminstrator</a> if the problem persists.';
+	}
+
+
 	pythonReturnedError(resultString, {errorExplanation=''}={}) {
 		resultString = String(resultString); // force as string in case it's something else
 		if (resultString.startsWith('ERROR: Internal Server Error')) {
@@ -1538,10 +1545,11 @@ class ClimberDB {
 			const pythonException = (resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/) || ['unknown custom exception thrown']
 			)[0].trim();
 			
+			const dbContact = this.getDBContactMessage();
 			// Show the 
 			if (errorExplanation !== '') {
 				const messageBody = `
-					${errorExplanation}  
+					${errorExplanation}${dbContact} 
 					<div class="w-100 d-flex justify-content-between">
 						<button 
 							role="button"
@@ -1579,7 +1587,7 @@ class ClimberDB {
 			.closest('.modal-body')
 			.find('.modal-error-text-container')
 			.text();
-		this.copyToClipboard(error, {triggeringElement: $button})
+		this.copyToClipboard(error, {triggeringElement: $button, tooltipContainer: '#alert-modal'})
 	}
 
 

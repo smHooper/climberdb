@@ -1349,9 +1349,10 @@ class ClimberDBQuery extends ClimberDB {
 	submitQuery(sql, {sqlParameters={}, queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
 		return this.queryDB({sql: sql.replace(/\{schema\}/g, this.dbSchema), sqlParameters: sqlParameters})
 			.done(response => {
-				if (this.pythonReturnedError(response)) {
-					const queryDisplayName = $('.query-option.selected').text();
-					showModal(`There was a problem with the '${queryDisplayName}' query: <br><br>${response}`, 'Unexpected Error');
+				const queryDisplayName = $('.query-option.selected').text();
+				const errorMessage = `There was a problem with the '${queryDisplayName}' query.`
+				if (this.pythonReturnedError(response, {errorExplanation: errorMessage})) {
+					return;
 				} else if (showResult) {
 					this.result = response.data || [];
 					this.ancillaryResult = [];
@@ -1414,10 +1415,7 @@ class ClimberDBQuery extends ClimberDB {
 	queryGuidedClientStatus() {
 		this.runQuery('guide_company_client_status')
 			.done(response => {
-				if (this.pythonReturnedError(response)) {
-					showModal('An unexpected error occurred: <br><br>' + response, 'Unexpected Error');
-				} else {
-
+				if (!this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred.'})) {
 					// If the user is exporting, the export needs briefings as well so just query it now
 					this.runQuery('guided_company_briefings', {showResult: false})
 						.done(queryResultString => {
@@ -1900,9 +1898,9 @@ class ClimberDBQuery extends ClimberDB {
 		// Handle the response
 		const exportType = $('#input-export_type').val();
 		deferred.done(resultString => {
-			if (this.pythonReturnedError(resultString)) {
+			if (this.pythonReturnedError(resultString, {errorExplanation: 'An unexpected error occurred while exporting the data.'})) {
 				$('#exports-modal').modal('hide');
-				showModal('An unexpected error occurred while exporting the data: ' + resultString, 'Unexpected Error');
+				return;
 			} else {
 				resultString = resultString.trim()
 				// Either prompt a download if the file is an Excel doc
@@ -1917,7 +1915,7 @@ class ClimberDBQuery extends ClimberDB {
 			}	
 		}).fail( (xhr, status, error) => {
 			$('#exports-modal').modal('hide');
-			showModal('An unexpected error occurred while exporting the data: ' + error, 'Unexpected Error');
+			showModal(`An unexpected error occurred while exporting the data: ${error}.${this.getDBContactMessage()}`, 'Unexpected Error');
 		}).always(() => {
 			hideLoadingIndicator();
 		})

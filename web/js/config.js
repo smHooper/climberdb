@@ -270,9 +270,7 @@ class ClimberDBConfig extends ClimberDB {
 			data: JSON.stringify(requestData),
 			contentType: 'application/json'
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
-			} else  {
+			if (!this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while saving data to the database.'})) {
 				// update in-memory data
 				for (const [id, {value}] of Object.entries(configUpdates)) {
 					this.config[id].value = value;
@@ -302,7 +300,7 @@ class ClimberDBConfig extends ClimberDB {
 				this.toggleBeforeUnload(false);
 			}
 		}).fail((xhr, status, error) => {
-			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Unexpected error');
+			showModal(`An unexpected error occurred while saving data to the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
 			// roll back in-memory data
 		}).always(() => {
 		 	this.hideLoadingIndicator();
@@ -316,9 +314,7 @@ class ClimberDBConfig extends ClimberDB {
 		return this.queryDB({
 			where: {'config': [{column_name: 'is_editable'}]}
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal('An error occurred while retreiving configuration values: <br><br>' + response, 'Database Error');
-			} else {
+			if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while retrieving configuration values.'})) {
 				const result = response.data || [];
 				for (const row of result) {
 					// Save in-memory data for rolling back edits
@@ -338,9 +334,7 @@ class ClimberDBConfig extends ClimberDB {
 			]},
 			orderBy: [{table_name: 'cua_company_codes', column_name: 'sort_order'}]
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal('An error occurred while retreiving CUA Holders: <br><br>' + response, 'Database Error');
-			} else {
+			if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while retrieving CUA Holders.'})) {
 				for (const {name, id} of response.data || []) {
 					this.addCUACompanyRow(name, id);
 				}
@@ -419,14 +413,10 @@ class ClimberDBConfig extends ClimberDB {
 						contentType: false,
 						processData: false
 					}).done(response => {
-						if (this.pythonReturnedError(response)) {
-							const message = 
-								'There was an error when removing the CUA Guide Company and the action' +
-								' could not be completed. Try again and if the problem persists, contact your' +
-								` <a href="mailto:${this.config.db_admin_email}">database adminstrator</a>.` +
-								' Full error message:<br><br>' + response;
-							showModal(message, 'Database Error');
-						} else {
+						const errorMessage = 
+							'There was an error when removing the CUA Guide Company' +
+							' and the action could not be completed.';
+						if (!this.pythonReturnedError(response, {errorExplanation: errorMessage})) {
 							$tr.fadeRemove();
 						}
 					})

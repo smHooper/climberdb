@@ -1053,8 +1053,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					$('#alert-modal .confirm-button').click(() => {
 						this.deleteByID('expedition_members', dbID)
 							.done(response => {
-								if (this.pythonReturnedError(response)) {
-									showModal('The expedition member could not be deleted because of an unexpected error: <br><br>' + response, 'Unexpected Error');
+								if (this.pythonReturnedError(response, {errorExplanation: 'The expedition member could not be deleted because of an unexpected error.'})) {
 									return;
 								} else {
 									delete this.expeditionInfo.expedition_members.data[dbID];
@@ -1098,13 +1097,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						const sql = `DELETE FROM ${this.dbSchema}.expedition_member_routes WHERE id IN (${memberRouteIDs})`;
 						this.deleteByID('expedition_member_routes', memberRouteIDs)
 							.done(response => {
-								if (this.pythonReturnedError(response)) {
-									showModal(
-										'And error occurred while attempting to delete this route: <br><br>' + response,
-										'Database Error'
-									);
-									return;
-								} else {
+								if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while attempting to delete this route.'})) {
 									const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
 									if (routeDeleted) {
 										// remove the route from in-memory .order
@@ -1113,10 +1106,9 @@ class ClimberDBExpeditions extends ClimberDB {
 									$card.fadeRemove();
 								}
 							}).fail((xhr, status, error) => {
-								showModal(
-									'And error occurred while attempting to delete this route: ' + error,
-									'Database Error'
-								);
+								const message = 'And error occurred while attempting to delete this route:' + 
+								 ` ${error}.${this.getDBContactMessage()}`;
+								showModal(message, 'Database Error');
 							})
 					})
 				}
@@ -1644,8 +1636,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			contentType: false,
 			processData: false
 		}).then(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
+			if (this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while saving data to the database.'})) {
 				return false;
 			} else {
 				const expeditionID = this.setInsertedIDs(response.data || {});
@@ -1659,7 +1650,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				return this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
 			}
 		}).fail((xhr, status, error) => {
-			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+			showModal(`An unexpected error occurred while saving data to the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
 		}).always(() => {
 			 	this.hideLoadingIndicator();
 			});
@@ -1788,10 +1779,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			showLoadingIndicator('deleteExpedition');
 			return this.deleteByID('expeditions', expeditionID)
 				.done( response => {
-					if (this.pythonReturnedError(response)) {
-						showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
-						return;
-					} else {
+					if (!this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while deleting data from the database.'})) {
 						// Remove the expedition from the search bar (if it exists, i.e., is from the current year)
 						$(`#expedition-options-drawer .expedition-search-bar-option[data-expedition-id=${expeditionID}]`).remove();
 
@@ -2192,9 +2180,11 @@ class ClimberDBExpeditions extends ClimberDB {
 						this.deleteByID('briefings', briefingInfo.id)
 							.done(response => {
 								const briefingURL = $('#expedition-briefing-link').attr('href')
-								if (this.pythonReturnedError(response)) {
-									showModal(`The briefing could not be deleted because of an unexpected error. You will have to delete this briefing manually on the <a href=${briefingURL} target="_blank">briefings page</a>. Full error message: <br><br>` + response, 'Unexpected Error')
-								} else {
+								const errorMessage = 
+									'The briefing could not be deleted because of an unexpected' +
+									' error. You will have to delete this briefing manually on' + 
+									` the <a href=${briefingURL} target="_blank">briefings page</a>.`;
+								if (!this.pythonReturnedError(response, {errorExplanation: errorMessage})) {
 									this.resetBriefingLink()
 								}
 							})
@@ -2402,16 +2392,16 @@ class ClimberDBExpeditions extends ClimberDB {
 			contentType: false,
 			processData: false
 		}).done(queryResultString => {
-				if (this.pythonReturnedError(queryResultString)) {
-					showModal('The expedition member could not be moved to a new expedition. Error: ' + queryResultString, 'Database Error');
-				} else {
+				if (!this.pythonReturnedError(queryResultString, {errorExplanation: 'The expedition member could not be moved to a new expedition.'})) {
 					this.loadExpedition(selectedExpeditionID);
 					this.updateURLHistory(selectedExpeditionID, $('#expedition-id-input'));
 					$('#change-expedition-modal').modal('hide');
 					$('#confirm-change-expedition-button').ariaHide(true);
 				}
 			}).fail((xhr, status, error) => {
-				showModal('The expedition member could not be moved to a new expedition. Error: ' + error, 'Database Error');
+				const message = 'The expedition member could not be moved to a new expedition because' +
+					` of an unexpected error: ${error}.${this.getDBContactMessage()}`;
+				showModal(message, 'Database Error');
 			}).always(() => {
 				hideLoadingIndicator();
 			});
@@ -2661,11 +2651,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			data: pdfData,
 			cache: false
 		}).done(responseData => {
-			if (this.pythonReturnedError(responseData)) {
-				showModal('Your PDF could not be exported because of an unexpected error: ' + responseData, 'Unexpected Error');
-				return;
+			if (!this.pythonReturnedError(responseData, {errorExplanation: 'Your PDF could not be exported because of an unexpected error.'})) {
+				window.open(responseData, '_blank')
 			}
-			window.open(responseData, '_blank')
         }).always(() => {
         	this.hideLoadingIndicator()
         });
@@ -2739,51 +2727,14 @@ class ClimberDBExpeditions extends ClimberDB {
 				expedition_name: this.expeditionInfo.expeditions.expedition_name
 			}
 		}).done(responseData => {
-			if (this.pythonReturnedError(responseData)) {
-				showModal('The Special User Permit(s) could not be exported because of an unexpected error: ' + responseData, 'Unexpected Error');
-				return;
+			if (!this.pythonReturnedError(responseData, {errorExplanation: 'The Special User Permit(s) could not be exported because of an unexpected error.'})) {	
+				window.open(responseData, '_blank');
 			}
-			window.open(responseData, '_blank');
 		}).fail((xhr, status, error) => {
-			showModal('The Special User Permit(s) could not be exported because of an unexpected error: ' + error, 'Unexpected Error');
+			const message = 'The Special User Permit(s) could not be exported because' +
+				` of an unexpected error: ${error}.${this.getDBContactMessage()}`;
+			showModal(message, 'Unexpected Error');
 		}).always(() => {hideLoadingIndicator()})
-	}
-
-	/*
-	Update the source Excel file for Label Matrix server-side
-	*/
-	writeToLabelMatrix() {
-		let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === true)
-		if (!tripLeaderInfo.length) {
-			showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
-			return;
-		} else {
-			tripLeaderInfo = tripLeaderInfo[0];
-		}
-
-		const airTaxiCode = this.expeditionInfo.expeditions.air_taxi_code;
-		const airTaxiName = $('#input-air_taxi option').filter((_, el) => el.value == airTaxiCode).text();
-		const labelData = {
-			expedition_name: this.expeditionInfo.expeditions.expedition_name,
-			leader_name: tripLeaderInfo.first_name + ' ' + tripLeaderInfo.last_name,
-			air_taxi_name: airTaxiName,
-			planned_return_date: this.expeditionInfo.expeditions.planned_return_date,
-			expedition_id: this.expeditionInfo.expeditions.id
-		}
-
-		$.post({
-			url: 'flask/cache_tag/write_label_matrix',
-			data: labelData,
-			cache: false
-		}).done((response) => {
-			if (this.pythonReturnedError(response)) {
-				showModal('This expedition\'s data could not be transferred to Label Matrix because of an unexpected error: ' + response, 'Unexpected Error')
-			} else {
-				showModal('Expedition data was successfully transferred to Label Matrix. Open the Label Matrix program and print your labels from there.', 'Data Transferred to Label Matrix')
-			}
-		}).fail((xhr, status, error) => {
-			showModal('This expedition\'s data could not be transferred to Label Matrix because of an unexpected error: ' + error, 'Unexpected Error')
-		})
 	}
 
 
@@ -2839,9 +2790,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				url: '/flask/cache_tag/preview',
 				data: labelData
 			}).done(responseData => {
-				if (this.pythonReturnedError(responseData)) {
-					showModal('An error occurred while generating the cache tag preview: ' + responseData, 'Unexpected Error')
-				} else {
+				if (!this.pythonReturnedError(responseData, {errorExplanation: 'An error occurred while generating the cache tag preview.'})) {
 					// Set modal <img> src
 					$('#modal-cache-tag-preview').attr('src', responseData.preview_src);
 					$('#print-cache-tag-button').data('zpl', responseData.zpl);
@@ -2850,7 +2799,9 @@ class ClimberDBExpeditions extends ClimberDB {
 					$('#cache-tag-modal').modal();
 				}
 			}).fail((xhr, status, error) => {
-				showModal('An error occurred while generating the cache tag preview: ' + error, 'Unexpected Error')
+				const message = 'An error occurred while generating the cache tag preview: ' + 
+					`${error}.${this.getDBContactMessage()}`; 
+				showModal(message, 'Unexpected Error')
 			}).always(() => {hideLoadingIndicator()});
 		}
 	}
@@ -2880,9 +2831,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				n_labels: nLabels
 			}
 		}).done(responseData => {
-			if (this.pythonReturnedError(responseData)) {
-				showModal('An unexpected error occurred while printing cache tags: ' + responseData, 'Unexpected Error')
-			} else {
+			if (!this.pythonReturnedError(responseData, {errorExplanation: 'An unexpected error occurred while printing cache tags.'})) {
 				// dismiss the print preview modal
 				$('#cache-tag-modal').modal('hide');
 				
@@ -2892,7 +2841,9 @@ class ClimberDBExpeditions extends ClimberDB {
 				);
 			}
 		}).fail((xhr, status, error) => {
-				showModal('An unexpected error occurred while printing cache tags: ' + error, 'Unexpected Error')
+			const message = 'An unexpected error occurred while printing cache tags:' +
+				` ${error}.${this.getDBContactMessage()}`	
+			showModal(message, 'Unexpected Error');
 		}).always(() => {hideLoadingIndicator()})
 	}
 
@@ -3108,9 +3059,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		}).done(response => {
 				const result = response.data || [];
-				if (this.pythonReturnedError(response)) {
-					showModal(`An error occurred while retreiving climbering info: <br><br>${response}. <br><br>Make sure you're connected to the NPS network and try again.`, 'Database Error');
-				} else {
+				if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while retrieving climbering info.'})) {
 					if (result.length) {
 						this.climberForm.fillClimberForm(climberID, result[0]);	
 						$('#edit-climber-info-button').attr('href', 'climbers.html?edit=true&id=' + climberID)
@@ -3805,11 +3754,11 @@ class ClimberDBExpeditions extends ClimberDB {
 			expeditionInfoResponse = expeditionInfoResponse[0];
 			commsResponse = commsResponse[0];
 			
-			if (this.pythonReturnedError(expeditionInfoResponse)) {
-				showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: <br><br>${expeditionInfoResponse}.`, 'Unexpected Error');
-				return;
-			} else if (this.pythonReturnedError(commsResponse)) {
-				showModal(`An unexpected error occurred while querying the comms info with ID ${expeditionID}: <br><br>${commsResponse}.`, 'Unexpected error');
+			if (
+					this.pythonReturnedError(expeditionInfoResponse, {errorExplanation: `An unexpected error occurred while querying expedition info with ID ${expeditionID}.`})
+					||
+					this.pythonReturnedError(commsResponse, {errorExplanation: `An unexpected error occurred while querying the comms info with ID ${expeditionID}.`})
+				) {
 				return;
 			} else {
 				const expeditionResult = expeditionInfoResponse.data;
@@ -4000,12 +3949,10 @@ class ClimberDBExpeditions extends ClimberDB {
 					this.show60DayWarning();
 				}
 			}
-		}).fail(() => {
+		}).fail((xhr, status, error) => {
 			const message = 
-				'An unexpected error occurred while querying this expedition.' +
-				' Try reloading the page and contact your <a href="mailto:' + 
-				`${this.config.db_admin_email}">Contact your database adminstrator</a>` + 
-				' if the problem persists';
+				'An unexpected error occurred while querying this expedition:' + 
+				` ${error}.${this.getDBContactMessage()}`;
 			showModal(message, 'Database Error');
 		}).always(() => {hideLoadingIndicator()});
 	}
@@ -4026,8 +3973,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				this.hideLoadingIndicator();
 			}).then(
 				response => {
-					if (this.pythonReturnedError(response)) {
-						showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
+					if (this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while deleting data from the database.'})) {
 						return false;
 					} else {
 						// Delete the in-memory data here rather than in deleteTransactionItem() 
@@ -4042,7 +3988,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 				}, 
 				(xhr, status, error) => {
-					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+					showModal(`An unexpected error occurred while deleting data from the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
 				}
 			);
 	}
@@ -4420,7 +4366,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			reader.onerror = function(e) {
 				// Hide preview and progress bar and notify the user
 				$progressBar.ariaHide();
-				showModal(`The file '${filename}' failed to upload correctly. Make sure your internet connection is consistent and try again.`, 'Upload failed');
+				showModal(`The file '${filename}' failed to upload correctly.${this.getDBContactMessage()}`, 'Upload failed');
 			}
 
 			// Get local reference to .attachments attribute because `this` refers to the FieReader 
@@ -4712,14 +4658,12 @@ class ClimberDBExpeditions extends ClimberDB {
 			orderBy: [{table_name: 'cmc_inventory', column_name: 'id'}]
 		})
 			.done(response => {
-				if (this.pythonReturnedError(response)) {
-					print('Error while querying CMC inventory: ' + response);
-					return;
-				}
-				for (const row of response.data || []) {
-					this.cmcInfo.cmcCanIDs[row.id] = row.cmc_can_identifier;
-					this.cmcInfo.rfidTags[row.rfid_taf_id] = row.id;
-					$select.append(`<option class="" value="${row.id}">${row.cmc_can_identifier}</option>`);
+				if (!this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while querying CMC inventory.'})) {
+					for (const row of response.data || []) {
+						this.cmcInfo.cmcCanIDs[row.id] = row.cmc_can_identifier;
+						this.cmcInfo.rfidTags[row.rfid_taf_id] = row.id;
+						$select.append(`<option class="" value="${row.id}">${row.cmc_can_identifier}</option>`);
+					}
 				}
 			})
 			.fail((xhr, status, error) => {

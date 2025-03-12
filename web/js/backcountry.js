@@ -412,8 +412,8 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 					tables: ['backcountry_location_codes'], 
 					order_by: [{table_name: 'backcountry_location_codes', column_name: 'sort_order'}]
 				}).done(result => {
-					if (this.pythonReturnedError(result)) {
-						showModal('An error occurred while retrieving lookup values from the database: ' + result, 'Database Error');
+					if (this.pythonReturnedError(result, {errorExplanation: 'An error occurred while retrieving lookup values from the database.'})) {
+						//showModal('An error occurred while retrieving lookup values from the database: ' + result, 'Database Error');
 						return;
 					}
 					for (const {code, name, latitude, longitude} of result.data) {

@@ -111,17 +111,14 @@ class ClimberDBIndex extends ClimberDB {
 			},
 			cache: false
 		}).done(resultString => {
-			const pythonError = this.pythonReturnedError(resultString);
-			if (pythonError !== false) {
-				showModal(`Password reset email failed to send with the error:\n${pythonError.trim()}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')
-			} else {
+			if (!this.pythonReturnedError(resultString, {errorExplanation: 'The password reset email failed to send because of an unexpected error.'})) {
 				// show success message
 				$('#sign-in-form-container > *:not(.email-success-message-container)').ariaHide();
 				$('.email-success-message-container').ariaHide(false)
 				$('#reset-password-success-message').ariaHide(false);
 			}
 		}).fail((xhr, status, error) => { 
-			showModal(`Password reset email failed to send with the error: ${error}. Make sure you're still connected to the NPS network and try again. Contact your <a href="mailto:${this.config.db_admin_email}">database adminstrator</a> if the problem persists.`, 'Email Server Error')
+			showModal(`Password reset email failed to send with the error: ${error}.${this.getDBContactMessage()}`, 'Email Server Error')
 		}).always(() => {this.toggleDotLoadingIndicator($buttonContainer, {hide: true})})
 	}
 
