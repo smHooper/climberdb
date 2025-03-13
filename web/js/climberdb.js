@@ -1568,7 +1568,7 @@ class ClimberDB {
 							Copy error text
 						</button>
 					</div>
-					<p id="modal-error-details-collapse" class="collapse modal-error-details-target modal-error-text-container">
+					<p id="modal-error-details-collapse" class="collapse modal-error-details-target modal-error-text-container pt-3">
 						${resultString}
 					</p>`;
 				showModal(messageBody, 'Unexpected Error');
