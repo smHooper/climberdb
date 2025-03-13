@@ -16,10 +16,9 @@ from uuid import uuid4
 
 from flask import Flask, has_request_context, json, jsonify, render_template, request, url_for
 from flask_mail import Mail, Message
-from flask.logging import default_handler
 
 import logging
-from logging.config import dictConfig as loggingDictConfig
+from logging.config import dictConfig
 
 from sqlalchemy import asc
 from sqlalchemy import case
@@ -37,6 +36,7 @@ from werkzeug.datastructures import FileStorage
 
 # climberdb modules
 from cache_tag import CacheTag, print_zpl
+#from climberdb_logging import configure_logging
 import climberdb_utils
 from export_briefings import briefings_to_excel
 
@@ -58,74 +58,33 @@ def wait_for_weasyprint():
 	'''
 	weasyprint_thread.join()
 
+app_name = __name__
 
-# Enable logging
+###### Enable logging #####
 log_dir = os.path.join(os.path.dirname(__file__), 'logs')
 if not os.path.isdir(log_dir):
 	os.mkdir(log_dir)
-# Configure a logger that will create a new file each day
-#	Only 100 logs will be saved before they oldest one is deleted
-loggingDictConfig(
-	{
-		"version": 1,
-		"formatters": {
-			"default": {
-				"datefmt": "%B %d, %Y %H:%M:%S %Z",
-			},
-		},
-		"handlers": {
-			"time-rotate": {
-				"class": "logging.handlers.TimedRotatingFileHandler",
-				"filename": os.path.join(log_dir, 'flask.log'),
-				"when": "D",
-				"interval": 1,
-				"backupCount": 100,
-				"formatter": "default",
-			},
-		},
-		"root": {
-			"level": "DEBUG",
-			"handlers": ["time-rotate"],
-		},
-	}
-)
-# Configure a custom formatter to include request information
-class RequestFormatter(logging.Formatter):
-	def format(self, record):
-		if has_request_context():
-			record.url = request.url
-			record.remote_addr = request.remote_addr
-			record.request_data = (
-				'**ommitted**' if request.url.endswith('checkPassword') else 
-				json.dumps(request.form)
-			)
-		else:
-			record.url = None
-			record.remote_addr = None
-			record.request_data = None
-		return super().format(record)
-
-line_separator = '-' * 150 
-formatter = RequestFormatter(line_separator + 
-    '\n[%(asctime)s] %(remote_addr)s requested %(url)s\n' 
-    'with POST data %(request_data)s\n'
-    '%(levelname)s in %(module)s message:\n %(message)s\n' +
-    line_separator
-)
-logging.root.handlers[0].setFormatter(formatter)
 
 
-app = Flask(__name__)
+# Configure logging before initializing the Flask instance because Flask will 
+#	otherwise create its own default_logger if a logger doesn't already exist
+#	according to the docs: https://flask.palletsprojects.com/en/stable/logging/
+configure_logging(app_name, log_dir)
 
-# Error handling
+###### Initialize app #####
+app = Flask(app_name)
+
+
 @app.errorhandler(500)
 def internal_server_error(error):
-	app.logger.error(traceback.format_exc())
+	"""
+	Capture errors in both logs and server responses. Errors get automatically 
+	logged, but send a response back to the client as well
+	"""
+	return 'ERROR: Internal Server Error.<br>' + traceback.format_exc() + '<br><br>request: ' + json.dumps(request.json)
 
-	return 'ERROR: Internal Server Error.\n' + traceback.format_exc() + '\n\nrequest: ' + json.dumps(request.json)
 
-
-# Load config
+####### Load config #####
 if not os.path.isfile(climberdb_utils.CONFIG_FILE):
 	raise IOError(f'CONFIG_FILE does not exists: {climberdb_utils.CONFIG_FILE}')
 if not app.config.from_file(climberdb_utils.CONFIG_FILE, load=json.load):
@@ -137,6 +96,7 @@ def get_environment() -> str:
 	return climberdb_utils.get_environment()
 
 
+###### Add configuration from DB #######
 def get_config_from_db() -> dict:
 	"""
 	Retrieve saved configuration values for the web app from the 'config' table
@@ -175,7 +135,7 @@ def get_config_from_db() -> dict:
 
 	return db_config
 
-# Call it
+# Call the function
 get_config_from_db()
 
 # Establish global scope sessionmakers to reuse at the function scope
@@ -185,7 +145,7 @@ write_engine = climberdb_utils.get_engine(access='write', schema=schema)
 ReadSession = sessionmaker(read_engine)
 WriteSession = sessionmaker(write_engine)
 
-# Get DB model in app's global scope
+##### Get DB model in app's global scope ####
 tables = climberdb_utils.get_tables()
 
 
@@ -1572,6 +1532,8 @@ def save_config():
 
 @app.route('/flask/db/delete/by_id', methods=['POST'])
 def delete_by_id():
+
+	raise ValueError('test error')
 
 	request_data = request.get_json()
 
