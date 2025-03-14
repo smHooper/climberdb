@@ -142,31 +142,30 @@ class ClimberDBUsers extends ClimberDB {
 		if (matchedUsers.length) {
 			const status = matchedUsers[0].user_status_code;
 			const matchedUserID = matchedUsers[0].id;
-			var message = `The user <strong>${username}</strong> already exists `
-			var footerButtons = '';
+			var 
+				message = `The user <strong>${username}</strong> already exists `,
+				modalType = 'alert',
+				eventHandler = () => {};
 			if (status == -1) {
-				message += `but the account is currently disabled. Would you like to enable it?`;
-				//TODO: need to send password reset email to enabled user
-				const onConfirmClick = `
-					climberDB.discardEdits(); //remove new user
-					const $tr = $('#main-data-table tbody tr[data-table-id=${matchedUserID}]');
-					// set user status code to 'enabled' for matched user
-					$tr.ariaHide(false)
-						.removeClass('uneditable')
-						.find('.input-field[name=user_status_code]')
-							.val(2)
-							.change();
-				`;
-				footerButtons = `
-					<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
-					<button class="generic-button modal-button primary-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
-				`;
+				message += `but the account is currently disabled. Would you like to enable this account?`;
+				modalType = 'yes/no'
+				eventHandler = () => {
+					$('#alert-modal .confirm-button').click(() => {
+						this.discardEdits(); //remove new user
+						const $tr = $(`#main-data-table tbody tr[data-table-id=${matchedUserID}]`);
+						// set user status code to 'enabled' for matched user
+						$tr.ariaHide(false)
+							.removeClass('uneditable')
+							.find('.input-field[name=user_status_code]')
+								.val(2)
+								.change();
+					});
+				}
 			} else {
 				message += 'and each user must have a unique username that matches their Windows Active Directory username.'
-				footerButtons = '';
 			}
 			
-			this.showModal(message, 'Duplicate username', {footerButtons: footerButtons});
+			this.showModal(message, 'Duplicate username', {modalType: 'confirm', eventHandlerCallable: eventHandler});
 		}
 	}
 
@@ -476,7 +475,7 @@ class ClimberDBUsers extends ClimberDB {
 			this.showModal(`An unexpected error occurred while saving data to the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
 			// roll back in-memory data
 		}).always(() => {
-		 	climberDB.hideLoadingIndicator();
+		 	hideLoadingIndicator();
 		});
 
 	}

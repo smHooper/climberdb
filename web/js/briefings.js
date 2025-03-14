@@ -901,14 +901,16 @@ class ClimberDBBriefings extends ClimberDB {
 			this.closeAppointmentDetailsDrawer();
 		} else {
 			const briefingID = $selectedAppointment.data('briefing-id');
-			const onConfirmClick = `
-				showLoadingIndicator();
-				climberDB.deleteBriefing(${briefingID}) 
-			`;
+			const eventHandler = () => {
+				$('#alert-modal .delete-button').click(() => {
+					showLoadingIndicator();
+					this.deleteBriefing(briefingID) 
+				})
+			}
 			
 			const footerButtons = `
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
-				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick};">Delete</button>
+				<button class="generic-button modal-button danger-button delete-button close-modal" data-dismiss="modal">Delete</button>
 			`;
 			const briefingInfo = this.getBriefingInfo(briefingID);
 			var briefingStart = '';
@@ -923,8 +925,10 @@ class ClimberDBBriefings extends ClimberDB {
 			this.showModal(
 				message,
 				'Delete This Briefing?',
-				'alert',
-				footerButtons
+				{
+					footerButtons: footerButtons,
+					eventHandlerCallable: eventHandler
+				}
 			);
 		}
 	}

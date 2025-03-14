@@ -244,15 +244,18 @@ class ClimberDB {
 	getDefaultModalFooterButtons(modalType) {
 		/* 
 		Helper method to return HTML for modal footer buttons based on type 
-		of modal 'alert' or 'confirm'. 'confirm' is for asking the user to 
+		of modal 'confirm', 'yes/no', or 'alert'. 'confirm' and 'yes/no' are for asking the user to 
 		confirm or discard changes or some action while 'alert' just provides 
 		information and an 'OK' button
 		*/
 		
 		return  modalType === 'confirm' ? 
-				'<button class="generic-button secondary-button modal-button close-modal confirm-button" data-dismiss="modal">Close</button>' +
+				'<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Cancel</button>' +
 				'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
-			  :
+			: modalType === 'yes/no' ? 
+				'<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>' +
+				'<button class="generic-button modal-button primary-button close-modal confirm-button" data-dismiss="modal>Yes</button>'
+			:
 			'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
 			;
 	}
@@ -286,7 +289,7 @@ class ClimberDB {
 	        return;
 	    }
 
-	    function processQueue() {
+	    const processQueue = () => {
 	        if (queue.length === 0) return;
 
 	        // Get the next modal request
@@ -294,7 +297,7 @@ class ClimberDB {
 	        
 	        $modal.addClass('showing');
 
-	        const finalFooterButtons = footerButtons || getDefaultModalFooterButtons(modalType);
+	        const finalFooterButtons = footerButtons || this.getDefaultModalFooterButtons(modalType);
 
 	        const closeButton = `
 	            <button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
