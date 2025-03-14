@@ -150,7 +150,7 @@ def configure_logging(app_name, log_dir):
 	root_logger = logging.root
 	root_logger.handlers[0].setFormatter(file_formatter) # file
 	root_logger.handlers[1].setFormatter(email_formatter) # email
-	
+
 
 # Configure logging before initializing the Flask instance because Flask will 
 #	otherwise create its own default_logger if a logger doesn't already exist
@@ -1618,8 +1618,6 @@ def save_config():
 
 @app.route('/flask/db/delete/by_id', methods=['POST'])
 def delete_by_id():
-
-	raise ValueError('test error')
 
 	request_data = request.get_json()
 

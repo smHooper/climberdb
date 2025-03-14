@@ -1119,7 +1119,7 @@ class ClimberDBQuery extends ClimberDB {
 			$target.val($target.data('current-value'));
 			const message = `The "${otherLabelText}" field ${targetIsGroupBy ? 'is already set to' : 'already includes'} "${otherValueText}". Either` + 
 				` choose a different "${targetLabelText}" value or change the "${otherLabelText}" value.`;
-			showModal(message, `Invalid ${targetLabelText} value`);
+			this.showModal(message, `Invalid ${targetLabelText} value`);
 		}
 
 		// when the group by or pivot field is backcountry_location_codes, make sure is_backcountry_yes_no is set
@@ -1334,7 +1334,7 @@ class ClimberDBQuery extends ClimberDB {
 			const message = `The field <strong>${firstErrorFieldName}</strong> must be filled` +
 				' in before you can run this query.';
 			const eventHandler = () => {$('#alert-modal .confirm-button').click(() => {$firstErrorField.focus()})}
-			showModal(message, 'Missing Parameter', 'alert', '', {eventHandlerCallable: eventHandler})
+			this.showModal(message, 'Missing Parameter', {modalType: 'alert', eventHandlerCallable: eventHandler})
 			$errors.removeClass('error');
 		}
 
@@ -1520,7 +1520,7 @@ class ClimberDBQuery extends ClimberDB {
 			where = ' WHERE ' + whereClauses.join(' AND ');
 		}
 		if (where.length == 0) {
-			showModal('You must enter an expedition name search string or select a year or expedition ID', 'No Query Parameters')
+			this.showModal('You must enter an expedition name search string or select a year or expedition ID', 'No Query Parameters')
 			return;
 		}
 
@@ -1915,7 +1915,7 @@ class ClimberDBQuery extends ClimberDB {
 			}	
 		}).fail( (xhr, status, error) => {
 			$('#exports-modal').modal('hide');
-			showModal(`An unexpected error occurred while exporting the data: ${error}.${this.getDBContactMessage()}`, 'Unexpected Error');
+			this.showModal(`An unexpected error occurred while exporting the data: ${error}.${this.getDBContactMessage()}`, 'Unexpected Error');
 		}).always(() => {
 			hideLoadingIndicator();
 		})

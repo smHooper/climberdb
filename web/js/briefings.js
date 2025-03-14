@@ -589,7 +589,7 @@ class ClimberDBBriefings extends ClimberDB {
 		showLoadingIndicator('saveEdits');
 
 		if (!$('.appointment-details-drawer .input-field.dirty').length) {
-			showModal('You have not made any edits to save yet.', 'No edits to save');
+			this.showModal('You have not made any edits to save yet.', 'No edits to save');
 			hideLoadingIndicator();
 			return;
 		}
@@ -599,7 +599,7 @@ class ClimberDBBriefings extends ClimberDB {
 				const $input = $(el);
 				const labelText = $input.siblings('.field-label').text();
 				$input.addClass('error').focus();
-				showModal(`Before you can save this briefing, all fields except "Briefing ranger" must be filled in and the '${labelText}' field is blank. Fill in this and any other blank fields, then try to save your changes.`, 'Empty field');
+				this.showModal(`Before you can save this briefing, all fields except "Briefing ranger" must be filled in and the '${labelText}' field is blank. Fill in this and any other blank fields, then try to save your changes.`, 'Empty field');
 				hideLoadingIndicator();
 				return;
 			}
@@ -712,7 +712,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 			}
 		}).fail((xhr, status, error) => {
-			showModal(
+			this.showModal(
 				`An unexpected error occurred while saving data to the database: ${error}.` + 
 					` Make sure you're still connected to the NPS network and try again. ` + 
 					this.getBriefingDateFromURL(), 
@@ -782,7 +782,7 @@ class ClimberDBBriefings extends ClimberDB {
 				});
 			})
 		}
-		showModal(
+		this.showModal(
 			'You have unsaved edits to this briefing. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this briefing.',
 			'Save edits?',
 			'confirm',
@@ -868,7 +868,7 @@ class ClimberDBBriefings extends ClimberDB {
 					} else {
 						const result = response.data || {};
 						if (Object.keys(result).length === 0) {
-							showModal(message, 'Record Does Not Exist in Database');
+							this.showModal(message, 'Record Does Not Exist in Database');
 							return;
 						}
 
@@ -920,7 +920,7 @@ class ClimberDBBriefings extends ClimberDB {
 			}
 			const expeditionNameText = briefingInfo ? ` for <strong>${briefingInfo.expedition_name}</strong>` : '';
 			const message = `Are you sure you want to delete ${briefingStart ? 'the ' : 'this'}<strong>${briefingStart}</strong> briefing${expeditionNameText}? This action is permanent and <strong>cannot be undone</strong>.`
-			showModal(
+			this.showModal(
 				message,
 				'Delete This Briefing?',
 				'alert',
@@ -1027,7 +1027,7 @@ class ClimberDBBriefings extends ClimberDB {
 							` to ${thisEndDatetime.toLocaleTimeString('en-us', {hour: 'numeric', minute: 'numeric'})}` + 
 							` with ${nClimbersScheduled} total climbers. The maximum number of climbers allowed in` + 
 							` a briefing is ${this.config.max_people_per_briefing}` ;
-						showModal(message, 'Scheduling conflict');
+						this.showModal(message, 'Scheduling conflict');
 						isAvailable = false;
 						break;
 					}
@@ -1039,7 +1039,7 @@ class ClimberDBBriefings extends ClimberDB {
 						thisStartDatetime.toLocaleTimeString('en-us', {hour: 'numeric', minute: 'numeric'}) + 
 						` to ${thisEndDatetime.toLocaleTimeString('en-us', {hour: 'numeric', minute: 'numeric'})}.` + 
 						` Briefings by the same ranger must either start at the same time or not overlap at all.` ;
-					showModal(message, 'Scheduling conflict');
+					this.showModal(message, 'Scheduling conflict');
 					isAvailable = false;
 					break;
 				}
@@ -1163,7 +1163,7 @@ class ClimberDBBriefings extends ClimberDB {
 		//	because if it's the begining the briefing will just be bumped up or down
 		if (!targetIsStartTime && newStartTime.padStart(5, '0') >= endTime.padStart(5, '0')) {
 			const message = `The briefing start time must be before the end time. The start time is currently set to <strong>${newStartTime}</strong> but the end time you selected is <strong>${endTime}</strong>.`;
-			showModal(message, 'Invalid Briefing End Time');
+			this.showModal(message, 'Invalid Briefing End Time');
 			this.revertInputValue($target, {briefingInfo: info});
 			return;
 		}
@@ -1664,7 +1664,7 @@ class ClimberDBBriefings extends ClimberDB {
 				window.location.href = resultString;
 			}
 		}).fail((xhr, status, error) => {
-			showModal('An unexpected error occurred while exporting the briefing schedule: ' + error)
+			this.showModal('An unexpected error occurred while exporting the briefing schedule: ' + error)
 		}).always(() => {hideLoadingIndicator()})
 
 	}
@@ -1684,7 +1684,7 @@ class ClimberDBBriefings extends ClimberDB {
 		if (rangeLengthDays > 366) {
 			const message = 'You entered a date range of more than one year. Change either' + 
 				' the start or the end date so that the total range is less than one year.'
-			showModal(message, 'Date Range Too Large');
+			this.showModal(message, 'Date Range Too Large');
 			return;
 		}
 

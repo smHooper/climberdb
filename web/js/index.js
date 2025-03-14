@@ -65,7 +65,7 @@ class ClimberDBIndex extends ClimberDB {
 		this.verifyPassword(password)
 			.done(isValid => {
 				if (!isValid) {
-					//showModal('Password incorrect', 'Incorrect password');
+					//this.showModal('Password incorrect', 'Incorrect password');
 					this.showInvalidPasswordMessage('#incorrect-password-message');
 				} else {
 					const stayLoggedIn = $('#retain-login-checkbox').prop('checked');
@@ -118,7 +118,7 @@ class ClimberDBIndex extends ClimberDB {
 				$('#reset-password-success-message').ariaHide(false);
 			}
 		}).fail((xhr, status, error) => { 
-			showModal(`Password reset email failed to send with the error: ${error}.${this.getDBContactMessage()}`, 'Email Server Error')
+			this.showModal(`Password reset email failed to send with the error: ${error}.${this.getDBContactMessage()}`, 'Email Server Error')
 		}).always(() => {this.toggleDotLoadingIndicator($buttonContainer, {hide: true})})
 	}
 
@@ -160,10 +160,10 @@ class ClimberDBIndex extends ClimberDB {
 				$('#sign-in-form-container').ariaHide();
 				$('#account-request-success-message').ariaHide(false);
 			} else {
-				showModal('There was a problem submitting your request. Check your network connection and try again.', 'Unexpected error');
+				this.showModal('There was a problem submitting your request. Check your network connection and try again.', 'Unexpected error');
 			}
 		}).fail((xhr, status, error) => {
-			showModal(`There was a problem submitting your request: ${error}. Check your network connection and try again.`, 'Unexpected error');
+			this.showModal(`There was a problem submitting your request: ${error}. Check your network connection and try again.`, 'Unexpected error');
 		}).always(() => {
 			hideLoadingIndicator()
 		})
@@ -292,10 +292,10 @@ class ClimberDBIndex extends ClimberDB {
 					//	open the regular log-in page
 					window.location.href = $('#set-password-button').data('target') || window.location.pathname;
 				} else {
-					showModal(`There was a problem setting your password. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Database Error');
+					this.showModal(`There was a problem setting your password. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Database Error');
 				}
 			}).fail((xhr, error, status) => {
-				showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+				this.showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
 			}).always(() => {this.toggleDotLoadingIndicator($buttonContainer, {hide: true});})
 		})
 	}

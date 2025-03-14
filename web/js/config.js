@@ -121,12 +121,13 @@ class ClimberDBConfig extends ClimberDB {
 			<button class="generic-button modal-button danger-button discard-button close-modal" data-dismiss="modal">Discard</button>
 			<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal">Save</button>
 		`;
-		showModal(
+		this.showModal(
 			'You have unsaved edits. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing.',
 			'Save edits?',
-			'alert',
-			footerButtons,
-			{eventHandlerCallable: eventHandler}
+			{
+				footerButtons: footerButtons,
+				eventHandlerCallable: eventHandler
+			}
 		)
 	}
 
@@ -216,7 +217,7 @@ class ClimberDBConfig extends ClimberDB {
 		const $cuaInputs = $('.cua-table-input.dirty');
 
 		if (![...$configInputs, ...$cuaInputs].length) {
-			showModal('You have not yet made any edits to save.', 'No edits to save');
+			this.showModal('You have not yet made any edits to save.', 'No edits to save');
 			return;
 		}
 
@@ -244,7 +245,7 @@ class ClimberDBConfig extends ClimberDB {
 			const inputValue = $el.val();
 			if (inputValue == 'None') {
 				hideLoadingIndicator();
-				showModal(
+				this.showModal(
 					'The CUA company code option for "None" is always included by default.' +
 					' Delete this row to save any other edits or additions.', 
 					'Invalid CUA Company Name'
@@ -300,7 +301,7 @@ class ClimberDBConfig extends ClimberDB {
 				this.toggleBeforeUnload(false);
 			}
 		}).fail((xhr, status, error) => {
-			showModal(`An unexpected error occurred while saving data to the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
+			this.showModal(`An unexpected error occurred while saving data to the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
 			// roll back in-memory data
 		}).always(() => {
 		 	this.hideLoadingIndicator();
@@ -422,7 +423,7 @@ class ClimberDBConfig extends ClimberDB {
 					})
 				})
 			}
-			showModal(message, 'Remove CUA Guide Company', 'alert', footerButtons, {eventHandlerCallable: eventHandler});
+			this.showModal(message, 'Remove CUA Guide Company', {footerButtons: footerButtons, eventHandlerCallable: eventHandler});
 		}
 	}
 

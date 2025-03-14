@@ -711,7 +711,7 @@ class ClimberDBDashboard extends ClimberDB {
 					.text(result.length);
 			}
 		}).fail(() => {
-			showModal('There was a problem loading backcountry group data', 'Database Error')
+			this.showModal('There was a problem loading backcountry group data', 'Database Error')
 		})
 	}
 

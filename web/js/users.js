@@ -142,7 +142,7 @@ class ClimberDBUsers extends ClimberDB {
 		if (matchedUsers.length) {
 			const status = matchedUsers[0].user_status_code;
 			const matchedUserID = matchedUsers[0].id;
-			var message = `The user ${username} already exists `
+			var message = `The user <strong>${username}</strong> already exists `
 			var footerButtons = '';
 			if (status == -1) {
 				message += `but the account is currently disabled. Would you like to enable it?`;
@@ -166,7 +166,7 @@ class ClimberDBUsers extends ClimberDB {
 				footerButtons = '';
 			}
 			
-			showModal(message, 'Duplicate username', 'confirm', footerButtons);
+			this.showModal(message, 'Duplicate username', {footerButtons: footerButtons});
 		}
 	}
 
@@ -209,7 +209,7 @@ class ClimberDBUsers extends ClimberDB {
 				footerButtons = '';
 			}
 			
-			showModal(message, 'Duplicate user', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+			this.showModal(message, 'Duplicate user', {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler});
 		}
 	}
 
@@ -358,7 +358,7 @@ class ClimberDBUsers extends ClimberDB {
 		const $table = $($(e.target).closest('button').data('target'))
 		// if there's already a new user, force the user to save or discard that one
 		if ($table.find('.new-user').length) {
-			showModal('You already created a new user. Either save those changes or delete that user before creating another one.', 'Save Error');
+			this.showModal('You already created a new user. Either save those changes or delete that user before creating another one.', 'Save Error');
 			return;
 		}
 		// If the user is currently editing
@@ -384,7 +384,7 @@ class ClimberDBUsers extends ClimberDB {
 		const $inputs = $tr.find('.input-field.dirty');
 
 		if (!$inputs.length) {
-			showModal('You have not yet made any edits to save.', 'No edits to save');
+			this.showModal('You have not yet made any edits to save.', 'No edits to save');
 			return;
 		}
 
@@ -462,18 +462,18 @@ class ClimberDBUsers extends ClimberDB {
 						}).done(resultString => {
 							const pythonError = this.pythonReturnedError(resultString);
 							if (pythonError !== false) {
-								showModal(`Account activation email failed to send with the error:\n${pythonError.trim()}.\nYou can send the activation link directly to ${firstName}: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
+								this.showModal(`Account activation email failed to send with the error:\n${pythonError.trim()}.\nYou can send the activation link directly to ${firstName}: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
 							} else {
-								showModal(`An activation email was successfully sent to ${email} with the activation link <a href="${activationURL}">${activationURL}</a>. The account will not be active until ${firstName} completes the activation process.`, 'Activation Email Sent')
+								this.showModal(`An activation email was successfully sent to ${email} with the activation link <a href="${activationURL}">${activationURL}</a>. The account will not be active until ${firstName} completes the activation process.`, 'Activation Email Sent')
 							}
 						}).fail((xhr, status, error) => { 
-							showModal(`Account activation email failed to send with the error: ${error}. You can send the activation link directly to the user whose account you just created: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
+							this.showModal(`Account activation email failed to send with the error: ${error}. You can send the activation link directly to the user whose account you just created: <br><a href="${activationURL}">${activationURL}</a>`, 'Email Server Error')
 						})
 					}
 				}
 			}
 		}).fail((xhr, status, error) => {
-			showModal(`An unexpected error occurred while saving data to the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
+			this.showModal(`An unexpected error occurred while saving data to the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
 			// roll back in-memory data
 		}).always(() => {
 		 	climberDB.hideLoadingIndicator();
@@ -537,12 +537,13 @@ class ClimberDBUsers extends ClimberDB {
 			<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal">Save</button>
 		`;
 
-		showModal(
+		this.showModal(
 			`You have unsaved edits to this user. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this user.`,
 			'Save edits?',
-			'alert',
-			footerButtons,
-			{eventHandlerCallable: onClickHandler}
+			{
+				footerButtons: footerButtons,
+				eventHandlerCallable: onClickHandler
+			}
 		);
 	}
 
@@ -571,7 +572,7 @@ class ClimberDBUsers extends ClimberDB {
 					` <a href="mailto:${this.config.db_admin_email}">Contact your database` +
 					` adminstrator</a> if the problem persists. Full error: <br><br>Could not ` +
 					` save edits because table-id is null`;
-				showModal(message, 'Unexpected error');
+				this.showModal(message, 'Unexpected error');
 				return;
 			}
 			const formData = new FormData()
@@ -592,7 +593,7 @@ class ClimberDBUsers extends ClimberDB {
 					$userRow.fadeRemove()
 				}
 			}).fail((xhr, status, error) => {
-				showModal('Database Error', 'The user could not be disabled because the system encountered an unexpected error: <br><br>' + error)
+				this.showModal('Database Error', 'The user could not be disabled because the system encountered an unexpected error: <br><br>' + error)
 			});
 		}
 	}
@@ -611,7 +612,7 @@ class ClimberDBUsers extends ClimberDB {
 			cache: false
 		}).done(resultString => {
 			if (!this.pythonReturnedError(resultString, {errorExplanation: 'The password reset email failed to send because of an unexpected error.'})) {
-				showModal(`A password reset email was sent to ${email_address}. The user's account will be inactive until they change their password.`, 'Password reset email sent');
+				this.showModal(`A password reset email was sent to ${email_address}. The user's account will be inactive until they change their password.`, 'Password reset email sent');
 				$(`tr[data-table-id=${userID}]`).addClass('inactive')
 					.find('.input-field[name=user_status_code]')
 						// set status to "inactive" in the UI but don't worry about saving because it's already doen server-side
@@ -619,7 +620,7 @@ class ClimberDBUsers extends ClimberDB {
 						//.change(); 
 			}
 		}).fail((xhr, status, error) => { 
-			showModal(`Password reset email failed to send with the error: ${error}.${this.getDBContactMessage()}`, 'Email Server Error')
+			this.showModal(`Password reset email failed to send with the error: ${error}.${this.getDBContactMessage()}`, 'Email Server Error')
 		});
 	}
 
@@ -631,7 +632,7 @@ class ClimberDBUsers extends ClimberDB {
 
 		const $tr = $('tbody tr:not(.uneditable)');
 		if ($tr.is('.new-user')) {
-			showModal('This is a new user so their password does not need to be reset. To send an activation email to the user, click the "Save" button', 'Invalid action');
+			this.showModal('This is a new user so their password does not need to be reset. To send an activation email to the user, click the "Save" button', 'Invalid action');
 			return;
 		}
 
@@ -648,7 +649,10 @@ class ClimberDBUsers extends ClimberDB {
 		const onConfirmClick = () => {$('#alert-modal .confirm-button').click(() => {
 			this.sendPasswordResetEmail(username, userID, email_address)
 		})}
-		showModal(`Are you sure want to reset ${firstName}'s password? If you click 'Yes', ${firstName} will receive an email at ${email_address} with a link to reset their password, but their account will be suspended until they reset it.`, 'Send password reset email?', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClick});
+		const message = `Are you sure want to reset ${firstName}'s password? If you click` + 
+			` 'Yes', ${firstName} will receive an email at ${email_address} with a link to` +
+			' reset their password, but their account will be suspended until they reset it.';
+		this.showModal(message, 'Send password reset email?', {footerButtons: footerButtons, eventHandlerCallable: onConfirmClick});
 	}
 
 
