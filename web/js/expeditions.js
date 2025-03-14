@@ -1093,11 +1093,10 @@ class ClimberDBExpeditions extends ClimberDB {
 				const routeCode = $routeCodeInput.val();
 				onConfirmClickHandler = () => {
 					$('#alert-modal .confirm-button').click(() => {
-						const sql = `DELETE FROM ${this.dbSchema}.expedition_member_routes WHERE id IN (${memberRouteIDs})`;
 						this.deleteByID('expedition_member_routes', memberRouteIDs)
 							.done(response => {
 								if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while attempting to delete this route.'})) {
-									const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
+									const routeDeleted = delete this.expeditionInfo.expedition_member_routes.data[routeCode];
 									if (routeDeleted) {
 										// remove the route from in-memory .order
 										this.expeditionInfo.expedition_member_routes.order = this.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
@@ -1175,7 +1174,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						const climberID = el.value;
 						const climberName = el.innerHTML;
 						const memberID = Object.keys(memberData).filter(id => parseInt(memberData[id].climber_id) === parseInt(climberID)).pop()
-						climberDB.addRouteMember($list, climberName, climberID, {expeditionMemberID: memberID});
+						this.addRouteMember($list, climberName, climberID, {expeditionMemberID: memberID});
 					}
 				})
 			}
@@ -2522,7 +2521,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		};
 		
 		// Get human-readable values from selects
-		for (const property of Object.keys(climberDB.expeditionInfo.expeditions).filter(k => k.endsWith('_code'))) {
+		for (const property of Object.keys(this.expeditionInfo.expeditions).filter(k => k.endsWith('_code'))) {
 			pdfData[property.replace('_code', '')] = this.selectValueToText(property, pdfData[property]);
 		}
 
@@ -2607,7 +2606,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			// Get total payment
 			var totalPayment = 0;
-			for (const transactions of Object.values(climberDB.expeditionInfo.transactions)) {
+			for (const transactions of Object.values(this.expeditionInfo.transactions)) {
 				for (const info of Object.values(transactions.data)) {
 					// only add negative-value tranactions because the rest are charges
 					if ( (info.transaction_value < 0) && (info.transaction_type_code == 24) ) 
@@ -3081,7 +3080,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	onAddClimberToExpeditionClick(e) {
 
 		// Check if the climber is already a member of this expedition
-		const currentClimberIDs = Object.values(climberDB.expeditionInfo.expedition_members.data)
+		const currentClimberIDs = Object.values(this.expeditionInfo.expedition_members.data)
 			.map(member => member.climber_id);
 		const climberID = $('#modal-climber-select').val();
 		const climberInfo = this.climberForm.selectedClimberInfo.climbers[climberID];
@@ -3801,8 +3800,10 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 					this.expeditionInfo.expeditions.id = firstRow.expedition_id;
 				} else {
-					const footerButton = '<button class="generic-button modal-button close-modal" onclick="climberDB.createNewExpedition()" data-dismiss="modal">Close</button>';
-					this.showModal(`There are no expeditions with the database ID '${expeditionID}'. This expedition was either deleted or the URL you are trying to use is invalid.`, 'Invalid Expedition ID', 'alert', footerButton);
+					const eventHandler = () => {$('#alert-modal .close-modal').click(() => {this.createNewExpedition()})}
+					const footerButton = '<button class="generic-button modal-button close-modal" data-dismiss="modal">Close</button>';
+					const message = `There are no expeditions with the database ID '${expeditionID}'. This expedition was either deleted or the URL you are trying to use is invalid.`;
+					this.showModal(message, 'Invalid Expedition ID', {footerButtons: footerButton, eventHandlerCallable: eventHandler});
 				}
 
 				// Get data for right-side tables
@@ -4299,51 +4300,6 @@ class ClimberDBExpeditions extends ClimberDB {
 			return;
 		}
 		this.addAttachmentListItem($button.closest('.attachments-tab-pane').find('.data-list'));
-	}
-
-
-	/*
-	Handler for when the user changes the attachment type
-	*/
-	onAttachmentTypeChange(e) {
-
-		const $fileTypeSelect = $(e.target);
-		const fileTypeSelectID = $fileTypeSelect.attr('id');
-		const previousFileType = $fileTypeSelect.data('previous-value');//should be undefined if this is the first time this function has been called
-		const $fileInput = $fileTypeSelect.closest('.card-body').find('.file-input-label ~ input[type=file]');
-		const $fileInputLabel = $fileTypeSelect.closest('.card-body').find('.file-input-label');
-		const fileInputID = $fileInput.attr('id');
-
-		if ($fileTypeSelect.val()) {
-			$fileInput.removeAttr('disabled')
-			$fileInputLabel.removeAttr('disabled')
-		}
-		else {
-			$fileInput.attr('disabled', true)
-			$fileInputLabel.attr('disabled', true)
-		}
-
-		// If the data-previous-value attribute has been set and there's already a file uploaded, that means the user has already selected a file
-		if (previousFileType && $fileInput.get(0).files[0]) {
-			const onConfirmClick = `
-				entryForm.updateAttachmentAcceptString('${fileTypeSelectID}');
-				$('#${fileInputID}').click();
-			`;
-			// **** move to eventHandler ****
-			const footerButtons = `
-				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal" onclick="$('#${fileTypeSelectID}').val('${previousFileType}');">No</button>
-				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
-			`;
-			const fileTypeCode = $fileTypeSelect.val();
-			const fileType = $fileTypeSelect.find('option')
-				.filter((_, option) => {return option.value === fileTypeCode})
-				.html()
-				.toLowerCase();
-
-			this.showModal(`You already selected a file. Do you want to upload a new <strong>${fileType}</strong> file instead?`, `Upload a new file?`, {footerButtons: footerButtons});
-		} else {
-			_this.updateAttachmentAcceptString($fileTypeSelect.attr('id'));
-		}
 	}
 
 
