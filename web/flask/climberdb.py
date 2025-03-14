@@ -93,6 +93,17 @@ def configure_logging(app_name, log_dir):
 		app_config = json.load(f)
 
 	environment = climberdb_utils.get_environment()
+	
+	# If the config file doesn't have a specific property set for error notification 
+	#	recipients, just send them to the DB admin
+	error_recipients = (
+		app_config.get('ERROR_NOTIFICATION_RECIPIENTS') or 
+		app_config.get('DB_ADMIN_EMAIL')
+	)
+	# And since the recipients could be a string or list, make sure it's a list
+	if not isinstance(error_recipients, list):
+		error_recipients = str(error_recipients).split(',')
+	
 	logging_config = {
 		'version': 1,
 		'formatters': {
@@ -118,7 +129,7 @@ def configure_logging(app_name, log_dir):
 				'level': 	'ERROR',
 				'mailhost': app_config['MAIL_SERVER'],
 				'fromaddr': f'ClimberDB Error Notifications <{app_name}.{environment}-notifications@nps.gov>',
-				'toaddrs':	[app_config['DB_ADMIN_EMAIL']],
+				'toaddrs':	error_recipients,
 				'subject':	f'An error occurred with the {app_name} app'
 			}
 		},
