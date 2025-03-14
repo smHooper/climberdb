@@ -16,10 +16,9 @@ from uuid import uuid4
 
 from flask import Flask, has_request_context, json, jsonify, render_template, request, url_for
 from flask_mail import Mail, Message
-from flask.logging import default_handler
 
 import logging
-from logging.config import dictConfig as loggingDictConfig
+from logging.config import dictConfig
 
 from sqlalchemy import asc
 from sqlalchemy import case
@@ -37,6 +36,7 @@ from werkzeug.datastructures import FileStorage
 
 # climberdb modules
 from cache_tag import CacheTag, print_zpl
+#from climberdb_logging import configure_logging
 import climberdb_utils
 from export_briefings import briefings_to_excel
 
@@ -58,43 +58,22 @@ def wait_for_weasyprint():
 	'''
 	weasyprint_thread.join()
 
+app_name = __name__
 
-# Enable logging
+###### Enable logging #####
 log_dir = os.path.join(os.path.dirname(__file__), 'logs')
 if not os.path.isdir(log_dir):
 	os.mkdir(log_dir)
-# Configure a logger that will create a new file each day
-#	Only 100 logs will be saved before they oldest one is deleted
-loggingDictConfig(
-	{
-		"version": 1,
-		"formatters": {
-			"default": {
-				"datefmt": "%B %d, %Y %H:%M:%S %Z",
-			},
-		},
-		"handlers": {
-			"time-rotate": {
-				"class": "logging.handlers.TimedRotatingFileHandler",
-				"filename": os.path.join(log_dir, 'flask.log'),
-				"when": "D",
-				"interval": 1,
-				"backupCount": 100,
-				"formatter": "default",
-			},
-		},
-		"root": {
-			"level": "DEBUG",
-			"handlers": ["time-rotate"],
-		},
-	}
-)
-# Configure a custom formatter to include request information
-class RequestFormatter(logging.Formatter):
+
+class RequestLoggingFormatter(logging.Formatter):
+	"""
+	Configure a custom formatter to include request information
+	"""
 	def format(self, record):
 		if has_request_context():
 			record.url = request.url
 			record.remote_addr = request.remote_addr
+			record.user = request.remote_user
 			record.request_data = (
 				'**ommitted**' if request.url.endswith('checkPassword') else 
 				json.dumps(request.form)
@@ -102,41 +81,127 @@ class RequestFormatter(logging.Formatter):
 		else:
 			record.url = None
 			record.remote_addr = None
+			record.user = None
 			record.request_data = None
 		return super().format(record)
 
-line_separator = '-' * 150 
-formatter = RequestFormatter(line_separator + 
-    '\n[%(asctime)s] %(remote_addr)s requested %(url)s\n' 
-    'with POST data %(request_data)s\n'
-    '%(levelname)s in %(module)s message:\n %(message)s\n' +
-    line_separator
-)
-logging.root.handlers[0].setFormatter(formatter)
+
+def configure_logging(app_name, log_dir):
 
 
-app = Flask(__name__)
+	with open(climberdb_utils.CONFIG_FILE) as f:
+		app_config = json.load(f)
 
-# Error handling
+	environment = climberdb_utils.get_environment()
+	
+	# If the config file doesn't have a specific property set for error notification 
+	#	recipients, just send them to the DB admin
+	error_recipients = (
+		app_config.get('ERROR_NOTIFICATION_RECIPIENTS') or 
+		app_config.get('DB_ADMIN_EMAIL')
+	)
+	# And since the recipients could be a string or list, make sure it's a list
+	if not isinstance(error_recipients, list):
+		error_recipients = str(error_recipients).split(',')
+	
+	logging_config = {
+		'version': 1,
+		'formatters': {
+			'default': {
+				'datefmt': '%B %d, %Y %H:%M:%S %Z',
+			},
+		},
+		'handlers': {
+			# Configure a logger that will create a new file each day
+			#	Only 100 logs will be saved before they oldest one is deleted
+			'file': {
+				'class': 'logging.handlers.TimedRotatingFileHandler',
+				'filename': os.path.join(log_dir, 'flask.log'),
+				'when': 'D',
+				'interval': 1,
+				'backupCount': 100,
+				'formatter': 'default',
+				'level': 'INFO'
+			},
+			# Logger for email notifications of Python errors
+			'email': {
+				'class': 	'logging.handlers.SMTPHandler',
+				'level': 	'ERROR',
+				'mailhost': app_config['MAIL_SERVER'],
+				'fromaddr': f'ClimberDB Error Notifications <{app_name}.{environment}-notifications@nps.gov>',
+				'toaddrs':	error_recipients,
+				'subject':	f'An error occurred with the {app_name} app'
+			}
+		},
+		'root': {
+			'level': 'INFO',
+			'handlers': ['file', 'email'],
+		}
+	}
+
+	dictConfig(logging_config)
+
+	line_separator = '-' * 150 
+	file_formatter = RequestLoggingFormatter(line_separator + 
+	    '\n[%(asctime)s] %(user)s requested %(url)s from %(remote_addr)s\n' 
+	    'with POST data %(request_data)s\n'
+	    '%(levelname)s in %(module)s message:\n %(message)s\n' +
+	    line_separator
+	)
+
+	email_formatter = RequestLoggingFormatter(
+		'Time: %(asctime)s\n'
+		'User: %(user)s\n'
+		'URL: %(url)s\n'
+		'Remote Address: %(remote_addr)s\n'
+		'Logger name: %(name)s\n'
+		'\n'
+	)
+
+	root_logger = logging.root
+	root_logger.handlers[0].setFormatter(file_formatter) # file
+	root_logger.handlers[1].setFormatter(email_formatter) # email
+
+
+# Configure logging before initializing the Flask instance because Flask will 
+#	otherwise create its own default_logger if a logger doesn't already exist
+#	according to the docs: https://flask.palletsprojects.com/en/stable/logging/
+configure_logging(app_name, log_dir)
+
+###### Initialize app #####
+app = Flask(app_name)
+
+
 @app.errorhandler(500)
 def internal_server_error(error):
-	app.logger.error(traceback.format_exc())
+	"""
+	Capture errors in both logs and server responses. Errors get automatically 
+	logged, but send a response back to the client as well
+	"""
+	return 'ERROR: Internal Server Error.<br>' + traceback.format_exc() + '<br><br>request: ' + json.dumps(request.json)
 
-	return 'ERROR: Internal Server Error.\n' + traceback.format_exc() + '\n\nrequest: ' + json.dumps(request.json)
 
-
-# Load config
+####### Load config #####
 if not os.path.isfile(climberdb_utils.CONFIG_FILE):
 	raise IOError(f'CONFIG_FILE does not exists: {climberdb_utils.CONFIG_FILE}')
 if not app.config.from_file(climberdb_utils.CONFIG_FILE, load=json.load):
 	raise IOError(f'Could not read CONFIG_FILE: {climberdb_utils.CONFIG_FILE}')
 
 
+@app.route('/flask/test/error', methods=['POST'])
+def test_error_logging() -> bool:
+	data = request.form
+	if data.get('test_client_secret') == app.config['TEST_CLIENT_SECRET']:
+		raise IOError('test error')
+
+	return True
+
 @app.route('/flask/environment', methods=['GET'])
 def get_environment() -> str:
 	return climberdb_utils.get_environment()
 
 
+###### Add configuration from DB #######
 def get_config_from_db() -> dict:
 	"""
 	Retrieve saved configuration values for the web app from the 'config' table
@@ -175,7 +240,7 @@ def get_config_from_db() -> dict:
 
 	return db_config
 
-# Call it
+# Call the function
 get_config_from_db()
 
 # Establish global scope sessionmakers to reuse at the function scope
@@ -185,7 +250,7 @@ write_engine = climberdb_utils.get_engine(access='write', schema=schema)
 ReadSession = sessionmaker(read_engine)
 WriteSession = sessionmaker(write_engine)
 
-# Get DB model in app's global scope
+##### Get DB model in app's global scope ####
 tables = climberdb_utils.get_tables()
 
 

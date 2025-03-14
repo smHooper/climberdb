@@ -743,8 +743,8 @@ class ClimberForm {
 		if (!dob || dob === $dobField.data('current-value')) return;
 
 		const birthdate = new Date(dob + ' 00:00');
-		const calculatedAge = Math.floor((new Date() - birthdate) / climberDB.constants.millisecondsPerDay / 365)
-		const enteredAge = $ageField.val()
+		const calculatedAge = Math.floor((new Date() - birthdate) / (this.constants || this._parent.constants).millisecondsPerDay / 365);
+		const enteredAge = $ageField.val();
 		if (enteredAge && enteredAge != calculatedAge) {
 			const message = `You changed this climber's D.O.B. to a date that conflicts with the currently entered age. Would you like to update the climber's age to ${calculatedAge}?`;
 			const footerButtons = 
@@ -755,9 +755,15 @@ class ClimberForm {
 					$ageField.val(calculatedAge).change();
 				})
 			}
-			showModal(message, 'Update Climber Age?', 'confirm', footerButtons, {eventHandlerCallable: eventHandler})
+			const modalArgs = {
+				modalType: 'confirm', 
+				footerButtons: footerButtons, 
+				eventHandlerCallable: eventHandler, 
+				modalMessageQueue: this._parent.modalMessageQueue
+			}
+			this._parent.showModal(message, 'Update Climber Age?', modalArgs);
 		} else {
-			$ageField.val(calculatedAge).change()
+			$ageField.val(calculatedAge).change();
 		}
 
 	}
@@ -778,12 +784,12 @@ class ClimberForm {
 		if (!dob || !age) return;
 
 		const birthdate = new Date(dob + ' 00:00');
-		const calculatedAge = Math.floor((new Date() - birthdate) / this.constants.millisecondsPerDay / 365);
+		const calculatedAge = Math.floor((new Date() - birthdate) / (this.constants || this._parent.constants).millisecondsPerDay / 365);
 		const enteredAge = $ageField.val();
 
 		if (calculatedAge != enteredAge) {
 			const message = `You entered this climber's age as ${enteredAge}, but this conflicts with the climber's D.O.B. Make sure the data you've entered in both of these fields is correct.`;
-			showModal(message, 'WARNING: Age Conflicts with D.O.B.');
+			this._parent.showModal(message, 'WARNING: Age Conflicts with D.O.B.', {modalMessageQueue: this._parent.modalMessageQueue});
 		}
 
 	}
@@ -857,7 +863,13 @@ class ClimberForm {
 					`You've made changes to the cliimber form. Are you sure you want to close` + 
 					' the form and discard these edits? To continue editing or save your edits, click cancel.';
 				const eventHandler = () => ($('#alert-modal .discard-button').click(() => {afterCloseCallBack.call()}))
-				showModal(message, 'Discard climber edits?', 'confirm', footerButtons, {eventHandlerCallable: eventHandler})
+				const modalArgs = {
+					modalType: 'confirm', 
+					footerButtons: footerButtons, 
+					eventHandlerCallable: eventHandler,
+					modalMessageQueue: this._parent.modalMessageQueue
+				}
+				this._parent.showModal(message, 'Discard climber edits?', modalArgs);
 			} else {
 				// User can save, discard, or cancel
 				this.confirmSaveEdits(afterCloseCallBack);
@@ -1011,7 +1023,7 @@ class ClimberForm {
 					}
 				}
 			}).fail((xhr, status, error) => {
-				showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
+				this._parent.showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
 			});
 
 		}
@@ -1057,14 +1069,12 @@ class ClimberForm {
 					]
 				}
 			}).done(response => {
-				if (this._parent.pythonReturnedError(response)) {
-					showModal('Retrieving climber history from the database failed with the following error:<br>' + response, 'Database Error');
-				} else {
+				if (!this._parent.pythonReturnedError(response, {errorExplanation: 'Retrieving climber history from the database failed.'})) {
 					this.fillClimberHistory(response.data || []);
 				}
 			})
 			.fail((xhr, status, error) => {
-				showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
+				this._parent.showModal('Retrieving climber history from the database failed.' + this._parent.getDBContactMessage(), 'Database Error')
 			});
 
 		const contactsDeferred = this._parent.queryDB({
@@ -1074,14 +1084,12 @@ class ClimberForm {
 					]
 				}
 			}).done(response => {
-				if (this._parent.pythonReturnedError(response)) {
-					showModal('Retrieving emergency contact info from the database failed because ' + response, 'Database Error');
-				} else {
+				if (!this._parent.pythonReturnedError(response, {errorExplanation: 'Retrieving emergency contacts from the database failed.'})) {
 					this.fillEmergencyContacts(response.data || []);
 				}
 			})
 			.fail((xhr, status, error) => {
-				showModal('Retrieving emergency contact info from the database failed because ' + error, 'Database Error')
+				this._parent.showModal('Retrieving emergency contact info from the database failed.' + this._parent.getDBContactMessage(), 'Database Error')
 			});
 
 
@@ -1132,7 +1140,7 @@ class ClimberForm {
 		
 		const inputSelector = '.input-field.dirty';
 		if ($(inputSelector).length === 0) {
-			showModal("You have not made any edits to save yet. Add or change this climber's information and then try to save it.", "No edits to save");
+			this._parent.showModal("You have not made any edits to save yet. Add or change this climber's information and then try to save it.", "No Edits To Save");
 			return $.Deferred().resolve('');
 		}
 
@@ -1153,7 +1161,7 @@ class ClimberForm {
 			if (requiredFieldsDisabled) message += 
 				' Even though you disabled required fields,' + 
 				' first and last name are always required.'
-			showModal(message, 'Required Field Is Empty');
+			this._parent.showModal(message, 'Required Field Is Empty');
 			return;
 		};
 
@@ -1238,9 +1246,8 @@ class ClimberForm {
 			contentType: false,
 			processData: false
 		}).done(response => {
-			if (this._parent.pythonReturnedError(response)) {
-				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this._parent.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
-				
+			const errorMessage = 'An unexpected error occurred while saving data to the database.';
+			if (this._parent.pythonReturnedError(response, {errorExplanation: errorMessage})) {
 				return false;
 			} else {
 				const result = response.data || [];
@@ -1280,7 +1287,7 @@ class ClimberForm {
 				this._parent.toggleBeforeUnload(false);
 			}
 		}).fail((xhr, status, error) => {
-			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+			this._parent.showModal(`An unexpected error occurred while saving data to the database: ${error}.${this._parent.getDBContactMessage()}`, 'Unexpected error');
 		}).always(() => {
 			this._parent.hideLoadingIndicator();
 		});
@@ -1316,12 +1323,15 @@ class ClimberForm {
 		// climberDB is a global instance of ClimberDB or its subclasses that should be instantiated in each page
 		// 	this is a little un-kosher because the ClimberForm() instance is probably a property of climberDB, but
 		//	the only alternative is to make showModal a global function 
-		showModal(
+		this._parent.showModal(
 			`You have unsaved edits to this climber. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this climber's info.`,
 			'Save edits?',
-			'alert',
-			footerButtons,
-			{eventHandlerCallable: eventHandler}
+			{
+				modalType: 'alert',
+				footerButtons: footerButtons,
+				eventHandlerCallable: eventHandler,
+				modalMessageQueue: this._parent.modalMessageQueue
+			}
 		);
 	}
 
@@ -1349,14 +1359,11 @@ class ClimberForm {
 
 			return this._parent.deleteByID(tableName, dbID)
 				.done(response => {
-					if (this._parent.pythonReturnedError(response)) {
-						showModal('An unexpected error occurred while deleting data from the database: <br><br' + response, 'Unexpected error');
-						return;
-					} else {
+					if (!this._parent.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while deleting data from the database.'})) {
 						$card.fadeOut(500, () => {$card.remove()});
 					}
 				}).fail((xhr, status, error) => {
-					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+					this._parent.showModal(`An unexpected error occurred while deleting data from the database: ${error}.${this._parent.getDBContactMessage()}`, 'Unexpected error');
 				}).always(() => {
 					hideLoadingIndicator();
 				});
@@ -1380,7 +1387,16 @@ class ClimberForm {
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
 			<button class="generic-button modal-button confirm-button danger-button close-modal" data-dismiss="modal">Yes</button>
 		`;
-		showModal(`Are you sure you want to delete this ${itemName}?`, `Delete ${itemName}?`, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+		this._parent.showModal(
+			`Are you sure you want to delete this ${itemName}?`, 
+			`Delete ${itemName}?`, 
+			{
+				modalType: 'confirm', 
+				footerButtons: footerButtons, 
+				eventHandlerCallable: onConfirmClickHandler,
+				modalMessageQueue: this._parent.modalMessageQueue
+			}
+		);
 
 	}
 
@@ -1389,12 +1405,11 @@ class ClimberForm {
 	deleteClimber(climberID) {
 		return this._parent.deleteByID('climbers', climberID)
 			.done(response => {
-				if (this._parent.pythonReturnedError(response)) {
-					showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
+				if (this._parent.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while deleting data from the database.'})) {
 					return;
 				} 
 			}).fail((xhr, status, error) => {
-				showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+				this._parent.showModal(`An unexpected error occurred while deleting data from the database: ${error}.${this._parent.getDBContactMessage()}`, 'Unexpected error');
 			}).always(() => {
 				hideLoadingIndicator();
 			});
@@ -1724,7 +1739,12 @@ class ClimberDBClimbers extends ClimberDB {
 							() => {this.saveModalClimber()}
 						)
 					}
-					showModal(message, 'Possible Duplicate Climber', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClick});
+					const modalArgs = {
+						modalType: 'confirm', 
+						footerButtons: footerButtons, 
+						eventHandlerCallable: onConfirmClick
+					}
+					this.showModal(message, 'Possible Duplicate Climber', modalArgs);
 				} else {
 					this.saveModalClimber();
 				}
@@ -2014,7 +2034,7 @@ class ClimberDBClimbers extends ClimberDB {
 					$('.hidden-on-invalid-result').ariaHide(true);
 					$('.result-details-pane').addClass('collapsed');
 				} else if (response.match(`No climber with ID ${climberID} found`)){ 
-					showModal(
+					this.showModal(
 						`There is no climber with the database ID '${climberID}'. This climber was either deleted or the URL you are trying to use is invalid.`, 
 						'Invalid Climber ID'
 					);
@@ -2022,7 +2042,7 @@ class ClimberDBClimbers extends ClimberDB {
 					this.resetURL();
 					this.getResultSet({newHistoryEntry: false});
 				} else {
-					showModal('Retrieving climber info from the database failed with the following error: <br>' + response, 'Database Error');
+					this.showModal('Retrieving climber info from the database failed with the following error: <br>' + response, 'Database Error');
 				}
 			} else {  
 				var result = response.data || [];
@@ -2079,7 +2099,7 @@ class ClimberDBClimbers extends ClimberDB {
 				
 			}
 		}).fail((xhr, status, error) => {
-			showModal('Retrieving climber info from the database failed because ' + error, 'Database Error')
+			this.showModal('Retrieving climber info from the database failed because ' + error, 'Database Error')
 		})
 	}
 
@@ -2122,7 +2142,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 		this.climberForm.deleteClimber(climberID)
 			.done(queryResultString => {
-				if (!this.pythonReturnedError(queryResultString)) {
+				if (!this.pythonReturnedError(queryResultString, {errorExplanation: 'The climber could not be deleted because of an unexpected error.'})) {
 					const $item = $(`#item-${climberID}`);
 					const deletedClimberIsSelected = $item.is('.selected');
 					const $nextItem = $item.next().length ? $item.next() : $item.prev();
@@ -2162,7 +2182,7 @@ class ClimberDBClimbers extends ClimberDB {
 		// If this isn't an admin, check if the climber belongs to any expeditions
 		if (!this.userInfo.isAdmin) {
 			if (climberInfo.expedition_name) { // will be null if climber isn't/wasn't on any expeditions
-				showModal(
+				this.showModal(
 					`You can't delete ${climberInfo.first_name} ${climberInfo.last_name}'s climber profile` + 
 						' because they are a member of at least one expedition. You must remove them from all' + 
 						' expeditions they\'re a member of before their profile can be deleted.', 
@@ -2187,7 +2207,12 @@ class ClimberDBClimbers extends ClimberDB {
 			message += ' and all information about their climbs will be delete including transaction history,' + 
 				' medical issues, and whether or not they summited.';
 		}
-		showModal(message, `Delete climber?`, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+		const modalArgs = {
+			modalType: 'confirm', 
+			footerButtons: footerButtons, 
+			eventHandlerCallable: onConfirmClickHandler
+		}
+		this.showModal(message, `Delete climber?`, modalArgs);
 	}
 
 
@@ -2233,9 +2258,7 @@ class ClimberDBClimbers extends ClimberDB {
 				climber_info_view: [{column_name: 'id', operator: '=', comparand: parseInt(climberID)}]
 			}
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal(`An error occurred while retreiving climbering info: <br>${response}. Make sure you're connected to the NPS network and try again.`, 'Database Error');
-			} else {
+			if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while retrieving climbering info.'})) {
 				const result = response.data || [];
 				if (result.length) {
 					const climberInfo = result[0];
@@ -2307,9 +2330,7 @@ class ClimberDBClimbers extends ClimberDB {
 							]
 						}
 					}).done(response => {
-						if (this.pythonReturnedError(response)) {
-							showModal('Retrieving climber history from the database failed with the following error: <br>' + response, 'Database Error');
-						} else {
+						if (!this.pythonReturnedError(response, {errorExplanation: 'Retrieving climber history from the database failed.'})) {
 							const result = response.data || [];
 							for (const row of result) {
 								const formattedDeparture = (new Date(row.actual_departure_date)).toLocaleDateString(); //add a time otherwise the date will be a day before
@@ -2320,7 +2341,9 @@ class ClimberDBClimbers extends ClimberDB {
 						}
 					})
 					.fail((xhr, status, error) => {
-						showModal('Retrieving climber history from the database failed because ' + error, 'Database Error')
+						const message = 'Retrieving climber history from the database' + 
+							` failed with the error ${error}.${this.getDBContactMessage()}`;
+						this.showModal(message, 'Database Error')
 					});
 				} else {
 					console.log('No climber found with ID ' + ClimberID);
@@ -2348,7 +2371,7 @@ class ClimberDBClimbers extends ClimberDB {
 		// Check that the user has actually selected a climber. This shouldn't be necessary beceause
 		//	 the button should only be visible if a climber *is* selected, but just in case...
 		if (!mergeClimberID) {
-			showModal(`You must select a climber to merge with ${selectedClimberName}`, 'Invalid Operation');
+			this.showModal(`You must select a climber to merge with ${selectedClimberName}`, 'Invalid Operation');
 		}
 
 		// Same buttons for either deleting an empty climber profile or merging
@@ -2378,7 +2401,12 @@ class ClimberDBClimbers extends ClimberDB {
 					});
 				});
 			}
-			showModal(message, 'Premanently Delete Climber Profile?', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+			const modalArgs = {
+				modalType: 'confirm', 
+				footerButtons: footerButtons, 
+				eventHandlerCallable: onConfirmClickHandler
+			}
+			this.showModal(message, 'Premanently Delete Climber Profile?', modalArgs);
 			return;
 		}
 
@@ -2397,8 +2425,8 @@ class ClimberDBClimbers extends ClimberDB {
 						merge_climber_id: mergeClimberID
 					}
 				}).done(response => {
-					if (this.pythonReturnedError(response)) {
-						showModal('An error occurred while trying to merge climber profiles: ' + response, 'Unexpected Error');
+					if (this.pythonReturnedError(response, {errorExplanation: 'An error occurred while trying to merge climber profiles.'})) {
+						return;
 					} else if ('update_result' in response) {
 						const nExpeditions = response.update_result.length;
 						const message = 'The two climber profiles were successfully merged.' + 
@@ -2406,7 +2434,7 @@ class ClimberDBClimbers extends ClimberDB {
 						` profile to <strong>${selectedClimberName}'s</strong>.`;
 						// Between dismissing the confirmation modal and showing this one, wires are getting 
 						//	crossed so pause for a half second before showing this one
-						setTimeout(()=>{showModal(message, 'Climber Profiles Succesfully Merged')}, 500);
+						setTimeout(()=>{this.showModal(message, 'Climber Profiles Succesfully Merged')}, 500);
 						
 						// Reload the currently selected climber by either 
 						const maxIndex = this.currentRecordSetIndex * this.recordsPerSet;
@@ -2421,15 +2449,22 @@ class ClimberDBClimbers extends ClimberDB {
 						// Hide the details because the selected climber to merge should no longer exist
 						$('.merge-climber-details-container').collapse('hide');
 					} else {
-						showModal('An unkown error occurred while trying to merge climber profiles.', 'Unexpected Error');
+						this.showModal('An unkown error occurred while trying to merge climber profiles.' + this.getDBContactMessage(), 'Unexpected Error');
 					}
 				}).fail((xhr, status, error) => {
-					showModal('An error occurred while trying to merge climber profiles: ' + error, 'Unexpected Error');
+					const message = 
+						'An error occurred while trying to merge climber' + 
+						` profiles: ${error}.${this.getDBContactMessage()}`;
+					this.showModal(message, 'Unexpected Error');
 				}).always(() => {hideLoadingIndicator()})
 			})
 		}
-		
-		showModal(message, 'Confirm Climber Profile Merge', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+		const modalArgs = {
+			modalType: 'confirm', 
+			footerButtons: footerButtons, 
+			eventHandlerCallable: onConfirmClickHandler
+		}
+		this.showModal(message, 'Confirm Climber Profile Merge', modalArgs);
 	}
 
 

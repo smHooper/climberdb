@@ -243,7 +243,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			const footerButtons = 
 				'<button class="generic-button modal-button close-modal danger-button confirm-button" data-dismiss="modal">Yes</button>' + 
 				'<button class="generic-button secondary-button modal-button close-modal deny-button" data-dismiss="modal">No</button>'
-			showModal(message, 'Reset Location coordinates?', 'alert', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+			this.showModal(message, 'Reset Location coordinates?', 'alert', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
 		} else {
 			$latitudeField.val(latitude).addClass('dirty');
 			$longitudeField.val(longitude).change();
@@ -412,15 +412,13 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 					tables: ['backcountry_location_codes'], 
 					order_by: [{table_name: 'backcountry_location_codes', column_name: 'sort_order'}]
 				}).done(result => {
-					if (this.pythonReturnedError(result)) {
-						showModal('An error occurred while retrieving lookup values from the database: ' + result, 'Database Error');
-						return;
-					}
-					for (const {code, name, latitude, longitude} of result.data) {
-						this.locationCoordinates[code] = {
-							name: name,
-							latitude: latitude, 
-							longitude: longitude
+					if (!this.pythonReturnedError(result, {errorExplanation: 'An error occurred while retrieving lookup values from the database.'})) {
+						for (const {code, name, latitude, longitude} of result.data) {
+							this.locationCoordinates[code] = {
+								name: name,
+								latitude: latitude, 
+								longitude: longitude
+							}
 						}
 					}
 				})

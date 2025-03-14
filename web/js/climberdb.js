@@ -21,83 +21,6 @@ function print(i) {
 }
 
 
-function getDefaultModalFooterButtons(modalType) {
-	return  modalType === 'confirm' ? 
-			'<button class="generic-button secondary-button modal-button close-modal confirm-button" data-dismiss="modal">Close</button>' +
-			'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
-		  :
-		'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
-		;
-}
-
-
-function showModal(message, title, modalType='alert', footerButtons='', {dismissable=true, eventHandlerCallable=()=>{}}={}) {
-
-	const $modal = $('#alert-modal');
-
-	// If the modal is currently being shown, wait until it's done to show this message
-	if ($modal.is('.showing')) {
-		$modal.on('hidden.bs.modal', () => {
-			const $returnedModal = showModal(message, title, modalType, footerButtons, dismissable);
-			if ($returnedModal) $modal.off('hidden.bs.modal');
-		})
-		return;
-	}
-
-	$modal.addClass('showing');
-
-	if (!footerButtons) footerButtons = getDefaultModalFooterButtons(modalType);
-
-	// expired session modal should not be dismissable so only add this if dismissable is false
-	const closeButton = `
-		<button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
-			<span aria-hidden="true">&times;</span>
-		</button>
-	`;
-	const innerHTML = `
-	  <div class="modal-dialog" role="document">
-	    <div class="modal-content">
-	      <div class="modal-header">
-	        <h5 class="modal-title">${title}</h5>
-	        	${dismissable ? closeButton : ''}
-	      </div>
-	      <div class="modal-body">
-	        <p>${message}</p>
-	      </div>
-	      <div class="modal-footer">
-	      	${footerButtons}
-	      </div>
-	    </div>
-	  </div>
-	`;
-	const options = dismissable ? {} : {backdrop: 'static', keyboard: false};
-	$modal.empty()
-		.append($(innerHTML))
-		.modal(options);
-	
-	$modal.find('.close-modal').click(() => {$modal.modal('hide')});
-
-	// Remove class that indicates the modal is being shown
-	$modal.on('hide.bs.modal', () => {
-		$modal.removeClass('showing')
-	})
-
-	eventHandlerCallable.call();
-
-	return $modal;
-}
-
-// var _$modalSuper = $.fn.modal;
-// _$modalSuper.Constructor.prototype.addModal = function (message, title, {modalType='alert', footerButtons='', dismissable=true}={}) {
-// 	const $modal = this;
-// 	return $modal.on('hidden.bs.modal', () => {
-// 		$modal.find('.modal-title').html(title);
-// 		$modal.find('.modal-body').html('<p>' + message + '</p>');
-// 		$modal.find('.modal-footer').html(footerButtons || getDefaultModalFooterButtons(modalType));
-// 	});
-// }
-
-
 function showLoadingIndicator(caller, timeout=15000) {
 
 	//set a timer to turn off the indicator after a max of 15 seconds because 
@@ -171,7 +94,7 @@ function deepCopy(inObject) {
 /*
 Helper function to debug issues with collapses
 */
-function toggleCollapseEventHandlers(selector, toggleOn=true) {
+function toggleCollapseEventMonitoring(selector, toggleOn=true) {
 	const $collapse = $(selector).closest('.collapse');
 
 	if (toggleOn) {
@@ -192,6 +115,34 @@ function toggleCollapseEventHandlers(selector, toggleOn=true) {
 		$collapse.off('shown.bs.collapse');
 		$collapse.off('hide.bs.collapse');
 		$collapse.off('hidden.bs.collapse');
+	}
+}
+
+
+/*
+Helper function to turn modal event monitoting on or off
+*/
+function toggleModalEventMonitoring(toggleOn=true) {
+	const $modal = $('#alert-modal');
+
+	if (toggleOn) {
+		$modal.on('show.bs.modal', e => {
+			print('modal show')
+		});
+		$modal.on('shown.bs.modal', e => {
+			print('modal shown')
+		});
+		$modal.on('hide.bs.modal', e => {
+			print('modal hide')
+		});
+		$modal.on('hidden.bs.modal', e => {
+			print('modal hidden')
+		});
+	} else {
+		$modal.off('show.bs.collapse');
+		$modal.off('shown.bs.collapse');
+		$modal.off('hide.bs.collapse');
+		$modal.off('hidden.bs.collapse');
 	}
 }
 
@@ -245,6 +196,7 @@ function valuesAreEqual(value1, value2) {
 /* ClimberDB base class*/
 class ClimberDB {
 	constructor() {
+		this.modalMessageQueue = [];
 		this.userInfo = {};
 		this.tableInfo = {
 			tables: {},
@@ -288,6 +240,109 @@ class ClimberDB {
 		this.maxInitialMapZoom = 12; // don't zoom in past this level when fitting map bounds to marker
 	}
 
+
+	getDefaultModalFooterButtons(modalType) {
+		/* 
+		Helper method to return HTML for modal footer buttons based on type 
+		of modal 'alert' or 'confirm'. 'confirm' is for asking the user to 
+		confirm or discard changes or some action while 'alert' just provides 
+		information and an 'OK' button
+		*/
+		
+		return  modalType === 'confirm' ? 
+				'<button class="generic-button secondary-button modal-button close-modal confirm-button" data-dismiss="modal">Close</button>' +
+				'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
+			  :
+			'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
+			;
+	}
+
+	/*
+	Add a modal message to the queue and process the queue
+	*/
+	showModal(
+	    message, 
+	    title, 
+	    {
+	    	modalType='alert', 
+	    	footerButtons='', 
+	        dismissable=true, 
+	        eventHandlerCallable=() => {},
+	        modalMessageQueue=null
+	    } = {}
+	) {
+	    const $modal = $('#alert-modal');
+
+	    // Modal queue to store pending messages. For ClimberForm to be able to call showModal, it needs access to the ClimberDB class property, which is passed explicitly
+	    var queue = Array.isArray(modalMessageQueue) ? modalMessageQueue : this.modalMessageQueue;
+	    
+	    //this.modalMessageQueue = this.modalMessageQueue || [];
+
+	    // Add the current modal request to the queue
+	    queue.push({ message, title, modalType, footerButtons, dismissable, eventHandlerCallable });
+
+	    // If modal is already showing, let it close naturally, then show the next modal in queue
+	    if ($modal.hasClass('showing')) {
+	        return;
+	    }
+
+	    function processQueue() {
+	        if (queue.length === 0) return;
+
+	        // Get the next modal request
+	        const { message, title, modalType, footerButtons, dismissable, eventHandlerCallable } = queue.shift();
+	        
+	        $modal.addClass('showing');
+
+	        const finalFooterButtons = footerButtons || getDefaultModalFooterButtons(modalType);
+
+	        const closeButton = `
+	            <button type="button" class="close close-modal" data-dismiss="modal" aria-label="Close">
+	                <span aria-hidden="true">&times;</span>
+	            </button>
+	        `;
+
+	        const innerHTML = `
+	            <div class="modal-dialog" role="document">
+	                <div class="modal-content">
+	                    <div class="modal-header">
+	                        <h5 class="modal-title">${title}</h5>
+	                        ${dismissable ? closeButton : ''}
+	                    </div>
+	                    <div class="modal-body">
+	                        <p>${message}</p>
+	                    </div>
+	                    <div class="modal-footer">
+	                        ${finalFooterButtons}
+	                    </div>
+	                </div>
+	            </div>
+	        `;
+
+	        const options = dismissable ? {} : { backdrop: 'static', keyboard: false };
+
+	        $modal.html(innerHTML).modal(options);
+
+	        // Ensure clicking close button hides the modal
+	        $modal.find('.close-modal').click(() => {
+	            $modal.modal('hide');
+	        });
+
+	        // Ensure we remove the 'showing' class and process the next modal in queue
+	        $modal.one('hidden.bs.modal', () => {
+	            $modal.removeClass('showing');
+	            processQueue(); // Show the next modal if any
+	        });
+
+	        // Call external event handler
+	        eventHandlerCallable.call();
+	    }
+
+	    // Process the queue immediately if no modal is currently displayed
+	    processQueue();
+	}
+
+
 	getUserInfo() {
 		
 		const urlParams = this.parseURLQueryString();
@@ -307,7 +362,7 @@ class ClimberDB {
 					const program_admin = this.config.program_admin_email;
 					const message = `There is no user account for Windows user <strong>${result.ad_username}</strong>. Contact the program adminstrator at <a href="mailto:${program_admin}">${program_admin}</a> if you have questions.`;
 					const footerButtons = '<a class="generic-button" href="index.html">OK</a>';
-					showModal(message, 'User Not Authorized', 'alert', footerButtons);
+					this.showModal(message, 'User Not Authorized', 'alert', footerButtons);
 					return;
 				}
 
@@ -346,7 +401,7 @@ class ClimberDB {
 		if (!this.userInfo.isAdmin) {
 			const adminEmail = this.config.program_admin_email;
 			const footerButtons = '<a href="dashboard.html" class="generic-button modal-button close-modal confirm-button">OK</a>'
-			showModal(`You do not have sufficient permissions to view this page. If you think this is an error, contact the program adminstrator at <a href="mailto:${adminEmail}">${adminEmail}</a>.`, 'Permission Error', 'alert', footerButtons, {dismissable: false})
+			this.showModal(`You do not have sufficient permissions to view this page. If you think this is an error, contact the program adminstrator at <a href="mailto:${adminEmail}">${adminEmail}</a>.`, 'Permission Error', 'alert', footerButtons, {dismissable: false})
 			deferred.reject();
 		} else {
 			deferred.resolve();
@@ -359,8 +414,8 @@ class ClimberDB {
 		return $.post({
 			url: '/flask/config'
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal('Invalid Configuration', 'There was a problem retrieving the app configuration: ' + response);
+			if (this.pythonReturnedError(response, {errorExplanation: 'There was a problem retrieving the app configuration.'})) {
+				return;
 			} else {
 				this.config = {...response}
 			}
@@ -686,7 +741,7 @@ class ClimberDB {
 			const message = 
 				`Your account does not have editing privileges. If you need edit privileges, contact` + 
 				` the program adminstrator at <a href="mailto:${program_admin}">${program_admin}</a>`
-			showModal(message, 'Editing Not Authorized', 'alert', '', {dismissable: false, eventHandlerCallable: eventHandler});
+			this.showModal(message, 'Editing Not Authorized', 'alert', '', {dismissable: false, eventHandlerCallable: eventHandler});
 		}
 
 		return allowEditing;
@@ -709,7 +764,7 @@ class ClimberDB {
 			<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">Yes</button>
 			<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>';
 		`;
-		showModal(
+		this.showModal(
 			'Are you sure you want to log out? Any unsaved data will be lost', 
 			'Log out?', 
 			'confirm', 
@@ -1328,10 +1383,10 @@ class ClimberDB {
 		var message = `You entered the date ${prettyDateString} for the year <strong>${year}</strong>.`;
 		if ($input.is('.warn-future-year-date') && (now.getFullYear() + 1) < year) {
 			message += ' Make sure this is the correct date before saving your edits.';
-			showModal(message, 'WARNING: Date Entered for the Year ' + year);
+			this.showModal(message, 'WARNING: Date Entered for the Year ' + year);
 		} else if ($input.is('.warn-previous-year-date') && year < now.getFullYear()) {
 			message += ' If entering a date using the keyboard, <strong>you must enter the full 4-digit year</strong>.';
-			showModal(message, 'WARNING: Date Entered for Previous Year');
+			this.showModal(message, 'WARNING: Date Entered for Previous Year');
 		}
 		
 	}
@@ -1488,16 +1543,64 @@ class ClimberDB {
 	}
 
 
-	pythonReturnedError(resultString) {
+	getDBContactMessage() {
+		return ' Make sure you\'re still connected to the NPS network and try again.' +
+			` <a href="mailto:${this.config.db_admin_email}">Contact your database` +
+			' adminstrator</a> if the problem persists.';
+	}
+
+
+	pythonReturnedError(resultString, {errorExplanation=''}={}) {
 		resultString = String(resultString); // force as string in case it's something else
 		if (resultString.startsWith('ERROR: Internal Server Error')) {
 			// almost all Python excetions have a class anme in the form *Error (e.g., ValueError).
 			//	That's not a hard and fast rule, however, and so if the match is null, return something generic
-			const pythonException = resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/) || ['unknown custom exception thrown'];
-			return pythonException[0].trim()
+			const pythonException = (resultString.match(/[A-Z]+[a-zA-Z]*Error: .*/) || ['unknown custom exception thrown']
+			)[0].trim();
+			
+			const dbContact = this.getDBContactMessage();
+			// Show the 
+			if (errorExplanation !== '') {
+				const messageBody = `
+					${errorExplanation}${dbContact} 
+					<div class="w-100 d-flex justify-content-between">
+						<button 
+							role="button"
+							class="text-only-button pl-0" 
+							type="button" 
+							data-toggle="collapse" data-target=".modal-error-details-target" aria-expanded="false" aria-controls="modal-error-details-collapse"
+						>
+							Error details
+						</button>
+						<button 
+							role="button"
+							class="text-only-button modal-error-details-target copy-error-text-button collapse"
+							data-toggle="tooltip"
+							data-placement="bottom"
+						>
+							Copy error text
+						</button>
+					</div>
+					<p id="modal-error-details-collapse" class="collapse modal-error-details-target modal-error-text-container pt-3">
+						${resultString}
+					</p>`;
+				this.showModal(messageBody, 'Unexpected Error');
+			}
+
+			return pythonException;
 		} else {
 			return false;
 		}
+	}
+
+
+	onCopyErrorButtonClick(e) {
+		const $button = $(e.target).closest('button');
+		const error = $button
+			.closest('.modal-body')
+			.find('.modal-error-text-container')
+			.text();
+		this.copyToClipboard(error, {triggeringElement: $button, tooltipContainer: '#alert-modal'})
 	}
 
 
@@ -1534,16 +1637,32 @@ class ClimberDB {
 	/*
 	Copy specified text to the clipboard
 	*/
-	copyToClipboard(text, modalMessage='') {
+	copyToClipboard(text, {modalMessage='', triggeringElement=null, tooltipContainer='body'}={}) {
 		const clipboard = navigator.clipboard;
 		if (!clipboard) {
-			showModal(`Your browser refused access to the clipboard. This feature only works with a HTTPS connection. Right-click and copy from <a href="${text}">this link</a> instead.`, 'Clipboard access denied');
+			this.showModal(`Your browser refused access to the clipboard. This feature only works with a HTTPS connection. Right-click and copy from <a href="${text}">this link</a> instead.`, 'Clipboard access denied');
 			return;
 		}
+		const $trigger = $(triggeringElement);
 		clipboard
 			.writeText(text)
 			.then(() => {
-				showModal(modalMessage || `Successfully copied ${text} to clipboard`, 'Copy successful');
+				if (modalMessage) {
+					this.showModal(modalMessage || `Successfully copied ${text} to clipboard`, 'Copy successful');
+				} 
+				// check if 'tooltip' is in the triggering element's data-toggle 
+				//	(if the attribute is defined)
+				else if (($trigger.data('toggle') || '').match('tooltip')) {
+					// Show it
+					$trigger.tooltip({
+						title: 'Copied!',
+						container: tooltipContainer,
+						trigger: 'focus'
+					}).tooltip('show');
+					// Then remove it after a set amount of time
+					setTimeout(() => {$trigger.tooltip('dispose')}, 2000);
+
+				}
 			})
 			.catch((err) => {
 				console.error(`Error copying text to clipboard: ${err}`);
@@ -2090,7 +2209,7 @@ class ClimberDB {
 						` You can have the same ${lowerCaseName} open multiple times simultaneously, but changes` + 
 						' you make will not be automatically synchronized. You must reload a' + 
 						' tab/window to see changes you make in another browser tab/window.';
-					showModal(message, `${pageObjectName} Already Open`);
+					this.showModal(message, `${pageObjectName} Already Open`);
 				}
 			}
 		}
@@ -2137,6 +2256,10 @@ class ClimberDB {
 			if ($(e.target).closest('.cloneable').length) return;
 			this.onDateFieldChange(e);
 		});
+
+		$(document).on('click', '#alert-modal .copy-error-text-button', e => {
+			this.onCopyErrorButtonClick(e);
+		})
 		
 		// Warn the user before they leave the page if they have unsaved edits
 		//$(window).on('beforeunload', (e) => {return this.beforeUnloadEventHandler(e)});
@@ -2163,7 +2286,7 @@ class ClimberDB {
 							})
 						}
 						const footerButtons = `<button class="generic-button modal-button close-modal" data-dismiss="modal">OK</button>`;
-						showModal(
+						this.showModal(
 							'Your session has expired. Click OK to log in again.', 
 							'Session expired', 
 							'alert', 

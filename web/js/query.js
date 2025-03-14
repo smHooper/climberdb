@@ -691,8 +691,8 @@ class ClimberDBQuery extends ClimberDB {
 			this.onGroupByPivotFieldChange(e);
 		})
 
-		$('#copy-query-link-button').click(() => {
-			this.onCopyQueryLinkButtonClick()
+		$('#copy-query-link-button').click(e => {
+			this.onCopyQueryLinkButtonClick(e)
 		})
 	}
 
@@ -1119,7 +1119,7 @@ class ClimberDBQuery extends ClimberDB {
 			$target.val($target.data('current-value'));
 			const message = `The "${otherLabelText}" field ${targetIsGroupBy ? 'is already set to' : 'already includes'} "${otherValueText}". Either` + 
 				` choose a different "${targetLabelText}" value or change the "${otherLabelText}" value.`;
-			showModal(message, `Invalid ${targetLabelText} value`);
+			this.showModal(message, `Invalid ${targetLabelText} value`);
 		}
 
 		// when the group by or pivot field is backcountry_location_codes, make sure is_backcountry_yes_no is set
@@ -1334,7 +1334,7 @@ class ClimberDBQuery extends ClimberDB {
 			const message = `The field <strong>${firstErrorFieldName}</strong> must be filled` +
 				' in before you can run this query.';
 			const eventHandler = () => {$('#alert-modal .confirm-button').click(() => {$firstErrorField.focus()})}
-			showModal(message, 'Missing Parameter', 'alert', '', {eventHandlerCallable: eventHandler})
+			this.showModal(message, 'Missing Parameter', {modalType: 'alert', eventHandlerCallable: eventHandler})
 			$errors.removeClass('error');
 		}
 
@@ -1349,9 +1349,10 @@ class ClimberDBQuery extends ClimberDB {
 	submitQuery(sql, {sqlParameters={}, queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
 		return this.queryDB({sql: sql.replace(/\{schema\}/g, this.dbSchema), sqlParameters: sqlParameters})
 			.done(response => {
-				if (this.pythonReturnedError(response)) {
-					const queryDisplayName = $('.query-option.selected').text();
-					showModal(`There was a problem with the '${queryDisplayName}' query: <br><br>${response}`, 'Unexpected Error');
+				const queryDisplayName = $('.query-option.selected').text();
+				const errorMessage = `There was a problem with the '${queryDisplayName}' query.`
+				if (this.pythonReturnedError(response, {errorExplanation: errorMessage})) {
+					return;
 				} else if (showResult) {
 					this.result = response.data || [];
 					this.ancillaryResult = [];
@@ -1414,10 +1415,7 @@ class ClimberDBQuery extends ClimberDB {
 	queryGuidedClientStatus() {
 		this.runQuery('guide_company_client_status')
 			.done(response => {
-				if (this.pythonReturnedError(response)) {
-					showModal('An unexpected error occurred: <br><br>' + response, 'Unexpected Error');
-				} else {
-
+				if (!this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred.'})) {
 					// If the user is exporting, the export needs briefings as well so just query it now
 					this.runQuery('guided_company_briefings', {showResult: false})
 						.done(queryResultString => {
@@ -1522,7 +1520,7 @@ class ClimberDBQuery extends ClimberDB {
 			where = ' WHERE ' + whereClauses.join(' AND ');
 		}
 		if (where.length == 0) {
-			showModal('You must enter an expedition name search string or select a year or expedition ID', 'No Query Parameters')
+			this.showModal('You must enter an expedition name search string or select a year or expedition ID', 'No Query Parameters')
 			return;
 		}
 
@@ -1900,9 +1898,9 @@ class ClimberDBQuery extends ClimberDB {
 		// Handle the response
 		const exportType = $('#input-export_type').val();
 		deferred.done(resultString => {
-			if (this.pythonReturnedError(resultString)) {
+			if (this.pythonReturnedError(resultString, {errorExplanation: 'An unexpected error occurred while exporting the data.'})) {
 				$('#exports-modal').modal('hide');
-				showModal('An unexpected error occurred while exporting the data: ' + resultString, 'Unexpected Error');
+				return;
 			} else {
 				resultString = resultString.trim()
 				// Either prompt a download if the file is an Excel doc
@@ -1917,7 +1915,7 @@ class ClimberDBQuery extends ClimberDB {
 			}	
 		}).fail( (xhr, status, error) => {
 			$('#exports-modal').modal('hide');
-			showModal('An unexpected error occurred while exporting the data: ' + error, 'Unexpected Error');
+			this.showModal(`An unexpected error occurred while exporting the data: ${error}.${this.getDBContactMessage()}`, 'Unexpected Error');
 		}).always(() => {
 			hideLoadingIndicator();
 		})
@@ -2029,9 +2027,13 @@ class ClimberDBQuery extends ClimberDB {
 	/*
 	Event handler for copy-query-link-button click
 	*/
-	onCopyQueryLinkButtonClick() {
+	onCopyQueryLinkButtonClick(e) {
 		const url = this.queryToURL();
-		this.copyToClipboard(url, `Permalink for this query successfully copied to clipboard`);
+		this.copyToClipboard(
+			url, 
+			{
+				modalMessage: `Permalink for this query successfully copied to clipboard`
+			});
 	}
 
 
