@@ -188,6 +188,14 @@ if not app.config.from_file(climberdb_utils.CONFIG_FILE, load=json.load):
 	raise IOError(f'Could not read CONFIG_FILE: {climberdb_utils.CONFIG_FILE}')
 
 
+@app.route('/flask/test/error', methods=['POST'])
+def test_error_logging() -> bool:
+	data = request.form
+	if data.get('test_client_secret') == app.config['TEST_CLIENT_SECRET']:
+		raise IOError('test error')
+
+	return True
+
 @app.route('/flask/environment', methods=['GET'])
 def get_environment() -> str:
 	return climberdb_utils.get_environment()
