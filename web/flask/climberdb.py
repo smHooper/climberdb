@@ -284,25 +284,24 @@ def add_header(response):
 ###############################################
 
 def validate_password(username, password):	
-	# Get user password from db
-	#engine = climberdb_utils.get_engine()
+
 	hashed_password = ''
-	with read_engine.connect() as conn:
-		statement = sqlatext('''SELECT hashed_password FROM users WHERE ad_username=:username''')
-		cursor = conn.execute(statement, {'username': username})
-		result = cursor.first()
+	users_table = tables['users']
+	with ReadSession() as session:
+		result = (
+			session.query(users_table)
+				.where(users_table.ad_username == username)
+				.first()
+		)
 		# If the result is an empty list, the user doesn't exist
 		if not result:
 			raise ValueError(f'Password query failed because user {username} does not exist')
 		# if the result is None, this is a new user whose password isn't set
-		if not result[0]:
+		hashed_password = result.hashed_password.encode('utf-8')
+		if not hashed_password:
 			# return false so the client knows whatever was entered isn't the 
 			#	same as the password in the db
 			return False 
-
-		hashed_password = result[0].encode('utf-8')
-	if not hashed_password:
-		raise RuntimeError('Could not connect to database')
 
 	# Check password
 	return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
@@ -339,28 +338,28 @@ def query_user_info(username):
 	"""
 	Helper function to get DB user info using AD username 
 	"""
-	sql = '''
-		SELECT id, 
-			:username AS ad_username, 
-			user_role_code, 
-			user_status_code, 
-			first_name, 
-			last_name, 
-			email_address 
-		FROM users 
-		WHERE ad_username=:username 
-	'''
-	
-	# If this is the dev environment, make sure the user is a super user
-	if not '\\prod\\' in os.path.abspath(__file__):
-		sql += ' AND user_role_code=4' 
 
-	#engine = climberdb_utils.get_engine()
-	result = read_engine.execute(sqlatext(sql), {'username': username})
+	users_table = tables['users'];
+	statement = select(
+			users_table.user_role_code,
+			users_table.user_status_code,
+			users_table.first_name,
+			users_table.last_name,
+			users_table.email_address
+		).where(
+			users_table.ad_username == username
+		)
+
+	# If this is the dev environment, make sure the user is a super user
+	if not climberdb_utils.get_environment() == 'prod':
+		statement.where(users_table.user_role_code == 4) 
+
+	result = read_engine.execute(statement)
+	# If the result is empty, the user doesn't exist
 	if result.rowcount == 0:
 		return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
 	else:
-		return result.first()._asdict()
+		return result.first()._asdict() | {'ad_username': username}
 
 
 # Get username and role
