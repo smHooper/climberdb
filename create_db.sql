@@ -524,7 +524,7 @@ CREATE OR REPLACE VIEW expedition_info_view AS
 		attachments.attachment_notes,
 		attachments.client_filename,
 		attachments.mime_type,
-		'attachments/' || split_part(attachments.file_path, '\', -1) AS file_path, --'
+		(regexp_match(attachments.file_path, '\w+\\[\w-]+\.\w{3,4}$'))[1] AS file_path, --'get jsut folder\file.ext
 		attachments.file_size_kb,
 		cmc_checkout.id AS cmc_checkout_id,
 		cmc_checkout.cmc_id,
