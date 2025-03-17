@@ -362,8 +362,10 @@ class ClimberDB {
 				
 				if (!(result.user_status_code && result.user_role_code)) {
 					// user isn't authorized 
-					const program_admin = this.config.program_admin_email;
-					const message = `There is no user account for Windows user <strong>${result.ad_username}</strong>. Contact the program adminstrator at <a href="mailto:${program_admin}">${program_admin}</a> if you have questions.`;
+					const programAdmin = this.config.program_admin_email;
+					// if config has not yet been retrieved, program_admin_email will be undefined
+					const adminEmailLink = programAdmin ? `at <a href="mailto:${programAdmin}">${programAdmin}</a> ` : '';
+					const message = `There is no user account for Windows user <strong>${result.ad_username}</strong>. Contact the climbing permit program adminstrator ${adminEmailLink}if you have questions.`;
 					const footerButtons = '<a class="generic-button" href="index.html">OK</a>';
 					this.showModal(message, 'User Not Authorized', {footerButtons: footerButtons});
 					return;
