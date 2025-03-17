@@ -1713,10 +1713,9 @@ class ClimberDBClimbers extends ClimberDB {
 	Check if a climber with the same name already exists. If so, make the user confrim that they want to create a climber with the same name
 	*/
 	onSaveModalClimberClick(e) {
-		const firstName = $('#input-first_name').val(); 
-		const middleName = $('#input-middle_name').val();
+		const firstName = $('#input-first_name').val();
 		const lastName = $('#input-last_name').val();
-		const fullName = `${firstName} ${middleName ? middleName + ' ' : ''}${lastName}`;
+		const fullName = `${firstName} ${lastName}`;
 		this.queryDB({
 			where: {
 				climber_info_view: [{
