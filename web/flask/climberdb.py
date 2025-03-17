@@ -196,6 +196,7 @@ def test_error_logging() -> bool:
 
 	return True
 
+
 @app.route('/flask/environment', methods=['GET'])
 def get_environment() -> str:
 	return climberdb_utils.get_environment()
@@ -327,14 +328,6 @@ def add_header(response):
 ###############################################
 # -------------- endpoints ------------------ #
 ###############################################
-# **for testing**
-@app.route('/flask/test', methods=['GET', 'POST'])
-def test():
-
-	if request.files:
-		return 'true'
-	else:
-		return 'false'
 
 @app.route('/flask/config', methods=['POST'])
 def db_config_endpoint():
@@ -493,6 +486,23 @@ def send_password_email(request_data, html):
 	mailer.send(msg)
 
 
+def get_url_root(url_root) -> str:
+	"""
+	Helper function to sanitize the URL root to always return a URL for 
+	the prod site, even if the request is coming from dev or test. This 
+	prevents users from receiving a link to anything but prod in an 
+	activation or password reset email, even if it was sent from the 
+	something other than prod
+	"""
+	prod_port = str(app.config['PROD_PORT_NUMBER'])
+	url_root = re.sub(
+		':\d{4}$', 
+		f':{prod_port}', 
+		request.url_root.strip('/')
+	)
+	return url_root
+
+
 # This endpoint sends an activation notification to a user whose account was just created by an admin
 @app.route('/flask/notifications/account_activation', methods=['POST'])
 def send_account_request():
@@ -503,8 +513,9 @@ def send_account_request():
 	if not 'username' in data:
 		raise ValueError('BAD REQUEST. No username given')
 
+	user_id = data['user_id']
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
-	data['button_url'] = f'''{request.url_root.strip('/')}/index.html?activation=true&id={data['user_id']}'''
+	data['button_url'] = f'''{get_url_root(request.url_root)}/index.html?activation=true&id={user_id}'''
 	data['button_text'] = 'Activate Account'
 	data['heading_title'] = 'Activate your Denali Climbing Permit Portal account'
 
@@ -528,7 +539,7 @@ def send_reset_password_request():
 
 	user_id = data['user_id']
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
-	data['button_url'] = f'''{request.url_root.strip('/').replace(':9006', ':9007')}/index.html?reset=true&id={user_id}'''
+	data['button_url'] = f'''{get_url_root(request.url_root)}/index.html?reset=true&id={user_id}'''
 	data['button_text'] = 'Reset Password'
 	data['heading_title'] = 'Reset Denali Climbing Permit Portal account password'
 
@@ -536,9 +547,12 @@ def send_reset_password_request():
 	
 	send_password_email(data, html)
 
-	#engine = climberdb_utils.get_engine()
 	try:
-		write_engine.execute(sqlatext('UPDATE users SET user_status_code=1 WHERE id=:user_id'), {'user_id': user_id})
+		# Set the user's status to 'Inactive'
+		with WriteSession() as write_session:
+			user = write_session.get(tables['users'], user_id)
+			user.user_status_code = 1 # set to inactive
+			write_session.commit()
 	except Exception as e:
 		raise RuntimeError(f'Failed to update user status with error: {e}')
 
