@@ -218,14 +218,14 @@ class ClimberForm {
 								<div class="field-container-row">
 									<div class="field-container checkbox-field-container col-sm">
 										<label class="checkmark-container">
-											<input id="input-is_guide" class="input-field input-checkbox" type="checkbox" name="is_guide" data-table-name="climbers" data-badge-target="#guide-badge" data-badge-target-value="t">
+											<input id="input-is_guide" class="input-field input-checkbox" type="checkbox" name="is_guide" data-table-name="climbers" data-badge-target="#guide-badge" data-badge-target-value="true">
 											<span class="checkmark data-input-checkmark"></span>
 										</label>
 										<label class="field-label checkbox-label" for="input-is_guide">Commercial guide</label>
 									</div>
 									<!--<div class="field-container checkbox-field-container col-sm">
 										<label class="checkmark-container">
-											<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin" data-table-name="climbers" data-badge-target="#pro-pin-badge" data-badge-target-value="t">
+											<input id="input-received_pro_pin" class="input-field input-checkbox" type="checkbox" name="received_pro_pin" data-table-name="climbers" data-badge-target="#pro-pin-badge" data-badge-target-value="true">
 											<span class="checkmark data-input-checkmark"></span>
 										</label>
 										<label class="field-label checkbox-label" for="input-received_pro_pin">Received Pro Pin</label>
