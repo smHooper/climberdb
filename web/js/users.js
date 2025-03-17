@@ -153,12 +153,12 @@ class ClimberDBUsers extends ClimberDB {
 					$('#alert-modal .confirm-button').click(() => {
 						this.discardEdits(); //remove new user
 						const $tr = $(`#main-data-table tbody tr[data-table-id=${matchedUserID}]`);
-						// set user status code to 'enabled' for matched user
-						$tr.ariaHide(false)
-							.removeClass('uneditable')
-							.find('.input-field[name=user_status_code]')
-								.val(2)
-								.change();
+						// Send password reset email to user. If successful, the method 
+						//	will handle setting the user's status to inactive, both on 
+						//	the client and server sideog
+						const userID = $tr.data('table-id');
+						const email_address = $tr.find('.input-field[name="email_address"]').val();
+						this.sendPasswordResetEmail(username, userID, email_address);
 					});
 				}
 			} else {
@@ -613,6 +613,7 @@ class ClimberDBUsers extends ClimberDB {
 			if (!this.pythonReturnedError(resultString, {errorExplanation: 'The password reset email failed to send because of an unexpected error.'})) {
 				this.showModal(`A password reset email was sent to ${email_address}. The user's account will be inactive until they change their password.`, 'Password reset email sent');
 				$(`tr[data-table-id=${userID}]`).addClass('inactive')
+					.ariaHide(false)
 					.find('.input-field[name=user_status_code]')
 						// set status to "inactive" in the UI but don't worry about saving because it's already doen server-side
 						.val(1) 
