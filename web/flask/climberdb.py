@@ -547,9 +547,12 @@ def send_reset_password_request():
 	
 	send_password_email(data, html)
 
-	#engine = climberdb_utils.get_engine()
 	try:
-		write_engine.execute(sqlatext('UPDATE users SET user_status_code=1 WHERE id=:user_id'), {'user_id': user_id})
+		# Set the user's status to 'Inactive'
+		with WriteSession() as write_session:
+			user = write_session.get(tables['users'], user_id)
+			user.user_status_code = 1 # set to inactive
+			write_session.commit()
 	except Exception as e:
 		raise RuntimeError(f'Failed to update user status with error: {e}')
 
