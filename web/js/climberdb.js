@@ -767,7 +767,7 @@ class ClimberDB {
 		}
 		const footerButtons = `
 			<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">Yes</button>
-			<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>';
+			<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">No</button>
 		`;
 		this.showModal(
 			'Are you sure you want to log out? Any unsaved data will be lost', 
