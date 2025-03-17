@@ -243,7 +243,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			const footerButtons = 
 				'<button class="generic-button modal-button close-modal danger-button confirm-button" data-dismiss="modal">Yes</button>' + 
 				'<button class="generic-button secondary-button modal-button close-modal deny-button" data-dismiss="modal">No</button>'
-			this.showModal(message, 'Reset Location coordinates?', 'alert', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+			this.showModal(message, 'Reset Location Coordinates?', {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler});
 		} else {
 			$latitudeField.val(latitude).addClass('dirty');
 			$longitudeField.val(longitude).change();
