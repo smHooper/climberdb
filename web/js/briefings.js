@@ -785,9 +785,8 @@ class ClimberDBBriefings extends ClimberDB {
 		this.showModal(
 			'You have unsaved edits to this briefing. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this briefing.',
 			'Save edits?',
-			'confirm',
-			footerButtons,
 			{
+				footerButtons: footerButtons,
 				eventHandlerCallable: eventHandler
 			}
 		);

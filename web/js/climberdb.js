@@ -365,7 +365,7 @@ class ClimberDB {
 					const program_admin = this.config.program_admin_email;
 					const message = `There is no user account for Windows user <strong>${result.ad_username}</strong>. Contact the program adminstrator at <a href="mailto:${program_admin}">${program_admin}</a> if you have questions.`;
 					const footerButtons = '<a class="generic-button" href="index.html">OK</a>';
-					this.showModal(message, 'User Not Authorized', 'alert', footerButtons);
+					this.showModal(message, 'User Not Authorized', {footerButtons: footerButtons});
 					return;
 				}
 
@@ -403,8 +403,10 @@ class ClimberDB {
 		const deferred = $.Deferred();
 		if (!this.userInfo.isAdmin) {
 			const adminEmail = this.config.program_admin_email;
+			const message = 'You do not have sufficient permissions to view this page. If you think this is an' +
+				` error, contact the program adminstrator at <a href="mailto:${adminEmail}">${adminEmail}</a>.`
 			const footerButtons = '<a href="dashboard.html" class="generic-button modal-button close-modal confirm-button">OK</a>'
-			this.showModal(`You do not have sufficient permissions to view this page. If you think this is an error, contact the program adminstrator at <a href="mailto:${adminEmail}">${adminEmail}</a>.`, 'Permission Error', 'alert', footerButtons, {dismissable: false})
+			this.showModal(message, 'Permission Error', {footerButtons: footerButtons, dismissable: false});
 			deferred.reject();
 		} else {
 			deferred.resolve();
@@ -744,7 +746,7 @@ class ClimberDB {
 			const message = 
 				`Your account does not have editing privileges. If you need edit privileges, contact` + 
 				` the program adminstrator at <a href="mailto:${program_admin}">${program_admin}</a>`
-			this.showModal(message, 'Editing Not Authorized', 'alert', '', {dismissable: false, eventHandlerCallable: eventHandler});
+			this.showModal(message, 'Editing Not Authorized', {modalType: 'alert', dismissable: false, eventHandlerCallable: eventHandler});
 		}
 
 		return allowEditing;
@@ -770,9 +772,10 @@ class ClimberDB {
 		this.showModal(
 			'Are you sure you want to log out? Any unsaved data will be lost', 
 			'Log out?', 
-			'confirm', 
-			footerButtons,
-			{eventHandlerCallable: onConfirmClickHandler}
+			{ 
+				footerButtons: footerButtons,
+				eventHandlerCallable: onConfirmClickHandler
+			}
 		);
 	}
 
@@ -2291,10 +2294,9 @@ class ClimberDB {
 						const footerButtons = `<button class="generic-button modal-button close-modal" data-dismiss="modal">OK</button>`;
 						this.showModal(
 							'Your session has expired. Click OK to log in again.', 
-							'Session expired', 
-							'alert', 
-							footerButtons, 
+							'Session Expired', 
 							{	
+								footerButtons: footerButtons,
 								eventHandlerCallable: onConfirmClickHandler,
 								dismissable: false
 							}
