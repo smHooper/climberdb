@@ -175,7 +175,10 @@ class ClimberDBUsers extends ClimberDB {
 		const firstName = $tr.find('.input-field[name=first_name]').val();
 		const lastName = $tr.find('.input-field[name=last_name]').val();
 		const matchedUsers = Object.values(this.users)
-			.filter(u => u.first_name === firstName && u.last_name === lastName);
+			.filter(u => 
+				u.first_name.toLowerCase() === firstName.toLowerCase() && 
+				u.last_name.toLowerCase()  === lastName.toLowerCase()
+			);
 		var onConfirmClickHandler = () => {};
 		
 		if (matchedUsers.length) {
@@ -186,15 +189,15 @@ class ClimberDBUsers extends ClimberDB {
 			if (status == -1) {
 				message += `but the account is currently disabled. Would you like to enable it?`;
 				onConfirmClickHandler = () => {
-					('#alert-modal .confirm-button').click(() => {
+					$('#alert-modal .confirm-button').click(() => {
 						this.discardEdits(); //remove new user
 						const $tr = $(`.climberdb-data-table tbody tr[data-table-id=${matchedUserID}]`);
-						// set user status code to 'enabled' for matched user
+						// set user status code to 'inactive' for matched user
 						// 	this will do nothing for non-login users since there is no status field
 						$tr.ariaHide(false)
 							.removeClass('uneditable')
 							.find('.input-field[name=user_status_code]')
-								.val(2)
+								.val(1)
 								.change();
 					});
 				}
