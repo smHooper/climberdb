@@ -1569,12 +1569,11 @@ class ClimberDBExpeditions extends ClimberDB {
 				const $li = $(li);
 				const attachmentID = $li.data('table-id') || null;
 				const $inputs = $(li).find(inputSelector);
-
-				const fileInputID = $li.find('.attachment-input').attr('id');
-				const attachmentFile = this.attachments[fileInputID].file;
-				const filename = attachmentFile.name;
 				var additionalValues = {};
 				if (!attachmentID) { // this is a new attachment
+					const fileInputID = $li.find('.attachment-input').attr('id');
+					const attachmentFile = this.attachments[fileInputID].file;
+					const filename = attachmentFile.name;
 					formData.append(filename, attachmentFile, filename)
 					additionalValues = {
 						client_filename: filename,
