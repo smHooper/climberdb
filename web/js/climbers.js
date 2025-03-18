@@ -38,7 +38,7 @@ class ClimberForm {
 									<span class="slider round"></span>
 								</label>
 							</div>
-							<button id="climber-form-close-button" class="close expedition-modal-hidden" type="button" aria-label="Close">
+							<button id="climber-form-close-button" class="close expedition-modal-hidden close-modal-button" type="button" aria-label="Close">
 								<span>&times;</span>
 							</button>	
 						</div>
@@ -553,12 +553,11 @@ class ClimberForm {
 		// Add event handlers that can be added here with the given scope. Some handlers related to the form 
 		//	either reference properties of the ClimberDB (or subclass thereof) or otherwise reference variables 
 		//	outside the scope of the ClimberForm class
-		$('.climber-form button.close:not(.modal-close-button)').click(e => {
-			this.confirmCloseClimberForm($(e.target).closest('button.close'));
-		});
 
 		$('.climber-form .close-modal-button').click(e => {
-			$('.climber-form button.close').click();
+			this.confirmCloseClimberForm(
+				$(e.target).closest('button.close-modal-button')
+			);
 		});
 
 		$('.climber-form-title-field').change(e => {
