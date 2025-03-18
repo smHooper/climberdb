@@ -417,7 +417,10 @@ class ClimberDBQuery extends ClimberDB {
 						(
 							SELECT DISTINCT 
 								expedition_member_id, 
-								mountain_name, 
+								CASE 
+			                        WHEN mountain_name NOT IN ('Denali', 'Foraker') THEN 'backcountry'
+			                        ELSE mountain_name 
+			                    END AS mountain_name, 
 								least(coalesce(actual_return_date, now())::date, '{year}-{month}-1'::date + interval '1 month') - greatest(actual_departure_date, '{year}-{month}-1') AS days 
 							FROM {schema}.registered_climbs_view
 							WHERE 
