@@ -4755,7 +4755,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		const groupStatusCode = parseInt($('#input-group_status').val());
-		const $cards = $('#expedition-members-accordion .card:not(.cancelled)');
+		const $cards = $('#expedition-members-accordion .card:not(.cancelled):not(.cloneable)');
 		const nClimbingFeesNotPaid = $cards.find('.climbing-fee-icon.transparent').length;
 		const nSUPsNotComplete = $cards.find('.input-field[name=application_complete]:not(:checked)').length;
 		const nPSARNotComplete = $cards.find('.input-field[name=psar_complete]:not(:checked)').length;
