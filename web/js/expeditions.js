@@ -4767,13 +4767,19 @@ class ClimberDBExpeditions extends ClimberDB {
 				(groupStatusCode === 1 || groupStatusCode === 2) && //group is not confirmed
 				(climbingFeesNotPaid || supsNotComplete || psarNotComplete)
 			) {
-			const newDepartureDate = new Date(departureDate.getTime() + this.constants.millisecondsPerDay * 60)
+			const now = new Date();
+			const newDepartureDate = new Date(now.getTime() + this.constants.millisecondsPerDay * 60)
 				.toLocaleDateString('en-US', {month: 'long', day: 'numeric'});
 			let reasons = '';
 			if (climbingFeesNotPaid) reasons += `<li>${nClimbingFeesNotPaid} climber${nClimbingFeesNotPaid > 1 ? 's have' : ' has'} not paid their climbing permit fee</li>`;
 			if (supsNotComplete) 	 reasons += `<li>${nSUPsNotComplete} climber${nSUPsNotComplete > 1 ? 's have' : ' has'} not submitted their SUP application</li>`;
 			if (psarNotComplete)	 reasons += `<li>${nPSARNotComplete} climber${nPSARNotComplete > 1 ? 's have' : ' has'} not submitted their PSAR form</li>`;
-			const message = `This expedition is 60 days or less from their scheduled departure date on <strong>${departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric'})}</strong>, but not all expedition members have completed the requirements to receive a permit. These unfulfilled requirements include: <ul>${reasons}</ul>You should verify that these requirements have not been fulfilled, and if not, change the groups departure date to on or after <strong>${newDepartureDate}</strong>.`;
+			const message = `This expedition is 60 days or less from their scheduled departure date on` + 
+				`<strong>${departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric'})}</strong>` + 
+				`, but not all expedition members have completed the requirements to receive a permit. These` + 
+				` unfulfilled requirements include: <ul>${reasons}</ul>You should verify that these` +
+				` requirements have not been fulfilled, and if not, change the groups departure date` + 
+				` to on or after <strong>${newDepartureDate}</strong>.`;
 			this.showModal(message, 'WARNING: 60-Day Rule Violation');
 		}
 	}
