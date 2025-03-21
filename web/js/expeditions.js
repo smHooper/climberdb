@@ -592,15 +592,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// -----------Comms ---------------
 		$('.add-comms-button').click(e => {
-			
-			if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
-				this.showModal('You must add at least one expedition member before you can add a communcation device.', 'Invalid Action');
-				return;
-			}
-
-			const $button = $(e.target);
-			const $ul = $($button.data('target'));
-			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item'});
+			this.onAddCommsButtonClick(e);
 		});
 
 		// ask user to confirm removing CMC only if the cmc_checkout record already exists in the DB
@@ -1683,7 +1675,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $el = $(el);
 			const memberID = $el.closest('.card').data('table-id');
 			const transactionID = $el.data('table-id'); 
-			const transactionInfo = this.expeditionInfo.transactions[memberID].data[transactionID];
+			const transactionInfo = (this.expeditionInfo.transactions[memberID] || {data: {}}).data[transactionID];
+			if (transactionInfo === undefined) continue;
 			this.setInputFieldValue(el, transactionInfo);
 		}
 
@@ -1709,7 +1702,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				const $listItem = $(el).closest('.data-list-item')
 				//const routeCode = $listItem.find('.input-field[name=route_code]').val();
 				const memberID = $listItem.data('expedition-member-id');
-				const routeMemberInfo = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID];
+				const routeMemberInfo = ((this.expeditionInfo.expedition_member_routes.data || {})[routeCode] || {})[memberID];
+				if (routeMemberInfo === undefined) continue;
 				this.setInputFieldValue(el, routeMemberInfo);
 			}
 		}
@@ -1728,7 +1722,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Ask the user to confirm/discard edits
 	*/
-	confirmSaveEdits({afterActionCallback=()=>{}, afterCancelCallback=()=>{}}={}) {
+	confirmSaveEdits({afterActionCallback=()=>{}, afterCancelCallback=()=>{}, message=''}={}) {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
 		
 		const onClickHandler = () => { 
@@ -1757,9 +1751,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			<button class="generic-button modal-button danger-button discard-button close-modal" data-dismiss="modal">Discard</button>
 			<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal">Save</button>
 		`;
-
+		const modalMessage = message || `You have unsaved edits to this expedition. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this expedition.`;
 		this.showModal(
-			`You have unsaved edits to this expedition. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this expedition.`,
+			modalMessage,
 			'Save edits?',
 			{
 				footerButtons: footerButtons,
@@ -3502,8 +3496,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('.route-member-name-field').append(`<option value=${climberID}>${climberName}</option>`);
 
 		this.updateExpeditionMemberCount();
-		this.updateCommsDeviceOwnerOptions();
-
+		// don't update comms owner options until the exp. member is saved
+		//this.updateCommsDeviceOwnerOptions();
 
 		return $newCard;
 	}
@@ -3942,6 +3936,10 @@ class ClimberDBExpeditions extends ClimberDB {
 						$card.find('.route-member-list .data-list-item:not(.cloneable)').length === nMembers 
 					)
 				}
+
+				// Now that all expedition members are loaded, make each one an 
+				//	option in the comms device owner select
+				this.updateCommsDeviceOwnerOptions();
 
 				hideLoadingIndicator('queryExpedition');
 
@@ -4667,6 +4665,37 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 		// Remove the option from all selects whose value !== id
 		$cmcSelects.not($select).find(`option[value=${cmcID}]`).remove();
+	}
+
+
+	onAddCommsButtonClick(e) {
+		if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
+			this.showModal('You must add at least one expedition member before you can add a communcation device.', 'Invalid Action');
+			return;
+		}
+		const $button = $(e.target);
+		const $ul = $($button.data('target'));
+
+		// If there's a new expedition member that has not yet been saved, ask the user to 
+		//	confirm or discard the edits. This is because a new expedition member can't be 
+		//	assigned as the owner of a comms device, so they won't appear in the select 
+		//	options until the user saves their edits. To prevent confusion, let them know 
+		//	they need to save or discard the changes
+		if ($('#expedition-members-accordion .new-card:not(.cloneable)').length) {
+			// when the user discards or saves the edits, add the new comms device
+			const message = 'You have added at least one new expedition member but have not yet' +
+				' saved those edits. To add a comms device, you must either <strong>Save</strong>' +
+				' your edits to add this expedition member to the database or' +
+				' <strong>Discard</strong> your edits. Click <strong>Cancel</strong> to prevent' +
+				' adding a new comms device and review your expedition member changes.'
+			this.confirmSaveEdits({
+				message: message,
+				// TODO: ****owner options not filled in 
+				afterActionCallback: () => {this.addNewListItem($ul, {newItemClass: 'new-list-item'})}
+			})
+		} else {
+			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item'});
+		}
 	}
 
 	updateCommsDeviceOwnerOptions() {
