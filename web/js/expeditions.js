@@ -1683,7 +1683,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $el = $(el);
 			const memberID = $el.closest('.card').data('table-id');
 			const transactionID = $el.data('table-id'); 
-			const transactionInfo = this.expeditionInfo.transactions[memberID].data[transactionID];
+			const transactionInfo = (this.expeditionInfo.transactions[memberID] || {data: {}}).data[transactionID];
+			if (transactionInfo === undefined) continue;
 			this.setInputFieldValue(el, transactionInfo);
 		}
 
@@ -1709,7 +1710,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				const $listItem = $(el).closest('.data-list-item')
 				//const routeCode = $listItem.find('.input-field[name=route_code]').val();
 				const memberID = $listItem.data('expedition-member-id');
-				const routeMemberInfo = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID];
+				const routeMemberInfo = ((this.expeditionInfo.expedition_member_routes.data || {})[routeCode] || {})[memberID];
+				if (routeMemberInfo === undefined) continue;
 				this.setInputFieldValue(el, routeMemberInfo);
 			}
 		}
