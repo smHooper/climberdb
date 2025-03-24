@@ -775,6 +775,7 @@ CREATE OR REPLACE VIEW missing_sup_or_payment_dashboard_view AS
 			coalesce(sup.expedition_id, fee.expedition_id) AS expedition_id,
 			expedition_name, 
 			extract(days FROM planned_departure_date - now()) AS days_to_departure, 
+			guide_company_code,
 			CASE 
 				WHEN expected_expedition_size > n_members THEN expected_expedition_size - has_sup
 				ELSE n_members - has_sup
@@ -812,7 +813,8 @@ CREATE OR REPLACE VIEW missing_sup_or_payment_dashboard_view AS
 			GROUP BY expedition_id
 		) fee ON expeditions.id=fee.expedition_id
 		WHERE 
-			planned_departure_date >= now()::date
+			planned_departure_date >= now()::date AND 
+			coalesce(guide_company_code, -1) = -1 --independent only
 	) _
 	WHERE 
 		missing_sup > 0 OR missing_payment > 0
