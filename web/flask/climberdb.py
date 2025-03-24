@@ -341,6 +341,7 @@ def query_user_info(username):
 
 	users_table = tables['users'];
 	statement = select(
+			users_table.id,
 			users_table.user_role_code,
 			users_table.user_status_code,
 			users_table.first_name,

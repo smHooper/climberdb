@@ -1082,7 +1082,7 @@ $BODY$
 		ORDER BY sort_order, table_name
 	LOOP
 		view_name := dest_schema || '.' || quote_ident(record_.table_name);
-		EXECUTE 'DROP VIEW IF EXISTS ' || view_name || ' CASCADE; CREATE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
+		EXECUTE 'CREATE OR REPLACE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
 	END LOOP;
   
 	RETURN; 
