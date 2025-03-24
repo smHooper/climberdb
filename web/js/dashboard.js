@@ -357,25 +357,8 @@ class ClimberDBDashboard extends ClimberDB {
 
 
 	configureFlaggedGroups() {
-		const sql = `
-			SELECT 
-				expedition_name, 
-				to_char(planned_departure_date, 'Mon DD') AS departure, 
-				to_char(planned_return_date, 'Mon DD') AS return, 
-				gb.* 
-			FROM ${this.dbSchema}.expeditions 
-			JOIN (
-				SELECT 
-					expedition_id, 
-					replace(string_agg(flagged_reason, ';'), ';;', ';') AS flagged_comments 
-				FROM ${this.dbSchema}.expedition_members 
-				WHERE flagged 
-				GROUP BY expedition_id
-			) gb ON expeditions.id=expedition_id
-			WHERE planned_departure_date >= now()::date
-			ORDER BY planned_departure_date;`
 		
-		return this.queryDB({sql: sql})
+		return this.queryDB({tables: ['current_flagged_expeditions_view']})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print('error querying flagged: ' + response)

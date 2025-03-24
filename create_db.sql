@@ -862,6 +862,7 @@ FROM transaction_type_codes AS codes JOIN (
 WHERE sort_order IS NOT NULL 
 ORDER BY sort_order;
 
+
 CREATE OR REPLACE VIEW current_backcountry_groups_view AS 
 	WITH today AS (
 	  SELECT now(), extract(year FROM now()) AS year
@@ -881,6 +882,27 @@ CREATE OR REPLACE VIEW current_backcountry_groups_view AS
 	  actual_departure_date < today.now AND 
 	  today.year = extract(year FROM actual_departure_date)
 	;
+
+
+CREATE OR REPLACE VIEW current_flagged_expeditions_view AS 
+	SELECT 
+		expedition_name, 
+		to_char(planned_departure_date, 'Mon DD') AS departure, 
+		to_char(planned_return_date, 'Mon DD') AS return, 
+		gb.* 
+	FROM expeditions 
+	JOIN (
+		SELECT 
+			expedition_id, 
+			-- if no reason provided, aggregated string will have two semi-colons
+			replace(string_agg(flagged_reason, ';'), ';;', ';') AS flagged_comments 
+		FROM expedition_members 
+		WHERE flagged 
+		GROUP BY expedition_id
+	) gb ON expeditions.id=expedition_id
+	WHERE coalesce(planned_departure_date, actual_departure_date) >= now()::date
+	ORDER BY planned_departure_date;
+
 
 CREATE MATERIALIZED VIEW table_info_matview AS 
    SELECT 

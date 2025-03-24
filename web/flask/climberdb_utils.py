@@ -32,7 +32,8 @@ VIEW_PRIMARY_KEYS = {
 	'overdue_parties_view': 'expedition_id',
 	'seven_day_rule_view': 'climber_id',
 	'special_use_permit_view': 'expedition_member_id',
-	'transaction_type_view': 'id'
+	'transaction_type_view': 'id',
+	'current_flagged_expeditions_view': 'expedition_id'
 }
 
 # __all__ = [
@@ -120,7 +121,10 @@ def get_tables(overwrite_cache: bool=False) -> dict:
 		# Otherwise, reflect the metadata from the DB
 		base = automap_base()
 		# Views are not automapped by default so manually add them
+
 		for view_name_ in view_names:
+			if view_name_ == 'current_flagged_expeditions_view':
+				import pdb; pdb.set_trace()
 			Table(
 				view_name_, 
 				base.metadata, 
