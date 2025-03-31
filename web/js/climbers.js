@@ -976,15 +976,23 @@ class ClimberForm {
 			// Map expedition_member_id to index so the card can be retrieved from the member_id
 			expeditionMemberIDs[row.expedition_member_id] = i;
 
-			// If a previous climb didn't already qualify this climber as a 7-dayer, check that 
-			//	1. The return date is before now
-			//	2. formattedReturn is truthy because null value passed to Date() will return the unix epoch
-			// 	OR
-			//	the group status is "Checked back from mountain"
+			// If a previous climb didn't already qualify this climber as a 7-dayer, check that the 
+			//	following are all true: 
+			//	1. this is NOT a backcountry group
+			//	2. The climber got to at least 10000 ft (or whatever minimum_elevation_for_7_day is)
+			//	3. either:
+			//		a. The return date is before now AND 
+			//		b. formattedReturn is truthy because null value passed to Date() will return the unix epoch
+			// 		OR
+			//		the group status is "Off Mountain"
 			qualifiesFor7DayPermit = qualifiesFor7DayPermit || 
 				(
-					((actualReturnDate <= now && formattedReturn) || row.group_status_code == 5) &&
-					row.highest_elevation_ft >= this._parent.config.minimum_elevation_for_7_day || 10000
+					!row.is_backcountry &&
+					row.highest_elevation_ft >= (this._parent.config.minimum_elevation_for_7_day || 10000) &&
+					(
+						(actualReturnDate <= now && formattedReturn) || 
+						parseInt(row.group_status_code) === this._parent.constants.groupStatusCodes.offMountain
+					)
 				)
 
 			receivedProPin = receivedProPin || row.received_pro_pin;
