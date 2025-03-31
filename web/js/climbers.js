@@ -919,8 +919,6 @@ class ClimberForm {
 			$firstCollapse.closest('.card').find('.card-link').click();
 		}
 
-		this.queryClimberHistory(parseInt(climberID));
-
 		// Show the details pane
 		$formParent
 			.removeClass('collapsed')
@@ -928,6 +926,8 @@ class ClimberForm {
 		
 		// .change() events on .input-fields will add dirty class
 		$('.climber-form .input-field').removeClass('dirty');
+
+		return this.queryClimberHistory(parseInt(climberID));
 	}
 
 
@@ -1092,7 +1092,7 @@ class ClimberForm {
 			});
 
 
-		return [historyDeferred, contactsDeferred]
+		return $.when(historyDeferred, contactsDeferred)
 	}
 
 	/*
@@ -1682,7 +1682,7 @@ class ClimberDBClimbers extends ClimberDB {
 	saveModalClimber() {
 		const deferred = this.climberForm.saveEdits();
 		if (deferred) {	
-			deferred.done(response => {
+			deferred.then(response => {
 				if (!this.pythonReturnedError(response)) {
 					const firstName = $('#input-first_name').val();
 					const lastName = $('#input-last_name').val();
@@ -1694,12 +1694,13 @@ class ClimberDBClimbers extends ClimberDB {
 					// query climbers by name. This will return multiple climbers, but one of them
 					//	will be the newly created climber
 					this.queryClimbers({searchString: climberName})
-						.done(() => {
+						.then(() => {
 							// Select the new climber from the climber ID
 							//	The climber ID will always be the first returned ID
 							const climberID = response.data[0].db_id;
-							this.selectResultItem($(`#item-${climberID}`));
 							this.climberForm.closeClimberForm($('.climber-form button.close'));
+							return this.selectResultItem($(`#item-${climberID}`));
+							
 						});
 					this.currentRecordSetIndex = 1;
 
@@ -1880,7 +1881,7 @@ class ClimberDBClimbers extends ClimberDB {
 		const climberID = $item.attr('id').replace('item-', '');
 		const climberIndex = this.climberIDs[climberID];
 		const climberInfo = this.climberInfo[climberIndex];
-		this.climberForm.fillClimberForm(climberID, climberInfo);
+		const deferred = this.climberForm.fillClimberForm(climberID, climberInfo);
 
 		$('#climber-info-tab-content').data('table-id', climberID);
 
@@ -1893,7 +1894,7 @@ class ClimberDBClimbers extends ClimberDB {
 
 		if (updateURLHistory) this.updateURLHistory(climberID);
 
-		return $item;
+		return deferred;
 		
 	}
 
@@ -1982,14 +1983,14 @@ class ClimberDBClimbers extends ClimberDB {
 			if (autoSelectID === true || autoSelectID == -1) {
 				// Select first
 				const $first = $('.query-result-list-item:not(.header-row)').first();
-				this.selectResultItem($first, {updateURLHistory: false});
 				$first[0].scrollIntoView();
+				return this.selectResultItem($first, {updateURLHistory: false});
 			} else {
 				// Otherwise, select the specified climber
 				const $item = $(`.query-result-list-item[data-climber-id=${autoSelectID}]`)
 				// Don't update the window.history because this function could be called from onpopstate, which would create a duplicate entry. 
-				this.selectResultItem($item, {updateURLHistory: false})
 				$item[0].scrollIntoView();
+				return this.selectResultItem($item, {updateURLHistory: false});
 			}
 		} 
 		// Otherwise, don't do anything
@@ -2023,7 +2024,7 @@ class ClimberDBClimbers extends ClimberDB {
 				return_count: returnCount
 			}),
 			contentType: 'application/json'
-		}).done(response => {
+		}).then(response => {
 			if (this.pythonReturnedError(response)) {
 				// result was empty so let the user know
 				if (withSearchString) {
@@ -2038,7 +2039,7 @@ class ClimberDBClimbers extends ClimberDB {
 					);
 					// Reset URL, then load the default result set but don't add a new history entry because it would duplicate the base URL in the history
 					this.resetURL();
-					this.getResultSet({newHistoryEntry: false});
+					return this.getResultSet({newHistoryEntry: false});
 				} else {
 					this.showModal('Retrieving climber info from the database failed with the following error: <br>' + response, 'Database Error');
 				}
@@ -2069,7 +2070,12 @@ class ClimberDBClimbers extends ClimberDB {
 				}
 				// Add climbers to the list. If a climberID was given, it will automatically be selected. 
 				//	If not, only select the first climber if there was no search string provided
-				this.fillResultList(this.climberInfo, {autoSelectID: selectClimberID || !withSearchString});
+				const deferred = this.fillResultList(
+					this.climberInfo, 
+					{
+						autoSelectID: selectClimberID || !withSearchString
+					}
+				);
 
 				// Update index
 				if (returnCount) {
@@ -2095,6 +2101,7 @@ class ClimberDBClimbers extends ClimberDB {
 					$('.show-previous-result-set-button').prop('disabled', true);
 				}
 				
+				return deferred;
 			}
 		}).fail((xhr, status, error) => {
 			this.showModal('Retrieving climber info from the database failed because ' + error, 'Database Error')
@@ -2103,14 +2110,12 @@ class ClimberDBClimbers extends ClimberDB {
 
 
 	queryClimberByID(climberID) {
-		const deferred = this.queryClimbers({climberID: climberID})
+		return this.queryClimbers({climberID: climberID})
 			.done(queryResultString => {
 				if (!this.pythonReturnedError(queryResultString)) {
 					this.currentRecordSetIndex = 1;
 				}
 			});
-		
-		return deferred;
 	}
 
 	/*
