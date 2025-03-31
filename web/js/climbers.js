@@ -968,8 +968,9 @@ class ClimberForm {
 			}
 
 			// Set the anchor url to this group
+			const pageName = row.is_backcountry ? 'backcountry' : 'expeditions';
 			$card.find('.expedition-link')
-				.attr('href', `expeditions.html?id=${row.expedition_id}`)
+				.attr('href', `${pageName}.html?id=${row.expedition_id}`)
 				.text(`View expedition '${row.expedition_name}'`);
 
 			// Map expedition_member_id to index so the card can be retrieved from the member_id
