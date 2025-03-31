@@ -1843,7 +1843,7 @@ def merge_climbers():
 				WHERE 
 					climber_id=:merge_climber_id AND 
 					expedition_id NOT IN (
-						SELECT expedition_id FROM expedition_members WHERE climber_id=:selected_climber_id
+						SELECT expedition_id FROM {schema}.expedition_members WHERE climber_id=:selected_climber_id
 					)
 				RETURNING id'''),
 			data
@@ -1851,7 +1851,7 @@ def merge_climbers():
 		# expedition_member records have now been transferred so the climber record to merge
 		#	can now be safely deleted
 		delete_result = conn.execute(
-			sqlatext(f'''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
+			sqlatext(f'''DELETE FROM {schema}.climbers WHERE id=:merge_climber_id RETURNING id'''),
 			data
 		)
 
