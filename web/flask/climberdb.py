@@ -1838,7 +1838,7 @@ def merge_climbers():
 		# 	shouldn't ever be the case but it is possible
 		update_result = conn.execute(
 			sqlatext(f'''
-				UPDATE expedition_members 
+				UPDATE {schema}.expedition_members 
 				SET climber_id=:selected_climber_id 
 				WHERE 
 					climber_id=:merge_climber_id AND 
