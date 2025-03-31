@@ -2364,11 +2364,11 @@ class ClimberDBClimbers extends ClimberDB {
 	onMergeClimberButtonClick() {
 
 		const $selectedClimberItem = $('.query-result-list-item.selected');
-		const selectedClimberID = $selectedClimberItem.data('climber-id');
+		const selectedClimberID = parseInt($selectedClimberItem.data('climber-id'));
 		const selectedClimberName = $selectedClimberItem.find('.result-label-climber-name').text();
 
 		const $mergeClimberSelect = $('#merge-climber-tab-content .climber-select');
-		const mergeClimberID = $mergeClimberSelect.val();
+		const mergeClimberID = parseInt($mergeClimberSelect.val());
 		const $mergeClimberOption = $mergeClimberSelect.find(`option[value=${mergeClimberID}]`)
 		const mergeClimberName = $mergeClimberOption.text();
 		// Check that the user has actually selected a climber. This shouldn't be necessary beceause

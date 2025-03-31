@@ -1818,7 +1818,7 @@ def merge_climbers():
 	be safely deleted
 
 	Request parameters:
-	selected_climber_id - the numeric ID of the climber record that the user intends to maintained
+	selected_climber_id - the numeric ID of the climber record that the user intends to maintain
 	merge_climber_id - the numeric ID of the climber record that the user intends to merge with 
 		the maintained climber record
 
@@ -1837,13 +1837,13 @@ def merge_climbers():
 		#	one expedition together, filter out expeditions they both belong to. In practice, this 
 		# 	shouldn't ever be the case but it is possible
 		update_result = conn.execute(
-			sqlatext('''
-				UPDATE expedition_members 
+			sqlatext(f'''
+				UPDATE {schema}.expedition_members 
 				SET climber_id=:selected_climber_id 
 				WHERE 
 					climber_id=:merge_climber_id AND 
 					expedition_id NOT IN (
-						SELECT expedition_id FROM expedition_members WHERE climber_id=:selected_climber_id
+						SELECT expedition_id FROM {schema}.expedition_members WHERE climber_id=:selected_climber_id
 					)
 				RETURNING id'''),
 			data
@@ -1851,11 +1851,11 @@ def merge_climbers():
 		# expedition_member records have now been transferred so the climber record to merge
 		#	can now be safely deleted
 		delete_result = conn.execute(
-			sqlatext('''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
+			sqlatext(f'''DELETE FROM {schema}.climbers WHERE id=:merge_climber_id RETURNING id'''),
 			data
 		)
 
-	return {'update_result': [r._asdict() for r in update_result.fetchall()]}
+		return {'update_result': [r._asdict() for r in update_result.fetchall()]}
 
 #---------------- DB I/O ---------------------#
 
