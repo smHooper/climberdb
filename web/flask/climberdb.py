@@ -1818,7 +1818,7 @@ def merge_climbers():
 	be safely deleted
 
 	Request parameters:
-	selected_climber_id - the numeric ID of the climber record that the user intends to maintained
+	selected_climber_id - the numeric ID of the climber record that the user intends to maintain
 	merge_climber_id - the numeric ID of the climber record that the user intends to merge with 
 		the maintained climber record
 
@@ -1855,7 +1855,7 @@ def merge_climbers():
 			data
 		)
 
-	return {'update_result': [r._asdict() for r in update_result.fetchall()]}
+		return {'update_result': [r._asdict() for r in update_result.fetchall()]}
 
 #---------------- DB I/O ---------------------#
 
