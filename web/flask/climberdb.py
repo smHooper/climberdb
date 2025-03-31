@@ -1837,7 +1837,7 @@ def merge_climbers():
 		#	one expedition together, filter out expeditions they both belong to. In practice, this 
 		# 	shouldn't ever be the case but it is possible
 		update_result = conn.execute(
-			sqlatext('''
+			sqlatext(f'''
 				UPDATE expedition_members 
 				SET climber_id=:selected_climber_id 
 				WHERE 
@@ -1851,7 +1851,7 @@ def merge_climbers():
 		# expedition_member records have now been transferred so the climber record to merge
 		#	can now be safely deleted
 		delete_result = conn.execute(
-			sqlatext('''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
+			sqlatext(f'''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
 			data
 		)
 
