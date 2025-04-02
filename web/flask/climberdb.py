@@ -297,7 +297,7 @@ def validate_password(username, password):
 		if not result:
 			raise ValueError(f'Password query failed because user {username} does not exist')
 		# if the result is None, this is a new user whose password isn't set
-		hashed_password = result.hashed_password.encode('utf-8')
+		hashed_password = (result.hashed_password or '').encode('utf-8')
 		if not hashed_password:
 			# return false so the client knows whatever was entered isn't the 
 			#	same as the password in the db
@@ -405,7 +405,7 @@ def set_password():
 	
 	# Update db
 	#engine = climberdb_utils.get_engine()
-	statement = sqlatext('''UPDATE users SET hashed_password=:password, user_status_code=2 WHERE ad_username=:username''')
+	statement = sqlatext(f'''UPDATE {schema}.users SET hashed_password=:password, user_status_code=2 WHERE ad_username=:username''')
 	write_engine.execute(statement, {'password': hashed_password.decode(), 'username': username})
 
 	return 'true'
