@@ -646,6 +646,14 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 	
 	/*
+	Helper function to detect if this is the backcountry page (or expedition)
+	since the ClimberDBBackcountry inherits from ClimberDBExpedition
+	*/
+	pageIsBackcountry() {
+		return !!window.location.pathname.match('backcountry.html');
+	}
+
+	/*
 	Helper function to determine if the value of an input field changed
 	*/
 	inputValueDidChange($input) {
@@ -1375,11 +1383,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		if (expeditionsHasEdits) {
 			if (isNewExpedition) {
 				// if this is the backcountry page, set the is_backcountry field to true
-				if ($('#locations-accordion').length) expeditionEdits.is_backcountry = true;
+				expeditionEdits.is_backcountry = this.pageIsBackcountry();
 
 				dbInserts.expeditions = [{
 					values: {
-						is_backcountry: !!window.location.pathname.match('backcountry.html'), 
 						entered_by: username,
 						entry_time: now,
 						last_modified_by: username,
@@ -3192,11 +3199,12 @@ class ClimberDBExpeditions extends ClimberDB {
 			where.push({column_name: 'expedition_id', operator: '<>', comparand: currentExpeditionID});
 		}
 
-		// IF this is the expedition page, 
+		// IF this is the expedition page, search only for expeditions. Do the same for 
+		//	BC groups if it's the BC page
 		where.push({
 			column_name: 'is_backcountry',
 			operator: '=',
-			comparand: !!window.location.pathname.match('backcountry.html') 
+			comparand: this.pageIsBackcountry() 
 		});
 
 		const requestData = {
@@ -3775,12 +3783,13 @@ class ClimberDBExpeditions extends ClimberDB {
 
 					// Prevent the user from loading backcountry expeditions on the Expeditions page and vice versa
 					const pageName = window.location.pathname;
-					const isBackcountry = expeditionResult[0].is_backcountry;
-					if (pageName.match('expedition') && isBackcountry) {
+					const dataIsBackcountry = expeditionResult[0].is_backcountry;
+					const pageIsBackcountry = this.pageIsBackcountry();
+					if (!pageIsBackcountry && dataIsBackcountry) {
 						const message = `You're trying to view a Backcountry group on the Expedition page. View this group on <a href="backcountry.html?id=${expeditionID}">the Backcountry page</a> instead.`;
 						this.showModal(message, 'Invalid Expedition');
 						return;
-					} else if (pageName.match('backcountry') && !isBackcountry) {
+					} else if (pageIsBackcountry && !dataIsBackcountry) {
 						const message = `You're trying to view a Denali or Foraker expedition on the Backcountry page. View this group on <a href="expeditions.html?id=${expeditionID}">the Expeditons page</a> instead.`;
 						this.showModal(message, 'Invalid Backcountry Group');
 						return;
@@ -4745,6 +4754,10 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	show60DayWarning() {
+
+		// 60-day rule is relevant for BC
+		if (this.pageIsBackcountry()) return;
+
 		const departureDate = new Date($('#input-planned_departure_date').val() + ' 00:00');
 		const now = new Date();
 		const daysToDeparture = (departureDate - now) / this.constants.millisecondsPerDay;
