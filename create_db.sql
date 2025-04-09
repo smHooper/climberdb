@@ -524,7 +524,7 @@ CREATE OR REPLACE VIEW expedition_info_view AS
 		attachments.attachment_notes,
 		attachments.client_filename,
 		attachments.mime_type,
-		'attachments/' || split_part(attachments.file_path, '\', -1) AS file_path, --'
+		(regexp_match(attachments.file_path, '\w+\\[\w-]+\.\w{3,4}$'))[1] AS file_path, --'get jsut folder\file.ext
 		attachments.file_size_kb,
 		cmc_checkout.id AS cmc_checkout_id,
 		cmc_checkout.cmc_id,
@@ -775,6 +775,7 @@ CREATE OR REPLACE VIEW missing_sup_or_payment_dashboard_view AS
 			coalesce(sup.expedition_id, fee.expedition_id) AS expedition_id,
 			expedition_name, 
 			extract(days FROM planned_departure_date - now()) AS days_to_departure, 
+			guide_company_code,
 			CASE 
 				WHEN expected_expedition_size > n_members THEN expected_expedition_size - has_sup
 				ELSE n_members - has_sup
@@ -812,7 +813,8 @@ CREATE OR REPLACE VIEW missing_sup_or_payment_dashboard_view AS
 			GROUP BY expedition_id
 		) fee ON expeditions.id=fee.expedition_id
 		WHERE 
-			planned_departure_date >= now()::date
+			planned_departure_date >= now()::date AND 
+			coalesce(guide_company_code, -1) = -1 --independent only
 	) _
 	WHERE 
 		missing_sup > 0 OR missing_payment > 0
@@ -860,6 +862,7 @@ FROM transaction_type_codes AS codes JOIN (
 WHERE sort_order IS NOT NULL 
 ORDER BY sort_order;
 
+
 CREATE OR REPLACE VIEW current_backcountry_groups_view AS 
 	WITH today AS (
 	  SELECT now(), extract(year FROM now()) AS year
@@ -879,6 +882,27 @@ CREATE OR REPLACE VIEW current_backcountry_groups_view AS
 	  actual_departure_date < today.now AND 
 	  today.year = extract(year FROM actual_departure_date)
 	;
+
+
+CREATE OR REPLACE VIEW current_flagged_expeditions_view AS 
+	SELECT 
+		expedition_name, 
+		to_char(planned_departure_date, 'Mon DD') AS departure, 
+		to_char(planned_return_date, 'Mon DD') AS return, 
+		gb.* 
+	FROM expeditions 
+	JOIN (
+		SELECT 
+			expedition_id, 
+			-- if no reason provided, aggregated string will have two semi-colons
+			replace(string_agg(flagged_reason, ';'), ';;', ';') AS flagged_comments 
+		FROM expedition_members 
+		WHERE flagged 
+		GROUP BY expedition_id
+	) gb ON expeditions.id=expedition_id
+	WHERE coalesce(planned_departure_date, actual_departure_date) >= now()::date
+	ORDER BY planned_departure_date;
+
 
 CREATE MATERIALIZED VIEW table_info_matview AS 
    SELECT 
@@ -1058,7 +1082,7 @@ $BODY$
 		ORDER BY sort_order, table_name
 	LOOP
 		view_name := dest_schema || '.' || quote_ident(record_.table_name);
-		EXECUTE 'DROP VIEW IF EXISTS ' || view_name || ' CASCADE; CREATE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
+		EXECUTE 'CREATE OR REPLACE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
 	END LOOP;
   
 	RETURN; 

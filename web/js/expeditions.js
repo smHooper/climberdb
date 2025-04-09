@@ -398,7 +398,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						+ ` climber is actually a commercial guide, <a href="climbers.html?id=${climberID}`
 						+ `&edit=true" target="_blank">edit their climber profile</a>. You can then reload`
 						+ ` this page and mark them as a guide on this expedition.`;
-					showModal(message, 'Climber Is Not A Guide');
+					this.showModal(message, 'Climber Is Not A Guide');
 					$checkbox.prop('checked', false).change();
 				}
 			}
@@ -520,12 +520,11 @@ class ClimberDBExpeditions extends ClimberDB {
 				const memberName = first_name + ' ' + last_name;
 				const $routeInput = $li.closest('.card').find('.route-code-header-input:not(.mountain-code-header-input)');
 				const routeName = $routeInput.find(`option[value=${$routeInput.val()}]`).text();//this.routeCodes[$li.find('.input-field[name="route_code"]').val()].name;
-				showModal(
+				this.showModal(
 					`Are you sure you want to remove <strong>${memberName}</strong> from the <strong>${routeName}</strong> route?`, 
 					'Remove expedition member from this route?', 
-					'alert', 
-					footerButtons,
 					{
+						footerButtons: footerButtons,
 						eventHandlerCallable: onConfirmClickHandler
 					}
 				);
@@ -598,15 +597,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// -----------Comms ---------------
 		$('.add-comms-button').click(e => {
-			
-			if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
-				showModal('You must add at least one expedition member before you can add a communcation device.', 'Invalid Action');
-				return;
-			}
-
-			const $button = $(e.target);
-			const $ul = $($button.data('target'));
-			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item'});
+			this.onAddCommsButtonClick(e);
 		});
 
 		// ask user to confirm removing CMC only if the cmc_checkout record already exists in the DB
@@ -659,6 +650,14 @@ class ClimberDBExpeditions extends ClimberDB {
 		// ^^^^^ Climber form stuff ^^^^^^
 	}
 	
+	/*
+	Helper function to detect if this is the backcountry page (or expedition)
+	since the ClimberDBBackcountry inherits from ClimberDBExpedition
+	*/
+	pageIsBackcountry() {
+		return !!window.location.pathname.match('backcountry.html');
+	}
+
 	/*
 	Helper function to determine if the value of an input field changed
 	*/
@@ -751,7 +750,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const currentYear = new Date().getFullYear();
 			if (departureYear < currentYear) {
 				const formattedDeparture = departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
-				showModal(
+				this.showModal(
 					`This expedition was scheduled to depart on <strong>${formattedDeparture}</strong>.` + 
 					' Make sure this is the group you intended to edit.', 
 					'WARNING: Editing Legacy Data'
@@ -1058,8 +1057,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					$('#alert-modal .confirm-button').click(() => {
 						this.deleteByID('expedition_members', dbID)
 							.done(response => {
-								if (this.pythonReturnedError(response)) {
-									showModal('The expedition member could not be deleted because of an unexpected error: <br><br>' + response, 'Unexpected Error');
+								if (this.pythonReturnedError(response, {errorExplanation: 'The expedition member could not be deleted because of an unexpected error.'})) {
 									return;
 								} else {
 									delete this.expeditionInfo.expedition_members.data[dbID];
@@ -1100,17 +1098,10 @@ class ClimberDBExpeditions extends ClimberDB {
 				const routeCode = $routeCodeInput.val();
 				onConfirmClickHandler = () => {
 					$('#alert-modal .confirm-button').click(() => {
-						const sql = `DELETE FROM ${this.dbSchema}.expedition_member_routes WHERE id IN (${memberRouteIDs})`;
 						this.deleteByID('expedition_member_routes', memberRouteIDs)
 							.done(response => {
-								if (this.pythonReturnedError(response)) {
-									showModal(
-										'And error occurred while attempting to delete this route: <br><br>' + response,
-										'Database Error'
-									);
-									return;
-								} else {
-									const routeDeleted = delete climberDB.expeditionInfo.expedition_member_routes.data[routeCode];
+								if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while attempting to delete this route.'})) {
+									const routeDeleted = delete this.expeditionInfo.expedition_member_routes.data[routeCode];
 									if (routeDeleted) {
 										// remove the route from in-memory .order
 										this.expeditionInfo.expedition_member_routes.order = this.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
@@ -1118,10 +1109,9 @@ class ClimberDBExpeditions extends ClimberDB {
 									$card.fadeRemove();
 								}
 							}).fail((xhr, status, error) => {
-								showModal(
-									'And error occurred while attempting to delete this route: ' + error,
-									'Database Error'
-								);
+								const message = 'And error occurred while attempting to delete this route:' + 
+								 ` ${error}.${this.getDBContactMessage()}`;
+								this.showModal(message, 'Database Error');
 							})
 					})
 				}
@@ -1134,7 +1124,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
 				<button class="generic-button modal-button danger-button close-modal confirm-button" data-dismiss="modal">OK</button>
 			`;
-			showModal(message, `Delete ${displayName}?`, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+			this.showModal(message, `Delete ${displayName}?`, {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler});
 		}
 	}
 
@@ -1189,7 +1179,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						const climberID = el.value;
 						const climberName = el.innerHTML;
 						const memberID = Object.keys(memberData).filter(id => parseInt(memberData[id].climber_id) === parseInt(climberID)).pop()
-						climberDB.addRouteMember($list, climberName, climberID, {expeditionMemberID: memberID});
+						this.addRouteMember($list, climberName, climberID, {expeditionMemberID: memberID});
 					}
 				})
 			}
@@ -1199,12 +1189,14 @@ class ClimberDBExpeditions extends ClimberDB {
 				<button class="generic-button modal-button primary-button close-modal add-selected-button" data-dismiss="modal">Add selected</button>
 				<button class="generic-button modal-button primary-button close-modal add-all-button" data-dismiss="modal">Add All</button>
 			`;
-			showModal(
+			this.showModal(
 				message, 
 				'Select expedition member(s) to add', 
-				'confirm', 
-				footerButtons,
-				{eventHandlerCallable: onClickHandler});
+				{ 
+					footerButtons: footerButtons,
+					eventHandlerCallable: onClickHandler
+				}
+			);
 		}
 	} 
 
@@ -1219,7 +1211,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		const $routeInput = $button.closest('.card').find('.route-code-header-input:not(.mountain-code-header-input)');
 		const routeCode = $routeInput.val();
 		if (routeCode === '') {
-			showModal('You must select a mountain and route first before you can mark that all climbers summited.', 'No Route Selected');
+			this.showModal('You must select a mountain and route first before you can mark that all climbers summited.', 'No Route Selected');
 			return;
 		}
 		const routeName = $routeInput.find(`option[value=${routeCode}]`).text();
@@ -1274,7 +1266,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
 			<button class="generic-button modal-button danger-button close-modal confirm-button" data-dismiss="modal">OK</button>
 		`;
-		showModal(message, title, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+		this.showModal(message, title, {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler});
 	}
 
 
@@ -1332,7 +1324,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			.has('.input-field.dirty, .input-field:required:invalid');
 		
 		if (!$editParents.length) {
-			showModal('You have not made any edits to save yet.', 'No edits to save');
+			this.showModal('You have not made any edits to save yet.', 'No edits to save');
 			hideLoadingIndicator();
 			return;
 		}
@@ -1353,7 +1345,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			.join('');
 
 			setTimeout(
-				() => {showModal(`The following fields are not filled. All required fields must be filled before you can save your edits:<ul>${errorFieldList}</ul>`, 'Required Field Is Empty')},
+				() => {this.showModal(`The following fields are not filled. All required fields must be filled before you can save your edits:<ul>${errorFieldList}</ul>`, 'Required Field Is Empty')},
 				500
 			);
 			hideLoadingIndicator();
@@ -1396,11 +1388,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		if (expeditionsHasEdits) {
 			if (isNewExpedition) {
 				// if this is the backcountry page, set the is_backcountry field to true
-				if ($('#locations-accordion').length) expeditionEdits.is_backcountry = true;
+				expeditionEdits.is_backcountry = this.pageIsBackcountry();
 
 				dbInserts.expeditions = [{
 					values: {
-						is_backcountry: !!window.location.pathname.match('backcountry.html'), 
 						entered_by: username,
 						entry_time: now,
 						last_modified_by: username,
@@ -1582,12 +1573,11 @@ class ClimberDBExpeditions extends ClimberDB {
 				const $li = $(li);
 				const attachmentID = $li.data('table-id') || null;
 				const $inputs = $(li).find(inputSelector);
-
-				const fileInputID = $li.find('.attachment-input').attr('id');
-				const attachmentFile = this.attachments[fileInputID].file;
-				const filename = attachmentFile.name;
 				var additionalValues = {};
 				if (!attachmentID) { // this is a new attachment
+					const fileInputID = $li.find('.attachment-input').attr('id');
+					const attachmentFile = this.attachments[fileInputID].file;
+					const filename = attachmentFile.name;
 					formData.append(filename, attachmentFile, filename)
 					additionalValues = {
 						client_filename: filename,
@@ -1649,8 +1639,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			contentType: false,
 			processData: false
 		}).then(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal(`An unexpected error occurred while saving data to the database. Make sure you're still connected to the NPS network and try again. <a href="mailto:${this.config.db_admin_email}">Contact your database adminstrator</a> if the problem persists. Full error: <br><br>${response}`, 'Unexpected error');
+			if (this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while saving data to the database.'})) {
 				return false;
 			} else {
 				const expeditionID = this.setInsertedIDs(response.data || {});
@@ -1664,7 +1653,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				return this.queryExpedition(expeditionID, {showOnLoadWarnings: false}) //suppress flagged expedition member warnings
 			}
 		}).fail((xhr, status, error) => {
-			showModal(`An unexpected error occurred while saving data to the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+			this.showModal(`An unexpected error occurred while saving data to the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
 		}).always(() => {
 			 	this.hideLoadingIndicator();
 			});
@@ -1698,7 +1687,8 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $el = $(el);
 			const memberID = $el.closest('.card').data('table-id');
 			const transactionID = $el.data('table-id'); 
-			const transactionInfo = this.expeditionInfo.transactions[memberID].data[transactionID];
+			const transactionInfo = (this.expeditionInfo.transactions[memberID] || {data: {}}).data[transactionID];
+			if (transactionInfo === undefined) continue;
 			this.setInputFieldValue(el, transactionInfo);
 		}
 
@@ -1724,7 +1714,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				const $listItem = $(el).closest('.data-list-item')
 				//const routeCode = $listItem.find('.input-field[name=route_code]').val();
 				const memberID = $listItem.data('expedition-member-id');
-				const routeMemberInfo = this.expeditionInfo.expedition_member_routes.data[routeCode][memberID];
+				const routeMemberInfo = ((this.expeditionInfo.expedition_member_routes.data || {})[routeCode] || {})[memberID];
+				if (routeMemberInfo === undefined) continue;
 				this.setInputFieldValue(el, routeMemberInfo);
 			}
 		}
@@ -1743,7 +1734,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Ask the user to confirm/discard edits
 	*/
-	confirmSaveEdits({afterActionCallback=()=>{}, afterCancelCallback=()=>{}}={}) {
+	confirmSaveEdits({afterActionCallback=()=>{}, afterCancelCallback=()=>{}, message=''}={}) {
 		//@param afterActionCallbackStr: string of code to be appended to html onclick attribute
 		
 		const onClickHandler = () => { 
@@ -1772,13 +1763,14 @@ class ClimberDBExpeditions extends ClimberDB {
 			<button class="generic-button modal-button danger-button discard-button close-modal" data-dismiss="modal">Discard</button>
 			<button class="generic-button modal-button primary-button confirm-button close-modal" data-dismiss="modal">Save</button>
 		`;
-
-		showModal(
-			`You have unsaved edits to this expedition. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this expedition.`,
+		const modalMessage = message || `You have unsaved edits to this expedition. Would you like to <strong>Save</strong> or <strong>Discard</strong> them? Click <strong>Cancel</strong> to continue editing this expedition.`;
+		this.showModal(
+			modalMessage,
 			'Save edits?',
-			'alert',
-			footerButtons,
-			{eventHandlerCallable: onClickHandler}
+			{
+				footerButtons: footerButtons,
+				eventHandlerCallable: onClickHandler
+			}
 		);
 	}
 
@@ -1793,10 +1785,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			showLoadingIndicator('deleteExpedition');
 			return this.deleteByID('expeditions', expeditionID)
 				.done( response => {
-					if (this.pythonReturnedError(response)) {
-						showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
-						return;
-					} else {
+					if (!this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while deleting data from the database.'})) {
 						// Remove the expedition from the search bar (if it exists, i.e., is from the current year)
 						$(`#expedition-options-drawer .expedition-search-bar-option[data-expedition-id=${expeditionID}]`).remove();
 
@@ -1811,7 +1800,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 				})
 				.fail((xhr, status, error) => {
-					showModal(`An unexpected error occurred while deleting data from the database: ${error}.`, 'Unexpected error');
+					this.showModal(`An unexpected error occurred while deleting data from the database: ${error}.`, 'Unexpected error');
 				})
 				.always(() => {
 					hideLoadingIndicator();
@@ -1864,7 +1853,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				' edits will be removed.';
 		}
 		
-		showModal(message, title, 'alert', footerButtons, {eventHandlerCallable: eventHandler});
+		this.showModal(message, title, {footerButtons: footerButtons, eventHandlerCallable: eventHandler});
 	} 
 
 
@@ -1873,7 +1862,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	*/
 	showChangeExpeditionModal($card) {
 		if ($card.is('.new-card')) {
-			showModal('You can\'t move this expedition member to a different expedition until you have saved their information. Either save their information first or delete this expedition member and enter add them to the correct expedition.', 'Invalid Operation');
+			this.showModal('You can\'t move this expedition member to a different expedition until you have saved their information. Either save their information first or delete this expedition member and enter add them to the correct expedition.', 'Invalid Operation');
 			return;
 		}
 		// default to -1 because ID will never equal -1, although a fallback option shouldn't 
@@ -1933,7 +1922,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					$('#input-expedition_name').addClass('ignore-duplicates');
 				});
 			}
-			showModal(message, 'Duplicate Expedition Name', 'alert', footerButtons, {eventHandlerCallable: eventHandler});
+			this.showModal(message, 'Duplicate Expedition Name', {footerButtons: footerButtons, eventHandlerCallable: eventHandler});
 		}
 	}
 
@@ -1982,7 +1971,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						.change(); 
 				})
 			}
-			//showModal(message, 'Update Planned Departure?', 'confirm', '', {eventHandlerCallable: eventHandlerCallable});
+			//this.showModal(message, 'Update Planned Departure?', {modalType: 'confirm', eventHandlerCallable: eventHandlerCallable});
 		}
 	}
 
@@ -2020,7 +2009,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const eventHandlerCallable = () => {
 				$('#alert-modal button').click(() => {this.revertInputValue($select)})
 			}
-			showModal(message, 'Missing Payment/Information', 'alert', '', {eventHandlerCallable: eventHandlerCallable})
+			this.showModal(message, 'Missing Payment/Information', {eventHandlerCallable: eventHandlerCallable})
 			return false;
 		} else {
 			return true;
@@ -2129,7 +2118,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const expeditionInfo =  this.expeditionInfo;
 			
 			if ($memberCards.length === 0) {
-				showModal(`You have not added any (non-canceled) expedition members yet, so this expedition's status can't be changed to <strong>${status}</strong>.`, 'No Expedition Members');
+				this.showModal(`You have not added any (non-canceled) expedition members yet, so this expedition's status can't be changed to <strong>${status}</strong>.`, 'No Expedition Members');
 				this.revertInputValue($select, {triggerChange: true})
 				return;
 			} else if ($memberCards.length === 1) {
@@ -2197,15 +2186,17 @@ class ClimberDBExpeditions extends ClimberDB {
 						this.deleteByID('briefings', briefingInfo.id)
 							.done(response => {
 								const briefingURL = $('#expedition-briefing-link').attr('href')
-								if (this.pythonReturnedError(response)) {
-									showModal(`The briefing could not be deleted because of an unexpected error. You will have to delete this briefing manually on the <a href=${briefingURL} target="_blank">briefings page</a>. Full error message: <br><br>` + response, 'Unexpected Error')
-								} else {
+								const errorMessage = 
+									'The briefing could not be deleted because of an unexpected' +
+									' error. You will have to delete this briefing manually on' + 
+									` the <a href=${briefingURL} target="_blank">briefings page</a>.`;
+								if (!this.pythonReturnedError(response, {errorExplanation: errorMessage})) {
 									this.resetBriefingLink()
 								}
 							})
 					})
 				}
-				showModal(message, 'Cancel Briefing?', 'confirm', footerButtons, {eventHandlerCallable: eventHandler})
+				this.showModal(message, 'Cancel Briefing?', {footerButtons: footerButtons, eventHandlerCallable: eventHandler})
 			}
 		}
 	}
@@ -2269,7 +2260,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				const result = response.data || [];
 				if (result.length) {
 					const climberName = $('#modal-expedition-search-bar-label > span').text();
-					showModal(`${climberName} is already a member of ${selectedExpeditionName}. If you think this is an error, check which expedition member record has the most complete or up-to-date information and delete the other one. Then change their expedition if necessary.`, 'Duplicate Expedition Member');
+					this.showModal(`${climberName} is already a member of ${selectedExpeditionName}. If you think this is an error, check which expedition member record has the most complete or up-to-date information and delete the other one. Then change their expedition if necessary.`, 'Duplicate Expedition Member');
 				} else {
 					const $searchBar = $('#modal-expedition-search-bar');
 					
@@ -2296,7 +2287,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					if (result.length) {
 						const departureYear = new Date(result[0].planned_departure_date).getFullYear();
 						if (departureYear < new Date().getFullYear()) {
-							showModal(`You selected the expedition <strong>${selectedExpeditionName}</strong> which has a planned departure from <strong>${departureYear}</strong>. Make sure you selected the right expedition before confirming the expedition change.`, 'Selected Expedition From Previous Year')
+							this.showModal(`You selected the expedition <strong>${selectedExpeditionName}</strong> which has a planned departure from <strong>${departureYear}</strong>. Make sure you selected the right expedition before confirming the expedition change.`, 'Selected Expedition From Previous Year')
 						}
 					}
 				}
@@ -2369,12 +2360,13 @@ class ClimberDBExpeditions extends ClimberDB {
 					$listItem.find('.file-input-label').click();
 				})
 			}
-			showModal(
+			this.showModal(
 				message, 
 				`Add ${attachmentTypeName}?`, 
-				'confirm', 
-				footerButtons, 
-				{eventHandlerCallable: onConfirmClick}
+				{ 
+					footerButtons: footerButtons, 
+					eventHandlerCallable: onConfirmClick
+				}
 			)
 		}
 	}
@@ -2407,16 +2399,16 @@ class ClimberDBExpeditions extends ClimberDB {
 			contentType: false,
 			processData: false
 		}).done(queryResultString => {
-				if (this.pythonReturnedError(queryResultString)) {
-					showModal('The expedition member could not be moved to a new expedition. Error: ' + queryResultString, 'Database Error');
-				} else {
+				if (!this.pythonReturnedError(queryResultString, {errorExplanation: 'The expedition member could not be moved to a new expedition.'})) {
 					this.loadExpedition(selectedExpeditionID);
 					this.updateURLHistory(selectedExpeditionID, $('#expedition-id-input'));
 					$('#change-expedition-modal').modal('hide');
 					$('#confirm-change-expedition-button').ariaHide(true);
 				}
 			}).fail((xhr, status, error) => {
-				showModal('The expedition member could not be moved to a new expedition. Error: ' + error, 'Database Error');
+				const message = 'The expedition member could not be moved to a new expedition because' +
+					` of an unexpected error: ${error}.${this.getDBContactMessage()}`;
+				this.showModal(message, 'Database Error');
 			}).always(() => {
 				hideLoadingIndicator();
 			});
@@ -2490,14 +2482,14 @@ class ClimberDBExpeditions extends ClimberDB {
 			return;
 		}
 		if (nMembers === 0) {
-			showModal(
+			this.showModal(
 				'There are no active members of this expedition. You must add at least one member or' +
 				' set at least one member\'s status to something other than "cancelled".', 
 				'No Expedition Members'
 			);
 			return;
 		} else if ((exportType === 'confirmation_letter') && !$('.input-field[name=is_trip_leader]:checked').length) {
-			showModal(
+			this.showModal(
 				'No expedition member has been designated as the trip leader yet. You must' +
 					' specify a trip leader before you can export this expedition\'s confirmation letter.' +
 					' To specify the leader for the expedition, hover over the member you want to' + 
@@ -2506,13 +2498,13 @@ class ClimberDBExpeditions extends ClimberDB {
 			);
 			return;
 		} else if ((exportType === 'registration_card') && (nRoutes === 0)) {
-			showModal('You must add at least one route before you can export the expedition\'s registration card', 'No Routes Entered');
+			this.showModal('You must add at least one route before you can export the expedition\'s registration card', 'No Routes Entered');
 			return;
 		} else if (exportType === 'special_use_permit') {
 			if (this.constants.groupStatusCodes.confirmed <= groupStatus && groupStatus <= this.constants.groupStatusCodes.offMountain) {
 				this.showExportPermitModal();
 			} else {
-				showModal(
+				this.showModal(
 					'At least one (non-canceled) expedition member has not yet been confirmed. The' + 
 						' expedition must have a group status of "Confirmed", "On Mountain", or "Off' +
 						' Mountain" to export Special User Permits.',
@@ -2542,7 +2534,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		};
 		
 		// Get human-readable values from selects
-		for (const property of Object.keys(climberDB.expeditionInfo.expeditions).filter(k => k.endsWith('_code'))) {
+		for (const property of Object.keys(this.expeditionInfo.expeditions).filter(k => k.endsWith('_code'))) {
 			pdfData[property.replace('_code', '')] = this.selectValueToText(property, pdfData[property]);
 		}
 
@@ -2627,7 +2619,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			// Get total payment
 			var totalPayment = 0;
-			for (const transactions of Object.values(climberDB.expeditionInfo.transactions)) {
+			for (const transactions of Object.values(this.expeditionInfo.transactions)) {
 				for (const info of Object.values(transactions.data)) {
 					// only add negative-value tranactions because the rest are charges
 					if ( (info.transaction_value < 0) && (info.transaction_type_code == 24) ) 
@@ -2674,11 +2666,9 @@ class ClimberDBExpeditions extends ClimberDB {
 			data: pdfData,
 			cache: false
 		}).done(responseData => {
-			if (this.pythonReturnedError(responseData)) {
-				showModal('Your PDF could not be exported because of an unexpected error: ' + responseData, 'Unexpected Error');
-				return;
+			if (!this.pythonReturnedError(responseData, {errorExplanation: 'Your PDF could not be exported because of an unexpected error.'})) {
+				window.open(responseData, '_blank')
 			}
-			window.open(responseData, '_blank')
         }).always(() => {
         	this.hideLoadingIndicator()
         });
@@ -2723,7 +2713,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		
 		// warn user and exit if no checkboxes are selected
 		if (expeditionMemberIDs.length === 0) {
-			showModal('You must select at least one expedition member to export a Special Use Permit for.', 'Invalid Operation');
+			this.showModal('You must select at least one expedition member to export a Special Use Permit for.', 'Invalid Operation');
 			return;
 		}	
 
@@ -2752,51 +2742,14 @@ class ClimberDBExpeditions extends ClimberDB {
 				expedition_name: this.expeditionInfo.expeditions.expedition_name
 			}
 		}).done(responseData => {
-			if (this.pythonReturnedError(responseData)) {
-				showModal('The Special User Permit(s) could not be exported because of an unexpected error: ' + responseData, 'Unexpected Error');
-				return;
+			if (!this.pythonReturnedError(responseData, {errorExplanation: 'The Special User Permit(s) could not be exported because of an unexpected error.'})) {	
+				window.open(responseData, '_blank');
 			}
-			window.open(responseData, '_blank');
 		}).fail((xhr, status, error) => {
-			showModal('The Special User Permit(s) could not be exported because of an unexpected error: ' + error, 'Unexpected Error');
+			const message = 'The Special User Permit(s) could not be exported because' +
+				` of an unexpected error: ${error}.${this.getDBContactMessage()}`;
+			this.showModal(message, 'Unexpected Error');
 		}).always(() => {hideLoadingIndicator()})
-	}
-
-	/*
-	Update the source Excel file for Label Matrix server-side
-	*/
-	writeToLabelMatrix() {
-		let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === true)
-		if (!tripLeaderInfo.length) {
-			showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
-			return;
-		} else {
-			tripLeaderInfo = tripLeaderInfo[0];
-		}
-
-		const airTaxiCode = this.expeditionInfo.expeditions.air_taxi_code;
-		const airTaxiName = $('#input-air_taxi option').filter((_, el) => el.value == airTaxiCode).text();
-		const labelData = {
-			expedition_name: this.expeditionInfo.expeditions.expedition_name,
-			leader_name: tripLeaderInfo.first_name + ' ' + tripLeaderInfo.last_name,
-			air_taxi_name: airTaxiName,
-			planned_return_date: this.expeditionInfo.expeditions.planned_return_date,
-			expedition_id: this.expeditionInfo.expeditions.id
-		}
-
-		$.post({
-			url: 'flask/cache_tag/write_label_matrix',
-			data: labelData,
-			cache: false
-		}).done((response) => {
-			if (this.pythonReturnedError(response)) {
-				showModal('This expedition\'s data could not be transferred to Label Matrix because of an unexpected error: ' + response, 'Unexpected Error')
-			} else {
-				showModal('Expedition data was successfully transferred to Label Matrix. Open the Label Matrix program and print your labels from there.', 'Data Transferred to Label Matrix')
-			}
-		}).fail((xhr, status, error) => {
-			showModal('This expedition\'s data could not be transferred to Label Matrix because of an unexpected error: ' + error, 'Unexpected Error')
-		})
 	}
 
 
@@ -2815,13 +2768,13 @@ class ClimberDBExpeditions extends ClimberDB {
 				this.constants.groupStatusCodes.offMountain
 			];
 		if (!allowableGroupStatuses.includes(groupStatusCode)) {
-			showModal(`The group status for this expedition is not 'Confirmed', 'On Mountain', or 'Off Mountain', so cache tags can't be printed.`, 'Invalid Group Status');
+			this.showModal(`The group status for this expedition is not 'Confirmed', 'On Mountain', or 'Off Mountain', so cache tags can't be printed.`, 'Invalid Group Status');
 			return;
 		}
 
 		// If there are unsaved edits, prompt the user to either save or discard them
 		if ($('.dirty').length) {
-			showModal(`You have unsaved edits. Either click the <strong>Save</strong> button to keep your edits or click the <strong>Edit</strong> button and choose <strong>Discard</strong> to undo your edits. Then you can print cache tags.`, 'Unsaved Edits')
+			this.showModal(`You have unsaved edits. Either click the <strong>Save</strong> button to keep your edits or click the <strong>Edit</strong> button and choose <strong>Discard</strong> to undo your edits. Then you can print cache tags.`, 'Unsaved Edits')
 			return;
 		} 
 		// Or if not, show the user a preview of the image
@@ -2829,7 +2782,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			// get cache tag data
 			let tripLeaderInfo = Object.values(this.expeditionInfo.expedition_members.data).filter(info => info.is_trip_leader === true)
 			if (!tripLeaderInfo.length) {
-				showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
+				this.showModal('You have not selected a trip leader yet. You select a trip leader before you can create cache tags', 'No Trip Leader Specified');
 				return;
 			} else {
 				tripLeaderInfo = tripLeaderInfo[0];
@@ -2852,9 +2805,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				url: '/flask/cache_tag/preview',
 				data: labelData
 			}).done(responseData => {
-				if (this.pythonReturnedError(responseData)) {
-					showModal('An error occurred while generating the cache tag preview: ' + responseData, 'Unexpected Error')
-				} else {
+				if (!this.pythonReturnedError(responseData, {errorExplanation: 'An error occurred while generating the cache tag preview.'})) {
 					// Set modal <img> src
 					$('#modal-cache-tag-preview').attr('src', responseData.preview_src);
 					$('#print-cache-tag-button').data('zpl', responseData.zpl);
@@ -2863,7 +2814,9 @@ class ClimberDBExpeditions extends ClimberDB {
 					$('#cache-tag-modal').modal();
 				}
 			}).fail((xhr, status, error) => {
-				showModal('An error occurred while generating the cache tag preview: ' + error, 'Unexpected Error')
+				const message = 'An error occurred while generating the cache tag preview: ' + 
+					`${error}.${this.getDBContactMessage()}`; 
+				this.showModal(message, 'Unexpected Error')
 			}).always(() => {hideLoadingIndicator()});
 		}
 	}
@@ -2876,13 +2829,13 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Check that the number of labels to print is filled in
 		const nLabels = $('#input-label_print_quantity').val();
 		if (!nLabels) {
-			showModal('You must enter a number of cache tag labels to print', 'Enter Print Quantity');
+			this.showModal('You must enter a number of cache tag labels to print', 'Enter Print Quantity');
 			return;
 		}
 
 		const zpl = $(e.target).data('zpl');
 		if (!zpl.length) {
-			showModal('An unexpected error occurred and the label data could not be sent to the printer. Try closing and reopening the <strong>Cache Tag Print Preview</strong> dialog', 'Unexpected Printing Error')
+			this.showModal('An unexpected error occurred and the label data could not be sent to the printer. Try closing and reopening the <strong>Cache Tag Print Preview</strong> dialog', 'Unexpected Printing Error')
 		}
 		showLoadingIndicator('onPrintCacheTagButtonClick');
 
@@ -2893,19 +2846,19 @@ class ClimberDBExpeditions extends ClimberDB {
 				n_labels: nLabels
 			}
 		}).done(responseData => {
-			if (this.pythonReturnedError(responseData)) {
-				showModal('An unexpected error occurred while printing cache tags: ' + responseData, 'Unexpected Error')
-			} else {
+			if (!this.pythonReturnedError(responseData, {errorExplanation: 'An unexpected error occurred while printing cache tags.'})) {
 				// dismiss the print preview modal
 				$('#cache-tag-modal').modal('hide');
 				
-				showModal(
+				this.showModal(
 					nLabels > 1 ? `All ${nLabels} cache tags printed successfully.` : 'Your cache tag printed successfully', 
 					'Check Your Printer!'
 				);
 			}
 		}).fail((xhr, status, error) => {
-				showModal('An unexpected error occurred while printing cache tags: ' + error, 'Unexpected Error')
+			const message = 'An unexpected error occurred while printing cache tags:' +
+				` ${error}.${this.getDBContactMessage()}`	
+			this.showModal(message, 'Unexpected Error');
 		}).always(() => {hideLoadingIndicator()})
 	}
 
@@ -2967,7 +2920,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					const message = `An expedition member has already been added within`
 						+ ` ${climberAdditionDayRestriction} days of this group's planned departure of ` 
 						+ departureDateString.toLocaleDateString('en-US', {month: 'long', day: 'numeric', timezone: 'UTC'});
-					showModal(message, 'WARNING: 30-Day Rule Violation');
+					this.showModal(message, 'WARNING: 30-Day Rule Violation');
 					break;
 				}
 			}
@@ -2979,7 +2932,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		let maxClimbers = this.config.max_expedition_members
 		if ($('#input-guide_company')) maxClimbers ++;
 		if (nMembers >= maxClimbers) {
-			showModal(
+			this.showModal(
 				`This group has reached or exceeded the maximum group size of ${maxClimbers} with ${nMembers} expedition members`,
 				'WARNING: Group Size Violation'
 			)
@@ -2997,11 +2950,10 @@ class ClimberDBExpeditions extends ClimberDB {
 			daysToDeparture <= previousClimberAdditionDays;
 		
 		if (limitToPreviousClimbers)	{
-			showModal('This expedition is scheduled to depart in ' + previousClimberAdditionDays + ' days or less. Only climbers who have previously climbed Denali or Foraker can be added to this expedition. When you search for climbers, the results will automatically be limited to only climbers who meet this criteria.', 
+			this.showModal('This expedition is scheduled to depart in ' + previousClimberAdditionDays + ' days or less. Only climbers who have previously climbed Denali or Foraker can be added to this expedition. When you search for climbers, the results will automatically be limited to only climbers who meet this criteria.', 
 				'WARNING: 7-Day Rule in Effect',
-				'alert',
-				'',
 				{
+					modalType: 'alert',
 					eventHandlerCallable: () => {
 						$('.confirm-button').click(() => {$('#modal-climber-search-bar').focus()})
 					}
@@ -3121,9 +3073,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		}).done(response => {
 				const result = response.data || [];
-				if (this.pythonReturnedError(response)) {
-					showModal(`An error occurred while retreiving climbering info: <br><br>${response}. <br><br>Make sure you're connected to the NPS network and try again.`, 'Database Error');
-				} else {
+				if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while retrieving climbering info.'})) {
 					if (result.length) {
 						this.climberForm.fillClimberForm(climberID, result[0]);	
 						$('#edit-climber-info-button').attr('href', 'climbers.html?edit=true&id=' + climberID)
@@ -3143,12 +3093,12 @@ class ClimberDBExpeditions extends ClimberDB {
 	onAddClimberToExpeditionClick(e) {
 
 		// Check if the climber is already a member of this expedition
-		const currentClimberIDs = Object.values(climberDB.expeditionInfo.expedition_members.data)
+		const currentClimberIDs = Object.values(this.expeditionInfo.expedition_members.data)
 			.map(member => member.climber_id);
 		const climberID = $('#modal-climber-select').val();
 		const climberInfo = this.climberForm.selectedClimberInfo.climbers[climberID];
 		if (currentClimberIDs.includes(climberID)) {
-			showModal(`${climberInfo.first_name} ${climberInfo.last_name} is already a member of the expedition '${this.expeditionInfo.expeditions.expedition_name}'`, 'Climber is already a member');
+			this.showModal(`${climberInfo.first_name} ${climberInfo.last_name} is already a member of the expedition '${this.expeditionInfo.expeditions.expedition_name}'`, 'Climber is already a member');
 			return;
 		}
 
@@ -3195,7 +3145,7 @@ class ClimberDBExpeditions extends ClimberDB {
 						.change();
 				})
 			}
-			showModal(message, 'Is This Climber Guiding?', 'confirm', footerButtons, {eventHandlerCallable: eventHandler});
+			this.showModal(message, 'Is This Climber Guiding?', {footerButtons: footerButtons, eventHandlerCallable: eventHandler});
 		}
 		
 		$(e.target).siblings('.close-modal-button').click();
@@ -3262,11 +3212,12 @@ class ClimberDBExpeditions extends ClimberDB {
 			where.push({column_name: 'expedition_id', operator: '<>', comparand: currentExpeditionID});
 		}
 
-		// IF this is the expedition page, 
+		// IF this is the expedition page, search only for expeditions. Do the same for 
+		//	BC groups if it's the BC page
 		where.push({
 			column_name: 'is_backcountry',
 			operator: '=',
-			comparand: !!window.location.pathname.match('backcountry.html') 
+			comparand: this.pageIsBackcountry() 
 		});
 
 		const requestData = {
@@ -3566,8 +3517,8 @@ class ClimberDBExpeditions extends ClimberDB {
 		$('.route-member-name-field').append(`<option value=${climberID}>${climberName}</option>`);
 
 		this.updateExpeditionMemberCount();
-		this.updateCommsDeviceOwnerOptions();
-
+		// don't update comms owner options until the exp. member is saved
+		//this.updateCommsDeviceOwnerOptions();
 
 		return $newCard;
 	}
@@ -3818,11 +3769,11 @@ class ClimberDBExpeditions extends ClimberDB {
 			expeditionInfoResponse = expeditionInfoResponse[0];
 			commsResponse = commsResponse[0];
 			
-			if (this.pythonReturnedError(expeditionInfoResponse)) {
-				showModal(`An unexpected error occurred while querying expedition info with ID ${expeditionID}: <br><br>${expeditionInfoResponse}.`, 'Unexpected Error');
-				return;
-			} else if (this.pythonReturnedError(commsResponse)) {
-				showModal(`An unexpected error occurred while querying the comms info with ID ${expeditionID}: <br><br>${commsResponse}.`, 'Unexpected error');
+			if (
+					this.pythonReturnedError(expeditionInfoResponse, {errorExplanation: `An unexpected error occurred while querying expedition info with ID ${expeditionID}.`})
+					||
+					this.pythonReturnedError(commsResponse, {errorExplanation: `An unexpected error occurred while querying the comms info with ID ${expeditionID}.`})
+				) {
 				return;
 			} else {
 				const expeditionResult = expeditionInfoResponse.data;
@@ -3845,14 +3796,15 @@ class ClimberDBExpeditions extends ClimberDB {
 
 					// Prevent the user from loading backcountry expeditions on the Expeditions page and vice versa
 					const pageName = window.location.pathname;
-					const isBackcountry = expeditionResult[0].is_backcountry;
-					if (pageName.match('expedition') && isBackcountry) {
+					const dataIsBackcountry = expeditionResult[0].is_backcountry;
+					const pageIsBackcountry = this.pageIsBackcountry();
+					if (!pageIsBackcountry && dataIsBackcountry) {
 						const message = `You're trying to view a Backcountry group on the Expedition page. View this group on <a href="backcountry.html?id=${expeditionID}">the Backcountry page</a> instead.`;
-						showModal(message, 'Invalid Expedition');
+						this.showModal(message, 'Invalid Expedition');
 						return;
-					} else if (pageName.match('backcountry') && !isBackcountry) {
+					} else if (pageIsBackcountry && !dataIsBackcountry) {
 						const message = `You're trying to view a Denali or Foraker expedition on the Backcountry page. View this group on <a href="expeditions.html?id=${expeditionID}">the Expeditons page</a> instead.`;
-						showModal(message, 'Invalid Backcountry Group');
+						this.showModal(message, 'Invalid Backcountry Group');
 						return;
 					}
 
@@ -3863,8 +3815,10 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 					this.expeditionInfo.expeditions.id = firstRow.expedition_id;
 				} else {
-					const footerButton = '<button class="generic-button modal-button close-modal" onclick="climberDB.createNewExpedition()" data-dismiss="modal">Close</button>';
-					showModal(`There are no expeditions with the database ID '${expeditionID}'. This expedition was either deleted or the URL you are trying to use is invalid.`, 'Invalid Expedition ID', 'alert', footerButton);
+					const eventHandler = () => {$('#alert-modal .close-modal').click(() => {this.createNewExpedition()})}
+					const footerButton = '<button class="generic-button modal-button close-modal" data-dismiss="modal">Close</button>';
+					const message = `There are no expeditions with the database ID '${expeditionID}'. This expedition was either deleted or the URL you are trying to use is invalid.`;
+					this.showModal(message, 'Invalid Expedition ID', {footerButtons: footerButton, eventHandlerCallable: eventHandler});
 				}
 
 				// Get data for right-side tables
@@ -4005,6 +3959,10 @@ class ClimberDBExpeditions extends ClimberDB {
 					)
 				}
 
+				// Now that all expedition members are loaded, make each one an 
+				//	option in the comms device owner select
+				this.updateCommsDeviceOwnerOptions();
+
 				hideLoadingIndicator('queryExpedition');
 
 				// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
@@ -4013,13 +3971,11 @@ class ClimberDBExpeditions extends ClimberDB {
 					this.show60DayWarning();
 				}
 			}
-		}).fail(() => {
+		}).fail((xhr, status, error) => {
 			const message = 
-				'An unexpected error occurred while querying this expedition.' +
-				' Try reloading the page and contact your <a href="mailto:' + 
-				`${this.config.db_admin_email}">Contact your database adminstrator</a>` + 
-				' if the problem persists';
-			showModal(message, 'Database Error');
+				'An unexpected error occurred while querying this expedition:' + 
+				` ${error}.${this.getDBContactMessage()}`;
+			this.showModal(message, 'Database Error');
 		}).always(() => {hideLoadingIndicator()});
 	}
 
@@ -4039,8 +3995,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				this.hideLoadingIndicator();
 			}).then(
 				response => {
-					if (this.pythonReturnedError(response)) {
-						showModal('An unexpected error occurred while deleting data from the database: <br><br>' + response, 'Unexpected error');
+					if (this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while deleting data from the database.'})) {
 						return false;
 					} else {
 						// Delete the in-memory data here rather than in deleteTransactionItem() 
@@ -4055,7 +4010,7 @@ class ClimberDBExpeditions extends ClimberDB {
 					}
 				}, 
 				(xhr, status, error) => {
-					showModal(`An unexpected error occurred while deleting data from the database: ${error}. Make sure you're still connected to the NPS network and try again. Contact your database adminstrator if the problem persists.`, 'Unexpected error');
+					this.showModal(`An unexpected error occurred while deleting data from the database: ${error}.${this.getDBContactMessage()}`, 'Unexpected error');
 				}
 			);
 	}
@@ -4083,12 +4038,13 @@ class ClimberDBExpeditions extends ClimberDB {
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
 				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal">OK</button>
 			`;
-			showModal(
+			this.showModal(
 				`Are you sure you want to delete this checkout record for CMC ${cmcID}?`, 
 				'Delete CMC?', 
-				'alert', 
-				footerButtons,
-				{eventHandlerCallable: onConfirmClickHandler}
+				{
+					footerButtons: footerButtons,
+					eventHandlerCallable: onConfirmClickHandler
+				}
 			);
 		}
 
@@ -4121,12 +4077,13 @@ class ClimberDBExpeditions extends ClimberDB {
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>
 				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal">OK</button>
 			`;
-			showModal(
+			this.showModal(
 				`Are you sure you want to delete this ${deviceType} from ${expeditionName}'s communication device list?`, 
 				'Delete Comms Device?', 
-				'alert', 
-				footerButtons,
-				{eventHandlerCallable: onConfirmClickHandler}
+				{ 
+					footerButtons: footerButtons,
+					eventHandlerCallable: onConfirmClickHandler
+				}
 			);
 		}
 	}
@@ -4217,7 +4174,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Prevent the user from creating a refund post manually because 
 		//	a refund post should be managed automatically
 		if (transactionTypeCode === 27 || transactionTypeCode === 28) {
-			showModal('You can\'t add a refund post directly to the transaction history. If you want to add a refund, just add a "Climbing fee refund" or "Entrance fee refund" and the refund post will be added automatically.', 'Invalid Operation')
+			this.showModal('You can\'t add a refund post directly to the transaction history. If you want to add a refund, just add a "Climbing fee refund" or "Entrance fee refund" and the refund post will be added automatically.', 'Invalid Operation')
 			$select.val(previousTransactionType);
 			return;
 		}
@@ -4330,7 +4287,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>
 				<button class="generic-button modal-button danger-button confirm-button close-modal" data-dismiss="modal">OK</button>
 			`
-			showModal(message, 'Permanently Delete Transaction?', 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});
+			this.showModal(message, 'Permanently Delete Transaction?', {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler});
 		}
 	}
 
@@ -4358,53 +4315,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		//	the new attachment record to an expedition_member record. In this case, saving the attachment 
 		//	file and db record can be handled completely server-side 
 		if ($button.closest('.card').is('.new-card')) {
-			showModal('You must save this expedition member before you can add an attachment.', 'Invalid Operation');
+			this.showModal('You must save this expedition member before you can add an attachment.', 'Invalid Operation');
 			return;
 		}
 		this.addAttachmentListItem($button.closest('.attachments-tab-pane').find('.data-list'));
-	}
-
-
-	/*
-	Handler for when the user changes the attachment type
-	*/
-	onAttachmentTypeChange(e) {
-
-		const $fileTypeSelect = $(e.target);
-		const fileTypeSelectID = $fileTypeSelect.attr('id');
-		const previousFileType = $fileTypeSelect.data('previous-value');//should be undefined if this is the first time this function has been called
-		const $fileInput = $fileTypeSelect.closest('.card-body').find('.file-input-label ~ input[type=file]');
-		const $fileInputLabel = $fileTypeSelect.closest('.card-body').find('.file-input-label');
-		const fileInputID = $fileInput.attr('id');
-
-		if ($fileTypeSelect.val()) {
-			$fileInput.removeAttr('disabled')
-			$fileInputLabel.removeAttr('disabled')
-		}
-		else {
-			$fileInput.attr('disabled', true)
-			$fileInputLabel.attr('disabled', true)
-		}
-
-		// If the data-previous-value attribute has been set and there's already a file uploaded, that means the user has already selected a file
-		if (previousFileType && $fileInput.get(0).files[0]) {
-			const onConfirmClick = `
-				entryForm.updateAttachmentAcceptString('${fileTypeSelectID}');
-				$('#${fileInputID}').click();
-			`;
-			const footerButtons = `
-				<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal" onclick="$('#${fileTypeSelectID}').val('${previousFileType}');">No</button>
-				<button class="generic-button modal-button danger-button close-modal" data-dismiss="modal" onclick="${onConfirmClick}">Yes</button>
-			`;
-			const fileTypeCode = $fileTypeSelect.val();
-			const fileType = $fileTypeSelect.find('option')
-				.filter((_, option) => {return option.value === fileTypeCode})
-				.html()
-				.toLowerCase();
-			showModal(`You already selected a file. Do you want to upload a new <strong>${fileType}</strong> file instead?`, `Upload a new file?`, 'confirm', footerButtons);
-		} else {
-			_this.updateAttachmentAcceptString($fileTypeSelect.attr('id'));
-		}
 	}
 
 
@@ -4433,7 +4347,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			reader.onerror = function(e) {
 				// Hide preview and progress bar and notify the user
 				$progressBar.ariaHide();
-				showModal(`The file '${filename}' failed to upload correctly. Make sure your internet connection is consistent and try again.`, 'Upload failed');
+				this.showModal(`The file '${filename}' failed to upload correctly.${this.getDBContactMessage()}`, 'Upload failed');
 			}
 
 			// Get local reference to .attachments attribute because `this` refers to the FieReader 
@@ -4500,7 +4414,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			.filter(v => v) // drop null values
 		const filename = el.files[0].name;
 		if (existingfilenames.includes(filename)) {
-			showModal(`An attachment with the filename <strong>${filename}</strong> already` + 
+			this.showModal(`An attachment with the filename <strong>${filename}</strong> already` + 
 				' exists. All attachments for an expedition must have unique filenames.' + 
 				' Please rename the file and upload it again.', 'Duplicate filename')
 			return;
@@ -4615,14 +4529,15 @@ class ClimberDBExpeditions extends ClimberDB {
 			const footerButtons = 
 				'<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">Cancel</button>' +
 				'<button class="generic-button modal-button danger-button close-modal confirm-delete" data-dismiss="modal">Delete</button>';
-			showModal(message, title, 'confirm', footerButtons, {eventHandlerCallable: onConfirmClickHandler});	
+				// TEST ****
+			this.showModal(message, title, {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler});	
 		}
 	}
 
 
 	onAddRouteButtonClick(e) {
 		if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
-			showModal('You must add at least one expedition member before you can add a route.', 'Invalid Action');
+			this.showModal('You must add at least one expedition member before you can add a route.', 'Invalid Action');
 			return;
 		}
 
@@ -4697,7 +4612,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				` which is greater than the summit elevation of <strong>${summitElevation}</strong>. If the elevation you entered` + 
 				` is correct, you will have to manually check the <em>Summited?</em> checkbox. Otherwise,` +
 				` correct the <em>Highest elevation</em>`;
-			showModal(message, 'Invalid Highest Elevation')
+			this.showModal(message, 'Invalid Highest Elevation')
 			return;
 		}
 
@@ -4725,14 +4640,12 @@ class ClimberDBExpeditions extends ClimberDB {
 			orderBy: [{table_name: 'cmc_inventory', column_name: 'id'}]
 		})
 			.done(response => {
-				if (this.pythonReturnedError(response)) {
-					print('Error while querying CMC inventory: ' + response);
-					return;
-				}
-				for (const row of response.data || []) {
-					this.cmcInfo.cmcCanIDs[row.id] = row.cmc_can_identifier;
-					this.cmcInfo.rfidTags[row.rfid_taf_id] = row.id;
-					$select.append(`<option class="" value="${row.id}">${row.cmc_can_identifier}</option>`);
+				if (!this.pythonReturnedError(response, {errorExplanation: 'An unexpected error occurred while querying CMC inventory.'})) {
+					for (const row of response.data || []) {
+						this.cmcInfo.cmcCanIDs[row.id] = row.cmc_can_identifier;
+						this.cmcInfo.rfidTags[row.rfid_taf_id] = row.id;
+						$select.append(`<option class="" value="${row.id}">${row.cmc_can_identifier}</option>`);
+					}
 				}
 			})
 			.fail((xhr, status, error) => {
@@ -4776,6 +4689,37 @@ class ClimberDBExpeditions extends ClimberDB {
 		$cmcSelects.not($select).find(`option[value=${cmcID}]`).remove();
 	}
 
+
+	onAddCommsButtonClick(e) {
+		if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
+			this.showModal('You must add at least one expedition member before you can add a communcation device.', 'Invalid Action');
+			return;
+		}
+		const $button = $(e.target);
+		const $ul = $($button.data('target'));
+
+		// If there's a new expedition member that has not yet been saved, ask the user to 
+		//	confirm or discard the edits. This is because a new expedition member can't be 
+		//	assigned as the owner of a comms device, so they won't appear in the select 
+		//	options until the user saves their edits. To prevent confusion, let them know 
+		//	they need to save or discard the changes
+		if ($('#expedition-members-accordion .new-card:not(.cloneable)').length) {
+			// when the user discards or saves the edits, add the new comms device
+			const message = 'You have added at least one new expedition member but have not yet' +
+				' saved those edits. To add a comms device, you must either <strong>Save</strong>' +
+				' your edits to add this expedition member to the database or' +
+				' <strong>Discard</strong> your edits. Click <strong>Cancel</strong> to prevent' +
+				' adding a new comms device and review your expedition member changes.'
+			this.confirmSaveEdits({
+				message: message,
+				// TODO: ****owner options not filled in 
+				afterActionCallback: () => {this.addNewListItem($ul, {newItemClass: 'new-list-item'})}
+			})
+		} else {
+			const $listItem = this.addNewListItem($ul, {newItemClass: 'new-list-item'});
+		}
+	}
+
 	updateCommsDeviceOwnerOptions() {
 		// Record the current values because removing the old options will make the value null
 		const $selects = $(`#comms-list .input-field[name=expedition_member_id]`);
@@ -4817,23 +4761,27 @@ class ClimberDBExpeditions extends ClimberDB {
 			const message = `${nFlagged} ${nFlagged === 1 ? ' member of this expedition has' : ' members of this expedition have'}` +
 				' been flagged. You might want to review the reason they were flagged. Flagged expedition member(s):\n' +
 				`<ul>${flaggedMemberListItems}</ul>`
-			return showModal(message, 'Flagged Epedition Member(s)');
+			return this.showModal(message, 'Flagged Epedition Member(s)');
 		}
 	}
 
 
 	show60DayWarning() {
+
+		// 60-day rule is relevant for BC
+		if (this.pageIsBackcountry()) return;
+
 		const departureDate = new Date($('#input-planned_departure_date').val() + ' 00:00');
 		const now = new Date();
 		const daysToDeparture = (departureDate - now) / this.constants.millisecondsPerDay;
-		const isGuided = $('#input-guide_company').val() !== '';
+		const isGuided = parseInt($('#input-guide_company').val() || -1) !== -1;
 		// If this expedition's departure has already passed or it's more than 60 days away, do nothing
 		if (isGuided || daysToDeparture < 0 || daysToDeparture > 60) {
 			return;
 		}
 
 		const groupStatusCode = parseInt($('#input-group_status').val());
-		const $cards = $('#expedition-members-accordion .card:not(.cancelled)');
+		const $cards = $('#expedition-members-accordion .card:not(.cancelled):not(.cloneable)');
 		const nClimbingFeesNotPaid = $cards.find('.climbing-fee-icon.transparent').length;
 		const nSUPsNotComplete = $cards.find('.input-field[name=application_complete]:not(:checked)').length;
 		const nPSARNotComplete = $cards.find('.input-field[name=psar_complete]:not(:checked)').length;
@@ -4845,14 +4793,20 @@ class ClimberDBExpeditions extends ClimberDB {
 				(groupStatusCode === 1 || groupStatusCode === 2) && //group is not confirmed
 				(climbingFeesNotPaid || supsNotComplete || psarNotComplete)
 			) {
-			const newDepartureDate = new Date(departureDate.getTime() + this.constants.millisecondsPerDay * 60)
+			const now = new Date();
+			const newDepartureDate = new Date(now.getTime() + this.constants.millisecondsPerDay * 60)
 				.toLocaleDateString('en-US', {month: 'long', day: 'numeric'});
 			let reasons = '';
 			if (climbingFeesNotPaid) reasons += `<li>${nClimbingFeesNotPaid} climber${nClimbingFeesNotPaid > 1 ? 's have' : ' has'} not paid their climbing permit fee</li>`;
 			if (supsNotComplete) 	 reasons += `<li>${nSUPsNotComplete} climber${nSUPsNotComplete > 1 ? 's have' : ' has'} not submitted their SUP application</li>`;
 			if (psarNotComplete)	 reasons += `<li>${nPSARNotComplete} climber${nPSARNotComplete > 1 ? 's have' : ' has'} not submitted their PSAR form</li>`;
-			const message = `This expedition is 60 days or less from their scheduled departure date on <strong>${departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric'})}</strong>, but not all expedition members have completed the requirements to receive a permit. These unfulfilled requirements include: <ul>${reasons}</ul>You should verify that these requirements have not been fulfilled, and if not, change the groups departure date to on or after <strong>${newDepartureDate}</strong>.`;
-			showModal(message, 'WARNING: 60-Day Rule Violation');
+			const message = `This expedition is 60 days or less from their scheduled departure date on` + 
+				`<strong>${departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric'})}</strong>` + 
+				`, but not all expedition members have completed the requirements to receive a permit. These` + 
+				` unfulfilled requirements include: <ul>${reasons}</ul>You should verify that these` +
+				` requirements have not been fulfilled, and if not, change the groups departure date` + 
+				` to on or after <strong>${newDepartureDate}</strong>.`;
+			this.showModal(message, 'WARNING: 60-Day Rule Violation');
 		}
 	}
 

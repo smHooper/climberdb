@@ -311,10 +311,7 @@ class ClimberDBDashboard extends ClimberDB {
 			sql: bcSQL, 
 			sqlParameters: {status_codes: [statusCodes.onMountain, statusCodes.offMountain]} 
 		}).done(response => {
-			if (this.pythonReturnedError(response)) {
-				showModal('There was an error while query backcountry stats to date.', 'Database Error')
-				return;
-			} else {
+			if (!this.pythonReturnedError(response, {errorExplanation: 'There was an error while query backcountry stats to date.'})) {
 				const result = response.data || []
 				$('#season-mountain-stats-card .bc-stats-table tbody').append(`
 					<tr>
@@ -360,25 +357,8 @@ class ClimberDBDashboard extends ClimberDB {
 
 
 	configureFlaggedGroups() {
-		const sql = `
-			SELECT 
-				expedition_name, 
-				to_char(planned_departure_date, 'Mon DD') AS departure, 
-				to_char(planned_return_date, 'Mon DD') AS return, 
-				gb.* 
-			FROM ${this.dbSchema}.expeditions 
-			JOIN (
-				SELECT 
-					expedition_id, 
-					replace(string_agg(flagged_reason, ';'), ';;', ';') AS flagged_comments 
-				FROM ${this.dbSchema}.expedition_members 
-				WHERE flagged 
-				GROUP BY expedition_id
-			) gb ON expeditions.id=expedition_id
-			WHERE planned_departure_date >= now()::date
-			ORDER BY planned_departure_date;`
 		
-		return this.queryDB({sql: sql})
+		return this.queryDB({tables: ['current_flagged_expeditions_view']})
 			.done(response => {
 				if (this.pythonReturnedError(response)) {
 					print('error querying flagged: ' + response)
@@ -467,14 +447,7 @@ class ClimberDBDashboard extends ClimberDB {
 		`;
 		return this.queryDB({sql: sql, sqlParameters: {start_date: `${year}-1-1`}})
 			.done((response) => {
-				if (this.pythonReturnedError(response)) {
-					showModal(
-						`An error occurred while querying group status. Make sure you're` + 
-						` connected to the NPS network and reload the page. If the` + 
-						` problem persists, contact your IT administrator.`, 
-						'Database error'
-					);
-				} else {
+				if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while querying group status.'})) {
 					const dropdowns = {};
 					const nExpeditions = {};
 					for (const row of response.data) {
@@ -562,13 +535,7 @@ class ClimberDBDashboard extends ClimberDB {
 
 		return this.queryDB({sql: sql})
 			.done(response => {
-	        	if (this.pythonReturnedError(response)) {
-	        		showModal(
-	        			`An error occurred while querying breifings. Make sure you're` + 
-	        			` connected to the NPS network and reload the page. If the` + 
-	        			` problem persists, contact your IT administrator.`, 
-	        			'Database error'
-	        		);
+	        	if (this.pythonReturnedError(response, {errorExplanation: 'An error occurred while querying breifings.'})) {
 	        		return false; // Save was unsuccessful
 	        	} else {
 	        		let queryResult = response.data || [];
@@ -699,9 +666,7 @@ class ClimberDBDashboard extends ClimberDB {
 			this.configureMap('bc-groups-map', {mapObject: this.maps.main, showBackcountryUnits: false}),
 			queryDeferred
 		).done((_, [queryResponse]) => { // ignore .configureMap() response
-			if (this.pythonReturnedError(queryResponse)) {
-				showModal('Backcountry groups could not be queried because there was an unexpected error: <br><br>' + queryResponse, 'Unexpected Error')
-			} else {
+			if (!this.pythonReturnedError(queryResponse, {errorExplanation: 'Backcountry groups could not be queried because there was an unexpected error.'})) {
 				const icon = L.icon({
 					iconUrl: '../imgs/camp_icon_50px.png',
 					iconSize: [35, 35],
@@ -729,7 +694,7 @@ class ClimberDBDashboard extends ClimberDB {
 					.text(result.length);
 			}
 		}).fail(() => {
-			showModal('There was a problem loading backcountry group data', 'Database Error')
+			this.showModal('There was a problem loading backcountry group data', 'Database Error')
 		})
 	}
 

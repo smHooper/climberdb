@@ -16,10 +16,9 @@ from uuid import uuid4
 
 from flask import Flask, has_request_context, json, jsonify, render_template, request, url_for
 from flask_mail import Mail, Message
-from flask.logging import default_handler
 
 import logging
-from logging.config import dictConfig as loggingDictConfig
+from logging.config import dictConfig
 
 from sqlalchemy import asc
 from sqlalchemy import case
@@ -37,6 +36,7 @@ from werkzeug.datastructures import FileStorage
 
 # climberdb modules
 from cache_tag import CacheTag, print_zpl
+#from climberdb_logging import configure_logging
 import climberdb_utils
 from export_briefings import briefings_to_excel
 
@@ -58,43 +58,22 @@ def wait_for_weasyprint():
 	'''
 	weasyprint_thread.join()
 
+app_name = __name__
 
-# Enable logging
+###### Enable logging #####
 log_dir = os.path.join(os.path.dirname(__file__), 'logs')
 if not os.path.isdir(log_dir):
 	os.mkdir(log_dir)
-# Configure a logger that will create a new file each day
-#	Only 100 logs will be saved before they oldest one is deleted
-loggingDictConfig(
-	{
-		"version": 1,
-		"formatters": {
-			"default": {
-				"datefmt": "%B %d, %Y %H:%M:%S %Z",
-			},
-		},
-		"handlers": {
-			"time-rotate": {
-				"class": "logging.handlers.TimedRotatingFileHandler",
-				"filename": os.path.join(log_dir, 'flask.log'),
-				"when": "D",
-				"interval": 1,
-				"backupCount": 100,
-				"formatter": "default",
-			},
-		},
-		"root": {
-			"level": "DEBUG",
-			"handlers": ["time-rotate"],
-		},
-	}
-)
-# Configure a custom formatter to include request information
-class RequestFormatter(logging.Formatter):
+
+class RequestLoggingFormatter(logging.Formatter):
+	"""
+	Configure a custom formatter to include request information
+	"""
 	def format(self, record):
 		if has_request_context():
 			record.url = request.url
 			record.remote_addr = request.remote_addr
+			record.user = request.remote_user
 			record.request_data = (
 				'**ommitted**' if request.url.endswith('checkPassword') else 
 				json.dumps(request.form)
@@ -102,34 +81,120 @@ class RequestFormatter(logging.Formatter):
 		else:
 			record.url = None
 			record.remote_addr = None
+			record.user = None
 			record.request_data = None
 		return super().format(record)
 
-line_separator = '-' * 150 
-formatter = RequestFormatter(line_separator + 
-    '\n[%(asctime)s] %(remote_addr)s requested %(url)s\n' 
-    'with POST data %(request_data)s\n'
-    '%(levelname)s in %(module)s message:\n %(message)s\n' +
-    line_separator
-)
-logging.root.handlers[0].setFormatter(formatter)
+
+def configure_logging(app_name, log_dir):
 
 
-app = Flask(__name__)
+	with open(climberdb_utils.CONFIG_FILE) as f:
+		app_config = json.load(f)
 
-# Error handling
+	environment = climberdb_utils.get_environment()
+	
+	# If the config file doesn't have a specific property set for error notification 
+	#	recipients, just send them to the DB admin
+	error_recipients = (
+		app_config.get('ERROR_NOTIFICATION_RECIPIENTS') or 
+		app_config.get('DB_ADMIN_EMAIL')
+	)
+	# And since the recipients could be a string or list, make sure it's a list
+	if not isinstance(error_recipients, list):
+		error_recipients = str(error_recipients).split(',')
+	
+	logging_config = {
+		'version': 1,
+		'formatters': {
+			'default': {
+				'datefmt': '%B %d, %Y %H:%M:%S %Z',
+			},
+		},
+		'handlers': {
+			# Configure a logger that will create a new file each day
+			#	Only 100 logs will be saved before they oldest one is deleted
+			'file': {
+				'class': 'logging.handlers.TimedRotatingFileHandler',
+				'filename': os.path.join(log_dir, 'flask.log'),
+				'when': 'D',
+				'interval': 1,
+				'backupCount': 100,
+				'formatter': 'default',
+				'level': 'INFO'
+			},
+			# Logger for email notifications of Python errors
+			'email': {
+				'class': 	'logging.handlers.SMTPHandler',
+				'level': 	'ERROR',
+				'mailhost': app_config['MAIL_SERVER'],
+				'fromaddr': f'ClimberDB Error Notifications <{app_name}.{environment}-notifications@nps.gov>',
+				'toaddrs':	error_recipients,
+				'subject':	f'An error occurred with the {app_name} app'
+			}
+		},
+		'root': {
+			'level': 'INFO',
+			'handlers': ['file', 'email'],
+		}
+	}
+
+	dictConfig(logging_config)
+
+	line_separator = '-' * 150 
+	file_formatter = RequestLoggingFormatter(line_separator + 
+	    '\n[%(asctime)s] %(user)s requested %(url)s from %(remote_addr)s\n' 
+	    'with POST data %(request_data)s\n'
+	    '%(levelname)s in %(module)s message:\n %(message)s\n' +
+	    line_separator
+	)
+
+	email_formatter = RequestLoggingFormatter(
+		'Time: %(asctime)s\n'
+		'User: %(user)s\n'
+		'URL: %(url)s\n'
+		'Remote Address: %(remote_addr)s\n'
+		'Logger name: %(name)s\n'
+		'\n'
+	)
+
+	root_logger = logging.root
+	root_logger.handlers[0].setFormatter(file_formatter) # file
+	root_logger.handlers[1].setFormatter(email_formatter) # email
+
+
+# Configure logging before initializing the Flask instance because Flask will 
+#	otherwise create its own default_logger if a logger doesn't already exist
+#	according to the docs: https://flask.palletsprojects.com/en/stable/logging/
+configure_logging(app_name, log_dir)
+
+###### Initialize app #####
+app = Flask(app_name)
+
+
 @app.errorhandler(500)
 def internal_server_error(error):
-	app.logger.error(traceback.format_exc())
+	"""
+	Capture errors in both logs and server responses. Errors get automatically 
+	logged, but send a response back to the client as well
+	"""
+	return 'ERROR: Internal Server Error.<br>' + traceback.format_exc() + '<br><br>request: ' + json.dumps(request.json)
 
-	return 'ERROR: Internal Server Error.\n' + traceback.format_exc() + '\n\nrequest: ' + json.dumps(request.json)
 
-
-# Load config
+####### Load config #####
 if not os.path.isfile(climberdb_utils.CONFIG_FILE):
 	raise IOError(f'CONFIG_FILE does not exists: {climberdb_utils.CONFIG_FILE}')
 if not app.config.from_file(climberdb_utils.CONFIG_FILE, load=json.load):
 	raise IOError(f'Could not read CONFIG_FILE: {climberdb_utils.CONFIG_FILE}')
+
+
+@app.route('/flask/test/error', methods=['POST'])
+def test_error_logging() -> bool:
+	data = request.form
+	if data.get('test_client_secret') == app.config['TEST_CLIENT_SECRET']:
+		raise IOError('test error')
+
+	return True
 
 
 @app.route('/flask/environment', methods=['GET'])
@@ -137,6 +202,7 @@ def get_environment() -> str:
 	return climberdb_utils.get_environment()
 
 
+###### Add configuration from DB #######
 def get_config_from_db() -> dict:
 	"""
 	Retrieve saved configuration values for the web app from the 'config' table
@@ -175,7 +241,7 @@ def get_config_from_db() -> dict:
 
 	return db_config
 
-# Call it
+# Call the function
 get_config_from_db()
 
 # Establish global scope sessionmakers to reuse at the function scope
@@ -185,7 +251,7 @@ write_engine = climberdb_utils.get_engine(access='write', schema=schema)
 ReadSession = sessionmaker(read_engine)
 WriteSession = sessionmaker(write_engine)
 
-# Get DB model in app's global scope
+##### Get DB model in app's global scope ####
 tables = climberdb_utils.get_tables()
 
 
@@ -218,25 +284,24 @@ def add_header(response):
 ###############################################
 
 def validate_password(username, password):	
-	# Get user password from db
-	#engine = climberdb_utils.get_engine()
+
 	hashed_password = ''
-	with read_engine.connect() as conn:
-		statement = sqlatext('''SELECT hashed_password FROM users WHERE ad_username=:username''')
-		cursor = conn.execute(statement, {'username': username})
-		result = cursor.first()
+	users_table = tables['users']
+	with ReadSession() as session:
+		result = (
+			session.query(users_table)
+				.where(users_table.ad_username == username)
+				.first()
+		)
 		# If the result is an empty list, the user doesn't exist
 		if not result:
 			raise ValueError(f'Password query failed because user {username} does not exist')
 		# if the result is None, this is a new user whose password isn't set
-		if not result[0]:
+		hashed_password = (result.hashed_password or '').encode('utf-8')
+		if not hashed_password:
 			# return false so the client knows whatever was entered isn't the 
 			#	same as the password in the db
 			return False 
-
-		hashed_password = result[0].encode('utf-8')
-	if not hashed_password:
-		raise RuntimeError('Could not connect to database')
 
 	# Check password
 	return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
@@ -262,14 +327,6 @@ def add_header(response):
 ###############################################
 # -------------- endpoints ------------------ #
 ###############################################
-# **for testing**
-@app.route('/flask/test', methods=['GET', 'POST'])
-def test():
-
-	if request.files:
-		return 'true'
-	else:
-		return 'false'
 
 @app.route('/flask/config', methods=['POST'])
 def db_config_endpoint():
@@ -281,28 +338,29 @@ def query_user_info(username):
 	"""
 	Helper function to get DB user info using AD username 
 	"""
-	sql = '''
-		SELECT id, 
-			:username AS ad_username, 
-			user_role_code, 
-			user_status_code, 
-			first_name, 
-			last_name, 
-			email_address 
-		FROM users 
-		WHERE ad_username=:username 
-	'''
-	
-	# If this is the dev environment, make sure the user is a super user
-	if not '\\prod\\' in os.path.abspath(__file__):
-		sql += ' AND user_role_code=4' 
 
-	#engine = climberdb_utils.get_engine()
-	result = read_engine.execute(sqlatext(sql), {'username': username})
+	users_table = tables['users'];
+	statement = select(
+			users_table.id,
+			users_table.user_role_code,
+			users_table.user_status_code,
+			users_table.first_name,
+			users_table.last_name,
+			users_table.email_address
+		).where(
+			users_table.ad_username == username
+		)
+
+	# If this is the dev environment, make sure the user is a super user
+	if not climberdb_utils.get_environment() == 'prod':
+		statement.where(users_table.user_role_code == 4) 
+
+	result = read_engine.execute(statement)
+	# If the result is empty, the user doesn't exist
 	if result.rowcount == 0:
 		return json.dumps({'ad_username': username, 'user_role_code': None, 'user_status_code': None})
 	else:
-		return result.first()._asdict()
+		return result.first()._asdict() | {'ad_username': username}
 
 
 # Get username and role
@@ -347,7 +405,7 @@ def set_password():
 	
 	# Update db
 	#engine = climberdb_utils.get_engine()
-	statement = sqlatext('''UPDATE users SET hashed_password=:password, user_status_code=2 WHERE ad_username=:username''')
+	statement = sqlatext(f'''UPDATE {schema}.users SET hashed_password=:password, user_status_code=2 WHERE ad_username=:username''')
 	write_engine.execute(statement, {'password': hashed_password.decode(), 'username': username})
 
 	return 'true'
@@ -428,6 +486,23 @@ def send_password_email(request_data, html):
 	mailer.send(msg)
 
 
+def get_url_root(url_root) -> str:
+	"""
+	Helper function to sanitize the URL root to always return a URL for 
+	the prod site, even if the request is coming from dev or test. This 
+	prevents users from receiving a link to anything but prod in an 
+	activation or password reset email, even if it was sent from the 
+	something other than prod
+	"""
+	prod_port = str(app.config['PROD_PORT_NUMBER'])
+	url_root = re.sub(
+		':\d{4}$', 
+		f':{prod_port}', 
+		request.url_root.strip('/')
+	)
+	return url_root
+
+
 # This endpoint sends an activation notification to a user whose account was just created by an admin
 @app.route('/flask/notifications/account_activation', methods=['POST'])
 def send_account_request():
@@ -438,8 +513,9 @@ def send_account_request():
 	if not 'username' in data:
 		raise ValueError('BAD REQUEST. No username given')
 
+	user_id = data['user_id']
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
-	data['button_url'] = f'''{request.url_root.strip('/')}/index.html?activation=true&id={data['user_id']}'''
+	data['button_url'] = f'''{get_url_root(request.url_root)}/index.html?activation=true&id={user_id}'''
 	data['button_text'] = 'Activate Account'
 	data['heading_title'] = 'Activate your Denali Climbing Permit Portal account'
 
@@ -463,7 +539,7 @@ def send_reset_password_request():
 
 	user_id = data['user_id']
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
-	data['button_url'] = f'''{request.url_root.strip('/').replace(':9006', ':9007')}/index.html?reset=true&id={user_id}'''
+	data['button_url'] = f'''{get_url_root(request.url_root)}/index.html?reset=true&id={user_id}'''
 	data['button_text'] = 'Reset Password'
 	data['heading_title'] = 'Reset Denali Climbing Permit Portal account password'
 
@@ -471,9 +547,12 @@ def send_reset_password_request():
 	
 	send_password_email(data, html)
 
-	#engine = climberdb_utils.get_engine()
 	try:
-		write_engine.execute(sqlatext('UPDATE users SET user_status_code=1 WHERE id=:user_id'), {'user_id': user_id})
+		# Set the user's status to 'Inactive'
+		with WriteSession() as write_session:
+			user = write_session.get(tables['users'], user_id)
+			user.user_status_code = 1 # set to inactive
+			write_session.commit()
 	except Exception as e:
 		raise RuntimeError(f'Failed to update user status with error: {e}')
 
@@ -1739,7 +1818,7 @@ def merge_climbers():
 	be safely deleted
 
 	Request parameters:
-	selected_climber_id - the numeric ID of the climber record that the user intends to maintained
+	selected_climber_id - the numeric ID of the climber record that the user intends to maintain
 	merge_climber_id - the numeric ID of the climber record that the user intends to merge with 
 		the maintained climber record
 
@@ -1758,13 +1837,13 @@ def merge_climbers():
 		#	one expedition together, filter out expeditions they both belong to. In practice, this 
 		# 	shouldn't ever be the case but it is possible
 		update_result = conn.execute(
-			sqlatext('''
-				UPDATE expedition_members 
+			sqlatext(f'''
+				UPDATE {schema}.expedition_members 
 				SET climber_id=:selected_climber_id 
 				WHERE 
 					climber_id=:merge_climber_id AND 
 					expedition_id NOT IN (
-						SELECT expedition_id FROM expedition_members WHERE climber_id=:selected_climber_id
+						SELECT expedition_id FROM {schema}.expedition_members WHERE climber_id=:selected_climber_id
 					)
 				RETURNING id'''),
 			data
@@ -1772,11 +1851,11 @@ def merge_climbers():
 		# expedition_member records have now been transferred so the climber record to merge
 		#	can now be safely deleted
 		delete_result = conn.execute(
-			sqlatext('''DELETE FROM climbers WHERE id=:merge_climber_id RETURNING id'''),
+			sqlatext(f'''DELETE FROM {schema}.climbers WHERE id=:merge_climber_id RETURNING id'''),
 			data
 		)
 
-	return {'update_result': [r._asdict() for r in update_result.fetchall()]}
+		return {'update_result': [r._asdict() for r in update_result.fetchall()]}
 
 #---------------- DB I/O ---------------------#
 
