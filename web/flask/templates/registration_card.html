@@ -55,8 +55,8 @@
 					<th class="leader-col">Leader</th>
 					<th class="name-col">Climber</th>
 					<th class="route-col">Route</th>
+					<th class="summit-col">Early Return Date</th>
 					<th class="summit-col">Highest Elevation</th>
-					<th class="summit-col">Date</th>
 					<th class="summit-col">Pro Pin</th>
 				</tr>
 			</thead>
@@ -83,7 +83,7 @@
 		</table>
 	</section>
 
-	<section>
+	<section id="orientation-section">
 		<h3 class="title-text">Check-In and Orientation</h3>
 		<table id="orientation-table" class="section-table alternating-row-table">
 			<tbody>
@@ -172,7 +172,18 @@
 	</section>
 
 	<section id="cmc-section">
-		<h4 class="sub-section-title">Number of CMCs issued _____________</h4>
+		<table class="section-table">
+			<tbody>
+				<tr>
+					<td class="col-50">
+						<h4>Number of CMCs issued _____________</h4>
+					</td>
+					<td class="col-50">
+						<h4>Ranger initials ____________</h4>
+					</td>
+				</tr>
+			</tbody>
+		</table>
 	</section>
 
 	<section>
@@ -219,13 +230,13 @@
 		<table id="climber-route-list" class="section-table alternating-row-table">
 			<thead>
 				<tr>
-					<th class="col-10">Name</th>
+					<th class="col-25">Name</th>
 					<th class="col-10">Elevation</th>
 					<th class="col-10">Date</th>
 					<th class="col-10">Frostbite</th>
-					<th class="col-5">AMS</th>
-					<th class="col-5">HACE</th>
-					<th class="col-5">HAPE</th>
+					<th class="col-7">AMS</th>
+					<th class="col-7">HACE</th>
+					<th class="col-7">HAPE</th>
 					<th class="col">Medical notes</th>
 				</tr>
 			</thead>
@@ -233,15 +244,15 @@
 				{% for route_info in routes %}
 					{% for climber_info in climbers %}
 						<tr>
-							<td class="col-10 ellipsis white-space-no-wrap">
+							<td class="col-25 ellipsis white-space-no-wrap">
 								{{ climber_info.full_name }}, {{route_info.route}}
 							</td>
 							<th class="col-10"></th>
 							<th class="col-10"></th>
 							<th class="col-10"></th>
-							<th class="col-5"></th>
-							<th class="col-5"></th>
-							<th class="col-5"></th>
+							<th class="col-7"></th>
+							<th class="col-7"></th>
+							<th class="col-7"></th>
 							<th class="col"></th>
 						</tr>
 					{% endfor %}

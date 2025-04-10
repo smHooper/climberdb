@@ -10,6 +10,9 @@ body {
 section {
 	margin-bottom: 20pt;
 }
+#orientation-section {
+	margin-bottom: 0;
+}
 
 .title-text {
 	width: 100%;
@@ -63,8 +66,8 @@ table span.value {
 }
 #climber-route-list tbody td	{width: 7%;} /*default*/
 #climber-route-list .leader-col {width: 3%;}
-#climber-route-list .name-col 	{width: 15%;}
-#climber-route-list .route-col 	{width: 30%;}
+#climber-route-list .name-col 	{width: 20%;}
+#climber-route-list .route-col 	{width: 25%;}
 #climber-route-list .summit-col {width: 10%;}
 
 #climber-route-list tbody .leader-col {
