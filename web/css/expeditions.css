@@ -866,6 +866,12 @@ used to show climber form in "add climber" mode)*/
 	z-index: unset;
 }
 
+/*error message for export modal when user 
+has not selected an export type*/
+#export-type-null-error-message {
+	color: #c26464;
+}
+
 /*
 Default to not showing unless the screen is at least 1500px wides
 */

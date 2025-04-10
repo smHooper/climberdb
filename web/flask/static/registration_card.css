@@ -10,6 +10,9 @@ body {
 section {
 	margin-bottom: 20pt;
 }
+#orientation-section {
+	margin-bottom: 0;
+}
 
 .title-text {
 	width: 100%;
@@ -34,13 +37,15 @@ section {
 table.header td {
 	height: 30pt;
 }
-table.header td.label.short {
+table.header td.label.short, 
+span.label-short {
 	width: 10%;
 }
 table.header td.label.long {
 	width: 15%;
 }
-table.header td.value {
+table.header td.value, 
+table span.value {
 	font-weight: bold;
 	width: 20%;
 }
@@ -61,8 +66,8 @@ table.header td.value {
 }
 #climber-route-list tbody td	{width: 7%;} /*default*/
 #climber-route-list .leader-col {width: 3%;}
-#climber-route-list .name-col 	{width: 15%;}
-#climber-route-list .route-col 	{width: 30%;}
+#climber-route-list .name-col 	{width: 20%;}
+#climber-route-list .route-col 	{width: 25%;}
 #climber-route-list .summit-col {width: 10%;}
 
 #climber-route-list tbody .leader-col {
@@ -104,12 +109,24 @@ table.header td.value {
 		page-break-after: left;
 	}
 }
+.col-3  {width:  3%;}
 .col-5  {width:  5%;}
+.col-7  {width:  7%;}
 .col-10 {width: 10%;}
 .col-15 {width: 15%;}
 .col-20 {width: 20%;}
 .col-25 {width: 25%;}
 .col-50 {width: 50%;}
+.white-space-no-wrap {
+	white-space: nowrap;
+}
+th.col, td.col {
+	width: 99%;
+}
+.col	{
+	min-width: 1%;
+	max-width: 100%; 
+}
 
 .text-align-right {
 	text-align: right;
@@ -123,4 +140,13 @@ table.header td.value {
 
 .comments-section {
 	height: 100pt;
+}
+.ellipsis {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.font-10-pt {
+	font-size: 10pt;
 }

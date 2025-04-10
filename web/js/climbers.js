@@ -1635,7 +1635,12 @@ class ClimberDBClimbers extends ClimberDB {
 		$('.result-details-pane')
 			.removeClass('uneditable')
 			.addClass('collapsed');
-		this.clearInputFields({parent: $climberForm, triggerChange: false});
+		this.clearInputFields({
+			parent: $climberForm, 
+			triggerChange: false, 
+			removeAccordionCards: true
+		});
+
 
 		// Make sure required fields are not required for new climbers because
 		//	all the info isn't given at first
@@ -2523,7 +2528,8 @@ class ClimberDBClimbers extends ClimberDB {
 			var urlParams = this.parseURLQueryString();
 			const queryDeferred = urlParams.id  ?
 				this.queryClimberByID(urlParams.id) :
-				this.getResultSet({selectClimberID: -1});// select the first climber
+				// select the first climber unless addClimber is in urlParams
+				this.getResultSet({selectClimberID: urlParams.addClimber ? null : -1});
 
 			queryDeferred.always(() => {
 				if (urlParams.id) {

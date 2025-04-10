@@ -21,8 +21,8 @@
 				<td class="label short">Expedition:</td>
 				<td class="value">{{ expedition_name }}</td>
 
-				<td class="label long"></td>
-				<td class="value"></td>
+				<td class="label long">Expedition #:</td>
+				<td class="value">{{ expedition_id }}</td><!--doesn't show up -->
 
 				<td class="label long">Check-in ranger:</td>
 				<td class="value"></td>
@@ -55,8 +55,8 @@
 					<th class="leader-col">Leader</th>
 					<th class="name-col">Climber</th>
 					<th class="route-col">Route</th>
-					<th class="summit-col">Summit Date</th>
-					<th class="summit-col">Elevation</th>
+					<th class="summit-col">Early Return Date</th>
+					<th class="summit-col">Highest Elevation</th>
 					<th class="summit-col">Pro Pin</th>
 				</tr>
 			</thead>
@@ -83,25 +83,29 @@
 		</table>
 	</section>
 
-	<section>
-		<h3 class="title-text">Check-in and Orientation</h3>
+	<section id="orientation-section">
+		<h3 class="title-text">Check-In and Orientation</h3>
 		<table id="orientation-table" class="section-table alternating-row-table">
 			<tbody>
 				<tr>
-					<td>Tent type:</td>
-					<td>Skis/snow shoes:</td>
+					<td><strong>Tent type:</strong></td>
+					<td><strong>Skis/snow shoes:</strong></td>
 				</tr>
-					<td>Gallons of fuel:</td>
-					<td>Spot owner amd address (e.g, 1254XXXXXXX@textmyspotx.com):</td>
+					<td><strong>Stove quantity and type:</strong></td>
+					<td><strong>inReach owner and address (e.g., name@inreach.garmin.com):</strong></td>
 				</tr>
-					<td>Stove qty and type:</td>
-					<td>inReach owner and address (e.g., name@inreach.garmin.com):</td>
+					<td><strong>Fuel Type:</strong>&nbsp;&nbsp;White gas&nbsp;&nbsp;|&nbsp;&nbsp;Isobutane&nbsp;&nbsp;(circle one)
+						<br>_________gal&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;_________ml
+					</td>
+					<td></td>
 				</tr>
-					<td>Days of food:</td>
-					<td>Sat phone (owner, provider, number):</td>
+					<td><strong>Days of food:</strong></td>
+					<td><strong>Sat phone (owner, provider, number):</strong></td>
 				</tr>
-					<td>Med kit (alti, pain?):</td>
-					<td>Other comms (type, owner, address):</td>
+					<td><strong>Med kit (circle all that apply):</strong><br>
+						Diamox&nbsp;|&nbsp;Dex.&nbsp;|&nbsp;Nifed.&nbsp;|&nbsp;Narcotics&nbsp;|&nbsp;Analgesic
+					</td>
+					<td><strong>Other comms/radio (type, owner, address):</strong></td>
 				</tr>
 			</tbody>
 		</table>
@@ -160,20 +164,37 @@
 					<label class="checklist-label">Has valid Special Use Permit</label>
 				</td>
 				<td>
-					<!-- empty cell-->
+					<div class="checklist-checkbox"></div>
+					<label class="checklist-label">Abandoned gear policy</label>
 				</td>
 			</tr>
 		</table>
 	</section>
 
 	<section id="cmc-section">
-		<h4 class="sub-section-title">CMC Numbers</h4>
+		<table class="section-table">
+			<tbody>
+				<tr>
+					<td class="col-50">
+						<h4>Number of CMCs issued _____________</h4>
+					</td>
+					<td class="col-50">
+						<h4>Ranger initials ____________</h4>
+					</td>
+				</tr>
+			</tbody>
+		</table>
 	</section>
 
 	<section>
-		<h3 class="title-text">Check Back</h3>
+		<h3 class="title-text">Check-Back</h3>
 		<table id="check-back-table" class="section-table">
 			<tbody>
+				<tr>
+					<td class="col-50"><span class="label short">Expedition:&nbsp;</span><span class="value">{{ expedition_name }}</td>
+					<td class="col-25 text-align-right">Check-back ranger</td>
+					<td class="col-25"></td>
+				</tr>
 				<tr>
 					<td class="col-50">Actual route(s) climbed (if different):</td>
 					<td class="col-25 text-align-right">Actual fly-in date:</td>
@@ -191,7 +212,12 @@
 				</tr>
 				<tr class="row-40pt">
 					<td class="col-50">Citations:</td>
-					<td class="col-25 text-align-right">Full pack-out (yes/no)?</td>
+					<td class="col-25 text-align-right">Full pack-out (yes/no)?:</td>
+					<td class="col-25"></td>
+				</tr>
+				<tr>
+					<td class="col-50">CIR/SAR Case #:</td>
+					<td class="col-25 text-align-right"># of CMCs returned:</td>
 					<td class="col-25"></td>
 				</tr>
 			</tbody>
@@ -204,24 +230,30 @@
 		<table id="climber-route-list" class="section-table alternating-row-table">
 			<thead>
 				<tr>
-					<th class="col-20">Name</th>
+					<th class="col-25">Name</th>
+					<th class="col-10">Elevation</th>
+					<th class="col-10">Date</th>
 					<th class="col-10">Frostbite</th>
-					<th class="col-5">AMS</th>
-					<th class="col-5">HACE</th>
-					<th class="col-5">HAPE</th>
-					<th class="col-25">Medical notes</th>
+					<th class="col-7">AMS</th>
+					<th class="col-7">HACE</th>
+					<th class="col-7">HAPE</th>
+					<th class="col">Medical notes</th>
 				</tr>
 			</thead>
 			<tbody>
 				{% for route_info in routes %}
 					{% for climber_info in climbers %}
 						<tr>
-							<td class="col-20">{{ climber_info.full_name }} </td>
-							<td class="col-10"></td>
-							<td class="col-5"></td>
-							<td class="col-5"></td>
-							<td class="col-5"></td>
-							<td class="col-25"></td>
+							<td class="col-25 ellipsis white-space-no-wrap">
+								{{ climber_info.full_name }}, {{route_info.route}}
+							</td>
+							<th class="col-10"></th>
+							<th class="col-10"></th>
+							<th class="col-10"></th>
+							<th class="col-7"></th>
+							<th class="col-7"></th>
+							<th class="col-7"></th>
+							<th class="col"></th>
 						</tr>
 					{% endfor %}
 				{% endfor %}
@@ -235,6 +267,45 @@
 
 	<section>
 		<h3 class="title-text">Ranger comments</h3>
+		<table>
+			<tbody>
+				<tr>
+					<td class="col-25 text-align-right font-10-pt white-space-no-wrap">
+						Lost or abandoned equipment:
+					</td>
+					<td class="col"></td>
+				</tr>
+				<tr>
+					<td class="col-25 text-align-right font-10-pt white-space-no-wrap">
+						GPS coordinates:
+					</td>
+					<td class="col"></td>
+				</tr>
+				<tr>
+					<td class="col-25 text-align-right font-10-pt white-space-no-wrap">
+						Elevation:
+					</td>
+					<td class="col"></td>
+				</tr>
+				<tr></tr>
+				<tr>
+					<td class="col-25 text-align-right font-10-pt white-space-no-wrap">
+						Retrieved from mountain (date/initials):
+					</td>
+					<td class="col"></td>
+				</tr>
+				<tr>
+					<td class="col-25 text-align-right font-10-pt white-space-no-wrap">
+						Notified climbing party (date/initials):
+					</td>
+					<td class="col"></td>
+				</tr>
+				<tr>
+					<td class="col-25 text-align-right font-10-pt white-space-no-wrap white-space-no-wrap">Gear retrieved from Ranger Station (date/initials):</td>
+					<td class="col"></td>
+				</tr>
+			</tbody>
+		</table>
 	</section>
 </body>
 

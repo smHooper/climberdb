@@ -814,6 +814,7 @@
 				<div class="modal-body">
 					<div class="field-container col-6">
 						<select class="input-field no-option-fill ignore-changes col-6" id="input-export_type" name="export_type" value="confirmation_letter">
+							<option value="">Export type</option>
 							<option value="confirmation_letter" selected="selected">Confirmation letter</option>
 							<option value="registration_card">Registration card</option>
 							<option value="transaction_history">Transaction history</option>
@@ -822,6 +823,7 @@
 						<label class="field-label" for="input-export_type">Export type</label>
 					</div>
 					<button class="generic-button d-inline" id="create-pdf-button" title="Create PDF">Create PDF</button>
+					<div id="export-type-null-error-message" class="col w-100 collapse error-message">You didn't select a type of export</div>
 				</div>
 				<div class="modal-footer">
 					<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Close</button>
