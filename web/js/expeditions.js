@@ -1029,6 +1029,42 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	removeRouteUI(routeCode, $routeCard) {
+		const routeDeleted = delete this.expeditionInfo.expedition_member_routes.data[routeCode];
+		if (routeDeleted) {
+			// remove the route from in-memory .order
+			this.expeditionInfo.expedition_member_routes.order = this.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
+		}
+		$routeCard.fadeRemove();
+
+		return routeDeleted;
+	}
+
+
+	deleteRoute($routeCard, routeCode, {showError=true}={}) {
+		// get DB IDs for all member route records that are saved in the DB
+
+		showLoadingIndicator();
+
+		const memberRouteIDs = $routeCard.find('.route-member-list .data-list-item:not(.cloneable):not(.new-list-item)')
+			.map((_, el) => $(el).data('table-id'))
+			.get();
+		return this.deleteByID('expedition_member_routes', memberRouteIDs)
+			.done(response => {
+				const errorCheckArgs = showError ? 
+					{errorExplanation: 'An error occurred while attempting to delete this route.'} :
+					{};
+				if (!this.pythonReturnedError(response, errorCheckArgs)) {
+					this.removeRouteUI(routeCode, $routeCard);
+				}
+			}).fail((xhr, status, error) => {
+				const message = 'And error occurred while attempting to delete this route:' + 
+				 ` ${error}.${this.getDBContactMessage()}`;
+				this.showModal(message, 'Database Error');
+			}).always(() => {hideLoadingIndicator();})
+	}
+
+
 	onDeleteCardButtonClick(e) {
 		// don't close or open the card
 		e.stopPropagation(); 
@@ -1090,29 +1126,11 @@ class ClimberDBExpeditions extends ClimberDB {
 					` and all related transactions and routes for this member? This action` +
 					` is permanent and cannot be undone.`;
 			} else if (tableName === 'expedition_member_routes') {
-				// get DB IDs for all member route records that are saved in the DB
-				const memberRouteIDs = $card.find('.route-member-list .data-list-item:not(.cloneable):not(.new-list-item)')
-					.map((_, el) => $(el).data('table-id'))
-					.get();
 				const $routeCodeInput = $card.find('.route-code-header-input:not(.mountain-code-header-input)');
 				const routeCode = $routeCodeInput.val();
 				onConfirmClickHandler = () => {
 					$('#alert-modal .confirm-button').click(() => {
-						this.deleteByID('expedition_member_routes', memberRouteIDs)
-							.done(response => {
-								if (!this.pythonReturnedError(response, {errorExplanation: 'An error occurred while attempting to delete this route.'})) {
-									const routeDeleted = delete this.expeditionInfo.expedition_member_routes.data[routeCode];
-									if (routeDeleted) {
-										// remove the route from in-memory .order
-										this.expeditionInfo.expedition_member_routes.order = this.expeditionInfo.expedition_member_routes.order.filter(code => code != routeCode);
-									}
-									$card.fadeRemove();
-								}
-							}).fail((xhr, status, error) => {
-								const message = 'And error occurred while attempting to delete this route:' + 
-								 ` ${error}.${this.getDBContactMessage()}`;
-								this.showModal(message, 'Database Error');
-							})
+						this.deleteRoute($card, routeCode);
 					})
 				}
 				const routeName = $routeCodeInput.find(`option[value=${routeCode}]`).text();
@@ -1302,8 +1320,14 @@ class ClimberDBExpeditions extends ClimberDB {
 					.attr('data-table-name', table_name)
 					.attr('data-table-id', db_id)
 					.removeClass('dirty');
-			if (Object.keys(foreign_keys).length) $inputs.data('foreign-ids', foreign_keys);
-			
+			if (Object.keys(foreign_keys).length) {
+				$inputs.data('foreign-ids', foreign_keys);
+				for (const [columnName, value] of Object.entries(foreign_keys)) {
+					for (const el of $inputs.filter(`[data-foreign-table="${columnName}"]`)) {
+						el.value = value;
+					}
+				}
+			}
 		}
 
 		return expeditionID;
@@ -3573,6 +3597,14 @@ class ClimberDBExpeditions extends ClimberDB {
 		const locations = this.expeditionInfo.itinerary_locations;
 		for (const locationID of locations.order) {
 			const $newCard = this.addNewCard('#locations-accordion', {updateIDs: {itinerary_locations: locationID}})
+			const bcRouteListID = 'bc-route-list-' + locationID;
+			const $list = $newCard.find('.bc-route-list')
+				.attr('id', bcRouteListID)
+			for (const el of $list.find('.input-field')) {
+				el.id += '-' + locationID;
+			}
+			$newCard.find('.add-bc-route-button')
+				.attr('data-target', '#' + bcRouteListID);
 			for (const el of $newCard.find('.input-field')) {
 				this.setInputFieldValue(el, locations.data[locationID], {dbID: locationID, triggerChange: false})
 			}
@@ -3596,7 +3628,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $mountainCodeInput = $newCard.find('.mountain-code-header-input')
 				.val(mountainCode)
 				.removeClass('default')//set in addNewCard()
-				.change()
+			if (!this.pageIsBackcountry()) $mountainCodeInput.change()
 			$newCard.find('.route-code-header-input, .input-field[name="route_code"]')
 				.not($mountainCodeInput)
 				.val(routeCode)
@@ -3633,6 +3665,26 @@ class ClimberDBExpeditions extends ClimberDB {
 						}
 					}
 					nRouteMembers ++;
+
+					// If this is a backcountry expedition, the routes accordion is hidden, but
+					// 	each route should be assoicated with a location and should be added to 
+					//	the purely cosmetic route data-list for that card
+					const routeItemExists = $(`.bc-route-list > li[data-route-code=${routeCode}]`).length;
+					if (memberRouteRecord.itinerary_location_id && !routeItemExists) {
+						const $bcRouteList = $(`#locations-accordion > .card[data-table-id=${memberRouteRecord.itinerary_location_id}] .bc-route-list`);
+						const $listItem = this.addNewListItem($bcRouteList)
+							.attr('data-route-code', routeCode)
+							.attr('data-card-id', $newCard.attr('id')); // store card ID to be able to relate changes back to the routes-accordion card
+						$listItem.find('.input-field[name="mountain_code"]')
+							.val(mountainCode)
+							.removeClass('default');
+						const $routeSelect = $listItem.find('.input-field[name="route_code"]');
+						this.updateRouteCodeOptions(mountainCode, $routeSelect);
+						$routeSelect
+							.val(routeCode)
+							.removeClass('default');
+
+					}
 				}
 			}
 
@@ -3908,6 +3960,12 @@ class ClimberDBExpeditions extends ClimberDB {
 							routes.data[routeCode][memberID][fieldName] = row[fieldName];
 						}
 						routes.data[routeCode][memberID].expedition_member_route_id = row.expedition_member_route_id;
+						
+						// the view already has an 'itinerary_location_id' field for the itinerary_location table's
+						//	primary key. To make sure the itinerary location ID is properly assigned to the route,
+						//	manually set the value from the renamed column
+						routes.data[routeCode][memberID].itinerary_location_id = row.expedition_member_routes_itinerary_location_id;
+						
 					}
 
 					const cmcCheckoutID = row.cmc_checkout_id;
@@ -4535,13 +4593,15 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
-	onAddRouteButtonClick(e) {
-		if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
-			this.showModal('You must add at least one expedition member before you can add a route.', 'Invalid Action');
-			return;
-		}
 
-		const $newCard = this.addNewCard($($(e.target).data('target')), {accordionName: 'routes', newCardClass: 'new-card'});
+	addNewRoute($accordion) {
+		const $newCard = this.addNewCard(
+			$accordion, 
+			{
+				accordionName: 'routes', 
+				newCardClass: 'new-card'
+			}
+		);
 		
 		// Use the UI to rather than in-memory data to add all active expedition members because
 		//	a new card wouldn't be in the in-memory data
@@ -4558,6 +4618,33 @@ class ClimberDBExpeditions extends ClimberDB {
 				$listItem.find('.name-label').text($memberCard.find('.expedition-member-card-link-label').text());
 			}
 		}
+		
+		return $newCard;
+	}
+
+
+	onAddRouteButtonClick(e) {
+		if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
+			this.showModal('You must add at least one expedition member before you can add a route.', 'Invalid Action');
+			return;
+		}
+
+		const $target = $($(e.target).data('target'));
+
+		this.addNewRoute($target);
+	}
+
+
+	updateRouteCodeOptions(mountainCode, $routeSelect, {setValueToDefault=false}={}) {
+		const mountainRoutes = Object.values(this.routeCodes)
+			.filter(r => r.mountain_code == mountainCode)
+			.sort((a, b) => a.sort_order - b.sort_order);
+		for (const route of mountainRoutes) {
+			$routeSelect.append($(`<option value="${route.code}">${route.name}</option>`))
+		}
+		// Just set to the first one
+		const value = setValueToDefault ? '' : mountainRoutes[0].code;
+		$routeSelect.val(value).change();
 	}
 
 
@@ -4569,14 +4656,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const mountainCode = $target.val();
 			const $routeHeaderSelect = $target.closest('.card-header').find('.input-field[name=route_code]')
 				.empty();//remove all options
-			const mountainRoutes = Object.values(this.routeCodes)
-				.filter(r => r.mountain_code == mountainCode)
-				.sort((a, b) => a.sort_order - b.sort_order);
-			for (const route of mountainRoutes) {
-				$routeHeaderSelect.append($(`<option value="${route.code}">${route.name}</option>`))
-			}
-			// Just set to the first one
-			$routeHeaderSelect.val(mountainRoutes[0].code).change();
+			this.updateRouteCodeOptions(mountainCode, $routeHeaderSelect);
 		} else {
 			// Set the hidden route code and route order inputs in the card (which are the actual inputs tied to DB values)
 			const routeCode = $target.val();
@@ -4892,12 +4972,14 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 
 			// load only expedition mountains (Denali and Foraker) as options
-			const $mountainCodeInput = $('[name=mountain_code]');
-			const expeditionMountains = Object.values(this.mountainCodes).filter(({is_backcountry}) => !is_backcountry);
-			for (const {code, name} of expeditionMountains) {
-				$mountainCodeInput.append(
-					$(`<option value="${code}">${name}</option>`)
-				)
+			if (!this.pageIsBackcountry()) {
+				const $mountainCodeInput = $('[name=mountain_code]');
+				const expeditionMountains = Object.values(this.mountainCodes).filter(({is_backcountry}) => !is_backcountry);
+				for (const {code, name} of expeditionMountains) {
+					$mountainCodeInput.append(
+						$(`<option value="${code}">${name}</option>`)
+					)
+				}
 			}
 
 			// Initialize select2s after select options have been filled

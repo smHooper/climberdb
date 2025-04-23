@@ -15,6 +15,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			// }
 		};
 		this.locationCoordinates = {}; // stores lat/lon of named locations
+		this.locationMountainCodes = {}; // stores mountain code/names for each location
 		this.markerIcons = { // maps location type to an icon image
 			1: '../imgs/plane_icon_50px.png',
 			2: '../imgs/camp_icon_50px.png',
@@ -49,6 +50,35 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		const index = $card.index(this.locationCardIndexSelector);
 		const mainMap = this.maps.main;
 		mainMap.map.flyTo(mainMap.layers[index].getLatLng())//, {maxZoom: this.maxInitialMapZoom});
+	}
+
+	
+	onBCMountainCodeChange(e) {
+		const $mountainInput = $(e.target);
+		const mountainCode = $mountainInput.val();
+		const $listItem = $mountainInput.closest('.data-list-item');
+		const $routeInput = $listItem.find('[name=route_code]')
+			.empty()
+			.append('<option value="">Select route</option>');
+		this.updateRouteCodeOptions(mountainCode, $routeInput, {setValueToDefault: true});
+	}
+
+	/*
+	When a BC route changes, update the associated route card in the (hidden) 
+	#routes-accordion
+	*/
+	onBCRouteCodeChange(e) {
+		const $input = $(e.target);
+		const routeCode = $input.val();
+		const $li = $input.closest('.data-list-item');
+		let cardID = $li.data('card-id');
+		if (!cardID) {
+			console.log('no card id for #' + $li.attr('id'))
+		}
+		const $routeCard = $('#' + cardID);
+		$routeCard.find('.route-code-header-input[name=route_code]')
+			.val(routeCode)
+			.change();
 	}
 
 
@@ -105,6 +135,13 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 
 		// Set the (hidden) display_order field value 
 		$newCard.find('.input-field[name=display_order]').val(index + 1).change();
+
+		// Set the BC route list as the target for the add-new-route button
+		// set target for "add new route" button
+		const $routeList = $newCard.find('.bc-route-list');
+		const bcRouteListID = $routeList.attr('id', `${$routeList.attr('id')}-new-${$routeList.index()}`);
+		$newCard.find('.add-bc-route-button')
+			.data('target', bcRouteListID);
 	}
 
 
@@ -206,6 +243,133 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	}
 
 
+	updateBCMountainOptions($mountainFields, newMountainCodes) {
+		// get values before removing options since that will remove the current selection
+		const currentValues = $mountainFields.map(
+				(_, el) => ({id: el.id, value: el.value})
+			).get()
+			.filter(({value}) => newMountainCodes.includes(parseInt(value)));
+
+		// Remove everthing except the default null option
+		$mountainFields.find('option').not('[value=""]').remove();
+
+		// Add the new options according to their sort_order from the DB
+		const sortedMountainCodes = newMountainCodes.sort((a, b) => {
+			return this.mountainCodes[a].name < this.mountainCodes[b].name ? -1 : 1
+		})
+		for (const mountainCode of sortedMountainCodes) {
+			const mountainName = this.mountainCodes[mountainCode].name;
+			$mountainFields.append(
+				`<option value=${mountainCode}>${mountainName}</option>}`
+			)
+		}
+		
+		// Reset values for mountains that were valid for both the previous 
+		//	location and this one
+		for (const {id, value} of currentValues) {
+			$('#' + id).val(value);
+		}
+	}
+
+
+	deleteBCRoute($li, {confirm=true}={}) {
+
+
+		const $routeCard = $('#' + $li.data('card-id'));
+		if ($li.is('.new-list-item')) {
+			$li.fadeRemove();
+			$routeCard.remove();
+		} else {
+			const routeCode = $routeCard
+				.find('.route-code-header-input:not(.mountain-code-header-input)')
+					.val();
+			const deleteRoute = () => {
+				this.deleteRoute($routeCard, routeCode)
+					.done(response => {
+						if (!this.pythonReturnedError(response)) {
+							$li.fadeRemove();
+						}
+					})
+					.fail(print('route deletion failed'));
+			}
+			if (confirm) {
+				const message = 'Are you sure you want to delete this route? This action is permanent and cannot be undone.'
+				const onConfirmClickHandler = () => {
+					$('#alert-modal .confirm-button').click(() => {
+						deleteRoute();
+					})
+				}
+				this.showModal(
+					message, 
+					'Delete Route?',
+					{
+						modalType: 'yes/no',
+						eventHandlerCallable: onConfirmClickHandler
+					}
+				)
+			} else {
+				deleteRoute();
+			}
+		}
+	}
+
+
+	onDeleteBCRouteButtonClick(e) {
+		const $button = $(e.target);
+		const $li = $button.closest('.data-list-item');
+		
+		const routeCode = $li.find('.input-field[name=route_code]')
+			.val();
+		this.deleteBCRoute($li);
+	}
+
+
+	addNewBCRoute($routeList) {
+		if ($routeList.closest('.card').is('.new-card')) {
+			const message = 
+				'You must save this itinerary location before you can add routes to it.' +
+				' Would you like to save all of your edits now?';
+			const onConfirmClickHandler = () => {
+				$('#alert-modal .confirm-button').click(() => {
+					this.saveEdits()
+				});
+			}
+			this.showModal(
+				message, 
+				'Save Edits?', 
+				{
+					modalType: 'yes/no', 
+					eventHandlerCallable: onConfirmClickHandler
+				}
+			);
+			$('#alert-modal .confirm-button')
+				.removeClass('danger-button');
+			return;
+		}
+
+		const $li = this.addNewListItem($routeList, {newItemClass: 'new-list-item'});
+		
+		// update the mountain code select options with the selected location's mountains
+		const locationCode = $li.closest('.card')
+			.find('.input-field[name=backcountry_location_code]')
+				.val();
+		this.updateBCMountainOptions(
+			$routeList.find('.bc-mountain-field'), 
+			this.locationMountainCodes[locationCode]
+		);
+		
+		// add a new corresponding route card
+		const $routeCard = this.addNewRoute($('#routes-accordion'));
+		
+		$li.data('card-id', $routeCard.attr('id'));
+		const $locationCard = $li.closest('.card');
+		const locationID = $locationCard.data('table-id');
+		if (!isNull(locationID)) {
+			$routeCard.find('.data-list-item:not(.cloneable) [name=itinerary_location_id]').val(locationID).change();
+		}
+	}
+
+
 	/*
 	Update the coordinate fields when the location name field changes
 	*/
@@ -213,40 +377,88 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		const $input = $(e.target);
 		const locationCode = $input.val();
 		
-		// If the user chose "other", do nothing
-		if (locationCode == -1) {
-			return;
+		// If the user chose "other", do nothing with location info
+		if (locationCode != -1) {
+
+			const $card = $input.closest('.card');
+			const $latitudeField = $card.find('.input-field[name=latitude]');
+			const $longitudeField = $card.find('.input-field[name=longitude]');
+			
+			const {name, latitude, longitude} = this.locationCoordinates[locationCode];
+			
+			if ($latitudeField.val() || $longitudeField.val()) {
+				// Check if the user wants to change the values already set
+				const message = 
+					`You've alread set the latitude and/or longitude. Do you want to` + 
+					` reset it with the default coordinates for <strong>${name}</strong>?`;
+				const onConfirmClickHandler = () => {
+					$('#alert-modal .confirm-button').click(() => {
+						$latitudeField.val(latitude);
+						$longitudeField.val(longitude).change();
+					});
+					// $('#alert-modal .deny-button').click(() => {
+					// 	// revert
+					// 	$latitudeField.val($latitudeField.data('current-value')).addClass('dirty');
+					// 	$longitudeField.val($longitudeField.data('current-value')).change();
+					// });
+				}
+				const footerButtons = 
+					'<button class="generic-button modal-button close-modal danger-button confirm-button" data-dismiss="modal">Yes</button>' + 
+					'<button class="generic-button secondary-button modal-button close-modal deny-button" data-dismiss="modal">No</button>'
+				this.showModal(message, 'Reset Location Coordinates?', {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler});
+			} else {
+				$latitudeField.val(latitude).addClass('dirty');
+				$longitudeField.val(longitude).change();
+			}
 		}
 
-		const $card = $input.closest('.card');
-		const $latitudeField = $card.find('.input-field[name=latitude]');
-		const $longitudeField = $card.find('.input-field[name=longitude]');
-		
-		const {name, latitude, longitude} = this.locationCoordinates[locationCode];
-		
-		if ($latitudeField.val() || $longitudeField.val()) {
-			// Check if the user wants to change the values already set
-			const message = 
-				`You've alread set the latitude and/or longitude. Do you want to` + 
-				` reset it with the default coordinates for <strong>${name}</strong>?`;
-			const onConfirmClickHandler = () => {
-				$('#alert-modal .confirm-button').click(() => {
-					$latitudeField.val(latitude);
-					$longitudeField.val(longitude).change();
-				});
-				// $('#alert-modal .deny-button').click(() => {
-				// 	// revert
-				// 	$latitudeField.val($latitudeField.data('current-value')).addClass('dirty');
-				// 	$longitudeField.val($longitudeField.data('current-value')).change();
-				// });
+		// if there are any routes already entered, ask he user if they want to get rid of them
+		const $routeList = $input.closest('.card').find('.bc-route-list');
+		const $mountainFields = $routeList.find('.data-list-item:not(.cloneable) .bc-mountain-field')
+		if ($mountainFields.length) {
+			// Check if the new location includes the currently selected mountains
+			const newMountainCodes = this.locationMountainCodes[locationCode];
+			const excludedMountains = $mountainFields
+				.map((_, el) => parseInt(el.value || 0))
+				.get()
+				.filter(v => !newMountainCodes.includes(v) && v !== 0)
+			const excludedMountainLength = excludedMountains.length;
+			if (excludedMountainLength > 0) {
+				const invalidMountainHTML = `
+					<ul>
+						${excludedMountains.map(c => `<li>${this.mountainCodes[c].name}</li>`)}
+					</ul>
+				`;
+				const s = excludedMountainLength > 1 ? 's' : ''
+				const message = 
+					`You have already selected the following mountain/route${s},` +
+					` which ${s === 's' ? 'are' : 'is'} not valid for the location you just selected: ` +
+					invalidMountainHTML +
+					` Would you like to remove the invalid mountain/route${s}?` +
+					` If you click 'Yes', you will permanently delete the invalid route${s}` + 
+					` from this backcountry group. If you click 'No', the invalid mountain/route${s}` +
+					' you already selected will remain in place.';
+				const onConfirmClickHandler = () => {
+					$('#alert-modal .danger-button').click(() => {
+						for (const el of $mountainFields.closest('.data-list-item')) {
+							this.deleteBCRoute($(el), {confirm: false});
+							this.addNewBCRoute($routeList);
+						}
+					});
+					// When the user clicks either button, update 
+					$('#alert-modal .generic-button').click(() => {
+						this.updateBCMountainOptions($mountainFields, newMountainCodes);
+					})
+				}
+
+				const footerButtons = 
+					'<button class="generic-button modal-button close-modal danger-button confirm-button" data-dismiss="modal">Yes</button>' + 
+					'<button class="generic-button secondary-button modal-button close-modal deny-button" data-dismiss="modal">No</button>';
+				this.showModal(message, 'Remove Invalid Mountain/Route?', {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler, dismissable: false});
+			} else {
+				this.updateBCMountainOptions($mountainFields, newMountainCodes);
 			}
-			const footerButtons = 
-				'<button class="generic-button modal-button close-modal danger-button confirm-button" data-dismiss="modal">Yes</button>' + 
-				'<button class="generic-button secondary-button modal-button close-modal deny-button" data-dismiss="modal">No</button>'
-			this.showModal(message, 'Reset Location Coordinates?', {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler});
-		} else {
-			$latitudeField.val(latitude).addClass('dirty');
-			$longitudeField.val(longitude).change();
+		
 		}
 	}
 
@@ -288,6 +500,15 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	}
 
 
+	removeLocationCard($locationCard) {
+		$locationCard.fadeRemove({
+			onRemove: () => {
+				this.removeLocationFromMap(locationCardIndex);
+				this.resetCampMarkerLabels();
+			}
+		});
+	}
+
 	/*
 	The expedition.js suprclass's version of this method can handle all card types
 	except locations, so override with a special handler for those
@@ -295,18 +516,69 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	onDeleteCardButtonClick(e) {
 
 		// 
-		const $card = $(e.target).closest('.card');
-		const isLocationCard = $card.closest('.accordion').is('#locations-accordion');
+		const $locationCard = $(e.target).closest('.card');
+		const isLocationCard = $locationCard.closest('.accordion').is('#locations-accordion');
+
 		if (isLocationCard) {
-			if ($card.is('.new-card')) {
-				const index = $card.index(this.locationCardIndexSelector);
-				$card.fadeRemove({
-					onRemove: () => {
-						this.removeLocationFromMap(index);
-						this.resetCampMarkerLabels();
-					}
-				});
+			const locationCardIndex = $locationCard.index(this.locationCardIndexSelector);
+			if ($locationCard.is('.new-card')) {
+				for (const el of $locationCard.find('.bc-route-list > .data-list-item')) {
+					this.deleteBCRoute($(el))
+				}
+				this.removeLocationCard($locationCard);
+
 			} else {
+				// Get location ID and expedition_member_route IDs to delete
+				const locationID = $locationCard.data('table-id');
+				const $routeCards = $(
+						$locationCard
+							.find('.bc-route-list > .data-list-item:not(.cloneable)')
+								.map((_, li) => '#' + $(li).data('card-id'))
+									.get()
+									.join(',')
+					);
+				const routeIDs = $routeCards
+					.find('.route-member-list .input-field[name=route_code]').map(
+						(_, el) => $(el).data('table-id')
+				).get()
+					.filter(id => !isNull(id));
+
+				const message = 
+					'Are you sure you want to delete this itinerary location' +
+					' and any related routes for this expedition? This action' +
+					' is permanent and cannot be undone.';
+				const onConfirmClickHandler = () => {
+					$('#alert-modal .confirm-button').click(() => {
+						this.deleteFromMultipleTables({
+							itinerary_locations: [locationID],
+							expedition_member_routes: routeIDs
+						}).done(response => {
+							if (this.pythonReturnedError(response, {errorExplanation: 'The itinerary location could not be deleted because of an unexpected error.'})) {
+								return;
+							} else {
+								// delete in-memory location
+								delete this.expeditionInfo.itinerary_locations.data[locationID];
+								this.expeditionInfo.itinerary_locations.order = this.expeditionInfo.itinerary_locations.order.filter(id => id != locationID);
+								for (const el of $routeCards) {
+									// in-memory data has to be removed per route so loop through each card
+									const $routeCardToDelete = $(el);
+									const routeCode = $routeCardToDelete.find('.card-header [name=route_code]').val();
+									this.removeRouteUI(routeCode, $routeCardToDelete);
+								}
+								// remove from map
+								this.removeLocationCard($locationCard);
+							}
+						})
+					})
+				}
+				this.showModal(
+					message, 
+					'Delete Itinerary Location?', 
+					{
+						modalType: 'yes/no', 
+						eventHandlerCallable: onConfirmClickHandler
+					}
+				);
 
 			}
 		} else {
@@ -345,6 +617,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			this.onAddLocationButtonClick()
 		});
 
+		
 		$(document).on('change', '.location-coordinate-field', e => {
 			this.onCoordinateFieldChange(e);
 		});
@@ -361,10 +634,25 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			this.onZoomToLocationClick(e);
 		});
 
+		$(document).on('change', '.bc-route-list .input-field[name=mountain_code]', e => {
+			this.onBCMountainCodeChange(e);
+		})
+
+		$(document).on('change', '.bc-route-list .input-field[name=route_code]', e => {
+			this.onBCRouteCodeChange(e);
+		})
+
 		$(document).on('click', '#add-new-backcountry-group-button', e => {
 			this.onNewBCGroupButtonClick();
 		});
 
+		$(document).on('click', '.add-bc-route-button', e => {
+			this.addNewBCRoute($($(e.target).data('target')));
+		});
+
+		$(document).on('click', '.delete-bc-route-button', e => {
+			this.onDeleteBCRouteButtonClick(e);
+		})
 		// Capture lat/lon values when location name field gets the focus
 		$(document).on('focus', '.input-field[name=backcountry_location_code]', e => {
 			const $card = $(e.target).closest('.card');
@@ -421,6 +709,17 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 							}
 						}
 					}
+				}),
+				// get location/mountain cross-ref
+				this.queryDB({
+					tables: ['backcountry_locations_mountains_xref']
+				}).done(result => {
+					if (!this.pythonReturnedError(result, {errorExplanation: 'An error occurred while retrieving lookup values from the database.'})) {
+						const bcMtns = this.locationMountainCodes; // for shorthand refernce
+						for (const {backcountry_location_code, mountain_code} of result.data) {
+							bcMtns[backcountry_location_code] = [...(bcMtns[backcountry_location_code] || []), mountain_code];	
+						}
+					}
 				})
 			);
 
@@ -452,6 +751,20 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 					$(`<option value="${code}">${name}</option>`)
 				)
 			}
+
+			// set the route-code-header-input options to every route code
+			//	because the route-accordion is hidden and the route code
+			//	is controlled by the bc-route-list. To make sure each route option
+			//	is available as a <select> option, make sure all route codes
+			//	are availeble
+			const $routHeaderInputs = $('.route-code-header-input[name=route_code]')
+				.empty()
+				.append(
+					Object.keys(this.routeCodes)
+						.map(code => `<option value=${code}>${code}</option>`)
+						.join('')
+				)
+			$('abs')
 		})
 
 	}

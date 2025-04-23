@@ -253,8 +253,8 @@ class ClimberDB {
 				'<button class="generic-button secondary-button modal-button close-modal" data-dismiss="modal">Cancel</button>' +
 				'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
 			: modalType === 'yes/no' ? 
-				'<button class="generic-button modal-button secondary-button close-modal" data-dismiss="modal">No</button>' +
-				'<button class="generic-button modal-button primary-button close-modal confirm-button" data-dismiss="modal>Yes</button>'
+				'<button class="generic-button secondary-button modal-button close-modal deny-button" data-dismiss="modal">No</button>' +
+				'<button class="generic-button modal-button close-modal danger-button confirm-button" data-dismiss="modal">Yes</button>'
 			:
 			'<button class="generic-button modal-button close-modal confirm-button" data-dismiss="modal">OK</button>'
 			;
@@ -1005,6 +1005,25 @@ class ClimberDB {
 		});
 	}
 
+	/*
+	Delete rows by ID from one or more tables.
+	@param deleteIDs - object in the form {tableName: [id1, id2]}
+	@param returning [optional] - object in the form {tableName: [column1, column2]}
+		to specify 
+	*/
+	deleteFromMultipleTables(deleteIDs, {returning={}}={}) {
+
+		var requestData = deleteIDs;
+		if (Object.keys(returning).length)
+				requestData.returning = returning;
+
+		return $.post({
+			url: '/flask/db/delete/from_multiple_tables',
+			data: JSON.stringify(requestData),
+			contentType: 'application/json'
+		})
+
+	}
 
 	/*
 	*/
@@ -1812,11 +1831,15 @@ class ClimberDB {
 						columns: {}
 					};
 				}
-				if (info.foreign_table_name) {
-					this.tableInfo.tables[tableName].foreignColumns.push({
-						foreignTable: info.foreign_table_name,
-						column: info.column_name
-					});
+				const foreignColumnInfo = {
+					foreignTable: info.foreign_table_name,
+					column: info.column_name
+				}
+				if (
+						info.foreign_table_name && 
+						!this.tableInfo.tables[tableName].foreignColumns.map(JSON.stringify).includes(JSON.stringify(foreignColumnInfo))
+					) {
+					this.tableInfo.tables[tableName].foreignColumns.push(foreignColumnInfo);
 				}
 
 				this.tableInfo.tables[tableName].columns[info.column_name] = {...info};

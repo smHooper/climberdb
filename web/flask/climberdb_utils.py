@@ -7,13 +7,14 @@ import datetime
 import json
 import dill as pickle
 import os
-from sqlalchemy import inspect, create_engine, Table, Column, Integer
+from sqlalchemy import column, Column, create_engine, func, inspect, Integer, Table,  select, text
 from sqlalchemy.engine import Engine, URL
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.decl_api import DeclarativeMeta
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.elements import BinaryExpression
+from sqlalchemy.sql.selectable import Subquery
 
 from typing import Any, Mapping
 
@@ -79,7 +80,28 @@ def get_schema() -> str:
 	return 'public' if get_environment() == 'prod' else 'dev'
 
 
-def get_tables(overwrite_cache: bool=False) -> dict:
+
+# 	Define a virtual view for the backcountry_locations_mountains_xref table
+# 	SQLALchemy automap_base's .prepare() will fail if the table has its 
+# 	own ID column, but session.query() will dail if it doesn't. To get 
+# 	around these conflicting problems, create a virtual view (doesn't exist
+# 	in the DB) and treat it like a SQLAlchemy ORM table
+# 	
+virtual_view = select(
+    func.row_number().over().label('id'),
+    column('backcountry_location_code'),
+    column('mountain_code')
+).select_from(text(f'{get_schema()}.backcountry_locations_mountains_xref')).subquery()
+
+Base = declarative_base()
+class BackcountryLocationsMountainsXref(Base):
+    __table__ = virtual_view
+    __mapper_args__ = {
+        'primary_key': [virtual_view.c.id]
+    }
+
+
+def get_tables(overwrite_cache: bool=False, schema:str='') -> dict:
 	"""
 	Return a dictionary of table_name: sqlalchemy.orm.automap class instance. 
 	If a SQLAlchemy metadata cache exists, load from that. If not, reflect 
@@ -95,7 +117,7 @@ def get_tables(overwrite_cache: bool=False) -> dict:
 
 	:return: dictionary
 	"""
-	schema = get_schema()
+	schema = schema or get_schema()
 	engine = get_engine(schema=schema)
 	
 
@@ -123,8 +145,6 @@ def get_tables(overwrite_cache: bool=False) -> dict:
 		# Views are not automapped by default so manually add them
 
 		for view_name_ in view_names:
-			if view_name_ == 'current_flagged_expeditions_view':
-				import pdb; pdb.set_trace()
 			Table(
 				view_name_, 
 				base.metadata, 
@@ -138,11 +158,20 @@ def get_tables(overwrite_cache: bool=False) -> dict:
 		with open(pickle_path, 'wb') as f:
 			pickle.dump(base.metadata, f)
 
-	table_names = inspector.get_table_names()
-		
-	return {
-		**{table_name_: getattr(base.classes, table_name_) for table_name_ in table_names + view_names}
+
+	table_names = inspector.get_table_names(schema=schema)
+	
+	relation_names = table_names + view_names;
+	
+	tables = {
+		table_name_: getattr(base.classes, table_name_) 
+		for table_name_ in relation_names 
+		if hasattr(base.classes, table_name_)
 	}
+	tables['backcountry_locations_mountains_xref'] = BackcountryLocationsMountainsXref
+
+	return tables
+
 
 def get_where_clause(
 		table_dict: Mapping, 
