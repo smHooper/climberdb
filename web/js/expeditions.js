@@ -3968,7 +3968,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
 				if (showOnLoadWarnings) {
 					this.showFlaggedMemberWarning();
-					this.show60DayWarning();
+					//this.show60DayWarning();
 				}
 			}
 		}).fail((xhr, status, error) => {
