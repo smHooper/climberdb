@@ -680,6 +680,10 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 		climbers.age,
 		climbers.sex_code,
 		expeditions.expedition_name,
+		CASE WHEN is_backcountry AND actual_departure_date IS NULL THEN format('%s - No Departure Entered', expedition_name)
+			WHEN  is_backcountry AND actual_departure_date IS NOT NULL THEN format('%1s - %2s', expedition_name, to_char(actual_departure_date, 'MM/DD/YYYY'))
+			ELSE expedition_name
+		END AS query_expedition_name,
 		expeditions.planned_departure_date,
 		expeditions.actual_departure_date,
 		expeditions.actual_return_date,
@@ -877,17 +881,17 @@ CREATE OR REPLACE VIEW current_backcountry_groups_view AS
 	)
 	SELECT 
 		itinerary_locations.expedition_id, 
-		CASE 
+		(CASE 
 			WHEN actual_departure_date IS NULL THEN format('%s - No Departure Entered', expedition_name)
 			ELSE format('%1s - %2s', expedition_name, to_char(actual_departure_date, 'MM/DD/YYYY'))
-		END AS expedition_name
+		END)::varchar(100) AS expedition_name,
 		latitude, 
 		longitude
 	FROM 
-	  itinerary_locations 
-	    JOIN expeditions ON expeditions.id=itinerary_locations.expedition_id 
-	    JOIN expedition_status_view ON expedition_status_view.expedition_id=itinerary_locations.expedition_id 
-	    JOIN today ON today.now BETWEEN coalesce(location_start_date, (today.year || '-1-1')::date) AND coalesce(location_end_date, (today.year || '-12-31')::date)
+		itinerary_locations 
+			JOIN expeditions ON expeditions.id=itinerary_locations.expedition_id 
+			JOIN expedition_status_view ON expedition_status_view.expedition_id=itinerary_locations.expedition_id 
+			JOIN today ON today.now BETWEEN coalesce(location_start_date, (today.year || '-1-1')::date) AND coalesce(location_end_date, (today.year || '-12-31')::date)
 	WHERE 
 		expedition_status = 4 AND 
 		actual_departure_date < today.now AND 
