@@ -1328,6 +1328,7 @@ def query_expeditions():
 	statement = select(
 			view.expedition_id,
 			view.expedition_name,
+			view.backcountry_expedition_name,
 			view.group_status_code,
 			*similarity_select
 		).where(
