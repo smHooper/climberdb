@@ -448,6 +448,14 @@ CREATE OR REPLACE VIEW expedition_info_view AS
 		attachments.last_modified_by AS attachments_last_modified_by,
 		expeditions.id AS expedition_id,
 		expeditions.expedition_name,
+		format(
+			'%1s - %2s', 
+			expeditions.expedition_name, 
+			to_char(
+				coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date), 
+				'MM/DD/YYYY'
+			)
+		) AS backcountry_expedition_name,
 		expeditions.date_confirmed,
 		expeditions.planned_departure_date,
 		expeditions.planned_return_date,
@@ -865,22 +873,25 @@ ORDER BY sort_order;
 
 CREATE OR REPLACE VIEW current_backcountry_groups_view AS 
 	WITH today AS (
-	  SELECT now(), extract(year FROM now()) AS year
+		SELECT now(), extract(year FROM now()) AS year
 	)
 	SELECT 
-	  itinerary_locations.expedition_id, 
-	  expeditions.expedition_name,
-	  latitude, 
-	  longitude
+		itinerary_locations.expedition_id, 
+		CASE 
+			WHEN actual_departure_date IS NULL THEN format('%s - No Departure Entered', expedition_name)
+			ELSE format('%1s - %2s', expedition_name, to_char(actual_departure_date, 'MM/DD/YYYY'))
+		END AS expedition_name
+		latitude, 
+		longitude
 	FROM 
 	  itinerary_locations 
 	    JOIN expeditions ON expeditions.id=itinerary_locations.expedition_id 
 	    JOIN expedition_status_view ON expedition_status_view.expedition_id=itinerary_locations.expedition_id 
 	    JOIN today ON today.now BETWEEN coalesce(location_start_date, (today.year || '-1-1')::date) AND coalesce(location_end_date, (today.year || '-12-31')::date)
 	WHERE 
-	  expedition_status = 4 AND 
-	  actual_departure_date < today.now AND 
-	  today.year = extract(year FROM actual_departure_date)
+		expedition_status = 4 AND 
+		actual_departure_date < today.now AND 
+		today.year = extract(year FROM actual_departure_date)
 	;
 
 

@@ -123,8 +123,6 @@ def get_tables(overwrite_cache: bool=False) -> dict:
 		# Views are not automapped by default so manually add them
 
 		for view_name_ in view_names:
-			if view_name_ == 'current_flagged_expeditions_view':
-				import pdb; pdb.set_trace()
 			Table(
 				view_name_, 
 				base.metadata, 

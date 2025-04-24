@@ -3214,10 +3214,11 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// IF this is the expedition page, search only for expeditions. Do the same for 
 		//	BC groups if it's the BC page
+		const isBackcountry = this.pageIsBackcountry();
 		where.push({
 			column_name: 'is_backcountry',
 			operator: '=',
-			comparand: this.pageIsBackcountry() 
+			comparand: isBackcountry 
 		});
 
 		const requestData = {
@@ -3252,7 +3253,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					//$drawer.append('<option value="">Click to select an expedition</option>')
 					for (const row of result) {
 						const cancelledClass = row.group_status_code == this.constants.groupStatusCodes.cancelled ? 'cancelled' : '';
-						$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
+						const displayName = isBackcountry ? row.backcountry_expedition_name : row.expedition_name;
+						$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${displayName}</div>`)
 					}
 				} else {
 					$drawer.append('<div class="expedition-search-bar-option">No expeditions match your search</div>');
