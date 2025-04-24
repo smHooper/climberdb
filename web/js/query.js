@@ -283,7 +283,7 @@ class ClimberDBQuery extends ClimberDB {
 						(
 							SELECT
 								expedition_id,
-								expedition_name AS "Group Name",
+								query_expedition_name AS "Group Name",
 								planned_departure_date AS "Planned Departure",
 								group_status_codes.name AS "Group Status",
 								every(sex_code = 1) AS is_all_female
@@ -293,7 +293,7 @@ class ClimberDBQuery extends ClimberDB {
 								extract(year FROM planned_departure_date) = {year}
 							GROUP BY 
 								expedition_id,
-								expedition_name,
+								query_expedition_name,
 								planned_departure_date,
 								"Group Status"
 						) _
@@ -443,7 +443,7 @@ class ClimberDBQuery extends ClimberDB {
 				sql: `
 					SELECT 
 						expedition_id,
-						expedition_name AS "BC Group Name",
+						query_expedition_name AS "BC Group Name",
 						string_agg(DISTINCT mountain_name, ', ' ORDER BY mountain_name) AS "Mountains/Locations",
 						group_status_name AS "Group Status",
 						count(expedition_member_id) AS "Party Size"
@@ -1706,7 +1706,7 @@ class ClimberDBQuery extends ClimberDB {
 				this.queries.count_climbers.hrefs = {'Climber name': 'climbers.html?id={climber_id}'}
 			} else if (returnData === 'expeditions') {
 				this.queries.count_climbers.columns = ['Expedition name', ...whereFieldAliases];
-				outerSelectClause = 'expedition_name AS "Expedition name", expedition_id, ' +  whereFieldSelectString;
+				outerSelectClause = 'query_expedition_name AS "Expedition name", expedition_id, ' +  whereFieldSelectString;
 				innerSelectStatement = `SELECT DISTINCT ON (expedition_id) * FROM ${this.dbSchema}.all_climbs_view`;
 				this.queries.count_climbers.hrefs = {'Expedition name': 'expeditions.html?id={expedition_id}'};
 			}
