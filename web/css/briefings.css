@@ -252,6 +252,57 @@ label {
 .briefing-appointment-text {
 	font-size: 14px;
 }
+
+/* --------------View notes button/tootlip --------------- */
+.view-notes-button > span {
+	color: white;
+	text-align: right;
+	font-weight: bold;
+}
+.tooltip-container {
+    position: relative
+}
+.tooltip-container .tooltip {
+    pointer-events: none;
+    padding: 10px;
+    border-radius: 5px;
+    color: white;
+    background-color: var(--ui-bg-dark-blue);
+    max-width: 200px;
+    z-index: 10;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 100%;
+    height: fit-content;
+    width: max-content;
+}
+.tooltip-container:before {
+    content: "";
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent var(--ui-bg-dark-blue) transparent;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    top: 100%;
+}
+.tooltip-container .tooltip,
+.tooltip-container:before {
+	transition: opacity .25s;
+	opacity: 0;
+	position: absolute;
+	z-index: 10;
+}
+
+.tooltip-container:focus .tooltip,
+.tooltip-container:focus:before,
+.tooltip-container.has-focus .tooltip,
+.tooltip-container.has-focus:before{
+    opacity: 1;
+    pointer-events: auto;
+}
+/* --------------View notes button/tootlip --------------- */
+
+
 .potential-appointment-container {
 	border: 5px solid #219EBC;/*#43d8ef;*/
 	border-radius: 10px;
@@ -265,7 +316,6 @@ label {
 	align-items: center;
 	/*grid-column-end: span 4;*/
 }
-
 
 .appointment-details-drawer {
 	flex: 1 1 auto;
