@@ -321,5 +321,11 @@ label {
 #appointment-details-route-list-container {
 	color: #888888;
 }
+.expedition-info-link-container {
+	margin-top: -.75rem;
+	width: 100%;
+	transition: 0.25s all ease;
+	margin-bottom: 1.25rem;
+}
 
 /*^^^^^^--details slider --^^^^^^*/
