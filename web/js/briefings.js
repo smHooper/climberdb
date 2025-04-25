@@ -261,7 +261,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 		$('#export-briefings-button').click(() => {
 			this.onExportBriefingsClick();
-		})
+		});
 	}
 
 
@@ -505,14 +505,18 @@ class ClimberDBBriefings extends ClimberDB {
 		var info; 
 		if (briefingID) {
 			info = this.briefings[selectedDate][briefingID];
+			const expeditionID = info.expedition_id;
 			const expeditionOptions = Object.values(this.expeditionInfo.expeditions)
-				.filter(i => this.expeditionInfo.unscheduled.includes(i.expedition_id) || i.expedition_id == info.expedition_id);
+				.filter(i => this.expeditionInfo.unscheduled.includes(i.expedition_id) || i.expedition_id == expeditionID);
 			this.fillExpeditionsSelectOptions(expeditionOptions);
 			for (const el of $('.appointment-details-drawer .input-field')) {
 				this.setInputFieldValue(el, info)
 			}
 			for (const routeName of info.routes.split('; ')) {
 				$routeList.append(`<li>${routeName}</li>`)
+			}
+			if (!isNull(expeditionID)) {
+				this.setExpeditionInfoLink(expeditionID);
 			}
 		} else {
 			const expeditionOptions = Object.values(this.expeditionInfo.expeditions)
@@ -560,6 +564,29 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	/*
+	When a user selects a different expedition's briefing appointment, update
+	the expedition page link and show the link
+	*/
+	setExpeditionInfoLink(expeditionID) {
+		$('#expedition-info-link')
+			.attr('href', `expeditions.html?id=${expeditionID}`)
+			.closest('.collapse')
+				.collapse('show');
+	}
+
+
+	/*
+	Hide the expedition page link and set it back to the default URL
+	*/
+	resetExpeditionInfoLink() {
+		const $link = $('#expedition-info-link');
+		$link.attr('href', 'expeditions.html')
+			.closest('.collapse')
+				.collapse('hide');
+	}
+
+
+	/*
 	ClimberDB.clearInputFields() excludes any .no-option-fill inputs because these 
 	usually don't have a default value. The briefing ranger field is .no-option-fill 
 	but does have one, so make sure it gets reset too
@@ -570,6 +597,10 @@ class ClimberDBBriefings extends ClimberDB {
 		
 		// clear .no-option-fill
 		$('.appointment-details-drawer .no-option-fill').val('').addClass('default');
+
+		this.resetExpeditionInfoLink();
+
+
 	}
 
 	/*
@@ -1115,6 +1146,10 @@ class ClimberDBBriefings extends ClimberDB {
 		const expeditionID = $input.val();
 		const expeditionName = $(`#input-expedition option[value="${expeditionID}"]`).text();
 		$selectedAppointment.find('.briefing-appointment-header').text(expeditionName);
+		if (!isNull(expeditionID)) {
+			this.setExpeditionInfoLink(expeditionID);
+		}
+
 		//	number of climbers
 		const nClimbers = this.expeditionInfo.expeditions[expeditionID].n_members;
 		$selectedAppointment.find('.briefing-details-n-climbers').text(nClimbers + ' ');
