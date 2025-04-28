@@ -577,7 +577,7 @@ CREATE OR REPLACE VIEW special_use_permit_view AS
 		expeditions.expedition_name,
 		climbers.address,
 		climbers.city,
-		state_codes.name AS state,
+		coalesce(state_codes.name, '')::varchar(50) AS state,
 		country_codes.name AS country,
 		climbers.postal_code,
 		climbers.phone,
@@ -587,8 +587,8 @@ CREATE OR REPLACE VIEW special_use_permit_view AS
 	FROM expedition_members
 		JOIN expeditions ON expedition_members.expedition_id = expeditions.id 
 		JOIN climbers ON expedition_members.climber_id = climbers.id 
-		JOIN state_codes ON climbers.state_code = state_codes.code 
 		JOIN country_codes ON climbers.country_code = country_codes.code
+		LEFT JOIN state_codes ON climbers.state_code = state_codes.code 
 	ORDER BY 
 		climbers.last_name, climbers.first_name;
 
