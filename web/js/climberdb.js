@@ -203,6 +203,7 @@ class ClimberDB {
 			insertOrder: [] // comply with left-right orientation of table relationships
 		};
 		this.entryMetaFields = ['entry_time', 'entered_by', 'last_modified_time', 'last_modified_by'];
+		this.currentURL = '';// for de-registering a BroadcastChannel listener
 		this.config = {};
 		this.loginInfo = {}; //{username: {expires: } }
 		this.constants = { // values that aren't configurable but need to be accessible across multiple pages
@@ -1444,12 +1445,20 @@ class ClimberDB {
 	}
 
 
+	resetOpenURLListener() {
+		// Check if this expedition is already open
+		this.stopListeningForOpenURL(this.currentURL);
+		this.startListeningForOpenURL();
+	}
+
 	/*
 	Helper method to reset a URL to its base url (without search or hash)
 	*/
 	resetURL() {
 		const url = new URL(window.location.origin + window.location.pathname);
 		window.history.replaceState({}, '', url);
+
+		this.resetOpenURLListener();
 	}
 
 
@@ -2198,6 +2207,8 @@ class ClimberDB {
 		//	prevent creating multiple channels that each emit and receive responses for 
 		//	the same message
 		let channel = this.urlChannels[url];
+		this.currentURL = url;
+
 		if (!channel) {
 			channel = new BroadcastChannel(url);
 			this.urlChannels[url] = channel;
@@ -2236,6 +2247,15 @@ class ClimberDB {
 
 		// Post a message asking if the page is open elsewhere
 		channel.postMessage({message: openQuery});
+	}
+
+	/*
+	Stop listening to the given URL for duplicate tabs
+	*/
+	stopListeningForOpenURL(url) {
+		url = url || this.currentURL;
+		this.urlChannels[url].close();
+		delete this.urlChannels[url];
 	}
 
 

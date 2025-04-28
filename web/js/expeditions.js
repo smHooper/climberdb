@@ -838,8 +838,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			} else {
 				this.loadExpedition(state.id);
 				this.currentHistoryIndex = state.historyIndex;
-				// Check if this expedition is already open
-				this.startListeningForOpenURL();
+				this.resetOpenURLListener();
 			}
 		} else {
 			// Open the blank page ready for a new expedition
@@ -863,7 +862,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		window.history.pushState({id: parseInt(expeditionID), historyIndex: this.currentHistoryIndex + 1}, '', url);
 
 		// This is a different expedition, so make sure it's not open elsewhere
-		this.startListeningForOpenURL();
+		this.resetOpenURLListener();
 	}
 
 	/*
