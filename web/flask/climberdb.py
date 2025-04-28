@@ -743,7 +743,8 @@ def export_special_use_permit():
 				output_pdfs.append(output_pdf)
 
 	if len(output_pdfs) == 0:
-		raise RuntimeError('PDFs could not be created because no expediton_member_ids matached ' + expedition_member_id_string)
+		expedition_member_id_string = ', '.join(expedition_member_ids)
+		raise RuntimeError('PDFs could not be created because no expediton_member_ids matched ' + expedition_member_id_string)
 
 	output_basename = f'special_use_permit_{expedition_id}_' + re.sub(r'\W+', '_', expedition_name)	
 	
