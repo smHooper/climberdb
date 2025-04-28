@@ -3689,6 +3689,10 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Toggle the is_guiding collapse
 		$('#input-guide_company').change();
+
+		// Make sure the beforeunload event is turned off since it was likely 
+		//	turned on by manual change events
+		this.toggleBeforeUnload(false);
 	}
 
 

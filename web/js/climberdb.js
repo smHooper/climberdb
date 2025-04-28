@@ -2152,12 +2152,9 @@ class ClimberDB {
 	*/
 	beforeUnloadEventHandler(e) {
 		
-		//if ($('.input-field.dirty:not(.filled-by-default)').length) {
 		e.preventDefault();
 		const message = 'You have unsaved edits. Are you sure you want to leave this page?';
 		e.returnValue = message;
-		//return message;
-		//}
 	}
 
 
@@ -2168,10 +2165,17 @@ class ClimberDB {
 	*/	
 	toggleBeforeUnload(shouldTurnOn=false) {
 
+		// To ensure only one beforeunload event is registered, store the event 
+		//	as a class property
+		if (!this._beforeUnloadHandler) {
+			this._beforeUnloadHandler = (e) => this.beforeUnloadEventHandler(e);
+		}
+
+		// register/de-register the stored handler
 		if (shouldTurnOn) {
-			$(window).on('beforeunload', (e) => {this.beforeUnloadEventHandler(e)});
+			window.addEventListener('beforeunload', this._beforeUnloadHandler);
 		} else {
-			$(window).off('beforeunload');
+			window.removeEventListener('beforeunload', this._beforeUnloadHandler);
 		}
 	}
 
