@@ -746,7 +746,7 @@ class ClimberDBDashboard extends ClimberDB {
 				this.configureGroupStatusGraph(),
 				this.configureDailyBriefingsChart(),
 				this.configureFlaggedGroups(),
-				this.configureSoloClimbers(),
+				//this.configureSoloClimbers(),
 				this.configureMisingPaymentOrSUP(),
 				this.configureOverdueParties(),
 				this.configureBCMap()
