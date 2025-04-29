@@ -1706,9 +1706,9 @@ class ClimberDBQuery extends ClimberDB {
 				this.queries.count_climbers.hrefs = {'Climber name': 'climbers.html?id={climber_id}'}
 			} else if (returnData === 'expeditions') {
 				this.queries.count_climbers.columns = ['Expedition name', ...whereFieldAliases];
-				outerSelectClause = 'query_expedition_name AS "Expedition name", expedition_id, ' +  whereFieldSelectString;
-				innerSelectStatement = `SELECT DISTINCT ON (expedition_id) * FROM ${this.dbSchema}.all_climbs_view`;
-				this.queries.count_climbers.hrefs = {'Expedition name': 'expeditions.html?id={expedition_id}'};
+				outerSelectClause = 'query_expedition_name AS "Expedition name", expedition_id, page_name, ' +  whereFieldSelectString;
+				innerSelectStatement = `SELECT DISTINCT ON (expedition_id) *, CASE WHEN is_backcountry THEN 'backcountry' ELSE 'expeditions' END AS page_name FROM ${this.dbSchema}.all_climbs_view`;
+				this.queries.count_climbers.hrefs = {'Expedition name': `{page_name}.html?id={expedition_id}`};
 			}
 		}
 
