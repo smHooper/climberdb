@@ -225,6 +225,13 @@
 										<label class="field-label" for="input-expected_expedition_size">Expected group size</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>	
+									<div class="field-container col-md-6 col-lg-3">
+										<input id="input-cmc_count" class="input-field default filled-by-default " name="cmc_count" data-table-name="expeditions" placeholder="# of CMCs" title="# of CMCs" type="number">
+										<label class="field-label" for="input-bump_flights"># of CMCs</label>
+										<span class="null-input-indicator">&lt; null &gt;</span>
+									</div>
+								</div>
+								<div class="field-container-row">
 									<div class="field-container checkbox-field-container col-6">
 										<label class="checkmark-container">
 											<input id="input-needs_special_use_permit" class="input-field input-checkbox" type="checkbox" name="needs_special_use_permit" data-table-name="expeditions">
@@ -238,9 +245,9 @@
 											<label class="field-label expedition-briefing-link-label" for="expedition-briefing-link">No briefing scheduled</label>
 											<a id="expedition-briefing-link" class="briefing-link" href="briefings.html" target="_blank" aria-hidden="true">Set briefing time</a>
 									</div>
-									<div class="col-6 pl-0">
+<!-- 									<div class="col-6 pl-0">
 										<button class="text-only-button jump-link page-bottom-jump-link" role="button" data-target="#cmcs-data-container" title="Scroll to CMC and Comms info">CMC and Comms Info</button>
-									</div>
+									</div> -->
 								</div>
 							</div>
 						</div>
@@ -709,7 +716,9 @@
 							</div>
 						</div>
 					</div>
-					<div class="expedition-data-wrapper">
+					<!-- CMCs -->
+					<!-- not using for now -->
+					<!--<div class="expedition-data-wrapper">
 						<div id="cmcs-data-container" class="expedition-data-content">
 							<div class="expedition-data-header-container">
 								<h3 id="expedition-data-header" class="expedition-data-header">CMCs</h3>
@@ -748,8 +757,11 @@
 								
 							</div>
 						</div>
-					</div>
-					<div class="expedition-data-wrapper">
+					</div>-->
+					
+					<!-- Comms -->
+					<!-- not using for now -->
+					<!--<div class="expedition-data-wrapper">
 						<div id="comms-data-container" class="expedition-data-content">
 							<div class="expedition-data-header-container">
 								<h3 id="expedition-data-header" class="expedition-data-header">Comms Devices</h3>
@@ -784,7 +796,7 @@
 								</ul>
 							</div>
 						</div>
-					</div>
+					</div>-->
 				</div>
 				<div class="w-100 d-flex justify-content-center hide-when-content-hidden">
 					<button class="text-only-button jump-link page-top-jump-link my-3" role="button" data-target="#page-top-bookmark" title="Scroll back to top">Back To Top</button>
