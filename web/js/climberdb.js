@@ -239,6 +239,7 @@ class ClimberDB {
 		this.defaultMapCenter = [63, -150.9];
 		this.defaultMapZoom = 10;
 		this.maxInitialMapZoom = 12; // don't zoom in past this level when fitting map bounds to marker
+		this.maxMapZoom = 15;
 	}
 
 
@@ -621,7 +622,8 @@ class ClimberDB {
 		};
 		const layerControl = L.control.layers(baseMaps).addTo(map);
 
-		mapObject.map = map;
+		// Prevent user from zooming beyond topo layer's max zoom
+		mapObject.map = map.setMaxZoom(this.maxMapZoom);
 
 		// if not showing backcountry units, set the  return value to be a resolved promise
 		var deferred = $.Deferred().resolve();
