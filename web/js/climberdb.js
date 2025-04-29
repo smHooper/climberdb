@@ -240,6 +240,13 @@ class ClimberDB {
 		this.defaultMapZoom = 10;
 		this.maxInitialMapZoom = 12; // don't zoom in past this level when fitting map bounds to marker
 		this.maxMapZoom = 15;
+		this.duplicatePageNotifications = [
+			'/backcountry.html',
+			'/briefings.html',
+			'/climbers.html',
+			'/config.html',
+			'/expeditions.html'
+		]
 	}
 
 
@@ -2281,7 +2288,9 @@ class ClimberDB {
 
 		if (addMenu) {
 			this.configureMenu();
+		}
 
+		if (this.duplicatePageNotifications.includes(window.location.pathname)) {
 			// Only check if the page is open if this is NOT the index page
 			this.urlChannel = this.startListeningForOpenURL();
 		}
