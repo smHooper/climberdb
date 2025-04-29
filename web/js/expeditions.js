@@ -355,9 +355,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		// Ask the user if they want to add an attachment
-		$(document).on('change', '.file-submission-checkbox', e => {
-			this.onFileSubmissionCheckboxChange(e);
-		});
+		// $(document).on('change', '.file-submission-checkbox', e => {
+		// 	this.onFileSubmissionCheckboxChange(e);
+		// });
 
 		$(document).on('click', '.change-expedition-button', e => {
 			this.showChangeExpeditionModal($(e.target).closest('.card'));
