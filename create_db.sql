@@ -659,7 +659,9 @@ CREATE OR REPLACE VIEW briefings_expedition_info_view AS
 					LEFT JOIN expedition_members ON expeditions_1.id = expedition_members.expedition_id
 					LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 					LEFT JOIN route_codes ON route_codes.code=expedition_member_routes.route_code
-				WHERE EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions_1.planned_departure_date)
+				WHERE 
+					EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions_1.planned_departure_date) AND 
+					special_group_type_code <> 3 -- exclude NPS patrols
 				GROUP BY 
 					expeditions_1.id, expedition_members.id, no_members
 			) t
