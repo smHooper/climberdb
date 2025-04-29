@@ -288,6 +288,15 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 .query-option-double-value-container {
 	height: 100%;
 }
+
+#reset-query-climbers-climbs-button {
+	color: var(--ui-primary-text-color);
+}
+#reset-query-climbers-climbs-button:hover,
+#reset-query-climbers-climbs-button:focus {
+	font-weight: bold;
+}
+
 /*for datetime fields, if the operator is BETWEEN and therefore 
 2 fields are showing, make the field-container extra-wide*/
 @media (min-width: 768px) {
