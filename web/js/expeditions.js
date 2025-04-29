@@ -4753,6 +4753,11 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	showFlaggedMemberWarning() {
+
+		const urlParams = this.parseURLQueryString();
+		if (urlParams.flaggedWarning === 'false') {
+			return;
+		}
 		const $flaggedCheckboxes = $('.input-checkbox[name="flagged"]:checked');
 		const nFlagged = $flaggedCheckboxes.length
 		if (nFlagged) {
