@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	bump_flights TEXT,
 	itinerary_description TEXT,
 	cmc_count INTEGER, -- alternative to checking out individual CMCs
+	expedition_notes VARCHAR,
 	last_modified_by VARCHAR(50),
 	last_modified_time TIMESTAMP
 );
@@ -543,7 +544,8 @@ CREATE OR REPLACE VIEW expedition_info_view AS
 		briefings.id AS briefing_id,
 		briefings.briefing_start::date AS briefing_date,
 		to_char(briefings.briefing_start, 'FMHH:MI am'::text) AS briefing_time,
-		to_char(briefings.briefing_start, 'Dy Mon FMDD, FMHH:MI am'::text) AS briefing_datetime
+		to_char(briefings.briefing_start, 'Dy Mon FMDD, FMHH:MI am'::text) AS briefing_datetime,
+		expeditions.expedition_notes
 	FROM expeditions
 	LEFT JOIN (expedition_members
 	JOIN climbers ON expedition_members.climber_id = climbers.id) ON expeditions.id = expedition_members.expedition_id
