@@ -1465,7 +1465,12 @@ class ClimberDB {
 	/*
 	Helper function to reset the values/classes of all inputs within a given parent to their defaults
 	*/
-	clearInputFields({parent='body', triggerChange=true, removeAccordionCards=false}={}) {
+	clearInputFields({
+		parent='body', 
+		triggerChange=true, 
+		removeAccordionCards=false,
+		excludeClass='.ignore-on-clear'
+	}={}) {
 		
 		const $parent = $(parent);
 
@@ -1474,7 +1479,7 @@ class ClimberDB {
 			$parent.find('.accordion .card:not(.cloneable)').remove();
 		}
 
-		for (const el of $parent.find('.input-field')) {
+		for (const el of $parent.find(`.input-field:not(${excludeClass})`)) {
 			const $el = $(el);
 			
 			// Skip any input-fields with a cloneable parent can't filter these out in .find() 
