@@ -2793,7 +2793,9 @@ class ClimberDBExpeditions extends ClimberDB {
 				expedition_name: this.expeditionInfo.expeditions.expedition_name,
 				leader_name: tripLeaderInfo.first_name + ' ' + tripLeaderInfo.last_name,
 				air_taxi_name: airTaxiName,
-				planned_return_date: this.expeditionInfo.expeditions.planned_return_date,
+				planned_return_date: getFormattedTimestamp(
+					new Date(this.expeditionInfo.expeditions.planned_return_date)
+				),
 				expedition_id: this.expeditionInfo.expeditions.id
 			}
 
