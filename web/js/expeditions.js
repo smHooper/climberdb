@@ -4002,7 +4002,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				
 				this.fillFieldValues(false);//don't trigger change
 				// If the data are being re-loaded after a save, show the cards and tabs that were open before
-				if (!showOnLoadWarnings && $openCards.length) {
+				if (!showOnLoadWarnings && $openCards.length && $activeTabs.length) {
 					$(openCardIDs).addClass('show');
 					//$('.nav-tabs .nav-link.active').removeClass('active');
 					$(activeTabIDs).click();
