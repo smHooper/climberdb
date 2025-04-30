@@ -1342,7 +1342,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				.data-list-item:not(.cloneable), 
 				.card:not(.cloneable) .tab-pane,
 				#expedition-members-accordion .card:not(.cloneable) .card-header,
-				#expedition-data-container
+				#expedition-data-container,
+				#locations-accordion
 			`)
 			.has('.input-field.dirty, .input-field:required:invalid');
 		
