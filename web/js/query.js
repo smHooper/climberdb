@@ -2012,7 +2012,7 @@ class ClimberDBQuery extends ClimberDB {
 			// If this is a select with potentially multiple selected options,
 			//	the value from the URL will be a CSV string
 			if ($paramInput.is('[multiple]')) {
-				paramValue = paramValue.split(',').map(s => s.trim());
+				paramValue = paramValue.split('|').map(s => s.trim());
 			}
 			$paramInput.val(paramValue).change();
 
@@ -2053,7 +2053,7 @@ class ClimberDBQuery extends ClimberDB {
 			
 			// if this is a select with potentially multiple options selected, join them
 			//	all as a CSV string
-			const paramValue = $input.is('[multiple]') ? rawValue.join(',') : rawValue;
+			const paramValue = $input.is('[multiple]') ? rawValue.join('|') : rawValue;
 			queryParams[inputID] = paramValue;
 		}
 
