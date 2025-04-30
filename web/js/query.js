@@ -700,6 +700,10 @@ class ClimberDBQuery extends ClimberDB {
 
 		$('#copy-query-link-button').click(e => {
 			this.onCopyQueryLinkButtonClick(e)
+		});
+
+		$('#count_climbers-summary_or_records').change(() => {
+			this.onCountClimbersQueryByChange()
 		})
 	}
 
@@ -1568,6 +1572,28 @@ class ClimberDBQuery extends ClimberDB {
 			.replace('{cua_company_clause}', cuaClause)
 			.replace('{year}', year);
 		this.submitQuery(sql, {sqlParameters: {cua_company_codes: cuaCompanies}, queryName: 'cua_backcountry_groups'})
+	}
+
+
+	/*
+	Because I can't figure out a clean way to have multiple dependent targets/values for a single field,
+	the search day start and end fields (only relevant for day/day of year GROUP BY queries) need to be
+	toggled on and off via Javascript when the #count_climbers-summary_or_records field changes
+	*/
+	onCountClimbersQueryByChange() {
+		const $groupByField = $('#count_climbers-group_by_fields');
+		const $dayStartField = $('#count_climbers-day_search_start');
+		const dependentValue = $dayStartField.data('dependent-value').split('|');
+		$dayStartField.closest('.collapse').collapse(
+			// If this is a count of climbers/climbs AND
+			$('#count_climbers-summary_or_records').val() === 'summary' && 
+			// day/day of year is selected as a GROUP BY field
+			$groupByField.val().some(v => dependentValue.includes(v)) ? 
+			// then show it.
+			'show' : 
+			// If either is not true, hide it
+			'hide'
+		)
 	}
 
 	fieldToSelectAlias([field, alias]) {
