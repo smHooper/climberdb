@@ -203,6 +203,7 @@ class ClimberDB {
 			insertOrder: [] // comply with left-right orientation of table relationships
 		};
 		this.entryMetaFields = ['entry_time', 'entered_by', 'last_modified_time', 'last_modified_by'];
+		this.currentURL = '';// for de-registering a BroadcastChannel listener
 		this.config = {};
 		this.loginInfo = {}; //{username: {expires: } }
 		this.constants = { // values that aren't configurable but need to be accessible across multiple pages
@@ -238,6 +239,14 @@ class ClimberDB {
 		this.defaultMapCenter = [63, -150.9];
 		this.defaultMapZoom = 10;
 		this.maxInitialMapZoom = 12; // don't zoom in past this level when fitting map bounds to marker
+		this.maxMapZoom = 15;
+		this.duplicatePageNotifications = [
+			'/backcountry.html',
+			'/briefings.html',
+			'/climbers.html',
+			'/config.html',
+			'/expeditions.html'
+		]
 	}
 
 
@@ -620,7 +629,8 @@ class ClimberDB {
 		};
 		const layerControl = L.control.layers(baseMaps).addTo(map);
 
-		mapObject.map = map;
+		// Prevent user from zooming beyond topo layer's max zoom
+		mapObject.map = map.setMaxZoom(this.maxMapZoom);
 
 		// if not showing backcountry units, set the  return value to be a resolved promise
 		var deferred = $.Deferred().resolve();
@@ -1376,7 +1386,7 @@ class ClimberDB {
 				if (notEqualTo) show = !show;
 
 				$thisContainer.collapse(show ? 'show' : 'hide');
-				if ($thisField.is('select, .input-checkbox')) this.toggleDependentFields($thisField);
+				if (show && $thisField.is('select, .input-checkbox')) this.toggleDependentFields($thisField);
 			}
 		}
 		setTimeout(10);
@@ -1463,19 +1473,32 @@ class ClimberDB {
 	}
 
 
+	resetOpenURLListener() {
+		// Check if this expedition is already open
+		this.stopListeningForOpenURL(this.currentURL);
+		this.startListeningForOpenURL();
+	}
+
 	/*
 	Helper method to reset a URL to its base url (without search or hash)
 	*/
 	resetURL() {
 		const url = new URL(window.location.origin + window.location.pathname);
 		window.history.replaceState({}, '', url);
+
+		this.resetOpenURLListener();
 	}
 
 
 	/*
 	Helper function to reset the values/classes of all inputs within a given parent to their defaults
 	*/
-	clearInputFields({parent='body', triggerChange=true, removeAccordionCards=false}={}) {
+	clearInputFields({
+		parent='body', 
+		triggerChange=true, 
+		removeAccordionCards=false,
+		excludeClass='.ignore-on-clear'
+	}={}) {
 		
 		const $parent = $(parent);
 
@@ -1484,9 +1507,9 @@ class ClimberDB {
 			$parent.find('.accordion .card:not(.cloneable)').remove();
 		}
 
-		for (const el of $parent.find('.input-field')) {
+		for (const el of $parent.find(`.input-field:not(${excludeClass})`)) {
 			const $el = $(el);
-			
+
 			// Skip any input-fields with a cloneable parent can't filter these out in .find() 
 			//	because inputs that are the descendants of .cloneables aren't the **immediate** 
 			//	descendants of .cloneables so there's always a non-.clineable parent in 
@@ -2175,12 +2198,9 @@ class ClimberDB {
 	*/
 	beforeUnloadEventHandler(e) {
 		
-		//if ($('.input-field.dirty:not(.filled-by-default)').length) {
 		e.preventDefault();
 		const message = 'You have unsaved edits. Are you sure you want to leave this page?';
 		e.returnValue = message;
-		//return message;
-		//}
 	}
 
 
@@ -2191,10 +2211,17 @@ class ClimberDB {
 	*/	
 	toggleBeforeUnload(shouldTurnOn=false) {
 
+		// To ensure only one beforeunload event is registered, store the event 
+		//	as a class property
+		if (!this._beforeUnloadHandler) {
+			this._beforeUnloadHandler = (e) => this.beforeUnloadEventHandler(e);
+		}
+
+		// register/de-register the stored handler
 		if (shouldTurnOn) {
-			$(window).on('beforeunload', (e) => {this.beforeUnloadEventHandler(e)});
+			window.addEventListener('beforeunload', this._beforeUnloadHandler);
 		} else {
-			$(window).off('beforeunload');
+			window.removeEventListener('beforeunload', this._beforeUnloadHandler);
 		}
 	}
 
@@ -2217,6 +2244,8 @@ class ClimberDB {
 		//	prevent creating multiple channels that each emit and receive responses for 
 		//	the same message
 		let channel = this.urlChannels[url];
+		this.currentURL = url;
+
 		if (!channel) {
 			channel = new BroadcastChannel(url);
 			this.urlChannels[url] = channel;
@@ -2257,6 +2286,15 @@ class ClimberDB {
 		channel.postMessage({message: openQuery});
 	}
 
+	/*
+	Stop listening to the given URL for duplicate tabs
+	*/
+	stopListeningForOpenURL(url) {
+		url = url || this.currentURL;
+		this.urlChannels[url].close();
+		delete this.urlChannels[url];
+	}
+
 
 	/* Return any Deferreds so anything that has to happen after these are done can wait */
 	init({addMenu=true}={}) {
@@ -2273,7 +2311,9 @@ class ClimberDB {
 
 		if (addMenu) {
 			this.configureMenu();
+		}
 
+		if (this.duplicatePageNotifications.includes(window.location.pathname)) {
 			// Only check if the page is open if this is NOT the index page
 			this.urlChannel = this.startListeningForOpenURL();
 		}

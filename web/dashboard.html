@@ -269,7 +269,7 @@
 					</div>
 
 					<!-- flagged and solo expeditions -->
-					<div id="flagged-group-card-container" class="col card-container half-height-card">
+					<div id="flagged-group-card-container" class="col card-container">
 						<div id="flagged-groups-card" class="card dashboard-card ">
 							<h4 class="dashboard-card-header">Flagged Expeditions <span class="table-row-counter"></span></h4>
 							<div class="dashboard-card-body mt-0">
@@ -293,7 +293,7 @@
 									</thead>
 									<tbody>
 										<tr class="cloneable hidden">
-											<td><a href="expeditions.html?id={expedition_id}" target="_blank">{expedition_name}</a></td>
+											<td><a href="expeditions.html?id={expedition_id}&flaggedWarning=false" target="_blank">{expedition_name}</a></td>
 											<td class="centered-text">{departure}</td>
 											<td>{flagged_comments}</td>
 										</tr>
@@ -302,7 +302,7 @@
 							</div>
 						</div>
 					</div>
-					<div id="solo-climbers-card-container" class="col card-container half-height-card">
+					<!--<div id="solo-climbers-card-container" class="col card-container half-height-card">
 						<div id="solo-climbers-card" class="card dashboard-card ">
 							<h4 class="dashboard-card-header">Confirmed Solo Climbers <span class="table-row-counter"></span></h4>
 							<div class="dashboard-card-body mt-0">
@@ -329,7 +329,7 @@
 											</th>
 											<th>
 												<button class="text-only-button sort-column-button sorted" data-field-name="planned_return">
-													<span class="text-nowrap">Planned return</span> <!-- force to single row-->
+													<span class="text-nowrap">Planned return</span> 
 													<i class="fa fa-solid fa-sort fa-circle-sort-up"></i>
 												</button>
 											</th>
@@ -346,7 +346,7 @@
 								</table>
 							</div>
 						</div>
-					</div>
+					</div> -->
 
 				</div>
 			</div>

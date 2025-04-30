@@ -1,6 +1,7 @@
 :root {
 	--modal-bg-color: #000000aa;
 	--nps-card-header-bg: #899936;
+	--expedition-card-default-height: 700px;
 }
 
 .main-content-header {
@@ -313,7 +314,7 @@
 	width: 100%;
 	display: grid;
 	grid-template-columns: 1fr;
-	grid-template-rows: repeat(5, 500px);
+	grid-template-rows: repeat(3, var(--expedition-card-default-height));
 	grid-auto-columns: 1fr;
 	row-gap: 20px;
 	column-gap: 20px;
@@ -883,7 +884,7 @@ Default to not showing unless the screen is at least 1500px wides
 @media (min-width: 1500px) {
 	.expedition-content {
 		grid-template-columns: repeat(2, 1fr);
-		grid-template-rows: repeat(3, 500px);
+		grid-template-rows: repeat(2, var(--expedition-card-default-height));
 	}
 	/* Only show modal only content if the screen is large enough */
 	.expedition-modal .modal-only {

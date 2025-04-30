@@ -131,6 +131,7 @@ CREATE TABLE IF NOT EXISTS expeditions (
 	bump_flights TEXT,
 	itinerary_description TEXT,
 	cmc_count INTEGER, -- alternative to checking out individual CMCs
+	expedition_notes VARCHAR,
 	last_modified_by VARCHAR(50),
 	last_modified_time TIMESTAMP
 );
@@ -459,6 +460,14 @@ CREATE OR REPLACE VIEW expedition_info_view AS
 		attachments.last_modified_by AS attachments_last_modified_by,
 		expeditions.id AS expedition_id,
 		expeditions.expedition_name,
+		format(
+			'%1s - %2s', 
+			expeditions.expedition_name, 
+			to_char(
+				coalesce(expeditions.actual_departure_date, expeditions.planned_departure_date), 
+				'MM/DD/YYYY'
+			)
+		) AS backcountry_expedition_name,
 		expeditions.date_confirmed,
 		expeditions.planned_departure_date,
 		expeditions.planned_return_date,
@@ -547,7 +556,8 @@ CREATE OR REPLACE VIEW expedition_info_view AS
 		briefings.id AS briefing_id,
 		briefings.briefing_start::date AS briefing_date,
 		to_char(briefings.briefing_start, 'FMHH:MI am'::text) AS briefing_time,
-		to_char(briefings.briefing_start, 'Dy Mon FMDD, FMHH:MI am'::text) AS briefing_datetime
+		to_char(briefings.briefing_start, 'Dy Mon FMDD, FMHH:MI am'::text) AS briefing_datetime,
+		expeditions.expedition_notes
 	FROM expeditions
 	LEFT JOIN (expedition_members
 	JOIN climbers ON expedition_members.climber_id = climbers.id) ON expeditions.id = expedition_members.expedition_id
@@ -581,7 +591,7 @@ CREATE OR REPLACE VIEW special_use_permit_view AS
 		expeditions.expedition_name,
 		climbers.address,
 		climbers.city,
-		state_codes.name AS state,
+		coalesce(state_codes.name, '')::varchar(50) AS state,
 		country_codes.name AS country,
 		climbers.postal_code,
 		climbers.phone,
@@ -591,8 +601,8 @@ CREATE OR REPLACE VIEW special_use_permit_view AS
 	FROM expedition_members
 		JOIN expeditions ON expedition_members.expedition_id = expeditions.id 
 		JOIN climbers ON expedition_members.climber_id = climbers.id 
-		JOIN state_codes ON climbers.state_code = state_codes.code 
 		JOIN country_codes ON climbers.country_code = country_codes.code
+		LEFT JOIN state_codes ON climbers.state_code = state_codes.code 
 	ORDER BY 
 		climbers.last_name, climbers.first_name;
 
@@ -663,7 +673,9 @@ CREATE OR REPLACE VIEW briefings_expedition_info_view AS
 					LEFT JOIN expedition_members ON expeditions_1.id = expedition_members.expedition_id
 					LEFT JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 					LEFT JOIN route_codes ON route_codes.code=expedition_member_routes.route_code
-				WHERE EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions_1.planned_departure_date)
+				WHERE 
+					EXTRACT(year FROM now()) <= EXTRACT(year FROM expeditions_1.planned_departure_date) AND 
+					special_group_type_code <> 3 -- exclude NPS patrols
 				GROUP BY 
 					expeditions_1.id, expedition_members.id, no_members
 			) t
@@ -684,6 +696,10 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 		climbers.age,
 		climbers.sex_code,
 		expeditions.expedition_name,
+		CASE WHEN is_backcountry AND actual_departure_date IS NULL THEN format('%s - No Departure Entered', expedition_name)
+			WHEN  is_backcountry AND actual_departure_date IS NOT NULL THEN format('%1s - %2s', expedition_name, to_char(actual_departure_date, 'MM/DD/YYYY'))
+			ELSE expedition_name
+		END AS query_expedition_name,
 		expeditions.planned_departure_date,
 		expeditions.actual_departure_date,
 		expeditions.actual_return_date,
@@ -877,22 +893,25 @@ ORDER BY sort_order;
 
 CREATE OR REPLACE VIEW current_backcountry_groups_view AS 
 	WITH today AS (
-	  SELECT now(), extract(year FROM now()) AS year
+		SELECT now(), extract(year FROM now()) AS year
 	)
 	SELECT 
-	  itinerary_locations.expedition_id, 
-	  expeditions.expedition_name,
-	  latitude, 
-	  longitude
+		itinerary_locations.expedition_id, 
+		(CASE 
+			WHEN actual_departure_date IS NULL THEN format('%s - No Departure Entered', expedition_name)
+			ELSE format('%1s - %2s', expedition_name, to_char(actual_departure_date, 'MM/DD/YYYY'))
+		END)::varchar(100) AS expedition_name,
+		latitude, 
+		longitude
 	FROM 
-	  itinerary_locations 
-	    JOIN expeditions ON expeditions.id=itinerary_locations.expedition_id 
-	    JOIN expedition_status_view ON expedition_status_view.expedition_id=itinerary_locations.expedition_id 
-	    JOIN today ON today.now BETWEEN coalesce(location_start_date, (today.year || '-1-1')::date) AND coalesce(location_end_date, (today.year || '-12-31')::date)
+		itinerary_locations 
+			JOIN expeditions ON expeditions.id=itinerary_locations.expedition_id 
+			JOIN expedition_status_view ON expedition_status_view.expedition_id=itinerary_locations.expedition_id 
+			JOIN today ON today.now BETWEEN coalesce(location_start_date, (today.year || '-1-1')::date) AND coalesce(location_end_date, (today.year || '-12-31')::date)
 	WHERE 
-	  expedition_status = 4 AND 
-	  actual_departure_date < today.now AND 
-	  today.year = extract(year FROM actual_departure_date)
+		expedition_status = 4 AND 
+		actual_departure_date < today.now AND 
+		today.year = extract(year FROM actual_departure_date)
 	;
 
 

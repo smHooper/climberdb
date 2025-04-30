@@ -355,9 +355,9 @@ class ClimberDBExpeditions extends ClimberDB {
 		});
 
 		// Ask the user if they want to add an attachment
-		$(document).on('change', '.file-submission-checkbox', e => {
-			this.onFileSubmissionCheckboxChange(e);
-		});
+		// $(document).on('change', '.file-submission-checkbox', e => {
+		// 	this.onFileSubmissionCheckboxChange(e);
+		// });
 
 		$(document).on('click', '.change-expedition-button', e => {
 			this.showChangeExpeditionModal($(e.target).closest('.card'));
@@ -838,8 +838,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			} else {
 				this.loadExpedition(state.id);
 				this.currentHistoryIndex = state.historyIndex;
-				// Check if this expedition is already open
-				this.startListeningForOpenURL();
+				this.resetOpenURLListener();
 			}
 		} else {
 			// Open the blank page ready for a new expedition
@@ -863,7 +862,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		window.history.pushState({id: parseInt(expeditionID), historyIndex: this.currentHistoryIndex + 1}, '', url);
 
 		// This is a different expedition, so make sure it's not open elsewhere
-		this.startListeningForOpenURL();
+		this.resetOpenURLListener();
 	}
 
 	/*
@@ -2818,7 +2817,9 @@ class ClimberDBExpeditions extends ClimberDB {
 				expedition_name: this.expeditionInfo.expeditions.expedition_name,
 				leader_name: tripLeaderInfo.first_name + ' ' + tripLeaderInfo.last_name,
 				air_taxi_name: airTaxiName,
-				planned_return_date: this.expeditionInfo.expeditions.planned_return_date,
+				planned_return_date: getFormattedTimestamp(
+					new Date(this.expeditionInfo.expeditions.planned_return_date)
+				),
 				expedition_id: this.expeditionInfo.expeditions.id
 			}
 
@@ -3238,10 +3239,11 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// IF this is the expedition page, search only for expeditions. Do the same for 
 		//	BC groups if it's the BC page
+		const isBackcountry = this.pageIsBackcountry();
 		where.push({
 			column_name: 'is_backcountry',
 			operator: '=',
-			comparand: this.pageIsBackcountry() 
+			comparand: isBackcountry 
 		});
 
 		const requestData = {
@@ -3276,7 +3278,8 @@ class ClimberDBExpeditions extends ClimberDB {
 					//$drawer.append('<option value="">Click to select an expedition</option>')
 					for (const row of result) {
 						const cancelledClass = row.group_status_code == this.constants.groupStatusCodes.cancelled ? 'cancelled' : '';
-						$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${row.expedition_name}</div>`)
+						const displayName = isBackcountry ? row.backcountry_expedition_name : row.expedition_name;
+						$drawer.append(`<div class="expedition-search-bar-option ${cancelledClass}" data-expedition-id="${row.expedition_id}" tabindex="0">${displayName}</div>`)
 					}
 				} else {
 					$drawer.append('<div class="expedition-search-bar-option">No expeditions match your search</div>');
@@ -3739,6 +3742,10 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		// Toggle the is_guiding collapse
 		$('#input-guide_company').change();
+
+		// Make sure the beforeunload event is turned off since it was likely 
+		//	turned on by manual change events
+		this.toggleBeforeUnload(false);
 	}
 
 
@@ -4026,7 +4033,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				// If any expedition members have been flagged, notify the user so they'll be prompted to look at the comments
 				if (showOnLoadWarnings) {
 					this.showFlaggedMemberWarning();
-					this.show60DayWarning();
+					//this.show60DayWarning();
 				}
 			}
 		}).fail((xhr, status, error) => {
@@ -4828,6 +4835,11 @@ class ClimberDBExpeditions extends ClimberDB {
 
 
 	showFlaggedMemberWarning() {
+
+		const urlParams = this.parseURLQueryString();
+		if (urlParams.flaggedWarning === 'false') {
+			return;
+		}
 		const $flaggedCheckboxes = $('.input-checkbox[name="flagged"]:checked');
 		const nFlagged = $flaggedCheckboxes.length
 		if (nFlagged) {

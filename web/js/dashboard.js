@@ -16,6 +16,10 @@ class ClimberDBDashboard extends ClimberDB {
 			// 	layers: {}
 			// }
 		};
+		this.mountainCodes = {
+			Denali: 1,
+			Foraker: 2
+		};
 		return this;
 	}
 
@@ -76,283 +80,313 @@ class ClimberDBDashboard extends ClimberDB {
 		// Collect data, then add to table since order matters and the queries won't necessarily return results in order
 		const tableData = {};
 		
-		// Show total number of climbers separately from per mountain total climbers
-		const totalClimbersSQL = `
-			SELECT 
-				count(*) AS total_climbers
-			FROM 
-			 	(
-				 	SELECT DISTINCT 
-						expedition_member_id
-					FROM {schema}.registered_climbs_view
-					WHERE planned_departure_date BETWEEN :start_date AND :end_date
-				) t
-			;
-		`;
-		
-		const startDate = `${year}-1-1`;
-		const endDate = `${year}-12-31`;
-		const totalClimbersDeferred = this.queryDB({
-			sql: totalClimbersSQL, 
-			sqlParameters: {start_date: startDate, end_date: endDate}
-		}).done(response => {
-			const $totalClimbersSpan = $('.total-registered-climbers-count');
-			if (this.pythonReturnedError(response)) {
-				print(`Total climbers query failed with result:\n${response}`);
+		this.queryDB({
+			where: {
+				mountain_codes: [
+					{column_name: 'code', operator: 'in', comparand: Object.values(this.mountainCodes)}
+				]
+			},
+			orderBy: [{table_name: 'mountain_codes', column_name: 'sort_order'}]
+		}).then(response => {
+			 if (this.pythonReturnedError(response)) {
+			 	print(response);
+			 	return;
+			 }
+
+			 const mountainCodes = response.data || [];
+			 if (mountainCodes.length === 0) {
+			 	print('no mountain codes');
+			 	return;
+			 }
+
+			// Get the name/code pair for Denali and Foraker using the mountain code 
+			//	constants defined above. This will prevent needing to change the source 
+			//	code yet again when the name for Denali (or Foraker, if that ever happens) 
+			//	because the name as displayed in the app is just retrieved from whatever 
+			//	is currently in the database. This does assume that the mountain codes, 
+			//	1 for Denali and 2 for Foraker, don't change, but there's no reason why 
+			//	they would
+			 const denali = mountainCodes.filter(({name, code}) => code === this.mountainCodes.Denali)[0];
+			 const foraker = mountainCodes.filter(({name, code}) => code === this.mountainCodes.Foraker)[0];
+
+			 const nullResult = [
+			 	{mountain_name: denali.name, value: 0},
+			 	{mountain_name: foraker.name, value: 0}
+			 ]
+			 
+			 const processResult = (response, statName, displayName) => {
+			 	tableData[statName] = {displayName: displayName}
+			 	if (this.pythonReturnedError(response)) {
+			 		print(`${statName} query failed with result:\n${response}`);
+			 		tableData[statName].data = [...nullResult];
+			 	} else {
+			 		let result = response.data || [];
+			 		// In case the query returns nothing, set the values to 0
+			 		if (!result.length) {
+			 			result = [...nullResult];
+			 		} 
+			 		result = Object.fromEntries(result.map(row => [row.mountain_name, row.value]));
+			 		if (!(denali.name in result)) {
+			 			result[denali.name] = 0
+			 		}
+			 		if (!(foraker.name in result)) {
+			 			result[foraker.name] = 0
+			 		}
+			 		tableData[statName].data = result;
+			 	}
+			 }
+
+			// Show total number of climbers separately from per mountain total climbers
+			const totalClimbersSQL = `
+				SELECT 
+					count(*) AS total_climbers
+				FROM 
+				 	(
+					 	SELECT DISTINCT 
+							expedition_member_id
+						FROM {schema}.registered_climbs_view
+						WHERE planned_departure_date BETWEEN :start_date AND :end_date
+					) t
+				;
+			`;
+			
+			const startDate = `${year}-1-1`;
+			const endDate = `${year}-12-31`;
+			const totalClimbersDeferred = this.queryDB({
+				sql: totalClimbersSQL, 
+				sqlParameters: {start_date: startDate, end_date: endDate}
+			}).done(response => {
+				const $totalClimbersSpan = $('.total-registered-climbers-count');
+				if (this.pythonReturnedError(response)) {
+					print(`Total climbers query failed with result:\n${response}`);
+					$totalClimbersSpan.text('ERROR');
+				} else {
+					const result = response.data || [];
+					$totalClimbersSpan.text(result[0].total_climbers)
+				}
+			})
+			.fail((xhr, status, error) => {
+				print('Registered climber query failed with error: ' + error);
 				$totalClimbersSpan.text('ERROR');
-			} else {
-				const result = response.data || [];
-				$totalClimbersSpan.text(result[0].total_climbers)
-			}
-		})
-		.fail((xhr, status, error) => {
-			print('Registered climber query failed with error: ' + error);
-			$totalClimbersSpan.text('ERROR');
-		})
+			})
 
-		const templateSQL = `
-			SELECT
-				coalesce(mountain_name, 'Either') AS mountain_name,
-				value
-			FROM (
-				SELECT 
-					mountain_name,
-					count(expedition_member_id) AS value
+			const templateSQL = `
+				SELECT
+					coalesce(mountain_name, 'Either') AS mountain_name,
+					value
 				FROM (
-				 	SELECT DISTINCT 
-						expedition_member_id, 
-						mountain_name
+					SELECT 
+						mountain_name,
+						count(expedition_member_id) AS value
 					FROM (
-						SELECT DISTINCT
+					 	SELECT DISTINCT 
 							expedition_member_id, 
-							route_code,
-							mountain_name,
-							reservation_status_code
-						FROM ${this.dbSchema}.registered_climbs_view
-						WHERE planned_departure_date BETWEEN :start_date AND :end_date 
-							{where}
-						ORDER BY expedition_member_id, mountain_name
-					) _
-				) __
-				GROUP BY mountain_name
-			) ____ 
-		`
-		const nullResult = [
-			{mountain_name: 'Denali', value: 0},
-			{mountain_name: 'Foraker', value: 0}
-		]
-		
-		const processResult = (response, statName, displayName) => {
-			tableData[statName] = {displayName: displayName}
-			if (this.pythonReturnedError(response)) {
-				print(`${statName} query failed with result:\n${response}`);
-				tableData[statName].data = [...nullResult];
-			} else {
-				let result = response.data || [];
-				// In case the query returns nothing, set the values to 0
-				if (!result.length) {
-					result = [...nullResult];
-				} 
-				result = Object.fromEntries(result.map(row => [row.mountain_name, row.value]));
-				if (!('Denali' in result)) {
-					result['Denali'] = 0
+							mountain_name
+						FROM (
+							SELECT DISTINCT
+								expedition_member_id, 
+								route_code,
+								mountain_name,
+								reservation_status_code
+							FROM ${this.dbSchema}.registered_climbs_view
+							WHERE planned_departure_date BETWEEN :start_date AND :end_date 
+								{where}
+							ORDER BY expedition_member_id, mountain_name
+						) _
+					) __
+					GROUP BY mountain_name
+				) ____ 
+			`
+
+			// registered climbers
+			const registeredSQL = templateSQL.replace(/\{where\}/g, '');
+			const registeredDeferred =  this.queryDB({
+				sql: registeredSQL, 
+				sqlParameters: {start_date: startDate, end_date: endDate}
+			})
+			.done(response => {
+				processResult(response, 'registered', 'Registered climbers');
+			})
+			.fail((xhr, status, error) => {
+				print('Registered climber query failed with error: ' + error);
+				tableData.registered = {
+					displayName: 'Registered climbers',
+					data: [...nullResult]
 				}
-				if (!('Foraker' in result)) {
-					result['Foraker'] = 0
-				}
-				tableData[statName].data = result;
-			}
-		}
+			});
 
-		// registered climbers
-		const registeredSQL = templateSQL.replace(/\{where\}/g, '');
-		const registeredDeferred =  this.queryDB({
-			sql: registeredSQL, 
-			sqlParameters: {start_date: startDate, end_date: endDate}
-		})
-		.done(response => {
-			processResult(response, 'registered', 'Registered climbers');
-		})
-		.fail((xhr, status, error) => {
-			print('Registered climber query failed with error: ' + error);
-			tableData.registered = {
-				displayName: 'Registered climbers',
-				data: [...nullResult]
-			}
-		});
+			// on the mountain
+			const onMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 4 --4 == briefing complete');
+			const onMountainDeferred =  this.queryDB({
+				sql: onMountainSQL, 
+				sqlParameters: {start_date: startDate, end_date: endDate}
+			})
+			.done(response => {
+				processResult(response, 'onMountain', 'On the mountain');
+			})
+			.fail((xhr, status, error) => {
+				print('Registered climber query failed with error: ' + error);
+				tableData.onMountain = {
+					displayName: 'On the mountain',
+					data: [...nullResult]
+				};
+			});
 
-		// on the mountain
-		const onMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 4 --4 == briefing complete');
-		const onMountainDeferred =  this.queryDB({
-			sql: onMountainSQL, 
-			sqlParameters: {start_date: startDate, end_date: endDate}
-		})
-		.done(response => {
-			processResult(response, 'onMountain', 'On the mountain');
-		})
-		.fail((xhr, status, error) => {
-			print('Registered climber query failed with error: ' + error);
-			tableData.onMountain = {
-				displayName: 'On the mountain',
-				data: [...nullResult]
-			};
-		});
+			// off mountain
+			const offMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 5 --5 == returned');
+			const offMountainDeferred =  this.queryDB({
+				sql: offMountainSQL, 
+				sqlParameters: {start_date: startDate, end_date: endDate}
+			})
+			.done(response => {
+				processResult(response, 'offMountain', 'Done and off mountain');
+			})
+			.fail((xhr, status, error) => {
+				print('Registered climber query failed with error: ' + error);
+				tableData.offMountain = {
+					displayName: 'Done and off mountain',
+					data: [...nullResult]
+				};
+			});
 
-		// off mountain
-		const offMountainSQL = templateSQL.replace(/\{where\}/g, 'AND reservation_status_code = 5 --5 == returned');
-		const offMountainDeferred =  this.queryDB({
-			sql: offMountainSQL, 
-			sqlParameters: {start_date: startDate, end_date: endDate}
-		})
-		.done(response => {
-			processResult(response, 'offMountain', 'Done and off mountain');
-		})
-		.fail((xhr, status, error) => {
-			print('Registered climber query failed with error: ' + error);
-			tableData.offMountain = {
-				displayName: 'Done and off mountain',
-				data: [...nullResult]
-			};
-		});
-
-		// summited
-		const summitedSQL = `
-			SELECT
-				coalesce(mountain_name, 'Either') AS mountain_name,
-				value
-			FROM (
-				SELECT 
-					mountain_name,
-					count(expedition_member_id) AS value
+			// summited
+			const summitedSQL = `
+				SELECT
+					coalesce(mountain_name, 'Either') AS mountain_name,
+					value
 				FROM (
-				 	SELECT DISTINCT 
-						expedition_member_id, 
-						mountain_name
+					SELECT 
+						mountain_name,
+						count(expedition_member_id) AS value
 					FROM (
-						SELECT DISTINCT
+					 	SELECT DISTINCT 
 							expedition_member_id, 
-							route_code,
-							mountain_name,
-							reservation_status_code
-						FROM ${this.dbSchema}.registered_climbs_view
-						WHERE 
-							planned_departure_date BETWEEN :start_date AND :end_date AND 
-							reservation_status_code = 5 AND
-							summit_date IS NOT NULL
-						ORDER BY expedition_member_id, mountain_name
-					) _		
-				) __
-				GROUP BY ROLLUP(mountain_name)
-			) ___ 
-		`;
+							mountain_name
+						FROM (
+							SELECT DISTINCT
+								expedition_member_id, 
+								route_code,
+								mountain_name,
+								reservation_status_code
+							FROM ${this.dbSchema}.registered_climbs_view
+							WHERE 
+								planned_departure_date BETWEEN :start_date AND :end_date AND 
+								reservation_status_code = 5 AND
+								summit_date IS NOT NULL
+							ORDER BY expedition_member_id, mountain_name
+						) _		
+					) __
+					GROUP BY ROLLUP(mountain_name)
+				) ___ 
+			`;
 
-		const summitedDeferred =  this.queryDB({
-			sql: summitedSQL, 
-			sqlParameters: {start_date: startDate, end_date: endDate}
-		})
-		.done(response => {
-			processResult(response, 'summited', 'Summits');
-		})
-		.fail((xhr, status, error) => {
-			print('Registered climber query failed with error: ' + error);
-			tableData.summited = {
-				displayName: 'Summits',
-				data: [...nullResult]
-			};
-		});
+			const summitedDeferred =  this.queryDB({
+				sql: summitedSQL, 
+				sqlParameters: {start_date: startDate, end_date: endDate}
+			})
+			.done(response => {
+				processResult(response, 'summited', 'Summits');
+			})
+			.fail((xhr, status, error) => {
+				print('Registered climber query failed with error: ' + error);
+				tableData.summited = {
+					displayName: 'Summits',
+					data: [...nullResult]
+				};
+			});
 
-		const cancelledSQL = offMountainSQL
-			.replace(/reservation_status_code = 5/g, 'reservation_status_code = 6')
-			.replace(/registered_climbs_view/g, 'all_climbs_view');
+			const cancelledSQL = offMountainSQL
+				.replace(/reservation_status_code = 5/g, 'reservation_status_code = 6')
+				.replace(/registered_climbs_view/g, 'all_climbs_view');
 
-		const cancelledDeferred = this.queryDB({
-			sql: cancelledSQL, 
-			sqlParameters: {start_date: startDate, end_date: endDate}
-		})
-		.done(response => {
-			processResult(response, 'cancelled', 'Cancelled climbers');
-		})
-		.fail((xhr, status, error) => {
-			print('Registered climber query failed with error: ' + error);
-			tableData.offMountain = {
-				displayName: 'Cancelled climbers',
-				data: [...nullResult]
-			};
-		});
+			const cancelledDeferred = this.queryDB({
+				sql: cancelledSQL, 
+				sqlParameters: {start_date: startDate, end_date: endDate}
+			})
+			.done(response => {
+				processResult(response, 'cancelled', 'Cancelled climbers');
+			})
+			.fail((xhr, status, error) => {
+				print('Registered climber query failed with error: ' + error);
+				tableData.offMountain = {
+					displayName: 'Cancelled climbers',
+					data: [...nullResult]
+				};
+			});
 
-		function addData(rowData, statDisplayName) {
-			return $(`
-				<tr>
-					<td>${statDisplayName}</td>
-					<td>${rowData['Denali']}</td>
-					<td>${rowData['Foraker']}</td>
-				</tr>
-			`).appendTo($('#season-mountain-stats-card .mountain-stats-table tbody'))
-		}
-
-		// Query BC stats
-		const bcSQL = `
-			SELECT
-				group_status_code,
-				count(*)
-			FROM (
-				SELECT DISTINCT  
-					expedition_member_id, group_status_code 
-				FROM {schema}.expedition_info_view 
-				WHERE 
-					group_status_code IN :status_codes AND 
-					extract(year FROM actual_departure_date) = extract(year FROM now()) AND
-					is_backcountry 
-			) _
-			GROUP BY group_status_code
-		`;
-		const statusCodes = this.constants.groupStatusCodes;
-		const bcDeferred = this.queryDB({
-			sql: bcSQL, 
-			sqlParameters: {status_codes: [statusCodes.onMountain, statusCodes.offMountain]} 
-		}).done(response => {
-			if (!this.pythonReturnedError(response, {errorExplanation: 'There was an error while query backcountry stats to date.'})) {
-				const result = response.data || []
-				$('#season-mountain-stats-card .bc-stats-table tbody').append(`
+			function addData(rowData, statDisplayName) {
+				return $(`
 					<tr>
-						<td>${(result.filter(({group_status_code}) => group_status_code == statusCodes.onMountain)[0] || {}).count || 0}</td>
-						<td>${(result.filter(({group_status_code}) => group_status_code == statusCodes.offMountain)[0] || {}).count || 0}</td>
+						<td>${statDisplayName}</td>
+						<td>${rowData[denali.name]}</td>
+						<td>${rowData[foraker.name]}</td>
 					</tr>
-				`)
-			}
-		})
-
-		return $.when(
-			totalClimbersDeferred,
-			registeredDeferred, 
-			onMountainDeferred, 
-			offMountainDeferred, 
-			summitedDeferred,
-			cancelledDeferred,
-			bcDeferred
-		).then(() => {
-			// Add summit percentage
-			tableData.summitPercent = {displayName: 'Summit percentage', data: {}};
-			tableData.summitPercent.data.Denali =
-				Math.round(
-					tableData.summited.data.Denali / 
-					(tableData.offMountain.data.Denali || 1) // if offMountain is 0, avoid 0 in denominator
-					* 100
-				) + '%';
-			tableData.summitPercent.data.Foraker = 
-				Math.round(
-					tableData.summited.data.Foraker / 
-					(tableData.offMountain.data.Foraker || 1) 
-					* 100
-				) + '%';
-
-			for (const statName of ['registered', 'onMountain', 'offMountain', 'summited', 'summitPercent', 'cancelled']) {
-				const $tr = addData(tableData[statName].data, tableData[statName].displayName);
-				if (statName === 'cancelled') $tr.addClass('cancelled-row')
+				`).appendTo($('#season-mountain-stats-card .mountain-stats-table tbody'))
 			}
 
+			// Query BC stats
+			const bcSQL = `
+				SELECT
+					group_status_code,
+					count(*)
+				FROM (
+					SELECT DISTINCT  
+						expedition_member_id, group_status_code 
+					FROM {schema}.expedition_info_view 
+					WHERE 
+						group_status_code IN :status_codes AND 
+						extract(year FROM actual_departure_date) = extract(year FROM now()) AND
+						is_backcountry 
+				) _
+				GROUP BY group_status_code
+			`;
+			const statusCodes = this.constants.groupStatusCodes;
+			const bcDeferred = this.queryDB({
+				sql: bcSQL, 
+				sqlParameters: {status_codes: [statusCodes.onMountain, statusCodes.offMountain]} 
+			}).done(response => {
+				if (!this.pythonReturnedError(response, {errorExplanation: 'There was an error while query backcountry stats to date.'})) {
+					const result = response.data || []
+					$('#season-mountain-stats-card .bc-stats-table tbody').append(`
+						<tr>
+							<td>${(result.filter(({group_status_code}) => group_status_code == statusCodes.onMountain)[0] || {}).count || 0}</td>
+							<td>${(result.filter(({group_status_code}) => group_status_code == statusCodes.offMountain)[0] || {}).count || 0}</td>
+						</tr>
+					`)
+				}
+			})
+
+			return $.when(
+				totalClimbersDeferred,
+				registeredDeferred, 
+				onMountainDeferred, 
+				offMountainDeferred, 
+				summitedDeferred,
+				cancelledDeferred,
+				bcDeferred
+			).then(() => {
+				// Add summit percentage
+				tableData.summitPercent = {displayName: 'Summit percentage', data: {}};
+				tableData.summitPercent.data[denali.name] =
+					Math.round(
+						tableData.summited.data[denali.name] / 
+						(tableData.offMountain.data[denali.name] || 1) // if offMountain is 0, avoid 0 in denominator
+						* 100
+					) + '%';
+				tableData.summitPercent.data.Foraker = 
+					Math.round(
+						tableData.summited.data.Foraker / 
+						(tableData.offMountain.data.Foraker || 1) 
+						* 100
+					) + '%';
+
+				for (const statName of ['registered', 'onMountain', 'offMountain', 'summited', 'summitPercent', 'cancelled']) {
+					const $tr = addData(tableData[statName].data, tableData[statName].displayName);
+					if (statName === 'cancelled') $tr.addClass('cancelled-row')
+				}
+
+			});
 		});
-
 	}
 
 
@@ -712,7 +746,7 @@ class ClimberDBDashboard extends ClimberDB {
 				this.configureGroupStatusGraph(),
 				this.configureDailyBriefingsChart(),
 				this.configureFlaggedGroups(),
-				this.configureSoloClimbers(),
+				//this.configureSoloClimbers(),
 				this.configureMisingPaymentOrSUP(),
 				this.configureOverdueParties(),
 				this.configureBCMap()

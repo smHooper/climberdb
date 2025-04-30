@@ -261,7 +261,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 		$('#export-briefings-button').click(() => {
 			this.onExportBriefingsClick();
-		})
+		});
 	}
 
 
@@ -415,6 +415,62 @@ class ClimberDBBriefings extends ClimberDB {
 	}
 
 
+	/*
+	Set tootlip text and toggle button visibility
+	*/
+	setViewNotesTooltip($viewNotesButton, notes) {
+		$viewNotesButton.ariaHide(isNull(notes))
+			.find('.notes-tooltip')
+				.text(notes);
+	}
+
+
+	/*
+	Helper function to standardize the HTML of an appointment container
+	*/
+	getBriefigAppointmentHTML(briefingInfo, rowIndexStart, rowIndexEnd) {
+		const $appointment = $(`
+			<div class="briefing-appointment-container" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}"">
+				<label class="briefing-appointment-header"></label>
+				<p class="briefing-appointment-text">
+					<span class="briefing-details-routes"></span><br>
+					<span class="briefing-details-n-climbers"></span> climber<span class="briefing-details-climber-plural"></span><br>
+					<span class="briefing-details-ranger-name"></span>
+				</p>
+				<button class="text-only-button view-notes-button tooltip-container" aria-live="off">
+					<span>View notes</span>
+					<div class="tooltip notes-tooltip" role="status"></div>
+				</button>
+			</div>
+		`);
+
+
+		if (!isNull(briefingInfo.id)) {
+			$appointment.attr('data-briefing-id', briefingInfo.id);
+		}
+		if (!isNull(briefingInfo.expedition_name)) {
+			$appointment.attr('title', briefingInfo.expedition_name)
+				.attr('aria-label', briefingInfo.expedition_name)
+				.find('.briefing-appointment-header').text(briefingInfo.expedition_name);
+		}
+		if (!isNull(briefingInfo.routes)) {
+			$appointment.find('.briefing-details-routes')
+				.text(`Routes: ${briefingInfo.routes.replace(/; /g, ', ')}`);
+		}
+		if (!isNull(briefingInfo.n_members)) {
+			$appointment.find('.briefing-details-n-climbers')
+				.text(briefingInfo.n_members)
+				.siblings('briefing-details-climber-plural')
+					.text(briefingInfo.n_members > 1 ? 's' : '');
+		}
+		if (!isNull(briefingInfo.ranger_last_name)) {
+			$appointment.find('.briefing-details-ranger-name')
+				.text(briefingInfo.ranger_last_name);
+		}
+
+		return $appointment;
+	}
+
 
 	/*
 	Helper method to add an appointment container to the sidebar schedule UI. This is 
@@ -425,17 +481,12 @@ class ClimberDBBriefings extends ClimberDB {
 		
 		const [rowIndexStart, rowIndexEnd] = this.getAppointmentRowIndex(briefingInfo, {appointmentTimes: appointmentTimes});
 
-		$('.schedule-ui-container').append(`
-			<div class="briefing-appointment-container" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}" data-briefing-id=${briefingInfo.id} title="${briefingInfo.expedition_name}">
-				<label class="briefing-appointment-header">${briefingInfo.expedition_name}</label>
-				<p class="briefing-appointment-text">
-					<span class="briefing-details-n-climbers">Routes: ${briefingInfo.routes.replace(/; /g, ', ')}</span><br>
-					<span class="briefing-details-n-climbers">${briefingInfo.n_members}</span> climber<span class="briefing-details-climber-plural">${briefingInfo.n_members > 1 ? 's' : ''}</span><br>
-					<span class="briefing-details-ranger-name">${briefingInfo.ranger_last_name || ''}</span>
-				</p>
-			</div>
-		`);
+		const notes = briefingInfo.briefing_notes;
+	
+		const $appointment = this.getBriefigAppointmentHTML(briefingInfo, rowIndexStart, rowIndexEnd)
+			.appendTo('.schedule-ui-container');
 
+		this.setViewNotesTooltip($appointment.find('.view-notes-button'), notes);
 	}
 
 
@@ -505,14 +556,18 @@ class ClimberDBBriefings extends ClimberDB {
 		var info; 
 		if (briefingID) {
 			info = this.briefings[selectedDate][briefingID];
+			const expeditionID = info.expedition_id;
 			const expeditionOptions = Object.values(this.expeditionInfo.expeditions)
-				.filter(i => this.expeditionInfo.unscheduled.includes(i.expedition_id) || i.expedition_id == info.expedition_id);
+				.filter(i => this.expeditionInfo.unscheduled.includes(i.expedition_id) || i.expedition_id == expeditionID);
 			this.fillExpeditionsSelectOptions(expeditionOptions);
 			for (const el of $('.appointment-details-drawer .input-field')) {
 				this.setInputFieldValue(el, info)
 			}
 			for (const routeName of info.routes.split('; ')) {
 				$routeList.append(`<li>${routeName}</li>`)
+			}
+			if (!isNull(expeditionID)) {
+				this.setExpeditionInfoLink(expeditionID);
 			}
 		} else {
 			const expeditionOptions = Object.values(this.expeditionInfo.expeditions)
@@ -560,6 +615,29 @@ class ClimberDBBriefings extends ClimberDB {
 
 
 	/*
+	When a user selects a different expedition's briefing appointment, update
+	the expedition page link and show the link
+	*/
+	setExpeditionInfoLink(expeditionID) {
+		$('#expedition-info-link')
+			.attr('href', `expeditions.html?id=${expeditionID}`)
+			.closest('.collapse')
+				.collapse('show');
+	}
+
+
+	/*
+	Hide the expedition page link and set it back to the default URL
+	*/
+	resetExpeditionInfoLink() {
+		const $link = $('#expedition-info-link');
+		$link.attr('href', 'expeditions.html')
+			.closest('.collapse')
+				.collapse('hide');
+	}
+
+
+	/*
 	ClimberDB.clearInputFields() excludes any .no-option-fill inputs because these 
 	usually don't have a default value. The briefing ranger field is .no-option-fill 
 	but does have one, so make sure it gets reset too
@@ -570,6 +648,10 @@ class ClimberDBBriefings extends ClimberDB {
 		
 		// clear .no-option-fill
 		$('.appointment-details-drawer .no-option-fill').val('').addClass('default');
+
+		this.resetExpeditionInfoLink();
+
+
 	}
 
 	/*
@@ -704,6 +786,7 @@ class ClimberDBBriefings extends ClimberDB {
 					this.onBriefingTimeChange($('#input-briefing_start_time'));
 					this.onBriefingTimeChange($('#input-briefing_end_time'));
 					this.onBriefingRangerChange();
+					this.setViewNotesTooltip($selectedAppointment.find('.view-notes-button'), info.briefing_notes);
 
 				}
 
@@ -932,6 +1015,7 @@ class ClimberDBBriefings extends ClimberDB {
 		}
 	}
 
+
 	/*
 	Record value changes in the .edits property
 	*/
@@ -962,6 +1046,11 @@ class ClimberDBBriefings extends ClimberDB {
 		// If there are no more dirty inputs, toggle beforeunload event
 		if (!$('.input-field.dirty:not(.filled-by-default)').length) {
 			this.toggleBeforeUnload(false);
+		}
+
+		// If this is a notes field, update the notes tooltip
+		if ($input.is('[name=briefing_notes]')) {
+			this.setViewNotesTooltip($selectedAppointment.find('.view-notes-button'), inputValue)
 		}
 	}
 
@@ -1115,6 +1204,10 @@ class ClimberDBBriefings extends ClimberDB {
 		const expeditionID = $input.val();
 		const expeditionName = $(`#input-expedition option[value="${expeditionID}"]`).text();
 		$selectedAppointment.find('.briefing-appointment-header').text(expeditionName);
+		if (!isNull(expeditionID)) {
+			this.setExpeditionInfoLink(expeditionID);
+		}
+
 		//	number of climbers
 		const nClimbers = this.expeditionInfo.expeditions[expeditionID].n_members;
 		$selectedAppointment.find('.briefing-details-n-climbers').text(nClimbers + ' ');
@@ -1351,18 +1444,12 @@ class ClimberDBBriefings extends ClimberDB {
 
 		//TODO: Prevent user from adding more than one briefing at a time without saving
 
-		// Add the appointment to the schedule
-		//	 Use date-change-not-called utility class to let the date field's .change() event know not to move the briefing
-		$(`
-			<div class="briefing-appointment-container selected new-briefing date-change-not-called" style="grid-row: ${startIndex} / ${endIndex}" title="New Appointment">
-				<label class="briefing-appointment-header">New Briefing</label>
-				<p class="briefing-appointment-text">
-				<span class="briefing-details-n-climbers"></span> <span class="briefing-details-climber hidden">climber</span><span class="briefing-details-climber-plural"></span><br>
-				<span class="briefing-details-ranger-name"></span>
-				</p>
-			</div>
-		`).appendTo('.schedule-ui-container')
-		.click(); // select this appointment
+		this.getBriefigAppointmentHTML({}, startIndex, endIndex)
+			.addClass('selected new-briefing date-change-not-called')
+			.appendTo('.schedule-ui-container')
+			.click()
+			.find('.briefing-appointment-header')
+				.text('New Briefing'); // select this appointment
 
 		const currentDate = $('.calendar-cell.selected').data('date');
 		// Set things that onchange events would set except you can't call .change() 

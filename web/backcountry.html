@@ -215,21 +215,21 @@
 										<label class="field-label" for="input-bump_flights">Bump flights</label>
 										<span class="null-input-indicator">&lt; null &gt;</span>
 									</div>
-									<div class="field-container checkbox-field-container col">	
+								</div>
+								<div class="field-container-row">
+									<div class="field-container checkbox-field-container col-6">	
 										<label class="checkmark-container">
 											<input id="input-is_acclimitizing" class="input-field input-checkbox" type="checkbox" name="is_acclimatizing" data-table-name="expeditions">
 											<span class="checkmark data-input-checkmark"></span>
 										</label>
 										<label class="field-label checkbox-label" for="input-needs_special_use_permit">Acclimatization trip for Denali/Foraker</label>
-									</div>
-								</div>
-								<div class="field-container-row">	
-									<div class="field-container checkbox-field-container">
+									</div>	
+									<div class="field-container checkbox-field-container col-6">
 										<label class="checkmark-container">
 											<input id="input-needs_special_use_permit" class="input-field input-checkbox" type="checkbox" name="needs_special_use_permit" data-table-name="expeditions">
 											<span class="checkmark data-input-checkmark"></span>
 										</label>
-										<label class="field-label checkbox-label" for="input-needs_special_use_permit">Requires additional permit (photography, etc.)</label>
+										<label class="field-label checkbox-label" for="input-needs_special_use_permit">Requires additional permit (SUP, etc.)</label>
 									</div>
 								</div>
 								<div class="field-container-row">
@@ -753,7 +753,8 @@
 						</div>
 
 						<!-- CMCs -->
-						<div id="cmcs-data-container" class="d-flex flex-wrap w-100 mt-5">
+						<!-- not using this for now -->
+						<!-- <div id="cmcs-data-container" class="d-flex flex-wrap w-100 mt-5">
 							<div class="expedition-data-header-container">
 								<h3 id="expedition-data-header" class="expedition-data-header">CMCs</h3>
 								<button class="generic-button add-data-button add-cmc-button" data-target="#cmc-list" title="Add CMC">Add CMC</button>
@@ -790,8 +791,44 @@
 							<div class="expedition-data-content-footer w-100">
 								
 							</div>
-						</div>
+						</div> -->
 
+						<!-- comms -->
+						<!--  not using this for now-->
+ 						<!--<div id="comms-data-container" class="d-flex flex-wrap w-100 mt-5">
+							<div class="expedition-data-header-container">
+								<h3 id="expedition-data-header" class="expedition-data-header">Comms Devices</h3>
+								<button class="generic-button add-data-button add-comms-button" data-target="#comms-list" title="Add comms">Add comms</button>
+							</div>
+							<div class="expedition-data-content-body">
+								<div class="data-list-item data-list-item-header">
+									<label class="data-list-col data-list-header-label col-3">Device type</label>
+									<label class="data-list-col data-list-header-label col-4">Number/address</label>
+									<label class="data-list-col data-list-header-label col-3">Device owner</label>
+									<label class="data-list-col data-list-header-label col-1"></label>
+								</div>
+								<ul id="comms-list" class="data-list cmc-list">
+									<li class="data-list-item show-children-on-hover cloneable hidden">
+										<div class="cmc-col col-3">
+											<select id="input-communication_device_type" class="input-field default" name="communication_device_type_code" data-table-name="communication_devices" title="Device Type" placeholder="Device type" required="required"></select>
+											<span class="required-indicator">*</span>
+										</div>
+										<div class="cmc-col col-4">
+											<input id="input-number_or_address" class="input-field" name="number_or_address" data-table-name="communication_devices" title="Device number/address" autocomplete="__never"> 
+										</div>
+										<div class="cmc-col col-3">
+											<select id="input-owner" class="input-field no-option-fill default" name="expedition_member_id" data-table-name="communication_devices" title="Device owner"></select>
+										</div>
+										<div class="col-1 list-item-delete-button-container">
+											<button class="icon-button delete-button delete-comms-button show-on-parent-hover" title="Delete comms">
+												<i class="fas fa-trash fa-lg"></i>
+												<label class="icon-button-label">delete</label>
+											</button>
+										</div>
+									</li>
+								</ul>
+							</div>
+						</div> -->
 					</div>
 				</div>
 				<div class="w-100 d-flex justify-content-center hide-when-content-hidden">

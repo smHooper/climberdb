@@ -1827,7 +1827,7 @@ class ClimberDBClimbers extends ClimberDB {
 				this.getResultSet({selectClimberID: climberID, newHistoryEntry: false});
 
 				// Check if this climber is already open in another Window
-				this.startListeningForOpenURL();
+				this.resetOpenURLListener();
 			}
 		}
 
@@ -1866,8 +1866,8 @@ class ClimberDBClimbers extends ClimberDB {
 		}
 		window.history.pushState(state, '', url);
 
-		// This is a different expedition, so make sure it's not open elsewhere
-		this.startListeningForOpenURL();
+		// This is a different climber, so make sure it's not open elsewhere
+		this.resetOpenURLListener();
 	}
 
 

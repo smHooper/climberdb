@@ -283,7 +283,7 @@ class ClimberDBQuery extends ClimberDB {
 						(
 							SELECT
 								expedition_id,
-								expedition_name AS "Group Name",
+								query_expedition_name AS "Group Name",
 								planned_departure_date AS "Planned Departure",
 								group_status_codes.name AS "Group Status",
 								every(sex_code = 1) AS is_all_female
@@ -293,7 +293,7 @@ class ClimberDBQuery extends ClimberDB {
 								extract(year FROM planned_departure_date) = {year}
 							GROUP BY 
 								expedition_id,
-								expedition_name,
+								query_expedition_name,
 								planned_departure_date,
 								"Group Status"
 						) _
@@ -443,7 +443,7 @@ class ClimberDBQuery extends ClimberDB {
 				sql: `
 					SELECT 
 						expedition_id,
-						expedition_name AS "BC Group Name",
+						query_expedition_name AS "BC Group Name",
 						string_agg(DISTINCT mountain_name, ', ' ORDER BY mountain_name) AS "Mountains/Locations",
 						group_status_name AS "Group Status",
 						count(expedition_member_id) AS "Party Size"
@@ -565,6 +565,10 @@ class ClimberDBQuery extends ClimberDB {
 		
 		$('#run-query-button').click(() => {
 			this.onRunQueryButtonClick();
+		});
+
+		$('#reset-query-climbers-climbs-button').click(e => {
+			this.onResetQueryCountClimbersClimbsClick(e);
 		});
 
 		$('.climberdb-select2').change(e => {this.onSelect2Change(e)});
@@ -696,6 +700,10 @@ class ClimberDBQuery extends ClimberDB {
 
 		$('#copy-query-link-button').click(e => {
 			this.onCopyQueryLinkButtonClick(e)
+		});
+
+		$('#count_climbers-summary_or_records').change(() => {
+			this.onCountClimbersQueryByChange()
 		})
 	}
 
@@ -754,6 +762,27 @@ class ClimberDBQuery extends ClimberDB {
 		}
 	}
 
+	/*
+	Reset the Query Climbers/Climbs query options
+	*/
+	resetQueryCountClimbers($container) {
+		$container.find('.field-container.collapse')
+			.collapse('hide');
+
+		$('.stat-field-row:not(.cloneable)').remove();
+
+		this.clearInputFields({parent: $container});
+
+		// show dependent fields if there are any. Do this after a half second because
+		//	the .collapse() transitions are still happening and will interfere otherwise
+		setTimeout(() => {$('#count_climbers-summary_or_records').change()}, 500);
+	}
+
+
+	onResetQueryCountClimbersClimbsClick(e) {
+		const $container = $(e.target).closest('.query-parameters-container');
+		this.resetQueryCountClimbers($container);
+	}
 
 	onSearchBarKeyUp(e) {
 		const $searchBar = $(e.target);
@@ -1545,6 +1574,28 @@ class ClimberDBQuery extends ClimberDB {
 		this.submitQuery(sql, {sqlParameters: {cua_company_codes: cuaCompanies}, queryName: 'cua_backcountry_groups'})
 	}
 
+
+	/*
+	Because I can't figure out a clean way to have multiple dependent targets/values for a single field,
+	the search day start and end fields (only relevant for day/day of year GROUP BY queries) need to be
+	toggled on and off via Javascript when the #count_climbers-summary_or_records field changes
+	*/
+	onCountClimbersQueryByChange() {
+		const $groupByField = $('#count_climbers-group_by_fields');
+		const $dayStartField = $('#count_climbers-day_search_start');
+		const dependentValue = $dayStartField.data('dependent-value').split('|');
+		$dayStartField.closest('.collapse').collapse(
+			// If this is a count of climbers/climbs AND
+			$('#count_climbers-summary_or_records').val() === 'summary' && 
+			// day/day of year is selected as a GROUP BY field
+			$groupByField.val().some(v => dependentValue.includes(v)) ? 
+			// then show it.
+			'show' : 
+			// If either is not true, hide it
+			'hide'
+		)
+	}
+
 	fieldToSelectAlias([field, alias]) {
 		return field.endsWith('_code') ? `${field}s.name AS "${alias}"` : `${field} AS "${alias}"`;
 	}
@@ -1706,9 +1757,9 @@ class ClimberDBQuery extends ClimberDB {
 				this.queries.count_climbers.hrefs = {'Climber name': 'climbers.html?id={climber_id}'}
 			} else if (returnData === 'expeditions') {
 				this.queries.count_climbers.columns = ['Expedition name', ...whereFieldAliases];
-				outerSelectClause = 'expedition_name AS "Expedition name", expedition_id, ' +  whereFieldSelectString;
-				innerSelectStatement = `SELECT DISTINCT ON (expedition_id) * FROM ${this.dbSchema}.all_climbs_view`;
-				this.queries.count_climbers.hrefs = {'Expedition name': 'expeditions.html?id={expedition_id}'};
+				outerSelectClause = 'query_expedition_name AS "Expedition name", expedition_id, page_name, ' +  whereFieldSelectString;
+				innerSelectStatement = `SELECT DISTINCT ON (expedition_id) *, CASE WHEN is_backcountry THEN 'backcountry' ELSE 'expeditions' END AS page_name FROM ${this.dbSchema}.all_climbs_view`;
+				this.queries.count_climbers.hrefs = {'Expedition name': `{page_name}.html?id={expedition_id}`};
 			}
 		}
 
@@ -1943,9 +1994,9 @@ class ClimberDBQuery extends ClimberDB {
 		$queryButton.click();
 
 		// query params are a JSON string, so parse it
-		const queryParams = $.parseJSON(urlParams.queryParams);
+		const queryParams = $.parseJSON(urlParams.queryParams || '{"statFields": []}');
 		
-		for (const {fieldName, statistic} of queryParams.statFields || {}) {
+		for (const {fieldName, statistic} of (queryParams.statFields || {})) {
 			const $row = this.addNumericStatField();
 			$row.find('.numeric-stat-field-name').val(fieldName).change();
 			$row.find('.numeric-stat-name').val(statistic).change();
@@ -1961,7 +2012,7 @@ class ClimberDBQuery extends ClimberDB {
 			// If this is a select with potentially multiple selected options,
 			//	the value from the URL will be a CSV string
 			if ($paramInput.is('[multiple]')) {
-				paramValue = paramValue.split(',').map(s => s.trim());
+				paramValue = paramValue.split('|').map(s => s.trim());
 			}
 			$paramInput.val(paramValue).change();
 
@@ -2002,7 +2053,7 @@ class ClimberDBQuery extends ClimberDB {
 			
 			// if this is a select with potentially multiple options selected, join them
 			//	all as a CSV string
-			const paramValue = $input.is('[multiple]') ? rawValue.join(',') : rawValue;
+			const paramValue = $input.is('[multiple]') ? rawValue.join('|') : rawValue;
 			queryParams[inputID] = paramValue;
 		}
 
