@@ -238,10 +238,13 @@
 						</div>
 
 						<div class="query-parameters-container hidden" data-query-name="count_climbers">
-							<h4 class="w-100 mb-3">Query Climbers/Climbs</h4>
+							<div class="w-100 mb-3 d-flex justify-content-between">
+								<h4 class="mb-0">Query Climbers/Climbs</h4>
+								<button id="reset-query-climbers-climbs-button" class="text-only-button">Reset query filters</button>
+							</div>
 							<div class="w-100"></div>
 							<div class="field-container col-sm col-md-4 col-lg-3">
-								<select id="count_climbers-summary_or_records" class="input-field no-option-fill" name="count_climbers-summary_or_records" title="What would you like to query?" required>
+								<select id="count_climbers-summary_or_records" class="input-field no-option-fill" name="count_climbers-summary_or_records" data-default-value="summary" title="What would you like to query?" required>
 									<option value="summary" selected>Count of climbers/climbs</option>
 									<option value="climbers">Climbers</option>
 									<option value="expeditions">Expeditions</option>
@@ -249,7 +252,7 @@
 								<label class="field-label" for="count_climbers-summary_or_records">What would you like to query?</label>
 							</div>
 							<div class="field-container col-sm col-md-4 col-lg-3 collapse show">
-								<select id="count_climbers-count_field" class="input-field no-option-fill" name="count_climbers-count_field" title="Count expedition members, climbers, or climbs?" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
+								<select id="count_climbers-count_field" class="input-field no-option-fill" name="count_climbers-count_field" title="Count expedition members, climbers, or climbs?" data-default-value="climbers" data-dependent-target="#count_climbers-summary_or_records" data-dependent-value="summary" required>
 									<option value="climbers" selected>Climbers</option>
 									<option value="expeditions">Expeditions</option>
 									<option value="members">Expedition member</option>

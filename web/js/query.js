@@ -567,6 +567,10 @@ class ClimberDBQuery extends ClimberDB {
 			this.onRunQueryButtonClick();
 		});
 
+		$('#reset-query-climbers-climbs-button').click(e => {
+			this.onResetQueryCountClimbersClimbsClick(e);
+		});
+
 		$('.climberdb-select2').change(e => {this.onSelect2Change(e)});
 
 		$('.mountain-code-parameter-input').change(e => {
@@ -754,6 +758,27 @@ class ClimberDBQuery extends ClimberDB {
 		}
 	}
 
+	/*
+	Reset the Query Climbers/Climbs query options
+	*/
+	resetQueryCountClimbers($container) {
+		$container.find('.field-container.collapse')
+			.collapse('hide');
+
+		$('.stat-field-row:not(.cloneable)').remove();
+
+		this.clearInputFields({parent: $container});
+
+		// show dependent fields if there are any. Do this after a half second because
+		//	the .collapse() transitions are still happening and will interfere otherwise
+		setTimeout(() => {$('#count_climbers-summary_or_records').change()}, 500);
+	}
+
+
+	onResetQueryCountClimbersClimbsClick(e) {
+		const $container = $(e.target).closest('.query-parameters-container');
+		this.resetQueryCountClimbers($container);
+	}
 
 	onSearchBarKeyUp(e) {
 		const $searchBar = $(e.target);
