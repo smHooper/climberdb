@@ -130,14 +130,14 @@ class ClimberDBUsers extends ClimberDB {
 	}
 
 
+
+
 	/* 
-	When the username changes check if the user already exists. If so, show and 
+	Check if the user already exists. If so, show and 
 	re-enable the existing user. Only a newly created user's username can be edited so no 
 	need to check if the username will be duplicated for an existing user
 	*/
-	onUsernameChange(e) {
-		const $input = $(e.target);
-		const username = $input.val();
+	checkUsername(username) {
 		const matchedUsers = Object.values(this.users).filter(u => u.ad_username === username);
 		if (matchedUsers.length) {
 			const status = matchedUsers[0].user_status_code;
@@ -167,11 +167,25 @@ class ClimberDBUsers extends ClimberDB {
 			
 			this.showModal(message, 'Duplicate username', {modalType: 'confirm', eventHandlerCallable: eventHandler});
 		}
+
+		return !matchedUsers.length;
 	}
 
 
-	onFirstLastNameChange(e) {
-		const $tr = $(e.target).closest('tr');
+	/*
+	When the username changes, check if it exists
+	*/
+	onUsernameChange(e) {
+		const $input = $(e.target);
+		const username = $input.val();
+		this.checkUsername(username);
+	}
+
+
+	/*
+	Check if the first/last name combo alreadt exists.
+	*/
+	checkFirstLastName($tr) {
 		const firstName = $tr.find('.input-field[name=first_name]').val();
 		const lastName = $tr.find('.input-field[name=last_name]').val();
 		const matchedUsers = Object.values(this.users)
@@ -213,6 +227,14 @@ class ClimberDBUsers extends ClimberDB {
 			
 			this.showModal(message, 'Duplicate user', {footerButtons: footerButtons, eventHandlerCallable: onConfirmClickHandler});
 		}
+
+		return !matchedUsers.length;
+	}
+
+
+	onFirstLastNameChange(e) {
+		const $tr = $(e.target).closest('tr');
+		this.checkFirstLastName($tr);
 	}
 
 
@@ -388,6 +410,19 @@ class ClimberDBUsers extends ClimberDB {
 		if (!$inputs.length) {
 			this.showModal('You have not yet made any edits to save.', 'No edits to save');
 			return;
+		}	
+
+		// If this is a new users, check username and first/last name for 
+		//	duplicates. Both check functions show a warning modal so no
+		//	need to show one here
+		if ($tr.is('.new-user')) {
+			if (!this.checkFirstLastName($tr)) {
+				return;
+			}
+			const username = $inputs.filter('[name=ad_username]').val();
+			if (!this.checkUsername(username)) {
+				return;
+			}
 		}
 
 		showLoadingIndicator('saveEdits');
