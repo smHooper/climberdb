@@ -1367,7 +1367,7 @@ class ClimberDB {
 				if (notEqualTo) show = !show;
 
 				$thisContainer.collapse(show ? 'show' : 'hide');
-				if ($thisField.is('select, .input-checkbox')) this.toggleDependentFields($thisField);
+				if (show && $thisField.is('select, .input-checkbox')) this.toggleDependentFields($thisField);
 			}
 		}
 		setTimeout(10);
@@ -1490,7 +1490,7 @@ class ClimberDB {
 
 		for (const el of $parent.find(`.input-field:not(${excludeClass})`)) {
 			const $el = $(el);
-			
+
 			// Skip any input-fields with a cloneable parent can't filter these out in .find() 
 			//	because inputs that are the descendants of .cloneables aren't the **immediate** 
 			//	descendants of .cloneables so there's always a non-.clineable parent in 
