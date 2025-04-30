@@ -765,13 +765,13 @@ class ClimberDBQuery extends ClimberDB {
 		$container.find('.field-container.collapse')
 			.collapse('hide');
 
-		this.clearInputFields($container);
-
 		$('.stat-field-row:not(.cloneable)').remove();
+
+		this.clearInputFields({parent: $container});
 
 		// show dependent fields if there are any. Do this after a half second because
 		//	the .collapse() transitions are still happening and will interfere otherwise
-		setTimeout(() => $('#count_climbers-summary_or_records').change(), 500);
+		setTimeout(() => {$('#count_climbers-summary_or_records').change()}, 500);
 	}
 
 
