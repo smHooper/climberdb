@@ -1994,9 +1994,9 @@ class ClimberDBQuery extends ClimberDB {
 		$queryButton.click();
 
 		// query params are a JSON string, so parse it
-		const queryParams = $.parseJSON(urlParams.queryParams);
+		const queryParams = $.parseJSON(urlParams.queryParams || '{"statFields": []}');
 		
-		for (const {fieldName, statistic} of queryParams.statFields || {}) {
+		for (const {fieldName, statistic} of (queryParams.statFields || {})) {
 			const $row = this.addNumericStatField();
 			$row.find('.numeric-stat-field-name').val(fieldName).change();
 			$row.find('.numeric-stat-name').val(statistic).change();
