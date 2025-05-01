@@ -324,6 +324,48 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	}
 
 
+	/*
+	Override the super class' saveEdits method to check if there is 
+	at least one route saved for the group. If not, warn the user
+	that this group won't appear in query results
+	*/
+	saveEdits({suppressRouteWarning=false}={}) {
+		const nRoutes = $('#routes-accordion .card:not(.cloneable)').length;
+		const isNewGroup = isNull($('#input-expedition_name').data('table-id'));
+		// Show the warning only if 
+		//	1. it isn't explicitly suppressed
+		//	2. this is a new group (don't show if user is editing an existing group)
+		//	3. there aren't any routes
+		if (!suppressRouteWarning && isNewGroup && nRoutes === 0) {
+			hideLoadingIndicator();
+			const message = 'You have not yet selected any routes for this backcountry' +
+				' group. You can still save your edits but the group will not appear in' +
+				' any query results or on the <strong>Mountain Stats This Season</strong>' +
+				' table of the home page. To add a route: ' + 
+				`<ol> 
+					<li>Click the <strong>Add location</strong> button</li>
+					<li>Click the <strong>Add member</strong> button</li>
+					<li>Click the <strong>Save</strong> button</li>
+					<li>Click the <strong>Add route</strong> button </li>
+				</ol>
+				` +
+				' Would you like to save this backcountry group <strong>without</strong> adding a route?'
+			const onConfirmClick = () => {$('#alert-modal .confirm-button').click(() => super.saveEdits())}
+			this.showModal(
+				message, 
+				'No Route Selected', 
+				{
+					modalType: 'yes/no', 
+					eventHandlerCallable: onConfirmClick
+				}
+			)
+		} else {
+			super.saveEdits();
+		}
+
+	}
+
+
 	addNewBCRoute($routeList) {
 		if ($routeList.closest('.card').is('.new-card')) {
 			const message = 
@@ -331,7 +373,9 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 				' Would you like to save all of your edits now?';
 			const onConfirmClickHandler = () => {
 				$('#alert-modal .confirm-button').click(() => {
-					this.saveEdits()
+					// Don't show routes warning because in order to add 
+					//	a route, the user has to save the location first
+					this.saveEdits({suppressRouteWarning: true})
 				});
 			}
 			this.showModal(
