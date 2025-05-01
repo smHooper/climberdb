@@ -414,6 +414,15 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	}
 
 
+	onAddRouteButtonClick(e) {
+		if (!$('#expedition-members-accordion .card:not(.cloneable)').length) {
+			this.showModal('You must add at least one backcountry group member before you can add a route.', 'Invalid Action');
+			return;
+		}
+
+		this.addNewBCRoute($($(e.target).data('target')));
+	}
+
 	/*
 	Update the coordinate fields when the location name field changes
 	*/
@@ -691,7 +700,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		});
 
 		$(document).on('click', '.add-bc-route-button', e => {
-			this.addNewBCRoute($($(e.target).data('target')));
+			this.onAddRouteButtonClick(e);
 		});
 
 		$(document).on('click', '.delete-bc-route-button', e => {
