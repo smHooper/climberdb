@@ -567,6 +567,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 
 
 	removeLocationCard($locationCard) {
+		const locationCardIndex = $locationCard.index(this.locationCardIndexSelector);
 		$locationCard.fadeRemove({
 			onRemove: () => {
 				this.removeLocationFromMap(locationCardIndex);
