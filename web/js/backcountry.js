@@ -496,11 +496,24 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 						for (const el of $mountainFields.closest('.data-list-item')) {
 							this.deleteBCRoute($(el), {confirm: false});
 							this.addNewBCRoute($routeList);
+							this.updateBCMountainOptions($mountainFields, newMountainCodes);
 						}
 					});
-					// When the user clicks either button, update 
-					$('#alert-modal .generic-button').click(() => {
-						this.updateBCMountainOptions($mountainFields, newMountainCodes);
+					// When the user clicks the No button, update mountain options including the 
+					//	current selection(s)
+					$('#alert-modal .deny-button').click(() => {
+						
+						// Get id/value pairs of existing mountain fields
+						const currentMountains = Object.fromEntries(
+							$mountainFields.map((_, el) => [[el.id, el.value]]).get() 
+						);
+
+						this.updateBCMountainOptions($mountainFields, [...Object.values(currentMountains), ...newMountainCodes]);
+						
+						// Set values of mountains since options were wiped
+						for (const [id, value] of Object.entries(currentMountains)) {
+							$('#' + id).val(value);
+						}
 					})
 				}
 
