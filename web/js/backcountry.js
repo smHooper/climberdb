@@ -587,9 +587,9 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		const isLocationCard = $locationCard.closest('.accordion').is('#locations-accordion');
 
 		if (isLocationCard) {
-			const locationCardIndex = $locationCard.index(this.locationCardIndexSelector);
+			
 			if ($locationCard.is('.new-card')) {
-				for (const el of $locationCard.find('.bc-route-list > .data-list-item')) {
+				for (const el of $locationCard.find('.bc-route-list > .data-list-item:not(.cloneable)')) {
 					this.deleteBCRoute($(el))
 				}
 				this.removeLocationCard($locationCard);
