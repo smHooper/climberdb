@@ -729,11 +729,24 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	}
 
 
+	clearExpeditionInfo({hideEditButtons=true, triggerChange=false}={}) {
+
+		const mainMap = this.maps.main;
+		// clear map layers
+		for (const layer of mainMap.layers) {
+			mainMap.map.removeLayer(layer);
+		}
+		mainMap.layers = [];
+
+		super.clearExpeditionInfo({hideEditButtons: hideEditButtons, triggerChange: triggerChange})
+	}
+
 	/*
 	Thin wrapper for ClimberDBExpeditions to set the locations on the map and 
 	update card headers
 	*/
 	fillFieldValues(triggerChange=true) {
+
 		super.fillFieldValues(triggerChange);
 
 		// Set location card labels
