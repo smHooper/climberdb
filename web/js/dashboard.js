@@ -710,7 +710,16 @@ class ClimberDBDashboard extends ClimberDB {
 					spiderLegPolylineOptions: {color: '#fff'},
 					showCoverageOnHover: false
 				});
+				let markerErrors = [];
 				for (const {expedition_id, expedition_name, latitude, longitude} of result) {
+					// Skip any groups that don't have lat or lon
+					if (isNull(latitude) || isNull(longitude)) {
+						markerErrors.push({
+							expedition_id: expedition_id, 
+							expedition_name: expedition_name
+						});
+						continue;
+					}
 					const marker = L.marker([latitude, longitude], {icon: icon})
 						.bindTooltip(expedition_name)
 						.on('click', () => {
@@ -720,9 +729,32 @@ class ClimberDBDashboard extends ClimberDB {
 					markerCluster.addLayer(marker);
 					this.maps.main.layers.push(marker);
 				}
-				markerCluster.addTo(this.maps.main.map);
-				this.fitMapBoundsToLocations(this.maps.main);
 
+				// Catch any map errors that would otherwise prevent the page from loading properly
+				try {
+					markerCluster.addTo(this.maps.main.map);
+					this.fitMapBoundsToLocations(this.maps.main);
+				} catch {
+					this.showModal(
+						'There was a problem with loading current backcountry groups.' + this.getDBContactMessage(), 
+						'Unexpected Error'
+					);
+				} finally {
+					// If there were any groups without a location, allow the user to
+					//	view them via link to BC page
+					const nErrors = markerErrors.length;
+					if (nErrors) {
+						const li = markerErrors.map(
+							({expedition_id, expedition_name}) => `<li><a href="backcountry.html?id=${expedition_id}" target="_blank">${expedition_name}</a></li>`
+						)
+						const s = nErrors > 1 ? 's' : '';
+						const message = 
+							`The following backcountry group${s} could not be shown on the` +
+							` map because there is no latitude or longitude: <ul>${li}</ul>`;
+						this.showModal(message, `Backcountry Group${s} Missing Lat/Long`);
+					}
+				}
+				
 				// Fill row counter
 				$('#bc-groups-map-card > .dashboard-card-header > .table-row-counter')
 					.text(result.length);
