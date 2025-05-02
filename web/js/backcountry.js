@@ -34,11 +34,29 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	Set the associated coordinate fields when a marker on the map is moved
 	*/
 	onMarkerDragend(locationIndex) {
-
+		const layer = this.maps.main.layers[locationIndex];
 		const $card = $(this.locationCardIndexSelector).eq(locationIndex);
+		const locationID = $card.data('table-id');
+
+		// If editing is disabled, reset the marker and warn the user
+		if ($('.uneditable').length) {
+			this.showModal(
+				'You must first click the edit button to move a backcountry location', 
+				'Invalid Operation'
+			)
+			// reset lat/lon using in-memory data from the DB. If editing is disabled, 
+			//	any changes the user would have made in this session would be reflected 
+			//	in the in-memory data
+			const data = this.expeditionInfo.itinerary_locations.data[locationID];
+			layer.setLatLng([data.latitude || 0, data.longitude || 0]);
+			
+			return;
+		};
+
+		
 		const $latitudeField = $card.find('.input-field[name=latitude]');
 		const $longitudeField = $card.find('.input-field[name=longitude]');
-		const latlng = this.maps.main.layers[locationIndex].getLatLng();
+		const latlng = layer.getLatLng();
 		const [latDDD, lonDDD] = this.getRoundedDDD(latlng.lat, latlng.lng);
 		$latitudeField.val(latDDD).change();
 		$longitudeField.val(lonDDD).change();
