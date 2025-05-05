@@ -354,7 +354,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		//	1. it isn't explicitly suppressed
 		//	2. this is a new group (don't show if user is editing an existing group)
 		//	3. there aren't any routes
-		if (!suppressRouteWarning && isNewGroup && nRoutes === 0) {
+		if (!suppressRouteWarning && !isNewGroup && nRoutes === 0) {
 			hideLoadingIndicator();
 			const message = 'You have not yet selected any routes for this backcountry' +
 				' group. You can still save your edits but the group will not appear in' +
