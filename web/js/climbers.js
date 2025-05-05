@@ -662,8 +662,9 @@ class ClimberForm {
 
 		const editObject = this.edits.updates; // get reference for shorthand
 		const dbValue = this.selectedClimberInfo[tableName][dbID][fieldName];
+		const inputValue = this._parent.getInputFieldValue($input)
 		// If the input value matches the DB value, remove the edit and the .dirty class
-		if (valuesAreEqual(dbValue, $input.val())) {
+		if (valuesAreEqual(dbValue, inputValue)) {
 			$input.removeClass('dirty');
 			if (editObject[tableName]) {
 				if (editObject[tableName][dbID]) {
