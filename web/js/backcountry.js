@@ -39,7 +39,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		const locationID = $card.data('table-id');
 
 		// If editing is disabled, reset the marker and warn the user
-		if ($('.uneditable').length) {
+		if ($('.expedition-content.backcountry-content.uneditable').length) {
 			this.showModal(
 				'You must first click the edit button to move a backcountry location', 
 				'Invalid Operation'
