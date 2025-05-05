@@ -243,7 +243,7 @@ class ClimberDBUsers extends ClimberDB {
 	*/
 	addUserRow({data={}}={}) {
 		return $(`
-			<tr class="uneditable" data-table-id="${data.id}">
+			<tr class="uneditable" data-table-id="${data.id || ''}">
 				<td class="uneditable">
 					<span>
 						<input class="input-field user-table-input" type="text" name="ad_username" title="Username" placeholder="username" value="${data.ad_username}" autocomplete="__never" tabindex=-1>
@@ -466,6 +466,9 @@ class ClimberDBUsers extends ClimberDB {
 
 				this.toggleBeforeUnload(false);
 
+				const result = ( response.data || [] )[0];
+				userID = userID || result.db_id;
+
 				// update in-memory data
 				const userInfo = (this.users[userID] = this.users[userID] || {});
 				for (const [field, value] of Object.entries(values)) {
@@ -473,9 +476,9 @@ class ClimberDBUsers extends ClimberDB {
 				}
 
 				if (isInsert) { 
-					const result = ( response.data || [] )[0]
-					$tr.attr('data-table-id', (result || {}).db_id)
-						.removeClass('new-user')
+					
+					$tr.attr('data-table-id', userID)
+						.removeClass('new-user');
 						
 					// Send activation email for a new user
 					if (!this.config.no_login_user_roles.includes(userInfo.user_role_code)) {
