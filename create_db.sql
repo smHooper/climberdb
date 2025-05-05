@@ -42,6 +42,16 @@ CREATE TABLE transaction_type_codes (
 CREATE TABLE IF NOT EXISTS user_role_codes(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 CREATE TABLE IF NOT EXISTS user_status_codes (id SERIAL PRIMARY KEY, name varchar(50) UNIQUE, code INTEGER UNIQUE, sort_order INTEGER);
 
+-- create a cross-ref table for the many-to-many relationship between 
+--	backcountry locations and mountains. This relationship allows
+--	different backcountry locations to be associated with overlapping
+--	sets of mountains that might also contain unique memebers
+CREATE TABLE IF NOT EXISTS dev.backcountry_locations_mountains_xref (
+	backcountry_location_code INTEGER REFERENCES backcountry_location_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	mountain_code INTEGER REFERENCES mountain_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	PRIMARY KEY (backcountry_location_code, mountain_code)
+);
+
 --Create data tables
 CREATE TABLE IF NOT EXISTS climbers (
 	id SERIAL PRIMARY KEY,
@@ -174,12 +184,29 @@ CREATE TABLE IF NOT EXISTS attachments (
 	entered_by VARCHAR(50), 
 	last_modified_time TIMESTAMP, 
 	last_modified_by VARCHAR(50)
-)
+);
+
+CREATE TABLE IF NOT EXISTS itinerary_locations (
+	id SERIAL PRIMARY KEY,
+	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+	backcountry_location_type_code INTEGER REFERENCES backcountry_location_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	backcountry_location_code INTEGER REFERENCES backcountry_location_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	location_start_date DATE,
+	location_end_date DATE,
+	latitude NUMERIC(10, 7),
+	longitude NUMERIC(10, 7), 
+	display_order INTEGER,	
+	entered_by VARCHAR(50),
+	entry_time TIMESTAMP,
+	last_modified_by VARCHAR(50),
+	last_modified_time TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS expedition_member_routes (
 	id SERIAL PRIMARY KEY,
 	expedition_member_id INTEGER NOT NULL REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	route_code INTEGER REFERENCES route_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+	itinerary_location_id REFERENCES itinerary_locations(id) ON UPDATE CASCADE ON DELETE SET NULL, --
 	route_order INTEGER,
 	route_was_summited BOOLEAN, --a null summit_date could indicate that the route wasn't climbed, but I don't think you could rely on it
 	highest_elevation_ft INTEGER,
@@ -235,22 +262,6 @@ CREATE TABLE IF NOT EXISTS communication_devices (
 	expedition_member_id INTEGER REFERENCES expedition_members(id) ON UPDATE CASCADE ON DELETE CASCADE,
 	communication_device_type_code INTEGER REFERENCES communication_device_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	number_or_address VARCHAR(255),
-	entered_by VARCHAR(50),
-	entry_time TIMESTAMP,
-	last_modified_by VARCHAR(50),
-	last_modified_time TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS itinerary_locations (
-	id SERIAL PRIMARY KEY,
-	expedition_id INTEGER NOT NULL REFERENCES expeditions(id) ON UPDATE CASCADE ON DELETE CASCADE,
-	backcountry_location_type_code INTEGER REFERENCES backcountry_location_type_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
-	backcountry_location_code INTEGER REFERENCES backcountry_location_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
-	location_start_date DATE,
-	location_end_date DATE,
-	latitude NUMERIC(10, 7),
-	longitude NUMERIC(10, 7), 
-	display_order INTEGER,	
 	entered_by VARCHAR(50),
 	entry_time TIMESTAMP,
 	last_modified_by VARCHAR(50),
@@ -522,6 +533,7 @@ CREATE OR REPLACE VIEW expedition_info_view AS
 		expedition_member_routes.route_was_summited,
 		expedition_member_routes.summit_date,
 		expedition_member_routes.highest_elevation_ft,
+		expedition_member_routes.itinerary_location_id AS expedition_member_routes_itinerary_location_id, -- prevent collision with itinerary_location table's id field
 		transactions.transaction_type_code,
 		transactions.transaction_value,
 		transactions.transaction_notes,

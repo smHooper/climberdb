@@ -44,6 +44,7 @@ from export_briefings import briefings_to_excel
 import threading
 import importlib
 
+
 def load_weasyprint():
     global weasyprint
     weasyprint = importlib.import_module('flask_weasyprint')
@@ -1651,6 +1652,37 @@ def save_config():
 	return response
 
 
+def delete_from_table(session:Session, table_name:str, id_list:[int], returning:dict={}) -> dict: 
+	
+	# For collecting values that would be in RETURNING clauses.
+	#	The dict is in the form { table_name: [{column: value}] }
+	returned = {}
+
+	table = tables.get(table_name)
+	if not table:
+		raise ValueError(f'The table "{table_name}" does not exist')
+
+	for table_id in id_list:
+		# Get the row by ID
+		row = session.get(table, table_id)	
+		# If a single ID was invalid, ROLLBACK the entire transaction
+		if not row:
+			raise RuntimeError(f'No {table_name} row with ID {table_id} found')
+		
+		if returning:
+			if not table_name in returned:
+				returned[table_name] = []
+			returned[table_name].append(
+				 {
+				 	column_name: climberdb_utils.sanitize_query_value(getattr(row, column_name)) 
+				 	for column_name in returning[table_name]
+				 } 
+			)
+		session.delete(row)
+
+	return returned
+
+
 @app.route('/flask/db/delete/by_id', methods=['POST'])
 def delete_by_id():
 
@@ -1673,36 +1705,44 @@ def delete_by_id():
 	except ValueError:
 		raise ValueError('Invalid ID in id_list: ' + str(ids))
 
-	table = tables.get(table_name)
-	if not table:
-		raise ValueError(f'The table "{table_name}" does not exist')
-
 	returning = request_data.get('returning')
-
-	# For collecting values that would be in RETURNING clauses.
-	#	The dict is in the form { table_name: [{column: value}] }
-	returned = {}
 
 	# Execute deletes within a transaction so an error will ROLLBACK 
 	#	any would-be successful deletes
 	with WriteSession() as session, session.begin():
-		for table_id in id_list:
-			# Get the row by ID
-			row = session.get(table, table_id)	
-			# If a single ID was invalid, ROLLBACK the entire transaction
-			if not row:
-				raise RuntimeError(f'No {table_name} row with ID {table_id} found')
-			
-			if returning:
-				if not table_name in returned:
-					returned[table_name] = []
-				returned[table_name].append(
-					 {
-					 	column_name: climberdb_utils.sanitize_query_value(getattr(row, column_name)) 
-					 	for column_name in returning[table_name]
-					 } 
-				)
-			session.delete(row)
+			returned = delete_from_table(session, table_name, id_list, returning)
+
+	return jsonify({
+		'data': returned
+	})
+
+
+@app.route('/flask/db/delete/from_multiple_tables', methods=['POST'])
+def delete_from_mutliple_tables():
+	request_data = request.get_json()
+
+	if not isinstance(request_data, dict):
+		raise ValueError('Invalid request_data: ' + str(request_data))
+
+	returning = request_data.get('returning') or {}
+
+	returned = {}
+	# Execute deletes within a transaction so an error will ROLLBACK 
+	#	any would-be successful deletes
+	with WriteSession() as session, session.begin():
+		for table_name, id_list in request_data.items():
+			if table_name not in tables:
+				raise ValueError(f'"{table_name}" not a valid table name')
+			if not isinstance(id_list, list):
+				raise ValueError(f'invalid ID list for table {table_name}: {str(id_list)}')
+			# make sure all IDs are integers
+			try:
+				id_list = [int(id_) for id_ in id_list]
+			except:
+				raise ValueError(f'invalid ID for table {table_name}: {str(id_list)}')
+			if len(id_list) == 0:
+				continue
+			returned |= delete_from_table(session, table_name, id_list, returning)
 
 	return jsonify({
 		'data': returned
