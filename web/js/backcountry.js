@@ -109,9 +109,16 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	*/
 	addLocationToMap(locationIndex, coordinates, mapObject, {isNewLocation=true}={}) {
 		const $card = $(this.locationCardIndexSelector).eq(locationIndex);
-		const locationType = $card.find('.input-field[name=backcountry_location_type_code]').val()
+		const $locationTypeField = $card.find('.input-field[name=backcountry_location_type_code]')
+			.change(); // if default value was set in HTML, trigger change event
+		let locationType = $locationTypeField.val();
+		// if the location type isn't set, set it to its default value
+		if (!locationType) {
+			locationType = $locationTypeField.data('default-value') || 2;  //default to camp icon
+			$locationTypeField.val(locationType).change();
+		}
 		const icon = L.icon({
-			iconUrl: this.markerIcons[locationType || 2], //default to camp icon
+			iconUrl: this.markerIcons[locationType],
 			iconSize: [35, 35],
 			className: isNewLocation ? 'blink' : '' // make it blink until the lat/lon is actually set
 		});
@@ -248,15 +255,17 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 		const locationTypeCode = $input.val();
 		for (const mapObject of Object.values(this.maps)) {
 			const layer = mapObject.layers[cardIndex];
-			const isBlinking = $(layer._icon).hasClass('blink');
-			const newIcon = L.icon({
-				iconUrl: this.markerIcons[locationTypeCode || 2], //default to camp icon
-				iconSize: [35, 35],
-				className: isBlinking ? 'blink' : '' // make it blink until the lat/lon is actually set
-			});
-			layer.setIcon(newIcon);
+			if (layer) {
+				const isBlinking = $(layer._icon).hasClass('blink');
+				const newIcon = L.icon({
+					iconUrl: this.markerIcons[locationTypeCode || 2], //default to camp icon
+					iconSize: [35, 35],
+					className: isBlinking ? 'blink' : '' // make it blink until the lat/lon is actually set
+				});
+				layer.setIcon(newIcon);
 
-			layer.setTooltipContent(locationLabel);
+				layer.setTooltipContent(locationLabel);
+			}
 		}
 	}
 
