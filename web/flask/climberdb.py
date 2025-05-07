@@ -1158,7 +1158,6 @@ def query_climbers():
 	if n_records:
 		index_where = f'WHERE row_number BETWEEN :min_index AND :max_index'
 
-	query_fields = '*' if query_all_fields else 'first_name, middle_name, last_name, full_name'
 	sql = ''
 	if search_string:
 		core_sql = f'''
@@ -1175,7 +1174,8 @@ def query_climbers():
 							regexp_replace(first_name, '\\W', '', 'g') AS re_first_name, 
 							regexp_replace(middle_name, '\\W', '', 'g') AS re_middle_name, 
 							regexp_replace(last_name, '\\W', '', 'g') AS re_last_name,
-							regexp_replace(full_name, '\\W', '', 'g') AS re_full_name
+							regexp_replace(full_name, '\\W', '', 'g') AS re_full_name,
+							email_address AS email
 						FROM {schema}.climber_info_view
 					)
 					SELECT *, 1 AS sort_order FROM climber_names WHERE 
@@ -1211,13 +1211,24 @@ def query_climbers():
 						)
 					UNION ALL
 					SELECT *, 6 AS sort_order FROM climber_names WHERE 
-						similarity(re_full_name, :search_string || '%%') > 0.5 AND 
+						similarity(re_full_name, :search_string) > 0.5 AND 
 						(
 							re_first_name NOT ILIKE :search_string || '%%' OR
 							re_first_name || re_middle_name NOT ILIKE :search_string || '%%' OR
 							re_first_name || re_last_name NOT ILIKE :search_string || '%%' OR 
 							re_last_name NOT ILIKE :search_string || '%%' OR
 							re_middle_name || re_last_name NOT ILIKE :search_string || '%%'
+						)
+					UNION ALL
+					SELECT *, 7 AS sort_order FROM climber_names WHERE 
+						similarity(lower(email), lower(:email_search_string)) > 0.5 AND 
+						(
+							re_first_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_middle_name NOT ILIKE :search_string || '%%' OR
+							re_first_name || re_last_name NOT ILIKE :search_string || '%%' OR 
+							re_last_name NOT ILIKE :search_string || '%%' OR
+							re_middle_name || re_last_name NOT ILIKE :search_string || '%%' OR 
+							similarity(re_full_name, :search_string || '%%') <= 0.5
 						)
 				) t 
 				GROUP BY full_name, id
@@ -1257,6 +1268,7 @@ def query_climbers():
 	with ReadSession() as session:
 		params = {
 			'search_string': re.sub(r'\W', '', search_string),
+			'email_search_string': search_string, # don't remove special characters for email
 			'is_guide': is_guide,
 			'is_7_day': is_7_day,
 			'min_index': min_index,
@@ -1272,7 +1284,6 @@ def query_climbers():
 			response['count'] = cursor.first().count
 		
 		return jsonify(response)
-
 
 
 @app.route('/flask/db/select/expeditions', methods=['POST'])
