@@ -2691,7 +2691,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			cache: false
 		}).done(responseData => {
 			if (!this.pythonReturnedError(responseData, {errorExplanation: 'Your PDF could not be exported because of an unexpected error.'})) {
-				window.open(responseData, '_blank')
+				window.open(responseData, '_blank');
 			}
         }).always(() => {
         	this.hideLoadingIndicator()
@@ -2767,7 +2767,29 @@ class ClimberDBExpeditions extends ClimberDB {
 			}
 		}).done(responseData => {
 			if (!this.pythonReturnedError(responseData, {errorExplanation: 'The Special User Permit(s) could not be exported because of an unexpected error.'})) {	
-				window.open(responseData, '_blank');
+				const climbersMissingCountry = responseData.missing_country || {};
+				const path = responseData.path;
+				const nMissingCountry = climbersMissingCountry.length;
+				if (nMissingCountry) {
+					const climberLinks = climbersMissingCountry.map(
+						({climber_name, climber_id}) => `
+							<li>
+								<a href="climbers.html?id=${climber_id}" target="_blank">${climber_name}</a>
+							</li>
+						`
+					).join('')
+					const s = nMissingCountry > 1 ? 's' : '';
+					const message = 
+						`The following climber${nMissingCountry > 1 ? 's do' : ' does'} not have` +
+						` a country selected in their climber profile. This information is required` +
+						` before you can create the Special Use Permit${s}. Click the link${s} below` +
+						` to edit climber information. <ul>${climberLinks}</ul>`;
+					this.showModal(message, 'Missing Country Information');
+				} else if (path.length) {
+					window.open(path, '_blank');
+				} else {
+					this.showModal('There was a problem with your export. ' + this.getDBContactMessage(), 'Unexpected Error')
+				}
 			}
 		}).fail((xhr, status, error) => {
 			const message = 'The Special User Permit(s) could not be exported because' +
