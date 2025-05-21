@@ -696,6 +696,8 @@ def export_special_use_permit():
 	expedition_id = request.form['expedition_id']
 	expedition_name = request.form['expedition_name']
 
+	climbers_missing_country = []
+
 	# Query data from DB
 	expedition_member_ids = permit_data.keys()
 	with ReadSession() as session:
@@ -717,6 +719,11 @@ def export_special_use_permit():
 			# Combine the client-side and DB data
 			member_data = dict(**permit_data[member_id], **orm_to_dict(row))
 			
+			if not row.country:
+				climbers_missing_country.append({
+					'climber_name': row.climber_name, 
+					'climber_id': row.climber_id
+				})
 			reader = PdfReader(pdf_path)
 			writer = PdfWriter()
 
@@ -739,7 +746,10 @@ def export_special_use_permit():
 			
 			# If there's only one PDF to create, just return that path
 			if len(expedition_member_ids) == 1:
-				return 'exports/' + pdf_filename
+				return jsonify({
+					'missing_country': climbers_missing_country,
+					'path': 'exports/' + pdf_filename
+				})
 			else:
 				output_pdfs.append(output_pdf)
 
@@ -771,7 +781,10 @@ def export_special_use_permit():
 			for pdf_path in output_pdfs:
 				z.write(pdf_path, arcname=os.path.basename(pdf_path))
 
-	return 'exports/' + output_filename
+	return jsonify({
+				'missing_country': climbers_missing_country,
+				'path': 'exports/' + output_filename
+			})
 
 
 # Default 
