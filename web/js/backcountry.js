@@ -789,11 +789,10 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			this.onLocationTypeChange({target: $card.find('.input-field[name=backcountry_location_type_code]')})
 		}
 
-		// // Set the map's extent to either the default or the minimum bounding box of all locations
-		// const locationData = Object.values(this.expeditionInfo.itinerary_locations.data)
-		// const latitudes = locationData.map(({latitude}) => latitude);
-		// const longitudes = locationData.map(({longitude}) => longitude);
-		// const minLat = 
+		// addLocationToMap will trigger change event, which will turn 
+		//	beforeunload listener on
+		this.toggleBeforeUnload(false);
+
 	}
 	
 
