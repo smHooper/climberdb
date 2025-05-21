@@ -233,7 +233,7 @@ class ClimberDB {
 			}
 		}
 		this.urlChannels = {}; // for checking if a URL is already open in another tab/window
-		this.nonEditingUserRoles = [2, 5]; // for checking if user has edit privs
+		this.nonEditingUserRoles = [5]; // for checking if user has edit privs
 		this.environment = '';
 		this.dbSchema = '';
 		this.defaultMapCenter = [63, -150.9];
