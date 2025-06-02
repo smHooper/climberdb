@@ -323,17 +323,20 @@ class ClimberDBBriefings extends ClimberDB {
 		return multiple;
 	}
 
+
 	/*
 	(re)Calculate the CSS grid start column (end column will fill to the max). 
 		1. Find the max number of columns for any time slot
-		2. Find the max start column for each briefing
-	This method is called when the daily schedule details need to be loaded/changed 
+		2. Set columns in order of start time and duration
+		3. For each column, find the first slot that isn't already occupied
+	This metqhod is called when the daily schedule details need to be loaded/changed 
 	and when exporting to Excel. The setUI parameter should be set to true unless
 	exporting to Excel
 	*/
 	setBriefingAppointmentColumns({appointmentTimes=[], dateString='', setUI=true}={}) {
 		
 		if (!appointmentTimes.length) appointmentTimes = this.getAppointmentTimes();
+		
 
 		dateString = dateString || $('.calendar-cell.selected').data('date');
 
@@ -342,6 +345,9 @@ class ClimberDBBriefings extends ClimberDB {
 		//	first (further left), which is more visually coherent
 		const sortedBriefings = Object.values(this.briefings[dateString] || [])
 			.sort((a, b) => {
+				const startDiff = new Date(a.briefing_start) - new Date(b.briefing_start);
+				if (startDiff !== 0) return startDiff;
+
 				const aDuration =  new Date(a.briefing_end) - new Date(a.briefing_start);
 				const bDuration = new Date(b.briefing_end) - new Date(b.briefing_start);
 				return (bDuration > aDuration) - (aDuration > bDuration);
@@ -363,6 +369,17 @@ class ClimberDBBriefings extends ClimberDB {
 		const uniqueCounts = [... new Set(briefingCountPerRow)];
 		const nColumns = this.leastCommonMultiple(uniqueCounts);
 
+		// Keep track of what cells are free
+		const nRows = appointmentTimes.length;
+		let columnOccupancy = Array.from({length: nRows}, () => Array(nColumns).fill(null));
+		
+		// Helper function to set an appointment in the columnOccupancy array
+		const fillSlot = (value, rowStart, rowEnd, colStart, colEnd) => {
+			for (let row=rowStart; row < rowEnd; row++) {
+				columnOccupancy[row].fill(value, colStart, colEnd); // fill inclusive
+			}
+		}
+
 		// Loop through the sorted briefings (longest to shortest) and set their
 		//	horizontal extents
 		let placedBriefings = {};
@@ -382,22 +399,46 @@ class ClimberDBBriefings extends ClimberDB {
 			//	number of briefings in the most crowded row
 			const briefingWidth = nColumns / longestRow.length
 			
-			// Because the briefings were initially sorted by length in the first for loop,
-			//	the start column can be reliably calculated by getting this briefing's index
-			//	in the longest row without the possibility of any briefing containers overlapping
-			const startColumn = longestRow.indexOf(briefingID) * briefingWidth + 1; 
-			const endColumn = startColumn + briefingWidth;
+			
+			// // Because the briefings were initially sorted by length in the first for loop,
+			// //	the start column can be reliably calculated by getting this briefing's index
+			// //	in the longest row without the possibility of any briefing containers overlapping
+			// let startColumn = longestRow.indexOf(briefingID) * briefingWidth + 1,
+			// 	endColumn = startColumn + briefingWidth;
+			
+			let startArrayColumn = -1;
+			for (let col = 0; col < nColumns; col += briefingWidth) {
+				const isFree = columnOccupancy.slice(rowStart, rowEnd)
+					.map(row => row.slice(col, col + briefingWidth))
+					.flat()
+					.every(v => v === null);
+				if (isFree) {
+					startArrayColumn = col;
+					break;
+				}
+			}
+			if (startArrayColumn === -1) {
+				console.log('could not find a free spot for briefing ID ' + briefingID);
+				startArrayColumn = nColumns;
+			}
+			const endArrayColumn = startArrayColumn + briefingWidth,
+				startGridColumn = startArrayColumn + 1,
+				endGridColumn = endArrayColumn + 1;
 
 			if (setUI) {
-				$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`).css('grid-column', `${startColumn} / ${endColumn}`);
+				$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`)
+					.css('grid-column', `${startGridColumn} / ${endGridColumn}`);
 			}
 			const id = parseInt(briefingID);
-			placedBriefings[id] = {startColumn: startColumn, endColumn: endColumn}
+			fillSlot(id, rowStart, rowEnd, startArrayColumn, endArrayColumn)
+			placedBriefings[id] = {startColumn: startGridColumn, endColumn: endGridColumn} //1-based index
+			
 		}
 
 		return placedBriefings;
 
 	}
+
 
 
 	/*
@@ -789,6 +830,8 @@ class ClimberDBBriefings extends ClimberDB {
 					this.setViewNotesTooltip($selectedAppointment.find('.view-notes-button'), info.briefing_notes);
 
 				}
+				// Reset the appointment layout
+				this.setBriefingAppointmentColumns({setUI: true});
 
 				$('.input-field.dirty').removeClass('dirty');
 				this.toggleBeforeUnload(false);
