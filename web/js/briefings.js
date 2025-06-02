@@ -327,8 +327,9 @@ class ClimberDBBriefings extends ClimberDB {
 	/*
 	(re)Calculate the CSS grid start column (end column will fill to the max). 
 		1. Find the max number of columns for any time slot
-		2. Find the max start column for each briefing
-	This method is called when the daily schedule details need to be loaded/changed 
+		2. Set columns in order of start time and duration
+		3. For each column, find the first slot that isn't already occupied
+	This metqhod is called when the daily schedule details need to be loaded/changed 
 	and when exporting to Excel. The setUI parameter should be set to true unless
 	exporting to Excel
 	*/
@@ -415,6 +416,10 @@ class ClimberDBBriefings extends ClimberDB {
 					startArrayColumn = col;
 					break;
 				}
+			}
+			if (startArrayColumn === -1) {
+				console.log('could not find a free spot for briefing ID ' + briefingID);
+				startArrayColumn = nColumns;
 			}
 			const endArrayColumn = startArrayColumn + briefingWidth,
 				startGridColumn = startArrayColumn + 1,
