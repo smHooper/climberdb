@@ -830,6 +830,8 @@ class ClimberDBBriefings extends ClimberDB {
 					this.setViewNotesTooltip($selectedAppointment.find('.view-notes-button'), info.briefing_notes);
 
 				}
+				// Reset the appointment layout
+				this.setBriefingAppointmentColumns({setUI: true});
 
 				$('.input-field.dirty').removeClass('dirty');
 				this.toggleBeforeUnload(false);
