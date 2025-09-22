@@ -1901,16 +1901,13 @@ class ClimberDB {
 		if (fieldName in values) {
 			if (isCheckbox) {
 				$el.prop('checked', value);
+			} else if (isSelect) {
+				$el.val(valueIsNull ? '' : value); //if the db record isn't filled in, set it to the default
+				$el.toggleClass('default', valueIsNull || value == '');
+			} else if ($el.is('[type=date]') && !valueIsNull) {
+				$el.val(getFormattedTimestamp(new Date(value)));
 			} else {
-				
-				if (isSelect) {
-					$el.val(valueIsNull ? '' : value); //if the db record isn't filled in, set it to the default
-					$el.toggleClass('default', valueIsNull || value == '');
-				} else if ($el.is('[type=date]') && !valueIsNull) {
-					$el.val(getFormattedTimestamp(new Date(value)));
-				} else {
-					$el.val(value);
-				}
+				$el.val(value);
 			}
 		} else if (isSelect) {
 			$el.addClass('default')
@@ -1943,9 +1940,9 @@ class ClimberDB {
 			// if it's a checkbox, return the 'checked' property, which is a boolean
 			$input.is('.input-checkbox') ? $input.prop('checked') : 
 			
-			// if it's a datetime type and the value is null, return null because 
+			// if it's a datetime type or number and the value is null, return null because 
 			//	sending '' to the server throws an error when saving
-			$input.is('[type=date], [type=datetime-local], [type=time], select') && val === '' ? null : 
+			$input.is('[type=date], [type=datetime-local], [type=time], [type=number], select') && val === '' ? null : 
 			
 			// otherwise, just return the value
 			val;
