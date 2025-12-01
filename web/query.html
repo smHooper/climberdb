@@ -73,6 +73,7 @@
 						<li class="query-option" role="button" data-query-name="count_climbers" id="count-bc-groups-by-location-button" data-tags="count, backcountry, bc, active, on mountain, itinerary, location"> Count backcountry groups by location/status</li>
 						<li class="query-option" role="button" data-query-name="pro_pins" data-tags="climber, epeditions, pro, pro pin">Query Pro Pins</li>
 						<li class="query-option" role="button" data-query-name="medical_issues" id="medical-query-button" data-tags="medical, altitude, illness, injury, frostbite, hace, hape, sickness">Medical issues</li>
+						<li class="query-option" role="button" data-query-name="sar" id="medical-query-button" data-tags="sar, search, rescue, medical, altitude, illness, injury, frostbite, hace, hape, sickness">Search and rescue</li>
 					</ul>
 					<h4 id="no-query-match-message" class="hidden" aria-hidden="true">No queries match your search</h4>
 				</div>
@@ -728,6 +729,24 @@
 									<option value="">Year</option>
 								</select>
 								<label class="field-label" for="medical_issues-year">Year</label>
+							</div>	
+						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="sar">
+							<h4 class="w-100 mb-3">Search and Rescue Query Parameters</h4>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="sar-year" class="input-field default no-option-fill year-select-field nullable" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="sar-year">Year</label>
+							</div>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="sar-fatality_yes_no" class="input-field default no-option-fill keep-default-option nullable" name="sar_fatality_yes_no" title="Fatality? (yes/no)">
+									<option value=" ">Fatality? (yes/no)</option>
+									<option value="sar_fatality AND">Yes</option>
+									<option value="NOT sar_fatality AND">No</option>
+								</select>
+								<label class="field-label" for="sar-year">Fatality? (yes/no)</label>
 							</div>	
 						</div>
 					</div>

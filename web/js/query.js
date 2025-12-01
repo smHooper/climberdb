@@ -531,6 +531,42 @@ class ClimberDBQuery extends ClimberDB {
 					'Expedition Name': 'justify-content-start',
 					'Frostbite Details': 'justify-content-start'
 				}
+			},
+			sar: {
+				sql: `
+					SELECT 
+						expedition_members.expedition_id,
+						expedition_members.climber_id,
+						climbers.first_name || ' ' || climbers.last_name AS "Climber Name",
+						expeditions.expedition_name AS "Expedition Name",
+						sar_incident_number AS "Case Incident Number",
+						CASE WHEN expedition_members.sar_fatality THEN 'Yes' ELSE 'No' END AS "Fatality"
+					FROM 
+						{schema}.expeditions 
+							JOIN {schema}.expedition_members ON expeditions.id = expedition_members.expedition_id
+							JOIN {schema}.climbers ON expedition_members.climber_id = climbers.id
+					WHERE 
+						sar_initiated AND 
+						{sar_fatality_yes_no}
+						extract(year FROM expeditions.actual_departure_date) {year}
+						
+					;
+				`,
+				columns: [
+					'Climber Name',
+					'Expedition Name',
+					'Case Incident Number',
+					'Fatality'
+				],
+				hrefs: {
+					'Climber Name': 'climbers.html?id={climber_id}',
+					'Expedition Name': 'expeditions.html?id={expedition_id}',
+				},
+				cssColumnClasses: {
+					'Climber Name': 'justify-content-start',
+					'Expedition Name': 'justify-content-start',
+					'Frostbite Details': 'justify-content-start'
+				}
 			}
 		};
 		return this;
