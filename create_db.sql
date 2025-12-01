@@ -156,6 +156,9 @@ CREATE TABLE IF NOT EXISTS expedition_members (
 	is_guiding BOOLEAN,
 	is_interpreter BOOLEAN,
 	received_pro_pin BOOLEAN, -- in new DB this should be recorded per expedition member, not per climber
+	sar_initiated BOOLEAN,
+	sar_incident_number VARCHAR(50),
+	sar_fatality BOOLEAN,
 	frostbite_severity_code INTEGER REFERENCES frostbite_severity_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	frostbite_details VARCHAR(255),
 	had_ams BOOLEAN,
@@ -414,7 +417,10 @@ CREATE OR REPLACE VIEW climber_history_view AS
 		expeditions.actual_departure_date, 
 		expeditions.actual_return_date,
 		expeditions.is_backcountry,
-		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code 
+		coalesce(expedition_status_view.expedition_status, 1) AS group_status_code,
+		expedition_members.sar_initiated,
+		expedition_members.sar_incident_number,
+		expedition_members.sar_fatality
 	FROM expedition_member_routes 
 		JOIN expedition_members ON expedition_member_routes.expedition_member_id=expedition_members.id 
 		JOIN expeditions ON expedition_members.expedition_id=expeditions.id 
@@ -518,6 +524,9 @@ CREATE OR REPLACE VIEW expedition_info_view AS
 		expedition_members.is_interpreter,
 		expedition_members.received_pro_pin,
 		expedition_members.reason_for_pro_pin,
+		expedition_members.sar_initiated,
+		expedition_members.sar_incident_number,
+		expedition_members.sar_fatality,
 		expedition_members.application_complete,
 		expedition_members.psar_complete,
 		expedition_members.frostbite_severity_code,
