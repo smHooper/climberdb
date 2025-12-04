@@ -1793,3 +1793,8 @@ input[type=number] {
   .col-xxl-11{flex: 0 0 91.666667%;   max-width: 91.666667%;}
   .col-xxl-12{flex: 0 0 100%;     max-width: 100%;}
 }
+
+/*-------------- Utilties --------------*/
+.pointer-events-none {
+  pointer-events: none;
+}
