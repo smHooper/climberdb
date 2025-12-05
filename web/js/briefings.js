@@ -10,6 +10,7 @@ class ClimberDBBriefings extends ClimberDB {
 		this.edits = {};
 		this.currentBriefing = {};
 		this.urlQueryParams = {};
+		this.guideCompanyColors = {};
 		return this;
 	}
 
@@ -41,6 +42,7 @@ class ClimberDBBriefings extends ClimberDB {
 	Show the calendar for the given (0-indexed) month and year
 	*/
 	setCalendarDates(month, year) {
+
 		const $calendarBody = $('.calendar-body-container').empty();
 
 		var date = new Date(year, month, 1);
@@ -549,8 +551,11 @@ class ClimberDBBriefings extends ClimberDB {
 	Helper function to standardize the HTML of an appointment container
 	*/
 	getBriefigAppointmentHTML(briefingInfo, rowIndexStart, rowIndexEnd) {
+		
+		const guideCompanyCode = briefingInfo.guide_company_code;
+		const colorClass = this.guideCompanyColors[guideCompanyCode]?.class || '';
 		const $appointment = $(`
-			<div class="briefing-appointment-container" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}"">
+			<div class="briefing-appointment-container ${colorClass}" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}"">
 				<label class="briefing-appointment-header"></label>
 				<p class="briefing-appointment-text">
 					<span class="briefing-details-routes"></span><br>
@@ -2013,18 +2018,50 @@ class ClimberDBBriefings extends ClimberDB {
 	}
 
 
+	getGuideCompanyColors() {
+		return this.queryDB({
+			where: {
+				guide_company_codes: [
+					{
+						column_name: 'sort_order', 
+						operator: 'is not', 
+						comparand: 'null'
+					},
+					{
+						column_name: 'code', 
+						operator: '<>', 
+						comparand: -1
+					}
+
+				]
+			}
+		}).then(result => {
+			if (!this.pythonReturnedError(result)) {
+				for (const i in result.data) {
+					const info = result.data[i];
+					this.guideCompanyColors[info.code] = {
+						guideCompanyName: info.name,
+						class: `alt-color-${parseInt(i) + 1}`
+					}
+				}
+			}
+		})
+	}
+
+
 	init() {
 
 		showLoadingIndicator('init');
 
 		// Call super.init()
-		var initDeferreds = super.init();
-		
+		var initDeferreds = super.init()
+
 		// Do synchronous stuff
 		this.configureMainContent();
 
 		
-		initDeferreds.then(() => {
+		$.when(this.getGuideCompanyColors(), initDeferreds)
+			.then(() => {
 			$.when(...this.fillBriefingDetailSelects())
 				.then(() => {
 					this.queryBriefings();
