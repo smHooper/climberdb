@@ -35,19 +35,19 @@ label {
 	margin: 0 20px; /*set space between nav buttons and label*/
 	line-height: 40px; /* center text vertically*/
 }
-.month-navigation-container > button {
+.month-navigation-container > .show-previous-month-button {
 	padding: 12px;
 	height: 40px;
 	width: 40px;
 	transition: 0.5s all;
 }
-.month-navigation-container > button > i {
+.month-navigation-container > .show-previous-month-button > i {
 	color: #00679b;
 	position: relative;
     top: -4px; /* chevrons needs to be offset for some reason*/
 }
-.month-navigation-container > button:not(:disabled):hover, 
-.month-navigation-container > button:not(:disabled):focus{
+.month-navigation-container > .show-previous-month-button:not(:disabled):hover, 
+.month-navigation-container > .show-previous-month-button:not(:disabled):focus{
 	border-radius: 40px;
 	background-color: rgba(255, 255, 255, 0.3);
 }
@@ -150,15 +150,16 @@ label {
 
 .briefing-details-sidebar-header-container {
 	display: flex;
+	flex-wrap: wrap;
 }
 .briefing-details-sidebar-header-container .icon-button {
 	width: 70px;
 }
 .briefing-details-sidebar-header {
-	max-width: calc(100% - 80px);
+	/*max-width: calc(100% - 80px);*/
 	text-align: center;
 	text-wrap: balance;
-	flex: 0 0 auto;
+	/*flex: 0 0 auto;*/
 }
 
 .briefing-details-sidebar-body {
@@ -221,7 +222,6 @@ label {
 
 .briefing-appointment-container {
 	position: relative;
-	background-color: var(--ui-primary-highlight-color);
 	color: white;
 	border-radius: 7px;
 	margin: 1px;
@@ -232,37 +232,71 @@ label {
 	transition: all 0.3s;
 	pointer-events: all;
 }
+.briefing-appointment-container,
+.color-guide-tooltip .color-swatch {
+	background-color: var(--ui-primary-highlight-color);
+}
 
 /*colors get assigned to each guiding company in briefings.js*/
-.briefing-appointment-container.alt-color-1 {
+.briefing-appointment-container.alt-color-1,
+.color-guide-tooltip .color-swatch.alt-color-1 {
 	background-color: var(--sunrise-linear-gradient-blue);
 	color: black;
 }
-.briefing-appointment-container.alt-color-2 {
+.briefing-appointment-container.alt-color-2,
+.color-guide-tooltip .color-swatch.alt-color-2 {
 	background-color: var(--ui-primary-text-color);
 }
-.briefing-appointment-container.alt-color-3 {
+.briefing-appointment-container.alt-color-3,
+.color-guide-tooltip .color-swatch.alt-color-3 {
 	background-color: var(--ui-secondary-highlight-color);
 	color: black;
 }
-.briefing-appointment-container.alt-color-4 {
+.briefing-appointment-container.alt-color-4,
+.color-guide-tooltip .color-swatch.alt-color-4 {
 	background-color: var(--ui-bg-dark-blue);
 }
-.briefing-appointment-container.alt-color-5 {
+.briefing-appointment-container.alt-color-5,
+.color-guide-tooltip .color-swatch.alt-color-5 {
 	background-color: var(--ui-desaturated-color);
 }
-.briefing-appointment-container.alt-color-6 {
+.briefing-appointment-container.alt-color-6,
+.color-guide-tooltip .color-swatch.alt-color-6 {
 	background-color: var(--sunrise-linear-gradient-yellow);
 	color: black;
 }
-.briefing-appointment-container.alt-color-7 {
+.briefing-appointment-container.alt-color-7,
+.color-guide-tooltip .color-swatch.alt-color-7 {
 	background-color: var(--ui-primary-color);
 }
-.briefing-appointment-container.alt-color-8 {
+.briefing-appointment-container.alt-color-8,
+.color-guide-tooltip .color-swatch.alt-color-8 {
 	background-color: #f98455;
 	color: black;
 }
 /*palette: https://coolors.co/f28100-f9b455-5abccd-ffe7aa-00679b-023047-faaf00-4d819b-219ebc*/
+.color-guide-tooltip {
+	background-color: var(--ui-bg-lighter-gray);
+	box-shadow: 0px 2px 13px 2px rgb(0 0 0 / 30%);
+	padding: .75rem 1.5rem;
+	border-radius: .5rem;
+}
+.color-guide-tooltip .color-swatch {
+	width: 1.5rem;
+	margin-right: 2rem;
+}
+.color-guide-tooltip ul {
+	list-style: none;
+	padding-inline-start: 0;
+}
+.color-guide-tooltip ul > li {
+	display: flex;
+	margin-bottom: .5rem;
+}
+.color-guide-tooltip ul > li > * {
+	height: 1.5rem;
+	line-height: 1.5rem;
+}
 
 .briefing-appointment-container.selected {
 	z-index: 100;
@@ -303,11 +337,6 @@ label {
 }
 .tooltip-container .tooltip {
     pointer-events: none;
-    padding: 10px;
-    border-radius: 5px;
-    color: white;
-    background-color: var(--ui-bg-dark-blue);
-    max-width: 200px;
     z-index: 10;
     left: 50%;
     transform: translateX(-50%);
@@ -315,7 +344,14 @@ label {
     height: fit-content;
     width: max-content;
 }
-.tooltip-container:before {
+.briefing-appointment-container .tooltip {
+	padding: 10px;
+	border-radius: 5px;
+	color: white;
+	background-color: var(--ui-bg-dark-blue);
+	max-width: 200px;
+}
+.briefing-appointment-container .tooltip-container:before {
     content: "";
     border-width: 5px;
     border-style: solid;
@@ -339,6 +375,7 @@ label {
     opacity: 1;
     pointer-events: auto;
 }
+
 /* --------------View notes button/tootlip --------------- */
 
 
@@ -440,13 +477,14 @@ label {
 }
 #weekly-view-modal .modal-header .month-navigation-container > button {
 	position: relative;
+	top: -5px;
 }
-#weekly-view-modal .modal-header .month-navigation-container > button > label,
+/*#weekly-view-modal .modal-header .month-navigation-container > button > label,
 #weekly-view-modal .modal-header .month-navigation-container > button > i {
 	position: relative;
 	top: -10px;
 	color: var(--ui-primary-color);
-}
+}*/
 #weekly-view-modal > .modal-dialog > .modal-content {
 	height: 100%;
 	overflow-y: auto;

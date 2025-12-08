@@ -73,7 +73,24 @@
 							<label class="icon-button-label ">expand</label>
 						</button>
 						<div class="d-flex col justify-content-center">
-							<h3 class="briefing-details-sidebar-header"></h3>
+							<div class="d-flex flex-wrap justify-content-center">
+								<h3 class="briefing-details-sidebar-header"></h3>
+								<button class="w-100 text-only-button show-guide-company-colors-button tooltip-container" aria-live="off">
+									<h6>Show color legend</h6>
+									<div class="tooltip color-guide-tooltip" role="status">
+										<div class="w-100 d-flex justify-content-end">
+											<h5 class="col text-center">Guide Company Colors</h5>
+											<span class="close-tooltip close close-button" role="button">&times;</span>
+										</div>
+										<ul>
+											<li id="default-color-guide-item">
+												<div class="color-swatch"></div>
+												<label class="color-guide-swatch-label">None</label>
+											</li>
+										</ul>
+									</div>
+								</button>
+							</div>
 							<button id="open-export-modal-button" class="icon-button ml-3" type="button" aria-label="Open exports menu" title="Open exports menu" aria-hidden="false">
 								<i class="fas fa-2x fa-file-export"></i>
 								<label class="icon-button-label ">export</label>
@@ -83,6 +100,22 @@
 							<i class="fas fa-arrow-right fa-arrow-to-right fa-lg"></i>
 							<label class="icon-button-label ">collapse</label>
 						</button>
+						<div class="w-100"></div>
+<!-- 						<button class="w-100 text-only-button show-guide-company-colors-button tooltip-container" aria-live="off">
+							<h6>Show guide company color legend</h6>
+							<div class="tooltip color-guide-tooltip" role="status">
+								<div class="w-100 d-flex justify-content-end">
+									<h5 class="col text-center">Guide Company Colors</h5>
+									<span class="close-tooltip close close-button" role="button">&times;</span>
+								</div>
+								<ul>
+									<li id="default-color-guide-item">
+										<div class="color-swatch"></div>
+										<label class="color-guide-swatch-label">None</label>
+									</li>
+								</ul>
+							</div>
+						</button> -->
 					</div>
 					<div class="briefing-details-sidebar-body">
 						<div class="time-label-container">
@@ -291,11 +324,22 @@
 			<div class="modal-content">
 		    	<div class="modal-header">
 		    		<div class="month-navigation-container">
-						<button class="icon-button mr-3 transparent pointer-events-none" type="button" aria-hidden="true">
-							<i class="fas fa-2x fa-file-export"></i>
-							<label class="icon-button-label "></label>
+						<button class="text-only-button show-guide-company-colors-button tooltip-container mr-5" aria-live="off">
+							<h6>Show color legend</h6>
+							<div class="tooltip color-guide-tooltip" role="status">
+								<div class="w-100 d-flex justify-content-end">
+									<h5 class="col text-center">Guide Company Colors</h5>
+									<span class="close-tooltip close close-button" role="button">&times;</span>
+								</div>
+								<ul>
+									<li id="default-color-guide-item">
+										<div class="color-swatch"></div>
+										<label class="color-guide-swatch-label">None</label>
+									</li>
+								</ul>
+							</div>
 						</button>
-						<label id="current-week-label" class="month-label" aria-live="polite"></label>
+						<h3 id="current-week-label" class="month-label" aria-live="polite"></h3>
 						<button id="export-weekly-briefing-calendar-button" class="icon-button ml-3" type="button" aria-label="Export weekly briefings" title="Export weekly briefings" aria-hidden="false">
 							<i class="fas fa-2x fa-file-export"></i>
 							<label class="icon-button-label ">export</label>

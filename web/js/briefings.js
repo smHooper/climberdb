@@ -320,6 +320,11 @@ class ClimberDBBriefings extends ClimberDB {
 			const $button = $(e.target).closest('button');
 			this.onShowWeeklyViewModalButtonClick($button);
 		});
+
+		// Hide the tooltip by focusing on a different element
+		$(document).on('click', '.close-tooltip', e => {
+			$('#open-export-modal-button').focus();
+		});
 	
 	}
 
@@ -2039,10 +2044,16 @@ class ClimberDBBriefings extends ClimberDB {
 			if (!this.pythonReturnedError(result)) {
 				for (const i in result.data) {
 					const info = result.data[i];
+					const colorClass = `alt-color-${parseInt(i) + 1}`;
 					this.guideCompanyColors[info.code] = {
 						guideCompanyName: info.name,
-						class: `alt-color-${parseInt(i) + 1}`
+						class: colorClass
 					}
+					const $li = $('#default-color-guide-item').clone();
+					$li.find('.color-swatch').addClass(colorClass);
+					$li.find('.color-guide-swatch-label').text(info.name);
+					$li.appendTo('.color-guide-tooltip ul');
+
 				}
 			}
 		})
