@@ -222,7 +222,6 @@ label {
 
 .briefing-appointment-container {
 	position: relative;
-	color: white;
 	border-radius: 7px;
 	margin: 1px;
 	grid-column-end: fit-content;/*set default*/
@@ -235,6 +234,7 @@ label {
 .briefing-appointment-container,
 .color-guide-tooltip .color-swatch {
 	background-color: var(--ui-primary-highlight-color);
+	color: white;
 }
 
 /*colors get assigned to each guiding company in briefings.js*/
@@ -246,6 +246,7 @@ label {
 .briefing-appointment-container.alt-color-2,
 .color-guide-tooltip .color-swatch.alt-color-2 {
 	background-color: var(--ui-primary-text-color);
+	color: white;
 }
 .briefing-appointment-container.alt-color-3,
 .color-guide-tooltip .color-swatch.alt-color-3 {
@@ -255,10 +256,12 @@ label {
 .briefing-appointment-container.alt-color-4,
 .color-guide-tooltip .color-swatch.alt-color-4 {
 	background-color: var(--ui-bg-dark-blue);
+	color: white;
 }
 .briefing-appointment-container.alt-color-5,
 .color-guide-tooltip .color-swatch.alt-color-5 {
 	background-color: var(--ui-desaturated-color);
+	color: white;
 }
 .briefing-appointment-container.alt-color-6,
 .color-guide-tooltip .color-swatch.alt-color-6 {
@@ -268,6 +271,7 @@ label {
 .briefing-appointment-container.alt-color-7,
 .color-guide-tooltip .color-swatch.alt-color-7 {
 	background-color: var(--ui-primary-color);
+	color: white;
 }
 .briefing-appointment-container.alt-color-8,
 .color-guide-tooltip .color-swatch.alt-color-8 {
