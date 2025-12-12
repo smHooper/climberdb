@@ -325,6 +325,10 @@ class ClimberDBBriefings extends ClimberDB {
 		$(document).on('click', '.close-tooltip', e => {
 			$('#open-export-modal-button').focus();
 		});
+
+		$('#export-weekly-briefing-calendar-button').click(e => {
+			this.onExportWeeklyBriefingsClick()
+		});
 	
 	}
 
@@ -436,6 +440,9 @@ class ClimberDBBriefings extends ClimberDB {
 				const bDuration = new Date(b.briefing_end) - new Date(b.briefing_start);
 				return (bDuration > aDuration) - (aDuration > bDuration);
 			});
+		if (sortedBriefings.length === 0) {
+			return {};
+		}
 		let briefingsPerRow = appointmentTimes.map(() => []);
 		let rowIndices = [];
 		for (const briefing of sortedBriefings) {
@@ -721,7 +728,8 @@ class ClimberDBBriefings extends ClimberDB {
 			const month = cellDate.getMonth() + 1; //0-based index so add 1
 			const dayOfMonth = cellDate.getDate();
 			$column.find('.weekly-view-modal-day-label > .short-date')
-				.text(`${month}/${dayOfMonth}`);
+				.text(`${month}/${dayOfMonth}`)
+				.data('date', dateString);
 
 			// Set briefings
 			const briefingAppointments = this.briefings[dateString];
@@ -1934,19 +1942,58 @@ class ClimberDBBriefings extends ClimberDB {
 	Export briefings to Excel. startDateStr and endDateStr should be in ISO 
 	date format YYYY-mm-dd
 	*/
-	exportBriefingSchedule(startDateStr, endDateStr) {
+	exportBriefingSchedule(startDateStr, endDateStr, {singleSheet=false}={}) {
 		// $startCalendarCell = $(`.calendar-cell[data-date=${startDateStr}]`);
 		// $endCalendarCell = $(`.calendar-cell[data-date=${endDateStr}]`);
 
 		showLoadingIndicator('exportBriefingSchedule');
 
 		var exportData = {
-			time_slots: $('.time-label').map((_, el) => el.innerHTML).get(),
-			briefings: {}
+			time_slots: $('#briefing-details-sidebar .time-label').map((_, el) => el.innerHTML).get(),
+			sheets: [] // each sheet is an object with dates as keys and a list of briefings as the values
 		};
 		const appointmentTimes = this.getAppointmentTimes();
 
 		var currentDate = new Date(startDateStr + ' 00:00');
+
+		// Define a helper function to convert RGB to HEX string. 
+		//	jQuery's .css('*color') will return the value as rgb() 
+		//	regardless of how it's defined in the CSS. 
+		const rgbToHex = (rgbString) => {
+			// rgbString is rgb(<r>, <g>, <b>) 
+			//	so remove everything except numbers and commas. 
+			//	Then split at commas
+			const [r, g, b] = rgbString
+				.replace(/[a-zA-z()\s]/g, '')
+				.split(',');
+			// To convert to hex, 
+			//	make the string an int, 
+			//	then convert to a base-16 string,
+			//	and add a leading 0 if necessary
+			const rHex = ('0' + parseInt(r).toString(16)).slice(-2);
+			const gHex = ('0' + parseInt(g).toString(16)).slice(-2);
+			const bHex = ('0' + parseInt(b).toString(16)).slice(-2);
+			
+			// return without leading '#' because that's how 
+			//	openpyxl expects it
+			return `${rHex}${gHex}${bHex}`;
+		}
+
+		// get Guide company colors
+		const guideCompanyColors = Object.fromEntries(
+			$('.color-guide-tooltip').first()
+				.find('.color-swatch')
+				.map((_, el) => {
+					const $el = $(el);
+					return [[
+						$el.data('guide-company-code'), 
+						{
+							background: rgbToHex($el.css('background-color')),
+							text: rgbToHex($el.css('color'))
+						}
+					]]
+				}).get()
+		)
 
 		while (currentDate <= new Date(endDateStr + ' 00:00')) {
 			
@@ -1966,18 +2013,29 @@ class ClimberDBBriefings extends ClimberDB {
 					${briefingInfo.ranger_last_name || ''}`.replace(/\t/g, '');
 				const {startColumn, endColumn} = columnIndices[id]; 
 				const [startRow, endRow] = this.getAppointmentRowIndex(briefingInfo, {appointmentTimes: appointmentTimes});
+				const colors = guideCompanyColors[briefingInfo.guide_company_code];
 				thisExportInfo.push({
 					expedition_name: briefingInfo.expedition_name,
-					briefing_text: briefingText,
+					// remove <em> tag because Excel should have only text, not markup
+					briefing_text: briefingText.replace(/<em>|<\/em>/g, ''),
 					comment: briefingInfo.briefing_notes || '',
 					// CSS Grid layout indices are inclusive at start and exclusive at end whereas 
 					//	openpyxl range indices are all inclusive, so subtract 1 from the end indices
-					cell_indices: [startRow, startColumn, endRow - 1, endColumn - 1]
+					cell_indices: [startRow, startColumn, endRow - 1, endColumn - 1],
+					background_color: colors.background,
+					text_color: colors.text
 				})
 				
 			}
-			exportData.briefings[thisDateStr] = thisExportInfo;
 
+			// If all dates should be shown on one sheet, add to the first sheet
+			if (singleSheet) {
+				exportData.sheets[0] = {...(exportData.sheets[0] || {}), [thisDateStr]: thisExportInfo};
+			} 
+			// Otherwise, add a new sheet 
+			else {
+				exportData.sheets.push({[thisDateStr]: thisExportInfo});
+			}
 			currentDate = currentDate.addDays(1);
 		}
 		
@@ -1985,7 +2043,7 @@ class ClimberDBBriefings extends ClimberDB {
 			url: 'flask/reports/briefing_schedule',
 			data: { // flask mutilates arrays in JS objects so stringify them
 				time_slots: JSON.stringify(exportData.time_slots),
-				briefings: JSON.stringify(exportData.briefings)
+				sheets: JSON.stringify(exportData.sheets)
 			}
 		}).done(resultString => {
 			const errorMessage = 'An unexpected error occurred while exporting the briefing schedule.';
@@ -2023,6 +2081,17 @@ class ClimberDBBriefings extends ClimberDB {
 	}
 
 
+	onExportWeeklyBriefingsClick() {
+		const startDateStr = $('.weekly-view-modal-day-label > .short-date')
+			.first()
+			.data('date');
+		const endDateStr = $('.weekly-view-modal-day-label > .short-date')
+			.last()
+			.data('date');
+
+		this.exportBriefingSchedule(startDateStr, endDateStr, {singleSheet: true}); 
+	}
+
 	getGuideCompanyColors() {
 		return this.queryDB({
 			where: {
@@ -2050,7 +2119,8 @@ class ClimberDBBriefings extends ClimberDB {
 						class: colorClass
 					}
 					const $li = $('#default-color-guide-item').clone();
-					$li.find('.color-swatch').addClass(colorClass);
+					$li.find('.color-swatch').addClass(colorClass)
+						.data('guide-company-code', info.code);
 					$li.find('.color-guide-swatch-label').text(info.name);
 					$li.appendTo('.color-guide-tooltip ul');
 
