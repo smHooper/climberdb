@@ -666,7 +666,7 @@ def get_transaction_history_html(expedition_id):
 def get_briefing_schedule():
 	data = dict(request.form)
 	data['time_slots'] = json.loads(data['time_slots'])
-	data['briefings'] = json.loads(data['briefings'])
+	data['sheets'] = json.loads(data['sheets'])
 
 	excel_filename = briefings_to_excel(data, get_content_dir('exports'))
 	

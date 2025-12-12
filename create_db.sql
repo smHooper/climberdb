@@ -643,7 +643,8 @@ CREATE OR REPLACE VIEW briefings_view AS
 	  t.expedition_name,
 	  users.first_name AS ranger_first_name,
 	  users.last_name AS ranger_last_name,
-	  users.ad_username AS ranger_username
+	  users.ad_username AS ranger_username,
+	  expeditions.guide_company_code
 	 FROM briefings
 	   JOIN ( SELECT expeditions.expedition_name,
 	          expedition_members.expedition_id,

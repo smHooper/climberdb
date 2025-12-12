@@ -10,12 +10,31 @@ class ClimberDBBriefings extends ClimberDB {
 		this.edits = {};
 		this.currentBriefing = {};
 		this.urlQueryParams = {};
+		this.guideCompanyColors = {};
 		return this;
 	}
 
 
 	getFormattedMonth(date=new Date()) {
-		return date.toLocaleDateString('en-us', {month: 'long', year: 'numeric'});
+		return date.toLocaleDateString(
+			'en-us', 
+			{
+				month: 'long', 
+				year: 'numeric'
+			}
+		);
+	}
+
+
+	getFormattedWeekday(date=new Date(), {weekday=undefined}={}) {
+		return date.toLocaleDateString(
+			'en-us', 
+			{
+				weekday: weekday,
+				month: 'long', 
+				day: 'numeric' 
+			}
+		);
 	}
 
 
@@ -23,6 +42,7 @@ class ClimberDBBriefings extends ClimberDB {
 	Show the calendar for the given (0-indexed) month and year
 	*/
 	setCalendarDates(month, year) {
+
 		const $calendarBody = $('.calendar-body-container').empty();
 
 		var date = new Date(year, month, 1);
@@ -42,6 +62,20 @@ class ClimberDBBriefings extends ClimberDB {
 			`);
 		}
 
+		// Define a function to call this code in multiple places
+		const addShowModalButton = () => {
+			$calendarBody.append(`
+				<button 
+					class="show-weekly-view-modal-button icon-button" 
+					aria-label="Expand expedition members content" 
+					title="Expand expedition members content"
+				>
+					<i class="expand-card-icon fa-solid fas fa-2x fa-expand-alt"></i>
+					<label class="icon-button-label">expand</label>
+				</button>
+			`)
+		}
+
 		// Get all dates for current month
 		var daysInMonth = 0;
 		while (date.getMonth() === month) {
@@ -56,6 +90,10 @@ class ClimberDBBriefings extends ClimberDB {
 				</div>
 			`);
 			date.setDate(dayOfMonth + 1);
+			// Put an expand week button at the end of each row
+			if ($('.calendar-cell').length % 7 === 0) { 
+				addShowModalButton();
+			}
 		}
 
 		// Add days for next month
@@ -70,9 +108,11 @@ class ClimberDBBriefings extends ClimberDB {
 			`);
 		}
 
-		$('.calendar-cell:not(.disabled)').click(e => {
-			this.onCalendarCellClick(e);
-		});
+		// If the month ended on any other day than Saturday, the show modal 
+		//	button wasn't added
+		if (endDayOfWeek < 6) {
+			addShowModalButton();
+		}
 
 	}
 
@@ -147,12 +187,16 @@ class ClimberDBBriefings extends ClimberDB {
 
 		const calendarDate = window.location.search.length ? this.getBriefingDateFromURL() : new Date();
 		
+		$(document).on('click', '.calendar-cell:not(.disabled)', e => {
+			this.onCalendarCellClick(e);
+		});
+
 		// Configure dates
 		$('#current-month-label')
 			.data('current-date', getFormattedTimestamp(calendarDate))
 			.text(this.getFormattedMonth(calendarDate));
 		$('.briefing-details-sidebar-header').text(
-			calendarDate.toLocaleDateString('en-us', {weekday: 'long', month: 'long', day: 'numeric' })
+			this.getFormattedWeekday(calendarDate, {weekday: 'long'})
 		);
 		$('#input-briefing_date')
 			.prop('min', `${calendarDate.getFullYear()}-1-1`)
@@ -163,42 +207,26 @@ class ClimberDBBriefings extends ClimberDB {
 
 		// Advance to next or previous month's calendar
 		$('.show-previous-month-button, .show-next-month-button').click(e => {
-			const nextButtonWasClicked = $(e.target).closest('button').is('.show-next-month-button');
-
-			// Because the selected date is going to change, if there are unsaved edits, check what the user wants to do
-			if ($('.input-field.dirty, .briefing-appointment-container.new-briefing').length) {
-				// Only close the drawer if the user saves or discards, not cancels
-				this.confirmSaveEdits({
-					afterActionCallback: () => {
-						this.closeAppointmentDetailsDrawer();
-						this.getPreviousNextMonth(nextButtonWasClicked);
-					}
-				});
-			} else {
-				// No edits to worry about so just close the drawer (if it's open) and go to the next month
-				this.closeAppointmentDetailsDrawer();
-				this.getPreviousNextMonth(nextButtonWasClicked);
-			}
-			
+			this.onShowPreviousNextMonthButtonClick(e);
 		});
 
 		$('button.half-hour-block:not(:last-child)')
 			.hover(e => {this.onTimeSlotHover(e)}, e => {this.onTimeSlotLostHover(e)})
 			.click(e => {this.onTimeSlotClick(e)});
-		$('.schedule-background .half-hour-block')
+		$('#briefing-details-sidebar .schedule-background .half-hour-block')
 			.hover(e => {this.onScheduleHover(e)}, e => {this.onScheduleLostHover(e)})
 			.click(e => {this.onScheduleSlotClick(e)})
 
 		// When the user clicks the expand or contract sidebar button, expand or contract it accordingly
 		$('.change-briefing-details-size-button').click(e => {
 			const $target = $(e.target);
-			const $sideBar = $('.briefing-details-sidebar');
+			const $sideBar = $('#briefing-details-sidebar');
 			const isExpanded = $sideBar.is('.expanded');
 			$sideBar.toggleClass('expanded', $target.closest('button').is('.expand-briefing-details-button'));
 		})
 
 		// bind click events to any .briefing-appointment-containers that might be clicked
-		$(document).on('click', '.briefing-appointment-container', e => {
+		$(document).on('click', '#briefing-details-sidebar .briefing-appointment-container', e => {
 			this.onBriefingAppointmentClick(e);
 		});
 
@@ -262,6 +290,46 @@ class ClimberDBBriefings extends ClimberDB {
 		$('#export-briefings-button').click(() => {
 			this.onExportBriefingsClick();
 		});
+
+		$(document).on('mouseenter', '.calendar-cell', e => {
+			const $cell = $(e.target).closest('.calendar-cell');
+			this.toggleCalendarCellHover($cell, {show: true});
+		});
+		$(document).on('mouseleave', '.calendar-cell', e => {
+			const $cell = $(e.target).closest('.calendar-cell');
+			this.toggleCalendarCellHover($cell, {show: false});
+		});
+
+		$(document).on('mouseenter', '.show-weekly-view-modal-button', e => {
+			const $button = $(e.target);
+			this.toggleShowWeeklyViewModalButtonHover(
+				$button, 
+				{addClass: true}
+			)
+		});
+
+		$(document).on('mouseleave', '.show-weekly-view-modal-button', e => {
+			const $button = $(e.target);
+			this.toggleShowWeeklyViewModalButtonHover(
+				$button, 
+				{addClass: false}
+			)
+		});
+
+		$(document).on('click', '.show-weekly-view-modal-button', e => {
+			const $button = $(e.target).closest('button');
+			this.onShowWeeklyViewModalButtonClick($button);
+		});
+
+		// Hide the tooltip by focusing on a different element
+		$(document).on('click', '.close-tooltip', e => {
+			$('#open-export-modal-button').focus();
+		});
+
+		$('#export-weekly-briefing-calendar-button').click(e => {
+			this.onExportWeeklyBriefingsClick()
+		});
+	
 	}
 
 
@@ -292,6 +360,26 @@ class ClimberDBBriefings extends ClimberDB {
 
 		$monthLabel.data('current-date', getFormattedTimestamp(newDate));
 		$monthLabel.text(this.getFormattedMonth(newDate));
+	}
+
+
+	onShowPreviousNextMonthButtonClick(e) {
+		const nextButtonWasClicked = $(e.target).closest('button').is('.show-next-month-button');
+
+		// Because the selected date is going to change, if there are unsaved edits, check what the user wants to do
+		if ($('.input-field.dirty, .briefing-appointment-container.new-briefing').length) {
+			// Only close the drawer if the user saves or discards, not cancels
+			this.confirmSaveEdits({
+				afterActionCallback: () => {
+					this.closeAppointmentDetailsDrawer();
+					this.getPreviousNextMonth(nextButtonWasClicked);
+				}
+			});
+		} else {
+			// No edits to worry about so just close the drawer (if it's open) and go to the next month
+			this.closeAppointmentDetailsDrawer();
+			this.getPreviousNextMonth(nextButtonWasClicked);
+		}
 	}
 
 
@@ -333,7 +421,7 @@ class ClimberDBBriefings extends ClimberDB {
 	and when exporting to Excel. The setUI parameter should be set to true unless
 	exporting to Excel
 	*/
-	setBriefingAppointmentColumns({appointmentTimes=[], dateString='', setUI=true}={}) {
+	setBriefingAppointmentColumns({appointmentTimes=[], dateString='', setUI=true, scheduleContainer='#briefing-details-sidebar .schedule-ui-container'}={}) {
 		
 		if (!appointmentTimes.length) appointmentTimes = this.getAppointmentTimes();
 		
@@ -352,6 +440,9 @@ class ClimberDBBriefings extends ClimberDB {
 				const bDuration = new Date(b.briefing_end) - new Date(b.briefing_start);
 				return (bDuration > aDuration) - (aDuration > bDuration);
 			});
+		if (sortedBriefings.length === 0) {
+			return {};
+		}
 		let briefingsPerRow = appointmentTimes.map(() => []);
 		let rowIndices = [];
 		for (const briefing of sortedBriefings) {
@@ -380,6 +471,7 @@ class ClimberDBBriefings extends ClimberDB {
 			}
 		}
 
+		const $scheduleContainer = $(scheduleContainer);
 		// Loop through the sorted briefings (longest to shortest) and set their
 		//	horizontal extents
 		let placedBriefings = {};
@@ -426,8 +518,9 @@ class ClimberDBBriefings extends ClimberDB {
 				endGridColumn = endArrayColumn + 1;
 
 			if (setUI) {
-				$(`.briefing-appointment-container[data-briefing-id=${briefingID}]`)
-					.css('grid-column', `${startGridColumn} / ${endGridColumn}`);
+				$scheduleContainer
+					.find(`.briefing-appointment-container[data-briefing-id=${briefingID}]`)
+						.css('grid-column', `${startGridColumn} / ${endGridColumn}`);
 			}
 			const id = parseInt(briefingID);
 			fillSlot(id, rowStart, rowEnd, startArrayColumn, endArrayColumn)
@@ -470,8 +563,11 @@ class ClimberDBBriefings extends ClimberDB {
 	Helper function to standardize the HTML of an appointment container
 	*/
 	getBriefigAppointmentHTML(briefingInfo, rowIndexStart, rowIndexEnd) {
+		
+		const guideCompanyCode = briefingInfo.guide_company_code;
+		const colorClass = this.guideCompanyColors[guideCompanyCode]?.class || '';
 		const $appointment = $(`
-			<div class="briefing-appointment-container" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}"">
+			<div class="briefing-appointment-container ${colorClass}" style="grid-row: ${rowIndexStart} / ${rowIndexEnd}"">
 				<label class="briefing-appointment-header"></label>
 				<p class="briefing-appointment-text">
 					<span class="briefing-details-routes"></span><br>
@@ -496,12 +592,12 @@ class ClimberDBBriefings extends ClimberDB {
 		}
 		if (!isNull(briefingInfo.routes)) {
 			$appointment.find('.briefing-details-routes')
-				.text(`Routes: ${briefingInfo.routes.replace(/; /g, ', ')}`);
+				.html(`Routes: ${briefingInfo.routes.replace(/; /g, ', ')}`);
 		}
 		if (!isNull(briefingInfo.n_members)) {
 			$appointment.find('.briefing-details-n-climbers')
 				.text(briefingInfo.n_members)
-				.siblings('briefing-details-climber-plural')
+				.siblings('.briefing-details-climber-plural')
 					.text(briefingInfo.n_members > 1 ? 's' : '');
 		}
 		if (!isNull(briefingInfo.ranger_last_name)) {
@@ -518,18 +614,23 @@ class ClimberDBBriefings extends ClimberDB {
 	only called when a new cell is selected and the schedule needs to be filled in and 
 	when discarding edits.
 	*/
-	addBriefingToSchedule(briefingInfo, {appointmentTimes=[]}={}) {
+	addBriefingToSchedule(
+		briefingInfo, 
+		{
+			scheduleContainer='#briefing-details-sidebar .schedule-ui-container', 
+			appointmentTimes=[]
+		}={}
+	) {
 		
 		const [rowIndexStart, rowIndexEnd] = this.getAppointmentRowIndex(briefingInfo, {appointmentTimes: appointmentTimes});
 
 		const notes = briefingInfo.briefing_notes;
 	
 		const $appointment = this.getBriefigAppointmentHTML(briefingInfo, rowIndexStart, rowIndexEnd)
-			.appendTo('.schedule-ui-container');
+			.appendTo(scheduleContainer);
 
 		this.setViewNotesTooltip($appointment.find('.view-notes-button'), notes);
 	}
-
 
 	/*
 	Helper method to select a cell after a user click. This is necessary to handle 
@@ -563,6 +664,111 @@ class ClimberDBBriefings extends ClimberDB {
 		this.closeAppointmentDetailsDrawer();
 	}
 
+
+	/*
+	Get the first and last day the week based on the index of the 
+	.show-weekly-view-modal button clicked. Each button is the 7th element in the 
+	row, so it's index * 7 will give the index of the last calendar cell for the 
+	corresponding week
+	*/
+	getWeekdayIndexRangeFromButton($button) {
+		const buttonIndex = $button
+			.closest('button') // make sure it's always the button, not a child
+			.index('.show-weekly-view-modal-button');
+		const lastIndexOfWeek = (buttonIndex + 1) * 7 - 1;  // 6 because index is 0-based
+		const firstIndexOfWeek = lastIndexOfWeek - 6;
+		
+		return {
+			firstIndexOfWeek: firstIndexOfWeek,
+			lastIndexOfWeek:  lastIndexOfWeek
+		}
+	}
+
+	/*
+	Toggle the .show class .show-weekly-view-modal button for the week corresponding 
+	to the calendar cell that the user is hovering/ending hover over 
+	*/
+	toggleCalendarCellHover($cell, {show=true}={}) {
+		const index = $cell.index('.calendar-cell');
+		const weekIndex = Math.floor(index / 7);
+		//const shownIndex = $('.show-weekly-view-modal-button.show').index('.show-weekly-view-modal-button');
+		$('.show-weekly-view-modal-button').eq(weekIndex).toggleClass('show', show);
+	}
+
+	/*
+	Event handler for both mouseover and mouseout events on .show-weekly-view-modal-button
+	*/
+	toggleShowWeeklyViewModalButtonHover($button, {addClass=true}) {
+
+		const {firstIndexOfWeek, lastIndexOfWeek} = this.getWeekdayIndexRangeFromButton($button);
+		const $calendarElements = $('.calendar-cell');
+		for (let i=firstIndexOfWeek; i <= lastIndexOfWeek; i++) {
+			$calendarElements.eq(i).toggleClass('expand-button-hover', addClass);
+		}
+	}
+
+	/*
+	Handler for .show-weekly-view-modal buttons
+	*/
+	onShowWeeklyViewModalButtonClick($button) {
+
+		const {firstIndexOfWeek, lastIndexOfWeek} = this.getWeekdayIndexRangeFromButton($button);
+		const $calendarElements = $('.calendar-cell');
+		const $modalColumns = $('.weekly-view-modal-day-col');
+		const appointmentTimes = this.getAppointmentTimes();
+		let firstDate,
+			lastDate;
+		for (let i=firstIndexOfWeek; i <= lastIndexOfWeek; i++) {
+			const $calendarCell = $calendarElements.eq(i);
+			const $column = $modalColumns.eq(i - firstIndexOfWeek);
+			
+			// Set date
+			const dateString = $calendarCell.data('date');
+			const cellDate = this.getDateFromCalendarCell($calendarCell);
+			const month = cellDate.getMonth() + 1; //0-based index so add 1
+			const dayOfMonth = cellDate.getDate();
+			$column.find('.weekly-view-modal-day-label > .short-date')
+				.text(`${month}/${dayOfMonth}`)
+				.data('date', dateString);
+
+			// Set briefings
+			const briefingAppointments = this.briefings[dateString];
+			const $scheduleContainer = $column.find('.schedule-ui-container');
+			if (briefingAppointments) {
+				for (const expeditionID in briefingAppointments) {
+					const info = briefingAppointments[expeditionID];
+					this.addBriefingToSchedule(
+						info, 
+						{
+							appointmentTimes: appointmentTimes,
+							scheduleContainer: $scheduleContainer
+						}
+					)
+				}
+				this.setBriefingAppointmentColumns({
+					appointmentTimes: appointmentTimes, 
+					dateString: dateString,
+					scheduleContainer: $scheduleContainer
+				});
+			}
+
+			if (i === firstIndexOfWeek) {
+				firstDate = cellDate;
+			} else if (i === lastIndexOfWeek) {
+				lastDate = cellDate;
+			}
+
+		}
+
+		const firstDateString = this.getFormattedWeekday(firstDate);
+		const lastDateString = this.getFormattedWeekday(lastDate);
+		$('#weekly-view-modal').find('.month-label')
+			.text(`Briefings for ${firstDateString} to ${lastDateString}`);
+
+		$('#weekly-view-modal').modal();
+
+
+	}
 
 	/*
 	Select the date when a calendar cell is clicked and fill any appointments on the sidebar schedule
@@ -1736,19 +1942,58 @@ class ClimberDBBriefings extends ClimberDB {
 	Export briefings to Excel. startDateStr and endDateStr should be in ISO 
 	date format YYYY-mm-dd
 	*/
-	exportBriefingSchedule(startDateStr, endDateStr) {
+	exportBriefingSchedule(startDateStr, endDateStr, {singleSheet=false}={}) {
 		// $startCalendarCell = $(`.calendar-cell[data-date=${startDateStr}]`);
 		// $endCalendarCell = $(`.calendar-cell[data-date=${endDateStr}]`);
 
 		showLoadingIndicator('exportBriefingSchedule');
 
 		var exportData = {
-			time_slots: $('.time-label').map((_, el) => el.innerHTML).get(),
-			briefings: {}
+			time_slots: $('#briefing-details-sidebar .time-label').map((_, el) => el.innerHTML).get(),
+			sheets: [] // each sheet is an object with dates as keys and a list of briefings as the values
 		};
 		const appointmentTimes = this.getAppointmentTimes();
 
 		var currentDate = new Date(startDateStr + ' 00:00');
+
+		// Define a helper function to convert RGB to HEX string. 
+		//	jQuery's .css('*color') will return the value as rgb() 
+		//	regardless of how it's defined in the CSS. 
+		const rgbToHex = (rgbString) => {
+			// rgbString is rgb(<r>, <g>, <b>) 
+			//	so remove everything except numbers and commas. 
+			//	Then split at commas
+			const [r, g, b] = rgbString
+				.replace(/[a-zA-z()\s]/g, '')
+				.split(',');
+			// To convert to hex, 
+			//	make the string an int, 
+			//	then convert to a base-16 string,
+			//	and add a leading 0 if necessary
+			const rHex = ('0' + parseInt(r).toString(16)).slice(-2);
+			const gHex = ('0' + parseInt(g).toString(16)).slice(-2);
+			const bHex = ('0' + parseInt(b).toString(16)).slice(-2);
+			
+			// return without leading '#' because that's how 
+			//	openpyxl expects it
+			return `${rHex}${gHex}${bHex}`;
+		}
+
+		// get Guide company colors
+		const guideCompanyColors = Object.fromEntries(
+			$('.color-guide-tooltip').first()
+				.find('.color-swatch')
+				.map((_, el) => {
+					const $el = $(el);
+					return [[
+						$el.data('guide-company-code'), 
+						{
+							background: rgbToHex($el.css('background-color')),
+							text: rgbToHex($el.css('color'))
+						}
+					]]
+				}).get()
+		)
 
 		while (currentDate <= new Date(endDateStr + ' 00:00')) {
 			
@@ -1768,18 +2013,29 @@ class ClimberDBBriefings extends ClimberDB {
 					${briefingInfo.ranger_last_name || ''}`.replace(/\t/g, '');
 				const {startColumn, endColumn} = columnIndices[id]; 
 				const [startRow, endRow] = this.getAppointmentRowIndex(briefingInfo, {appointmentTimes: appointmentTimes});
+				const colors = guideCompanyColors[briefingInfo.guide_company_code];
 				thisExportInfo.push({
 					expedition_name: briefingInfo.expedition_name,
-					briefing_text: briefingText,
+					// remove <em> tag because Excel should have only text, not markup
+					briefing_text: briefingText.replace(/<em>|<\/em>/g, ''),
 					comment: briefingInfo.briefing_notes || '',
 					// CSS Grid layout indices are inclusive at start and exclusive at end whereas 
 					//	openpyxl range indices are all inclusive, so subtract 1 from the end indices
-					cell_indices: [startRow, startColumn, endRow - 1, endColumn - 1]
+					cell_indices: [startRow, startColumn, endRow - 1, endColumn - 1],
+					background_color: colors.background,
+					text_color: colors.text
 				})
 				
 			}
-			exportData.briefings[thisDateStr] = thisExportInfo;
 
+			// If all dates should be shown on one sheet, add to the first sheet
+			if (singleSheet) {
+				exportData.sheets[0] = {...(exportData.sheets[0] || {}), [thisDateStr]: thisExportInfo};
+			} 
+			// Otherwise, add a new sheet 
+			else {
+				exportData.sheets.push({[thisDateStr]: thisExportInfo});
+			}
 			currentDate = currentDate.addDays(1);
 		}
 		
@@ -1787,7 +2043,7 @@ class ClimberDBBriefings extends ClimberDB {
 			url: 'flask/reports/briefing_schedule',
 			data: { // flask mutilates arrays in JS objects so stringify them
 				time_slots: JSON.stringify(exportData.time_slots),
-				briefings: JSON.stringify(exportData.briefings)
+				sheets: JSON.stringify(exportData.sheets)
 			}
 		}).done(resultString => {
 			const errorMessage = 'An unexpected error occurred while exporting the briefing schedule.';
@@ -1821,7 +2077,57 @@ class ClimberDBBriefings extends ClimberDB {
 			return;
 		}
 
-		this.exportBriefingSchedule(startDateStr, endDateStr);
+		const useSingleSheet = $('#input-export_to_single_sheet').prop('checked');
+		this.exportBriefingSchedule(startDateStr, endDateStr, {singleSheet: useSingleSheet});
+	}
+
+
+	onExportWeeklyBriefingsClick() {
+		const startDateStr = $('.weekly-view-modal-day-label > .short-date')
+			.first()
+			.data('date');
+		const endDateStr = $('.weekly-view-modal-day-label > .short-date')
+			.last()
+			.data('date');
+
+		this.exportBriefingSchedule(startDateStr, endDateStr, {singleSheet: true}); 
+	}
+
+	getGuideCompanyColors() {
+		return this.queryDB({
+			where: {
+				guide_company_codes: [
+					{
+						column_name: 'sort_order', 
+						operator: 'is not', 
+						comparand: 'null'
+					},
+					{
+						column_name: 'code', 
+						operator: '<>', 
+						comparand: -1
+					}
+
+				]
+			}
+		}).then(result => {
+			if (!this.pythonReturnedError(result)) {
+				for (const i in result.data) {
+					const info = result.data[i];
+					const colorClass = `alt-color-${parseInt(i) + 1}`;
+					this.guideCompanyColors[info.code] = {
+						guideCompanyName: info.name,
+						class: colorClass
+					}
+					const $li = $('#default-color-guide-item').clone();
+					$li.find('.color-swatch').addClass(colorClass)
+						.data('guide-company-code', info.code);
+					$li.find('.color-guide-swatch-label').text(info.name);
+					$li.appendTo('.color-guide-tooltip ul');
+
+				}
+			}
+		})
 	}
 
 
@@ -1830,13 +2136,14 @@ class ClimberDBBriefings extends ClimberDB {
 		showLoadingIndicator('init');
 
 		// Call super.init()
-		var initDeferreds = super.init();
-		
+		var initDeferreds = super.init()
+
 		// Do synchronous stuff
 		this.configureMainContent();
 
 		
-		initDeferreds.then(() => {
+		$.when(this.getGuideCompanyColors(), initDeferreds)
+			.then(() => {
 			$.when(...this.fillBriefingDetailSelects())
 				.then(() => {
 					this.queryBriefings();
