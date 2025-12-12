@@ -2077,7 +2077,8 @@ class ClimberDBBriefings extends ClimberDB {
 			return;
 		}
 
-		this.exportBriefingSchedule(startDateStr, endDateStr);
+		const useSingleSheet = $('#input-export_to_single_sheet').prop('checked');
+		this.exportBriefingSchedule(startDateStr, endDateStr, {singleSheet: useSingleSheet});
 	}
 
 
