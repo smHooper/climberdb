@@ -638,7 +638,7 @@ class ClimberDBBriefings extends ClimberDB {
 	*/
 	selectCalendarCellByClick($cell) {
 		// Clear old date's appointments
-		$('.schedule-ui-container .briefing-appointment-container').remove();
+		$('#briefing-details-sidebar .schedule-ui-container .briefing-appointment-container').remove();
 
 		$('.calendar-cell.selected').removeClass('selected');
 		$cell.addClass('selected');
@@ -1652,7 +1652,7 @@ class ClimberDBBriefings extends ClimberDB {
 		const [timeIndex, time, nAppointmenTimes] = this.getTimeSlotEventInfo(e);
 		const startIndex = timeIndex + 1;
 		const endIndex = Math.min(timeIndex + (this.config.default_briefing_length_hrs * 2) + 1, nAppointmenTimes);
-		$('.schedule-ui-container').append(`
+		$('#briefing-details-sidebar .schedule-ui-container').append(`
 			<div class="potential-appointment-container" data-time="${time}" style="grid-row: ${startIndex}/${endIndex}">
 			</div>
 		`);
@@ -1695,7 +1695,7 @@ class ClimberDBBriefings extends ClimberDB {
 
 		this.getBriefigAppointmentHTML({}, startIndex, endIndex)
 			.addClass('selected new-briefing date-change-not-called')
-			.appendTo('.schedule-ui-container')
+			.appendTo('#briefing-details-sidebar .schedule-ui-container')
 			.click()
 			.find('.briefing-appointment-header')
 				.text('New Briefing'); // select this appointment
