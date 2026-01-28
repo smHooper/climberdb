@@ -567,6 +567,9 @@ class ClimberDBQuery extends ClimberDB {
 					'Expedition Name': 'justify-content-start',
 					'Frostbite Details': 'justify-content-start'
 				}
+			},
+			annual_summary: {
+
 			}
 		};
 		return this;
@@ -1847,6 +1850,27 @@ class ClimberDBQuery extends ClimberDB {
 	}
 
 
+	/*
+	The annual summary query isn't a single query but a Flask endpoint. The endpoint generates an Excel file and returns its path.
+	*/
+	queryAnnualSummary() {
+		
+		if (!this.validateFields('annual_summary')) return;
+		const year = $('#annual-summary-year').val()
+			.replace(/[^\d]/g, '');
+		const errorMessage = 'There was an unexpected error while running the annual summary query';
+		return $.get({
+			url: `/flask/reports/annual_summary/${year}`
+		}).done(response => {
+			if (!this.pythonReturnedError(response, {errorExplanation: errorMessage})) {
+				window.open(response, '_blank')	
+			}
+		}).fail((xhr, status, error) => {
+			this.showModal(errorMessage + `: ${error}`, 'Unexpected Error');
+		})
+	}
+
+
 	onRunQueryButtonClick() {
 		const queryName = $('.query-option.selected').data('query-name');
 		if (queryName === 'guide_company_client_status') {
@@ -1857,6 +1881,8 @@ class ClimberDBQuery extends ClimberDB {
 			this.queryExpeditionByNameOrID();
 		} else if (queryName === 'cua_backcountry_groups') {
 			this.queryCUABackcountryGroups();
+		} else if (queryName === 'annual_summary') {
+			this.queryAnnualSummary();
 		} else {
 			this.runQuery(queryName);
 		}
