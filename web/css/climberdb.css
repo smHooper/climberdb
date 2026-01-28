@@ -133,7 +133,7 @@ input.fuzzy-search-bar:focus,
 #climberdb-main-content .query-option-operator:focus,
 .query-result-list-item:focus {
   -webkit-box-shadow: none;
-  outline: -webkit-focus-ring-color auto 0px !important;
+  outline: none;/*-webkit-focus-ring-color auto 0px !important;*/
 }
 button > img {
   height: 100%;
@@ -556,7 +556,7 @@ ul.tabs input[type="radio"]:checked ~ .tab-content {
   height: 30px;
   color:var(--ui-bg-dark-blue);
   background-color: rgba(0,0,0,0);
-  outline: -webkit-focus-ring-color auto 0px;
+  outline: none;/*-webkit-focus-ring-color auto 0px;*/
   -webkit-box-shadow: none;
   border-color: rgba(0,0,0,0);
   border-bottom: 2px solid rgba(0,0,0,0.2);
