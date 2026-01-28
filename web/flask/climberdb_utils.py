@@ -7,11 +7,26 @@ import datetime
 import json
 import dill as pickle
 import os
-from sqlalchemy import column, Column, create_engine, func, inspect, Integer, Table,  select, text
+from sqlalchemy import (
+	asc, 
+	case, 
+	column, 
+	Column, 
+	create_engine, 
+	desc, 
+	func, 
+	inspect, 
+	Integer, 
+	Table,  
+	select, 
+	text
+)
 from sqlalchemy.engine import Engine, URL
+from sqlalchemy.engine.row import Row as sqla_Row
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.decl_api import DeclarativeMeta
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.elements import BinaryExpression
 from sqlalchemy.sql.selectable import Subquery
@@ -37,13 +52,9 @@ VIEW_PRIMARY_KEYS = {
 	'current_flagged_expeditions_view': 'expedition_id'
 }
 
-# __all__ = [
-# 	'CONFIG_FILE',
-# 	'get_engine',
-# 	'get_environment',
-# 	'get_schema',
-# 	'get_tables',
-# ]
+
+with open(CONFIG_FILE) as f:
+	config = json.load(f)
 
 
 def get_engine(access='read', schema='public') -> Engine:
@@ -52,8 +63,8 @@ def get_engine(access='read', schema='public') -> Engine:
 
 	:return: sqlalchemy.engine.Engine
 	"""
-	with open(CONFIG_FILE) as f:
-		config = json.load(f)
+	# with open(CONFIG_FILE) as f:
+	# 	config = json.load(f)
 
 	url = URL.create('postgresql', **config[f'DB_{access.upper()}_PARAMS'])
 
@@ -83,10 +94,10 @@ def get_schema() -> str:
 
 # 	Define a virtual view for the backcountry_locations_mountains_xref table
 # 	SQLALchemy automap_base's .prepare() will fail if the table has its 
-# 	own ID column, but session.query() will dail if it doesn't. To get 
+# 	own ID column, but session.query() will fail if it doesn't. To get 
 # 	around these conflicting problems, create a virtual view (doesn't exist
 # 	in the DB) and treat it like a SQLAlchemy ORM table
-# 	
+
 virtual_view = select(
     func.row_number().over().label('id'),
     column('backcountry_location_code'),
@@ -253,7 +264,12 @@ def get_where_clause(
 
 def sanitize_query_value(value: Any) -> Any:
 	"""
-	Python datetime.date* types are converted to strings in the JSON response with a GMT timezone. When converting to a Javascript Date, this pushes the local time back 8/9 hours (depending on Daylight Savings). To prevent this, just convert all datetime.date* types to string. Then when the Javascript Date() constructor is called, it assumes local time and converts appropriately
+	Python datetime.date* types are converted to strings in the JSON response 
+	with a GMT timezone. When converting to a Javascript Date, this pushes the 
+	local time back 8/9 hours (depending on Daylight Savings). To prevent this,
+	just convert all datetime.date* types to string. Then when the Javascript
+	Date() constructor is called, it assumes local time and converts 
+	appropriately
 	
 	:parameters:
 	------------
@@ -267,3 +283,181 @@ def sanitize_query_value(value: Any) -> Any:
 
 	return value
 
+
+def orm_to_dict(
+		orm_class_instance: Any, 
+		selected_columns:[str]=[], 
+		prohibited_columns: dict={}
+	) -> dict:
+	"""
+	Helper function to process an ORM class instance into a dictionary
+	"""	
+	prohibited_columns = prohibited_columns or config['PHOHIBITED_QUERY_COLUMNS']
+	exclude_columns = prohibited_columns.get(orm_class_instance.__table__.name) or []
+	
+	# If specific columns weren't specified, return all
+	columns = (
+		selected_columns or 
+		[column.name for column in orm_class_instance.__table__.columns]
+	)
+
+	return {
+		column_name: sanitize_query_value(getattr(orm_class_instance, column_name))
+		for column_name in columns
+		if column_name not in exclude_columns
+	}
+
+
+
+def select_result_to_dict(cursor) -> list:
+	"""
+	Helper function to process results from SQLAlchemy result cursor resulting 
+	from a .execute() call
+	"""
+	return ([ 
+		{
+			column_name: sanitize_query_value(value)
+			for column_name, value in row._asdict().items()
+		} 
+		for row in cursor.all()
+	])
+
+
+# Define in global scope so it can be imported and used in this module
+db_tables = get_tables()
+schema = get_schema()
+
+def query_db(query_params:dict):
+
+	sql = query_params.get('sql')
+	where_clauses = query_params.get('where') or {}
+	selects = query_params.get('select') or {}
+	table_names = (
+		query_params.get('tables') or 
+		set([*where_clauses.keys(), *selects.keys()])
+	)
+
+	prohibited_columns = config['PHOHIBITED_QUERY_COLUMNS']
+
+	schema = get_schema()
+	read_engine = get_engine(access='read', schema=schema)
+	ReadSession = sessionmaker(read_engine)
+
+	# If raw SQL was passed, execute it
+	with ReadSession() as session:
+		if sql:
+			# List parameters have to be tuples
+			params = {
+				name: tuple(param) if isinstance(param, list) 
+				else param 
+				for name, param in (query_params.get('params') or {}).items()
+			}
+			result = session.execute(sql.replace('{schema}', schema), params)
+			
+			response_data = select_result_to_dict(result)
+
+		# Otherwise, use the SQLAlchemy ORM
+		elif len(table_names):
+			
+			result = (session
+				.query(*[db_tables[table_name_] for table_name_ in table_names])
+				.where(*[
+					get_where_clause(
+						db_tables,
+						table_name,
+						where.get('column_name'), 
+						where.get('operator') or '', 
+						where.get('comparand')
+					)
+					for table_name, table_wheres in where_clauses.items() 
+					for where in table_wheres
+					if where.get('column_name')
+				])
+			)
+
+			joins = query_params.get('joins')
+			if joins:
+				for join_ in joins: 
+					left_table = db_tables[join_.get('left_table')]
+					right_table = db_tables[join_.get('right_table')]
+					left_table_column = getattr(
+						left_table, 
+						join_.get('left_table_column')
+					)
+					right_table_column = getattr(
+						right_table, 
+						join_.get('right_table_column')
+					)
+					result = result.join(
+						right_table, 
+						left_table_column == right_table_column, 
+						isouter=join_.get('is_left'),
+						full=join_.get('is_full')
+					)
+
+			order_by_clauses = query_params.get('order_by')
+			if order_by_clauses:
+				# If there are multiple ORDER BY columns, successive calls to 
+				#	.order_by will modify the result accordingly
+				for order_by in order_by_clauses:
+					table = db_tables[order_by['table_name']]
+					order = asc # function from sqla
+					if 'order' in order_by:
+						order = (
+							asc if order_by['order']
+								.lower().startswith('asc') 
+							else desc
+						)
+					result = result.order_by(
+						order(
+							getattr(table, order_by['column_name'])
+						)
+					)
+
+
+			response_data = []
+			if result.count():
+				for row in result:
+					row_data = {}
+					# If there was more than one table passed to query(), the 
+					#	result will be a sqla.engine.row.Row, with separate 
+					#	class instances for each table. In that case, iterate
+					#	through each of them and combine
+					if isinstance(row, sqla_Row): 
+						for orm_instance in row:
+							selected_columns = selects.get(
+									orm_instance.__table__.name
+								) or []
+							row_data = {
+								**row_data, 
+								**orm_to_dict(
+									orm_instance, 
+									selected_columns=selected_columns
+								)
+							}
+					else:
+						row_data = orm_to_dict(row)
+					# Add to the list of dicts, which will 
+					response_data.append(row_data)
+		else:
+			raise RuntimeError(
+				'Either "sql", "tables", or "where" given in reequest data. Request data:\n' + 
+				json.dumps(query_params, indent=4)
+			)
+		
+		return response_data
+
+
+__all__ = [
+	'CONFIG_FILE',
+	'get_engine',
+	'get_environment',
+	'get_schema',
+	'get_tables',
+	'get_where_clause',
+	'sanitize_query_value',
+	'orm_to_dict',
+	'select_result_to_dict',
+	'query_db',
+	'db_tables'
+]

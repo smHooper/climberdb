@@ -74,6 +74,7 @@
 						<li class="query-option" role="button" data-query-name="pro_pins" data-tags="climber, epeditions, pro, pro pin">Query Pro Pins</li>
 						<li class="query-option" role="button" data-query-name="medical_issues" id="medical-query-button" data-tags="medical, altitude, illness, injury, frostbite, hace, hape, sickness">Medical issues</li>
 						<li class="query-option" role="button" data-query-name="sar" id="medical-query-button" data-tags="sar, search, rescue, medical, altitude, illness, injury, frostbite, hace, hape, sickness">Search and rescue</li>
+						<li class="query-option" role="button" data-query-name="annual_summary" id="annual-summary-query-button" data-tags="summary, statistics, stats, year end, end of year, yearly, annual">Annual summary stats</li>
 					</ul>
 					<h4 id="no-query-match-message" class="hidden" aria-hidden="true">No queries match your search</h4>
 				</div>
@@ -608,7 +609,7 @@
 									</select>
 									<input id="count_climbers-location_end_date" class="input-field single-value-field datetime-query-option where-clause-field" type="date" data-field-name="location_end_date" name="location_end_date" data-validation-field-name="BC location end date" required>
 									<div class="query-option-double-value-container hidden">
-										<input id="count_climbers-location_end_date-low_value" class="input-field query-option-input-field double-value-field low-value-field datetime-query-option" type="date" data-field-name="location_end_date" data-validation-field-name="BC location end date" aria-hidden="true" required>
+										<input id="count_climbers-location_end_date-low_value" class="input-field query-option-input-field double-value-field low-value-field datetime-query-sunm" type="date" data-field-name="location_end_date" data-validation-field-name="BC location end date" aria-hidden="true" required>
 										<span>and</span>
 										<input id="count_climbers-location_end_date-high_value" class="input-field query-option-input-field double-value-field high-value-field datetime-query-option" type="date" data-field-name="location_end_date" data-validation-field-name="BC location end date" aria-hidden="true" required>
 									</div>
@@ -749,9 +750,26 @@
 								<label class="field-label" for="sar-year">Fatality? (yes/no)</label>
 							</div>	
 						</div>
+
+						<div class="query-parameters-container hidden" data-query-name="annual_summary">
+							<h4 class="w-100 mb-3">Annual Summary Stats Report Parameters</h4>	
+							<div class="field-container col-sm-6 col-md-4 col-lg-3">
+								<select id="annual-summary-year" class="input-field default no-option-fill year-select-field nullable" name="year" title="Year" required>
+									<option value="">Year</option>
+								</select>
+								<label class="field-label" for="annual-summary-year">Year</label>
+							</div>	
+						</div>
 					</div>
 					<div class="w-100 d-flex justify-content-center">
-						<button id="run-query-button" class="generic-button hidden" title="Run query">Run query</button>
+						<div class="d-flex justify-content-center">
+							<button id="run-query-button" class="generic-button hidden" title="Run query">Run query</button>
+							<div id="run-query-loading-indicator" class="run-query-loading-indicator loading-indicator-dot-container pr-5 hidden" aria-hidden="true">
+								<div class="loading-indicator-dot dot1"></div>
+								<div class="loading-indicator-dot dot2"></div>
+								<div class="loading-indicator-dot dot3"></div>
+							</div>
+						</div>
 						<button id="copy-query-link-button" class="generic-button icon-button color-primary-text ml-3">
 							<i class="fas fa-link fa-2x">
 							</i>

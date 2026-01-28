@@ -567,6 +567,9 @@ class ClimberDBQuery extends ClimberDB {
 					'Expedition Name': 'justify-content-start',
 					'Frostbite Details': 'justify-content-start'
 				}
+			},
+			annual_summary: {
+
 			}
 		};
 		return this;
@@ -1411,10 +1414,23 @@ class ClimberDBQuery extends ClimberDB {
 
 
 	/*
+	Helper to show/hide the loading indicator when a query is running. This hides the 
+	"run query" button so users can't click it again until the query finishes
+	*/
+	toggleQueryLooadingIndicator({hide=true}={}) {
+		$('#run-query-loading-indicator').ariaHide(hide);
+		$('#run-query-button').ariaHide(!hide);
+	}
+
+
+	/*
 	Helper function to submit SQL and optionally show result. This needs to be separated from runQuery() so that custom 
 	query processing functions can still use the same code
 	*/
 	submitQuery(sql, {sqlParameters={}, queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
+
+		this.toggleQueryLooadingIndicator({hide: false})
+
 		return this.queryDB({sql: sql.replace(/\{schema\}/g, this.dbSchema), sqlParameters: sqlParameters})
 			.done(response => {
 				const queryDisplayName = $('.query-option.selected').text();
@@ -1433,6 +1449,8 @@ class ClimberDBQuery extends ClimberDB {
 						this.showResult(this.result, queryName);
 					}
 				}
+			}).always(() => {
+				this.toggleQueryLooadingIndicator({hide: true})
 			})
 	}
 
@@ -1847,6 +1865,32 @@ class ClimberDBQuery extends ClimberDB {
 	}
 
 
+	/*
+	The annual summary query isn't a single query but a Flask endpoint. The endpoint generates an Excel file and returns its path.
+	*/
+	queryAnnualSummary() {
+		
+		if (!this.validateFields('annual_summary')) return;
+		
+		this.toggleQueryLooadingIndicator({hide: false})
+
+		const year = $('#annual-summary-year').val()
+			.replace(/[^\d]/g, '');
+		const errorMessage = 'There was an unexpected error while running the annual summary query';
+		return $.get({
+			url: `/flask/reports/annual_summary/${year}`
+		}).done(response => {
+			if (!this.pythonReturnedError(response, {errorExplanation: errorMessage})) {
+				window.open(response, '_blank')	
+			}
+		}).fail((xhr, status, error) => {
+			this.showModal(errorMessage + `: ${error}`, 'Unexpected Error');
+		}).always(() => {
+			this.toggleQueryLooadingIndicator({hide: true})
+		})
+	}
+
+
 	onRunQueryButtonClick() {
 		const queryName = $('.query-option.selected').data('query-name');
 		if (queryName === 'guide_company_client_status') {
@@ -1857,6 +1901,8 @@ class ClimberDBQuery extends ClimberDB {
 			this.queryExpeditionByNameOrID();
 		} else if (queryName === 'cua_backcountry_groups') {
 			this.queryCUABackcountryGroups();
+		} else if (queryName === 'annual_summary') {
+			this.queryAnnualSummary();
 		} else {
 			this.runQuery(queryName);
 		}
