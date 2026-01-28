@@ -8,7 +8,7 @@ import shutil
 
 import bcrypt
 import smtplib
-from pandas import DataFrame, ExcelWriter, read_sql
+from pandas import concat, DataFrame, ExcelWriter, read_sql, Series
 from zipfile import ZipFile, ZIP_DEFLATED
 from pypdf import PdfReader, PdfWriter
 from datetime import datetime
@@ -23,7 +23,6 @@ from logging.config import dictConfig
 from sqlalchemy import asc
 from sqlalchemy import case
 from sqlalchemy import desc
-from sqlalchemy.engine.row import Row as sqla_Row
 from sqlalchemy.sql.expression import func as sqlafunc
 from sqlalchemy import select
 from sqlalchemy import text as sqlatext
@@ -37,6 +36,8 @@ from werkzeug.datastructures import FileStorage
 # climberdb modules
 from cache_tag import CacheTag, print_zpl
 #from climberdb_logging import configure_logging
+from annual_report import AnnualSummary
+from annual_report import ExcelReportRenderer
 import climberdb_utils
 from export_briefings import briefings_to_excel
 
@@ -253,8 +254,7 @@ ReadSession = sessionmaker(read_engine)
 WriteSession = sessionmaker(write_engine)
 
 ##### Get DB model in app's global scope ####
-tables = climberdb_utils.get_tables()
-
+tables = climberdb_utils.db_tables
 
 def get_content_dir(dirname='exports'):
 	return os.path.join(os.path.dirname(__file__), '..', dirname)
@@ -717,7 +717,7 @@ def export_special_use_permit():
 			form_prefix = f'id_{member_id}'
 
 			# Combine the client-side and DB data
-			member_data = dict(**permit_data[member_id], **orm_to_dict(row))
+			member_data = dict(**permit_data[member_id], **climberdb_utils.orm_to_dict(row))
 			
 			if not row.country:
 				climbers_missing_country.append({
@@ -918,6 +918,25 @@ def export_query():
 
 		return 'exports/' + pdf_filename
 
+
+@app.route('/flask/reports/annual_summary/<year>')
+def query_annual_summary(year):
+
+	summary = AnnualSummary(int(year), schema).run_report()
+	renderer = ExcelReportRenderer(app.config['ANUUAL_REPORT_TEMPLATE'])
+
+	exports_dir = get_content_dir('exports')
+	xlsx_name = f'general_statistics_{year}.xlsx'
+	xlsx_path = os.path.join(exports_dir, xlsx_name)
+	
+	renderer.render_report(
+		summary.tags['tables'], 
+		summary.tags['values'], 
+		xlsx_path
+	)
+
+	return 'exports/' + xlsx_name
+
 #--------------- Reports ---------------------#
 
 
@@ -978,137 +997,18 @@ def print_cache_tag():
 
 #---------------- DB I/O ---------------------#
 
-# helper function to process an ORM class instance into a dictionary
-def orm_to_dict(orm_class_instance: Any, selected_columns:[str]=[], prohibited_columns: dict={}) -> dict:
-	
-	prohibited_columns = prohibited_columns or app.config['PHOHIBITED_QUERY_COLUMNS']
-	exclude_columns = prohibited_columns.get(orm_class_instance.__table__.name) or []
-	
-	# If specific columns weren't specified, return all
-	columns = (
-		selected_columns or 
-		[column.name for column in orm_class_instance.__table__.columns]
-	)
-
-	return {
-		column_name: climberdb_utils.sanitize_query_value(getattr(orm_class_instance, column_name))
-		for column_name in columns
-		if column_name not in exclude_columns
-	}
-
-
-# helper function to process results from SQLAlchemy result cursor resulting 
-#	from a .execute() call
-def select_result_to_dict(cursor) -> list:
-	return ([ 
-		{
-			column_name: climberdb_utils.sanitize_query_value(value)
-			for column_name, value in row._asdict().items()
-		} 
-		for row in cursor.all()
-	])
-
-
 # All-purpose SELECT query endpoint
 @app.route('/flask/db/select', methods=['POST'])
-def query_db():
+def run_select_query():
 
 	request_data = request.get_json()	
+	response_data = climberdb_utils.query_db(request_data)
+	response = {'data': response_data}
 
-	sql = request_data.get('sql')
-	where_clauses = request_data.get('where') or {}
-	selects = request_data.get('select') or {}
-	table_names = (
-		request_data.get('tables') or 
-		set([*where_clauses.keys(), *selects.keys()])
-	)
+	if 'queryTime' in request_data:
+		response['queryTime'] = request_data['queryTime']
 
-	prohibited_columns = app.config['PHOHIBITED_QUERY_COLUMNS']
-
-	# If raw SQL was passed, execute it
-	with ReadSession() as session:
-		if sql:
-			# List parameters have to be tuples
-			params = {
-				name: tuple(param) if isinstance(param, list) 
-				else param 
-				for name, param in (request_data.get('params') or {}).items()
-			}
-			result = session.execute(sql.replace('{schema}', schema), params)
-			
-			response_data = select_result_to_dict(result)
-
-		# Otherwise, use the SQLAlchemy ORM
-		elif len(table_names):
-			
-			result = (session
-				.query(*[tables[table_name_] for table_name_ in table_names])
-				.where(*[
-					climberdb_utils.get_where_clause(
-						tables,
-						table_name,
-						where.get('column_name'), 
-						where.get('operator') or '', 
-						where.get('comparand')
-					)
-					for table_name, table_wheres in where_clauses.items() 
-					for where in table_wheres
-					if where.get('column_name')
-				])
-			)
-
-			joins = request_data.get('joins')
-			if joins:
-				for join_ in joins: 
-					left_table = tables[join_.get('left_table')]
-					right_table = tables[join_.get('right_table')]
-					left_table_column = getattr(left_table, join_.get('left_table_column'))
-					right_table_column = getattr(right_table, join_.get('right_table_column'))
-					result = result.join(right_table, left_table_column == right_table_column, isouter=join_.get('is_left'), full=join_.get('is_full'))
-
-			order_by_clauses = request_data.get('order_by')
-			if order_by_clauses:
-				# If there are multiple ORDER BY columns, successive calls to .order_by 
-				#	will modify the result accordingly
-				for order_by in order_by_clauses:
-					table = tables[order_by['table_name']]
-					order = asc # function from sqla
-					if 'order' in order_by:
-						order = asc if order_by['order'].lower().startswith('asc') else desc
-					result = result.order_by(order(getattr(table, order_by['column_name'])))
-
-
-			response_data = []
-			if result.count():
-				for row in result:
-					row_data = {}
-					# If there was more than one table passed to query(), the result will be
-					#	a sqla.engine.row.Row, with separate class instances for each table.
-					#	In that case, iterate through each of them and combine
-					if isinstance(row, sqla_Row): 
-						for orm_instance in row:
-							selected_columns = selects.get(orm_instance.__table__.name) or []
-							row_data = {
-								**row_data, 
-								**orm_to_dict(orm_instance, selected_columns=selected_columns)
-							}
-					else:
-						row_data = orm_to_dict(row)
-					# Add to the list of dicts, which will 
-					response_data.append(row_data)
-		else:
-			raise RuntimeError(
-				'Either "sql", "tables", or "where" given in reequest data. Request data:\n' + 
-				json.dumps(request_data, indent=4)
-			)
-		
-		response = {'data': response_data}
-
-		if 'queryTime' in request_data:
-			response['queryTime'] = request_data['queryTime']
-
-		return jsonify(response)
-
+	return jsonify(response)
 
 
 @app.route('/flask/db/select/rangers', methods=['POST'])
@@ -1126,7 +1026,7 @@ def query_rangers():
 			).order_by('full_name')
 		)
 		result = session.execute(stmt)
-		response = {'data': select_result_to_dict(result)}
+		response = {'data': climberdb_utils.select_result_to_dict(result)}
 
 		return jsonify(response)
 
@@ -1146,7 +1046,7 @@ def query_climbers():
 			if not row:
 				raise RuntimeError(f'No climber with ID {climber_id} found')
 			return jsonify({
-				'data': [orm_to_dict(row)]
+				'data': [climberdb_utils.orm_to_dict(row)]
 			})
 
 	search_string = request_data.get('search_string')
@@ -1289,7 +1189,7 @@ def query_climbers():
 		}
 		result = session.execute(sqlatext(sql), params)
 		response = {
-			'data': select_result_to_dict(result),
+			'data': climberdb_utils.select_result_to_dict(result),
 			'queryTime': request_data.get('queryTime')
 		}
 		if return_count:
@@ -1367,7 +1267,7 @@ def query_expeditions():
 		result = session.execute(statement)
 
 		return jsonify({
-			'data': select_result_to_dict(result),
+			'data': climberdb_utils.select_result_to_dict(result),
 			'queryTime': request_data.get('queryTime')
 		})
 
@@ -1572,7 +1472,7 @@ def save_config():
 	codes = tables['cua_company_codes']
 	with ReadSession() as session:
 		result = [
-			orm_to_dict(row) 
+			climberdb_utils.orm_to_dict(row) 
 			for row  
 			in session.query(codes)
 				.where(codes.name != 'None') # exclude from sort_order update
