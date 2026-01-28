@@ -234,7 +234,6 @@ class ExcelReportRenderer:
 		for col, width in self.col_widths.items():
 			ws.column_dimensions[col].width = width
 
-		#import pdb; pdb.set_trace()
 		for _, m in logical_merges.iterrows():
 			ws.merge_cells(**m)
 
@@ -344,6 +343,12 @@ class AnnualSummary:
 			}),
 			columns=['mountain_code', 'value']
 		)
+		if len(data) == 0:
+			# If there are no records that match this query, fill with 0s
+			data = DataFrame([
+				{'mountain_code': c, 'value': 0} 
+				for c in self.mountain_names.index
+			])
 
 		# Set the index to just 0s so all rows collapse to one with .pivot
 		data.index = [0] * len(data)
@@ -429,7 +434,7 @@ class AnnualSummary:
 				.squeeze(axis=1)
 				.fillna(0)
 		)
-		
+
 		snapshot = concat([
 			total_climbers,
 			guided_climbers,
@@ -508,7 +513,11 @@ class AnnualSummary:
 				AND mountain_code IN ({self.mountain_code_str})
 			GROUP BY mountain_code
 		'''
-		summit_dates = (DataFrame(query_db({'sql': sql}))
+		summit_dates = (
+			DataFrame(
+				query_db({'sql': sql}),
+				columns=['Earliest', 'Latest', 'mountain_code']
+			)
 			.set_index('mountain_code')
 			.T
 		)
@@ -597,7 +606,9 @@ class AnnualSummary:
 		us_total_params['distinct_on'] = 'climber_id'
 		us_total_params['group_by'] = 'a'
 		us_total_sql = self._TEMPLATE_SQL.format(**us_total_params)
-		us_total = query_db({'sql': us_total_sql})[0]['count']
+		us_total = (
+				query_db({'sql': us_total_sql}) or [{'count': 0}]
+			)[0]['count']
 		us_percent = round(
 			us_total / total_climbers.Total.squeeze() * 100,
 			1
@@ -610,9 +621,14 @@ class AnnualSummary:
 		us_climbers_sql = self._TEMPLATE_SQL.format(**us_climbers_params)
 		us_climbers = (
 			DataFrame(
-				query_db({'sql': us_climbers_sql})
+				query_db({'sql': us_climbers_sql}),
+				columns=['mountain_code', 'state_code', 'count']
 			).pivot(columns='mountain_code', index='state_code', values='count')
 			.rename(columns=self.mountain_names)
+			# If either mountain had no climbers, make sure both are in columns
+			.reindex(columns=self.mountain_names)		
+			.fillna(0)
+			.astype(int)
 		)
 
 		self.n_states = len(us_climbers)
@@ -635,10 +651,16 @@ class AnnualSummary:
 		intl_sql = self._TEMPLATE_SQL.format(**intl_params)
 		intl_climbers = (
 			DataFrame(
-				query_db({'sql': intl_sql})
+				query_db({'sql': intl_sql}),
+				columns=['mountain_code', 'country_code', 'count']
 			).pivot(columns='mountain_code', index='country_code', values='count')
-			.rename(columns=self.mountain_names)
+			.rename(columns=self.mountain_names)			
+			# If either mountain had no climbers, make sure both are in columns
+			.reindex(columns=self.mountain_names)		
+			.fillna(0)
+			.astype(int)
 		)
+
 		self.n_countries = len(intl_climbers)
 		top_countries = self._get_top_states_countries(intl_climbers, n=6)
 		# Get the code values of the top Denali countries
@@ -656,7 +678,7 @@ class AnnualSummary:
 			) + ' climbers'
 		less_than_3_countries = less_than_3.index
 
-		# Get all other counteis
+		# Get all other countries
 		other_countries = intl_climbers.loc[
 			~intl_climbers.index.isin(
 				top_denali_countries.tolist() + less_than_3.index.tolist()
@@ -708,15 +730,21 @@ class AnnualSummary:
 				to_combine.append(split)
 			
 			return concat(to_combine)
-
+		columns = ['average', 'youngest', 'oldest', 'mountain_code', 'sex_code']
 		age_sql = self._TEMPLATE_SQL.format(**default_params)
-		climber_age = DataFrame(query_db({'sql': age_sql}))
+		climber_age = DataFrame(
+			query_db({'sql': age_sql}), 
+			columns=columns
+		)
 		age_by_gender = split_by_gender(climber_age)
 		
 		summit_age_params = default_params.copy()
 		summit_age_params['where'] += ' AND route_was_summited'
 		summit_age_sql = self._TEMPLATE_SQL.format(**summit_age_params)
-		summit_age = DataFrame(query_db({'sql': summit_age_sql}))
+		summit_age = DataFrame(
+			query_db({'sql': summit_age_sql}), 
+			columns=columns
+		)
 		summit_age_by_gender = split_by_gender(summit_age)
 		summit_age_by_gender.index += '_summited'
 
@@ -746,9 +774,12 @@ class AnnualSummary:
 
 		def process_guides_rangers(sql, data_type='Guide'):
 			data = (
-				DataFrame(query_db({'sql': sql}))
-					.set_index('sex_code')
-					.rename(index=self._GENDER_CODES)
+				DataFrame(
+					query_db({'sql': sql}), 
+					columns=['average', 'count', 'sex_code']
+				)
+				.set_index('sex_code')
+				.rename(index=self._GENDER_CODES)
 			)
 			data['average'] = (
 				data['average']
@@ -772,11 +803,11 @@ class AnnualSummary:
 						'male': f'Percent Male {data_type}s'
 					},
 					columns={'percent': 0}
-				).loc[[
+				).reindex(index=[
 					total_index_str,
 					f'Percent Female {data_type}s',
 					f'Percent Male {data_type}s',
-				]]
+				])
 			)
 			
 			guide_ages = data.loc[:, ['average']].rename(
@@ -820,7 +851,8 @@ class AnnualSummary:
 		summit_by_month_params['where'] += ' AND summit_date IS NOT NULL AND mountain_code = 1'
 		summit_by_month_sql = self._TEMPLATE_SQL.format(**summit_by_month_params)
 		self.summits_by_month = (DataFrame(
-				query_db({'sql': summit_by_month_sql})
+				query_db({'sql': summit_by_month_sql}),
+				columns=['month', 'count']
 			).set_index('month')
 			.reindex(index=['May', 'June', 'July'], fill_value=0)
 		)
@@ -835,10 +867,13 @@ class AnnualSummary:
 		top_summit_dates_sql = self._TEMPLATE_SQL\
 			.format(**top_summit_dates_params)
 		self.top_summit_dates = (
-			DataFrame(query_db({'sql': top_summit_dates_sql}))
-				.sort_values('count', ascending=False)
-				.head(3)
-				.set_index('summit_date')
+			DataFrame(
+				query_db({'sql': top_summit_dates_sql}),
+				columns=['summit_date', 'count']
+			)
+			.sort_values('count', ascending=False)
+			.head(3)
+			.set_index('summit_date')
 		)
 
 
@@ -851,7 +886,10 @@ class AnnualSummary:
 		routes_params['select'] = 'mountain_code, route_name, summited, count(*)'
 		routes_params['group_by'] = 'mountain_code, route_name, summited'
 		routes_sql = self._TEMPLATE_SQL.format(**routes_params)
-		routes = DataFrame(query_db({'sql': routes_sql}))
+		routes = DataFrame(
+			query_db({'sql': routes_sql}),
+			columns=['mountain_code', 'route_name', 'summited', 'count']
+		)
 
 		def get_route_counts(mountain_code):
 			mountain_routes = (
@@ -897,25 +935,30 @@ class AnnualSummary:
 		trip_length_params['group_by'] = 'mountain_code, guided'
 		trip_length_sql = self._TEMPLATE_SQL.format(**trip_length_params)
 		trip_length_all = (
-			DataFrame(query_db({'sql': trip_length_sql}))
-				.pivot(
-					columns='guided', 
-					index='mountain_code', 
-					values='avg_trip_length'
-				).rename(index='All ' + self.mountain_names + ' trips')
+			DataFrame(
+				query_db({'sql': trip_length_sql}),
+				columns=['avg_trip_length', 'mountain_code', 'guided']
+			)
+			.pivot(
+				columns='guided', 
+				index='mountain_code', 
+				values='avg_trip_length'
+			).rename(index='All ' + self.mountain_names + ' trips')
 		)
 		trip_summit_params = trip_length_params.copy()
 		trip_summit_params['where'] += ' AND route_was_summited'
 		trip_length_summit_sql = self._TEMPLATE_SQL.format(**trip_summit_params)
 		trip_length_summit = (
-			DataFrame(query_db({'sql': trip_length_summit_sql}))
-				.pivot(
-					columns='guided', 
-					index='mountain_code', 
-					values='avg_trip_length'
-				).rename(
-					index=self.mountain_names + ' trips with successful summits'
-				)
+			DataFrame(query_db({'sql': trip_length_summit_sql}),
+				columns=['avg_trip_length', 'mountain_code', 'guided']
+			)
+			.pivot(
+				columns='guided', 
+				index='mountain_code', 
+				values='avg_trip_length'
+			).rename(
+				index=self.mountain_names + ' trips with successful summits'
+			)
 		)
 		trip_length_nps_params = trip_length_params.copy()
 		trip_length_nps_params['select'] = f'''
@@ -926,7 +969,10 @@ class AnnualSummary:
 		trip_length_nps_params['where'] += ' AND special_group_type_code = 3'
 		trip_length_nps_sql = self._TEMPLATE_SQL.format(**trip_length_nps_params)
 		trip_length_nps = (
-			DataFrame(query_db({'sql': trip_length_nps_sql}))
+			DataFrame(
+				query_db({'sql': trip_length_nps_sql}),
+				columns=['avg_trip_length', 'mountain_code']
+			)
 				.set_index('mountain_code')
 				.rename(
 					columns={'avg_trip_length': 'Non-Guided'},
