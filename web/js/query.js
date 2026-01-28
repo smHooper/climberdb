@@ -1414,10 +1414,23 @@ class ClimberDBQuery extends ClimberDB {
 
 
 	/*
+	Helper to show/hide the loading indicator when a query is running. This hides the 
+	"run query" button so users can't click it again until the query finishes
+	*/
+	toggleQueryLooadingIndicator({hide=true}={}) {
+		$('#run-query-loading-indicator').ariaHide(hide);
+		$('#run-query-button').ariaHide(!hide);
+	}
+
+
+	/*
 	Helper function to submit SQL and optionally show result. This needs to be separated from runQuery() so that custom 
 	query processing functions can still use the same code
 	*/
 	submitQuery(sql, {sqlParameters={}, queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
+
+		this.toggleQueryLooadingIndicator({hide: false})
+
 		return this.queryDB({sql: sql.replace(/\{schema\}/g, this.dbSchema), sqlParameters: sqlParameters})
 			.done(response => {
 				const queryDisplayName = $('.query-option.selected').text();
@@ -1436,6 +1449,8 @@ class ClimberDBQuery extends ClimberDB {
 						this.showResult(this.result, queryName);
 					}
 				}
+			}).always(() => {
+				this.toggleQueryLooadingIndicator({hide: true})
 			})
 	}
 
@@ -1856,6 +1871,9 @@ class ClimberDBQuery extends ClimberDB {
 	queryAnnualSummary() {
 		
 		if (!this.validateFields('annual_summary')) return;
+		
+		this.toggleQueryLooadingIndicator({hide: false})
+
 		const year = $('#annual-summary-year').val()
 			.replace(/[^\d]/g, '');
 		const errorMessage = 'There was an unexpected error while running the annual summary query';
@@ -1867,6 +1885,8 @@ class ClimberDBQuery extends ClimberDB {
 			}
 		}).fail((xhr, status, error) => {
 			this.showModal(errorMessage + `: ${error}`, 'Unexpected Error');
+		}).always(() => {
+			this.toggleQueryLooadingIndicator({hide: true})
 		})
 	}
 
