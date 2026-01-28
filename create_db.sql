@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS user_status_codes (id SERIAL PRIMARY KEY, name varcha
 --	backcountry locations and mountains. This relationship allows
 --	different backcountry locations to be associated with overlapping
 --	sets of mountains that might also contain unique memebers
-CREATE TABLE IF NOT EXISTS dev.backcountry_locations_mountains_xref (
+CREATE TABLE IF NOT EXISTS backcountry_locations_mountains_xref (
 	backcountry_location_code INTEGER REFERENCES backcountry_location_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	mountain_code INTEGER REFERENCES mountain_codes(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 	PRIMARY KEY (backcountry_location_code, mountain_code)
@@ -707,8 +707,8 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 		climbers.age,
 		climbers.sex_code,
 		expeditions.expedition_name,
-		CASE WHEN is_backcountry AND actual_departure_date IS NULL THEN format('%s - No Departure Entered', expedition_name)
-			WHEN  is_backcountry AND actual_departure_date IS NOT NULL THEN format('%1s - %2s', expedition_name, to_char(actual_departure_date, 'MM/DD/YYYY'))
+		CASE WHEN expeditions.is_backcountry AND actual_departure_date IS NULL THEN format('%s - No Departure Entered', expedition_name)
+			WHEN  expeditions.is_backcountry AND actual_departure_date IS NOT NULL THEN format('%1s - %2s', expedition_name, to_char(actual_departure_date, 'MM/DD/YYYY'))
 			ELSE expedition_name
 		END AS query_expedition_name,
 		expeditions.planned_departure_date,
@@ -735,7 +735,7 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 		CASE WHEN summit_date IS NULL THEN 'No' ELSE 'Yes' END AS summited,
 		actual_return_date - actual_departure_date AS trip_length_days,
 		extract(year FROM coalesce(planned_departure_date, actual_departure_date)) AS year, --for bc groups, planned_departure is null
-		to_char(planned_departure_date, 'Month') AS month,
+		to_char(planned_departure_date, 'FMMonth') AS month,
 		expeditions.is_backcountry,
 		CASE WHEN expeditions.is_backcountry THEN 'Yes' ELSE 'No' END AS is_backcountry_yes_no,
 		itinerary_locations.backcountry_location_type_code,
@@ -756,7 +756,7 @@ CREATE OR REPLACE VIEW registered_climbs_view AS
 	SELECT * FROM all_climbs_view
 	WHERE 
 		reservation_status_code <> 6 AND 
-		group_status_code <> 6; 
+		group_status_code <> 6;
 
 CREATE OR REPLACE VIEW solo_climbs_view AS 
 	SELECT 
