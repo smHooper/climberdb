@@ -516,12 +516,12 @@ class AnnualSummary:
 		summit_dates = (
 			DataFrame(
 				query_db({'sql': sql}),
-				columns=['Earliest', 'Latest', 'mountain_code']
+				columns=['earliest', 'latest', 'mountain_code']
 			)
 			.set_index('mountain_code')
 			.T
 		)
-
+		import pdb; pdb.set_trace()
 		summit_dates.rename(columns=self.mountain_names, inplace=True)
 		summit_dates['description'] = (
 			summit_dates
@@ -547,7 +547,7 @@ class AnnualSummary:
 		self.snapshot = snapshot
 
 
-	def _get_top_states_countries(self, data, n=4):
+	def _get_top_states_countries(self, data, n=4, max_rows=10):
 		"""
 		Helper method to sort queries of states and contries of origin.
 		Don't just get the 4 most popular states. Get the top 4 values 
@@ -561,7 +561,7 @@ class AnnualSummary:
 		# Loop through mountains in order of their code, so Denali will be first
 		for mountain_name_ in self.mountain_names.sort_index():
 			top_counts = (data
-				.dropna(subset=mountain_name_)
+				.loc[data[mountain_name_].fillna(0) > 0]
 				.sort_values(mountain_name_, ascending=False)
 				.head(n)[mountain_name_]
 			)
@@ -569,8 +569,13 @@ class AnnualSummary:
 				data[mountain_name_]
 					.loc[data[mountain_name_].isin(top_counts)]
 			)
+			import pdb; pdb.set_trace()
 
-		return DataFrame(top).sort_values(self.denali_name, ascending=False)
+		return (
+			DataFrame(top)
+				.sort_values(self.denali_name, ascending=False)
+				.head(max_rows)
+		)
 
 
 	def _build_states_countries_of_origin(self):
@@ -663,6 +668,7 @@ class AnnualSummary:
 
 		self.n_countries = len(intl_climbers)
 		top_countries = self._get_top_states_countries(intl_climbers, n=6)
+		import pdb; pdb.set_trace()
 		# Get the code values of the top Denali countries
 		top_denali_countries = (
 			top_countries
