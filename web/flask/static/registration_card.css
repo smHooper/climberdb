@@ -64,16 +64,16 @@ table span.value {
 	border-left: none;
 	border-right: none;
 }
-#climber-route-list tbody td	{width: 7%;} /*default*/
-#climber-route-list .leader-col {width: 3%;}
-#climber-route-list .name-col 	{width: 20%;}
-#climber-route-list .route-col 	{width: 25%;}
-#climber-route-list .summit-col {width: 10%;}
+#climber-route-list tbody td	{width: 10%;} /*default*/
+/*#climber-route-list .leader-col {width: 5%;}*/
+#climber-route-list .name-col 	{width: 35%;}
+#climber-route-list .route-col 	{width: 45%;}
 
 #climber-route-list tbody .leader-col {
 	font-weight: bold;
 	font-size: 12pt;
-	text-align: center;
+	text-indent: 7px;
+	/*text-align: center;*/
 }
 /*unicode must be displayed in a font that has that character*/
 .unicode-character {
@@ -116,6 +116,7 @@ table span.value {
 .col-15 {width: 15%;}
 .col-20 {width: 20%;}
 .col-25 {width: 25%;}
+.col-33 {width: 33.3%}
 .col-50 {width: 50%;}
 .white-space-no-wrap {
 	white-space: nowrap;
