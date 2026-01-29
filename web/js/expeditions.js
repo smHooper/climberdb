@@ -2752,7 +2752,7 @@ class ClimberDBExpeditions extends ClimberDB {
 				application_fee_not_required: feeRequired ? '/Off' : '/Yes',
 				permit_fee: this.config.climbing_permit_fee,
 				application_fee_paid: feePaid,
-				permit_expiration: 'July 31, ' + new Date().getFullYear()
+				permit_expiration: 'Nov 30, ' + new Date().getFullYear()
 			}
 		}
 
