@@ -712,6 +712,7 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 			ELSE expedition_name
 		END AS query_expedition_name,
 		expeditions.planned_departure_date,
+		expeditions.planned_return_date,
 		expeditions.actual_departure_date,
 		expeditions.actual_return_date,
 		expeditions.guide_company_code,
