@@ -1115,6 +1115,23 @@ class ClimberDB {
 	}
 
 
+	/*
+	Set the default values on a select
+	*/
+	setDefaultValue($el) {
+		$el = $($el);
+
+		if ($el.is('select')) {
+			const defaultValue = $el.data('default-value');
+			if (defaultValue) {
+				$el.val(defaultValue);
+			} else {	
+				$el.val('').addClass('default');
+			}
+		}
+	}
+
+
 	addNewListItem($ul, {dbID=null, parentDBID=null, newItemClass=''}={}) {
 
 		const $cloneable = $ul.find('li.cloneable');
@@ -1144,6 +1161,8 @@ class ClimberDB {
 			if ($el.data('dependent-target')) 
 				$el.attr('data-dependent-target', `${$el.data('dependent-target')}-${itemTag}`);
 			if (!isNaN(dbID)) $el.attr('data-table-id', dbID);
+
+			this.setDefaultValue($el);
 		}
 
 		for (const el of $newItem.find('label.generic-button')) {
@@ -1225,14 +1244,7 @@ class ClimberDB {
 				.siblings('.field-label')
 					.attr('for', newID);
 			if (dataTable in updateIDs)  $el.attr('data-table-id', updateIDs[dataTable]);
-			if ($el.is('select')) {
-				const defaultValue = $el.data('default-value');
-				if (defaultValue) {
-					$el.val(defaultValue);
-				} else {	
-					$el.val('').addClass('default');
-				}
-			}
+			this.setDefaultValue($el);
 		}
 
 		for (const el of $newCard.find('label.generic-button, .field-label.checkbox-label')) {
