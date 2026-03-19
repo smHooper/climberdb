@@ -714,7 +714,7 @@ class ClimberDBQuery extends ClimberDB {
 			this.onSummitsPerDayClick()
 		});
 		$('#bc-groups-on-mountain-button').click(e => {
-			this.onBackcountryOnMOuntainClick()
+			this.onBackcountryOnMountainClick()
 		});
 		$('#count-bc-groups-by-location-button').click(e => {
 			this.onBCGroupsByLocationClick()
@@ -1087,13 +1087,14 @@ class ClimberDBQuery extends ClimberDB {
 		$('#count_climbers-group_by_fields').val(['summit_date']).change();
 	}
 
-	onBackcountryOnMOuntainClick() {
-		this.setCountClimbersOrClimbsParameters({queryTarget:'expeditions'});
+	onBackcountryOnMountainClick() {
+		this.setCountClimbersOrClimbsParameters({queryTarget:'expeditions', year:null});
 		const $container = $('.query-parameters-container[data-query-name="count_climbers"]');
 		$container.find(
 			'.show-query-parameter-button[data-field-name=is_backcountry_yes_no],' +
 			'.show-query-parameter-button[data-field-name=group_status_code],' +
-			'.show-query-parameter-button[data-field-name=backcountry_location_code]'
+			'.show-query-parameter-button[data-field-name=backcountry_location_code],' +
+			'.show-query-parameter-button[data-field-name=planned_return_date]' 
 		).click();
 
 		$('#count_climbers-is_backcountry_yes_no')
@@ -1105,6 +1106,13 @@ class ClimberDBQuery extends ClimberDB {
 		$('#count_climbers-backcountry_location_code')
 			.siblings('.add-remove-all-multiselect-options-button')
 			.click();
+		$('#count_climbers-planned_return_date_operator')
+			.val('>=')
+			.change();
+		$('#count_climbers-planned_return_date')
+			.val(getFormattedTimestamp(new Date((new Date().getFullYear()), 0, 1)))
+			.change();
+
 	}
 
 	onBCGroupsByLocationClick() {
