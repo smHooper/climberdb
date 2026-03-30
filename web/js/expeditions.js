@@ -342,7 +342,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			const $newItem = this.addNewListItem($(e.target).closest('.transactions-tab-pane').find('.data-list'), {newItemClass: 'new-list-item'})
 			// 
 			$newItem.find('.input-field[name="transaction_type_code"]').change();
-
+			$newItem.find('.input-field[name="payment_method_code"]').change();
 			// This field is hidden completely so just fill it silently with the current timestamp
 			$newItem.find('.input-field[name=transaction_date]').val( getFormattedTimestamp(new Date()) ).change();
 			const $card = $newItem.closest('.card');
@@ -1443,6 +1443,14 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		var foreignColumns = {};
 		const getEdits = (dbID, $inputs, tableName, {htmlID='', additionalValues={} }={}) => {
+			// ignore inputs that are the child of a closed .collapse if they have the 
+			//	.ignore-changes-on-hidden class
+			for (const el of $inputs) {
+				const $el = $(el);
+				if ($el.is('.ignore-changes-when-hidden') && $el.closest('.collapse').is(':not(.show)')) {
+					$inputs = $inputs.not($el);
+				}
+			}
 			var values = {
 				...Object.fromEntries(
 					$inputs.get().map(el => { return [ el.name, this.getInputFieldValue($(el)) ] } )
