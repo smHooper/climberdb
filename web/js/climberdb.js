@@ -1124,7 +1124,7 @@ class ClimberDB {
 		if ($el.is('select')) {
 			const defaultValue = $el.data('default-value');
 			if (defaultValue) {
-				$el.val(defaultValue).change();
+				$el.val(defaultValue);
 			} else {	
 				$el.val('').addClass('default');
 			}
