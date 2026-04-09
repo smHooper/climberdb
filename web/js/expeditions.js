@@ -4721,8 +4721,10 @@ class ClimberDBExpeditions extends ClimberDB {
 		const highestElevation = $highestElevationInput.val();
 		const $card = $highestElevationInput.closest('.card');
 		const mountainCode = $card.find('.input-field[name=mountain_code]').val();
-		const summitElevation = this.mountainCodes[mountainCode].elevation_ft;
+		const summitElevation = this.mountainCodes[mountainCode]?.elevation_ft;
 		const $checkbox = $highestElevationInput.closest('.data-list-item').find('[name=route_was_summited]');
+
+		if (isNull(summitElevation)) return;
 
 		// Check to make sure the elvation entered is not greater than the summit elevation
 		if (parseInt(highestElevation) > parseInt(summitElevation)){
