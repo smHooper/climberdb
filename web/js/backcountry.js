@@ -107,16 +107,19 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 	@param coordinates: LatLng Leaflet object or 2-element array of [lat, lon]
 	@param mapObject: either this.maps.main or this.maps.modal
 	*/
-	addLocationToMap(locationIndex, coordinates, mapObject, {isNewLocation=true}={}) {
+	addLocationToMap(locationIndex, coordinates, mapObject, {isNewLocation=true, triggerChange=true}={}) {
 		const $card = $(this.locationCardIndexSelector).eq(locationIndex);
 		const $locationTypeField = $card.find('.input-field[name=backcountry_location_type_code]')
-			.change(); // if default value was set in HTML, trigger change event
+		
 		let locationType = $locationTypeField.val();
 		// if the location type isn't set, set it to its default value
 		if (!locationType) {
 			locationType = $locationTypeField.data('default-value') || 2;  //default to camp icon
-			$locationTypeField.val(locationType).change();
+			$locationTypeField.val(locationType);
 		}
+
+		if (triggerChange) $locationTypeField.change();
+
 		const icon = L.icon({
 			iconUrl: this.markerIcons[locationType],
 			iconSize: [35, 35],
@@ -783,7 +786,7 @@ class ClimberDBBackcountry extends ClimberDBExpeditions {
 			const index = $card.index(this.locationCardIndexSelector);
 			const coordinates = [$card.find('.input-field[name=latitude]').val(), $card.find('.input-field[name=longitude]').val()];
 			for (const mapObject of Object.values(this.maps)) {
-				this.addLocationToMap(index, coordinates, mapObject, {isNewLocation: false});
+				this.addLocationToMap(index, coordinates, mapObject, {isNewLocation: false, triggerChange: triggerChange});
 			}
 			
 			this.onLocationTypeChange({target: $card.find('.input-field[name=backcountry_location_type_code]')})
