@@ -234,7 +234,7 @@ label {
 .briefing-appointment-container,
 .color-guide-tooltip .color-swatch {
 	background-color: var(--ui-primary-highlight-color);
-	color: white;
+	color: black;
 }
 
 /*colors get assigned to each guiding company in briefings.js*/
@@ -332,7 +332,7 @@ label {
 
 /* --------------View notes button/tootlip --------------- */
 .view-notes-button > span {
-	color: white;
+	color: black;
 	text-align: right;
 	font-weight: bold;
 }
