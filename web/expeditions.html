@@ -518,17 +518,17 @@
 														</div>
 														<div class="transactions-container-body">
 															<div class="data-list-item data-list-item-header">
-																<label class="data-list-col data-list-header-label col-3 transaction-type-column">Type</label>
+																<label class="data-list-col data-list-header-label col-4 transaction-type-column">Transaction type</label>
 																<label class="data-list-col data-list-header-label col-2 payment-method-column">Payment method</label>
 																<label class="data-list-col data-list-header-label col col-13-percent transaction-value-column">Value</label>
-																<label class="data-list-col data-list-header-label col-2 transaction-date-column">Date</label>
-																<label class="data-list-col data-list-header-label col transaction-notes-column">Transaction notes</label>
+																<label class="data-list-col data-list-header-label col-3 transaction-date-column">Date</label>
+																<label class="data-list-col data-list-header-label col transaction-notes-column modal-only hidden">Transaction notes</label>
 																<label class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit by</label>
 																<label class="data-list-col data-list-header-label modal-only data-list-metadata-column hidden">Last edit date</label>
 															</div>
 															<ul id="transactions-list" class="data-list">
 																<li class="data-list-item show-children-on-hover cloneable hidden" data-table-name="transactions">
-																	<div class="col-3 d-flex transaction-type-column">
+																	<div class="col-4 d-flex transaction-type-column">
 																		<select id="input-transaction_type" class="input-field transaction-type-field" name="transaction_type_code" data-table-name="transactions" placeholder="Transaction type" title="Transaction type" required=""></select>
 																		<span class="required-indicator">*</span>
 																	</div>
@@ -542,12 +542,14 @@
 																		<span class="unit-symbol">$</span>
 																		<input id="input-transaction_value" class="input-field field-with-units transaction-amount-field" name="transaction_value" data-table-name="transactions" title="Transaction value"> 
 																	</div>
-																	<div class="col-2 d-flex transaction-date-column">
+																	<div class="col-3 d-flex transaction-date-column">
 																		<input id="input-transaction_date" class="input-field warn-previous-year-date warn-future-year-date" type="date" name="transaction_date" data-table-name="transactions"> 
 																	</div>
 																	<div class="col d-flex transaction-notes-column">
-																		<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
-																		<div class="col pl-1 list-item-delete-button-container">
+																		<div class="col modal-only hidden">
+																			<input id="input-transaction_notes" class="input-field" name="transaction_notes" type="text" data-table-name="transactions" title="Transaction type"> 
+																		</div>
+																		<div class="pl-1 list-item-delete-button-container">
 																			<button class="icon-button delete-button delete-transaction-button show-on-parent-hover" title="Delete transaction">
 																				<i class="fas fa-trash fa-lg"></i>
 																				<label class="icon-button-label">delete</label>
