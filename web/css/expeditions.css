@@ -529,6 +529,7 @@
 }
 .input-field.card-link-label.route-code-header-input {
 	border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+	min-width: 100%;
 	/* border-radius: 7px; */
 }
 .uneditable .input-field.card-link-label.route-code-header-input {

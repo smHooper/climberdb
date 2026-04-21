@@ -140,6 +140,11 @@ button > img {
   max-width: 100%;
 }
 
+/* Chrome version >= 135 changed select styling so chevron can overlap text*/
+select {
+  padding-right: 1.2rem;
+}
+
 /*------Custom checkbox--------*/
 /* The container */
 .checkmark-container {
