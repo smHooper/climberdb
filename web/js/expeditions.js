@@ -2844,6 +2844,7 @@ class ClimberDBExpeditions extends ClimberDB {
 
 			const airTaxiCode = this.expeditionInfo.expeditions.air_taxi_code;
 			const airTaxiName = $('#input-air_taxi option').filter((_, el) => el.value == airTaxiCode).text();
+			const flagged = $('.input-checkbox[name="flagged"]:checked').length > 0;
 			const labelData = {
 				expedition_name: this.expeditionInfo.expeditions.expedition_name,
 				leader_name: tripLeaderInfo.first_name + ' ' + tripLeaderInfo.last_name,
@@ -2851,7 +2852,8 @@ class ClimberDBExpeditions extends ClimberDB {
 				planned_return_date: getFormattedTimestamp(
 					new Date(this.expeditionInfo.expeditions.planned_return_date)
 				),
-				expedition_id: this.expeditionInfo.expeditions.id
+				expedition_id: this.expeditionInfo.expeditions.id,
+				flagged: flagged
 			}
 
 			showLoadingIndicator('onShowCacheTagModalButtonClick');
