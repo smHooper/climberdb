@@ -29,6 +29,7 @@ ZPL_COMPRESSION_DICT = (
     {20 + i * 20: character for i, character in enumerate(string.ascii_lowercase[6:])}
 ) 
 LABELARY_API_URL = 'https://api.labelary.com'
+FLAGGED_BAR_THICKNESS_INCHES = 0.25
 
 
 class CacheTag:
@@ -40,6 +41,7 @@ class CacheTag:
             expedition_id: str,
             air_taxi: str,
             return_date: str,
+            flagged: Optional[bool]=False,
             label_height: Optional[int]=6.875,
             label_width: Optional[int]=3.0625,
             label_margin_x: Optional[Union[int, float]] = 1 / 16,
@@ -62,12 +64,13 @@ class CacheTag:
         self.expedition_id = expedition_id
         self.air_taxi = air_taxi
         self.return_date = return_date
+        self.flagged = flagged
 
         self.arrowhead_zpl_str = ''
 
 
     def __repr__(self) -> str:
-        return self.zebra.__repr__()
+        return self.label.code.__repr__()
 
 
     def add_text(
@@ -236,7 +239,6 @@ class CacheTag:
 
         return width_mm
 
-
     def build_label_image(
             self,
             bottom_margin_mm: int,
@@ -317,6 +319,32 @@ class CacheTag:
         current_y_mm = add_expedition_info('Return:', self.return_date, current_y_mm)
 
 
+    def add_flagged_bar(
+            self,
+            y: Union[int, float],
+            bar_thickness_mm: Union[int, float]
+        ) -> None:
+        """
+        Add a bar to the label that indicates the expedition is flagged.
+
+        :param x: left-most coordinate of the bar in mm
+        :param y: top-most coordinate of the bar in mm
+        :param width_mm: width of the bar in mm
+        :param height_mm: height of the bar in mm
+        :return: None
+        """
+        # ZPL doesn't provide a fill option so the box will have a border that's half the thickness of the bar width
+        resolution = self.label.dpmm
+        bar_thickness_dots = bar_thickness_mm * resolution
+        self.label.origin(0, y)
+        self.label.draw_box( 
+            self.label.width * MILLIMETERS_PER_INCH * resolution, 
+            bar_thickness_dots,
+            thickness=bar_thickness_dots / 2
+        )
+        self.label.endorigin()
+
+
     def close_zpl(self):
         """
         Helper function to add closing ZPL2 command
@@ -339,6 +367,16 @@ class CacheTag:
         top_margin = bottom_margin
         bottom_margin = int((self.center_margin / 2) * MILLIMETERS_PER_INCH)
         self.build_label_image(bottom_margin, top_margin)
+
+        if self.flagged:
+            bar_thickness_mm = FLAGGED_BAR_THICKNESS_INCHES * MILLIMETERS_PER_INCH
+            margin_mm = self.label_margin_y * MILLIMETERS_PER_INCH
+            
+            top_bar_y = margin_mm / 2 - bar_thickness_mm / 2
+            self.add_flagged_bar(top_bar_y, bar_thickness_mm)
+
+            bottom_bar_y = self.label.height - margin_mm /2 - bar_thickness_mm / 2
+            self.add_flagged_bar(bottom_bar_y, bar_thickness_mm)
 
         self.close_zpl()
 
@@ -388,9 +426,9 @@ class CacheTag:
 
 
 def test_tag(ssl_cert=True):
-    tag = CacheTag('Some Long Expedition Name on 2 Lines', 'Sam Hooper', '5970', 'Talkeetna Air Taxi', '5/23/2023', ssl_cert=ssl_cert)
+    tag = CacheTag('Some Long Expedition Name on 2 Lines', 'Sam Hooper', '5970', 'Talkeetna Air Taxi', '5/23/2023', ssl_cert=ssl_cert, flagged=True)
     tag.build_cache_tag_label()
-    #tag.label.preview()
+    tag.label.preview()
 
     return tag
 
