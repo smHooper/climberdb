@@ -969,7 +969,7 @@ def preview_cache_tag():
 		expedition_id, 
 		data['air_taxi_name'], 
 		data['planned_return_date'],
-		flagged=data['flagged'],
+		flagged=str(data['flagged']).lower() == 'true',
 		ssl_cert=app.config['SSL_CERT_PATH']
 	)
 	tag.build_cache_tag_label()
