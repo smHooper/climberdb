@@ -379,6 +379,30 @@
 																<span class="null-input-indicator">&lt; null &gt;</span>
 															</div>
 														</div>
+														<div class="field-container-row">		
+															<div class="field-container checkbox-field-container col-sm-6">
+																<label class="checkmark-container">
+																	<input id="input-sar_initiated" class="input-field input-checkbox" type="checkbox" name="sar_initiated" data-table-name="expedition_members">
+																	<span class="checkmark data-input-checkmark"></span>
+																</label>
+																<label class="field-label checkbox-label" for="input-sar_initiated">SAR initiated</label>
+															</div>	
+														</div>
+														<div class="field-container-row collapse">
+															<div class="field-container col-sm-6">
+																<label class="field-label" for="input-sar_incident_number">Case Incident Number</label>
+																<input id="input-sar_incident_number" class="input-field" name="sar_incident_number" data-table-name="expedition_members" placeholder="Enter the case incident #" title="SAR Case Incident #" type="text" autocomplete="__never" data-dependent-target="#input-sar_initiated" data-dependent-value="true" required=""></input>
+																<span class="required-indicator">*</span>
+																<span class="null-input-indicator">&lt; null &gt;</span>
+															</div>
+															<div class="field-container col-sm-6">
+																<label class="checkmark-container">
+																	<input id="input-sar_fatality" class="input-field input-checkbox" type="checkbox" name="sar_fatality" data-table-name="expedition_members" data-dependent-target="#input-sar_initiated" data-dependent-value="true">
+																	<span class="checkmark data-input-checkmark"></span>
+																</label>
+																<label class="field-label checkbox-label" for="input-sar_fatality">Fatality</label>
+															</div>
+														</div>
 														<div class="field-container-row">
 															<div class="field-container checkbox-field-container col-sm-3">
 																<label class="checkmark-container">
