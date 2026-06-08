@@ -501,6 +501,7 @@ def get_url_root(url_root) -> str:
 		f':{prod_port}', 
 		request.url_root.strip('/')
 	)
+	
 	return url_root
 
 
@@ -516,7 +517,7 @@ def send_account_request():
 
 	user_id = data['user_id']
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
-	data['button_url'] = f'''{get_url_root(request.url_root)}/index.html?activation=true&id={user_id}'''
+	data['button_url'] = f'''{app.config.get('PROD_URL_ROOT') or get_url_root(request.url_root)}/index.html?activation=true&id={user_id}'''
 	data['button_text'] = 'Activate Account'
 	data['heading_title'] = 'Activate your Denali Climbing Permit Portal account'
 
@@ -540,7 +541,7 @@ def send_reset_password_request():
 
 	user_id = data['user_id']
 	data['logo_base64_string'] = 'data:image/jpg;base64,' + get_email_logo_base64()	
-	data['button_url'] = f'''{get_url_root(request.url_root)}/index.html?reset=true&id={user_id}'''
+	data['button_url'] = f'''{app.config.get('PROD_URL_ROOT') or get_url_root(request.url_root)}/index.html?reset=true&id={user_id}'''
 	data['button_text'] = 'Reset Password'
 	data['heading_title'] = 'Reset Denali Climbing Permit Portal account password'
 
