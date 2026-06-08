@@ -34,7 +34,7 @@ from sqlalchemy.sql.selectable import Subquery
 from typing import Any, Mapping
 
 SQLA_TABLE_DIR = os.path.join(os.path.dirname(__file__), '_sqlalchemy_cache')
-CONFIG_FILE = '//inpdenaterm01/climberdb/config/climberdb_config.json'
+CONFIG_FILE = '//inpdenakeydb01/climberdb/config/climberdb_config.json'
 # The SQLAlchemy ORM requires that views have a primary key. This dict 
 #	stores the PK column name for each view. ANy views not specified here
 #	have a row_number column that serves as the PK
