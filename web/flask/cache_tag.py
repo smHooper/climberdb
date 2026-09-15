@@ -257,7 +257,6 @@ class CacheTag:
         arrowhead_img = PIL.Image.open(NPS_LOGO_PATH).rotate(90, expand=True)
         half_height_mm = self.label.height / 2
         left_margin_mm = self.label_margin_x * MILLIMETERS_PER_INCH
-        resolution = self.label.dpmm
         print_upper_left_y = origin_y + top_margin_mm
         print_area_height = half_height_mm - top_margin_mm - bottom_margin_mm
         secondary_font_size = 3
@@ -294,9 +293,9 @@ class CacheTag:
         # Add rule below logo
         current_x_mm += logo_width + 0.5
         underline_width_mm = 1
-        underline_width_dots = underline_width_mm * resolution
+        underline_width_dots = underline_width_mm
         self.label.origin(current_x_mm, print_upper_left_y)
-        self.label.draw_box(underline_width_dots, print_area_height * resolution, underline_width_dots)
+        self.label.draw_box(underline_width_dots, print_area_height, underline_width_dots)
         self.label.endorigin()
         current_x_mm += underline_width_mm
 
@@ -334,11 +333,10 @@ class CacheTag:
         :return: None
         """
         # ZPL doesn't provide a fill option so the box will have a border that's half the thickness of the bar width
-        resolution = self.label.dpmm
-        bar_thickness_dots = bar_thickness_mm * resolution
+        bar_thickness_dots = bar_thickness_mm 
         self.label.origin(0, y)
         self.label.draw_box( 
-            self.label.width * MILLIMETERS_PER_INCH * resolution, 
+            self.label.width * MILLIMETERS_PER_INCH, 
             bar_thickness_dots,
             thickness=bar_thickness_dots / 2
         )
