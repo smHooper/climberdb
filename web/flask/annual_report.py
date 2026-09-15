@@ -324,6 +324,8 @@ class AnnualSummary:
 				.index[0]
 		)
 		self.denali_name = self.mountain_names[self._DENALI_CODE]
+		self.routes_climbed_title = f'WHAT ROUTES WERE CLIMBED IN {year}?'
+		self.report_title = f'{year} Climbing Season - General Statistics'
 
 
 	def _query_snapshot(
@@ -1031,7 +1033,9 @@ class AnnualSummary:
 				'less_than_3_total':    self.less_than_3_total,
 				'other_countries':      self.other_countries_list,
 				'other_countries_total': self.other_counters_total,
-				'denali_name': 			self.denali_name
+				'denali_name': 			self.denali_name,
+				'route_climbed_title':	self.routes_climbed_title,
+				'report_title':			self.report_title
 			}
 		}
 
