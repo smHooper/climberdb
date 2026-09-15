@@ -367,7 +367,6 @@ def query_user_info(username):
 # Get username and role
 @app.route('/flask/user_info', methods=['POST'])
 def get_user_info():
-	
 	username = ''
 	try:
 		# strip domain ('nps') from username, and make sure it's all lowercase
@@ -1002,7 +1001,6 @@ def print_cache_tag():
 # All-purpose SELECT query endpoint
 @app.route('/flask/db/select', methods=['POST'])
 def run_select_query():
-
 	request_data = request.get_json()	
 	response_data = climberdb_utils.query_db(request_data)
 	response = {'data': response_data}
