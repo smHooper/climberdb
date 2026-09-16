@@ -479,12 +479,13 @@ class AnnualSummary:
 			guided_summit_percent = round(
 				  guided_summits['value'] 
 				/ guided_climbers.loc[0, self.denali_name] 
-				* 100
+				* 100,
+				1
 			)
 			snapshot = concat([
 				snapshot,
 				DataFrame([{
-					self.denali_name: guided_summit_percent,
+					self.denali_name: f'{guided_summit_percent}%',
 					'description': f'{self.denali_name} Guided Summit Rate'
 				}])
 			])
@@ -493,12 +494,13 @@ class AnnualSummary:
 			independent_summit_percent = round(
 				  independent_summits['value'] 
 				/ independent_climbers.loc[0, self.denali_name] 
-				* 100
+				* 100,
+				1
 			)
 			snapshot = concat([
 				snapshot,
 				DataFrame([{
-					self.denali_name: independent_summit_percent,
+					self.denali_name: f'{independent_summit_percent}%',
 					'description': f'{self.denali_name} Non-Guided Summit Rate'
 				}])
 			])
