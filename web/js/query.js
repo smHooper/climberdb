@@ -11,7 +11,7 @@ class ClimberDBQuery extends ClimberDB {
 			climbers: `SELECT DISTINCT ON (climber_id) * FROM {schema}.all_climbs_view`,
 			expeditions: `SELECT DISTINCT ON (expedition_id) * FROM {schema}.all_climbs_view`,
 			members:  `SELECT DISTINCT ON (expedition_member_id) * FROM {schema}.all_climbs_view`,
-			climbs:   `SELECT * FROM {schema}.all_climbs_view`,
+			climbs:   `SELECT DISTINCT ON (route_code, expedition_member_id) * FROM {schema}.all_climbs_view`,
 		}
 		this.minDragbarPageY = 220; // min height to prevent user from covering query title when resizing param container
 		this.queries = {
