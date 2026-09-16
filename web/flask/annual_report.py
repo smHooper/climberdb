@@ -257,7 +257,7 @@ class AnnualSummary:
 			{select}
 		FROM (
 			SELECT DISTINCT ON ({distinct_on})
-			*
+			{inner_select}
 			FROM {schema}.registered_climbs_view
 			WHERE year = {year} 
 			{where}
@@ -279,6 +279,7 @@ class AnnualSummary:
 			'year': year, 
 			'schema': schema, 
 			'select': 'mountain_code, count(expedition_member_id) AS value',
+			'inner_select': '*',
 			'distinct_on': 'expedition_member_id, mountain_code',
 			'where': f' AND mountain_code in ({self.mountain_code_str})',
 			'group_by': 'mountain_code'
@@ -324,6 +325,8 @@ class AnnualSummary:
 				.index[0]
 		)
 		self.denali_name = self.mountain_names[self._DENALI_CODE]
+		self.routes_climbed_title = f'WHAT ROUTES WERE CLIMBED IN {self.year}?'
+		self.report_title = f'{self.year} Climbing Season - General Statistics'
 
 
 	def _query_snapshot(
@@ -521,7 +524,6 @@ class AnnualSummary:
 			.set_index('mountain_code')
 			.T
 		)
-		import pdb; pdb.set_trace()
 		summit_dates.rename(columns=self.mountain_names, inplace=True)
 		summit_dates['description'] = (
 			summit_dates
@@ -569,7 +571,6 @@ class AnnualSummary:
 				data[mountain_name_]
 					.loc[data[mountain_name_].isin(top_counts)]
 			)
-			import pdb; pdb.set_trace()
 
 		return (
 			DataFrame(top)
@@ -668,7 +669,7 @@ class AnnualSummary:
 
 		self.n_countries = len(intl_climbers)
 		top_countries = self._get_top_states_countries(intl_climbers, n=6)
-		import pdb; pdb.set_trace()
+
 		# Get the code values of the top Denali countries
 		top_denali_countries = (
 			top_countries
@@ -851,15 +852,16 @@ class AnnualSummary:
 	def _build_summit_dates(self):
 		# Summits per month and top 3 summit dates
 		summit_by_month_params = self.default_params.copy()
-		summit_by_month_params['select'] = 'month, count(*)'
-		summit_by_month_params['group_by'] = 'month'
+		summit_by_month_params['select'] = 'summit_month, count(*)'
+		summit_by_month_params['group_by'] = 'summit_month'
+		summit_by_month_params['inner_select'] = 'to_char(summit_date, \'FMMonth\') AS summit_month, *'
 		summit_by_month_params['distinct_on'] = 'expedition_member_id'
 		summit_by_month_params['where'] += ' AND summit_date IS NOT NULL AND mountain_code = 1'
 		summit_by_month_sql = self._TEMPLATE_SQL.format(**summit_by_month_params)
 		self.summits_by_month = (DataFrame(
 				query_db({'sql': summit_by_month_sql}),
-				columns=['month', 'count']
-			).set_index('month')
+				columns=['summit_month', 'count']
+			).set_index('summit_month')
 			.reindex(index=['May', 'June', 'July'], fill_value=0)
 		)
 
@@ -881,7 +883,7 @@ class AnnualSummary:
 			.head(3)
 			.set_index('summit_date')
 		)
-
+		
 
 	def _build_routes(self) -> None:
 		"""
@@ -913,9 +915,12 @@ class AnnualSummary:
 			mountain_routes['Attempts'] = mountain_routes.sum(axis=1)
 			mountain_routes = mountain_routes.drop(columns='No')
 			mountain_routes['Success Rate'] = (
-				mountain_routes.Summits / mountain_routes.Attempts * 100
-			).round().astype(int)
-
+				(mountain_routes.Summits / mountain_routes.Attempts * 100)
+					.round(1)
+					.fillna(0)
+					.astype(str)
+					+ '%'
+			)
 			return mountain_routes.sort_values('Attempts', ascending=False)
 		
 		self.denali_routes = get_route_counts(self._DENALI_CODE)
@@ -1031,7 +1036,9 @@ class AnnualSummary:
 				'less_than_3_total':    self.less_than_3_total,
 				'other_countries':      self.other_countries_list,
 				'other_countries_total': self.other_counters_total,
-				'denali_name': 			self.denali_name
+				'denali_name': 			self.denali_name,
+				'routes_climbed_title':	self.routes_climbed_title,
+				'report_title':			self.report_title
 			}
 		}
 

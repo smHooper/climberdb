@@ -704,12 +704,12 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 		climbers.state_code,
 		climbers.country_code,
 		climbers.dob,
-		climbers.age,
+		climber_info_view.age,
 		climbers.sex_code,
 		expeditions.expedition_name,
-		CASE WHEN expeditions.is_backcountry AND actual_departure_date IS NULL THEN format('%s - No Departure Entered', expedition_name)
-			WHEN  expeditions.is_backcountry AND actual_departure_date IS NOT NULL THEN format('%1s - %2s', expedition_name, to_char(actual_departure_date, 'MM/DD/YYYY'))
-			ELSE expedition_name
+		CASE WHEN expeditions.is_backcountry AND actual_departure_date IS NULL THEN format('%s - No Departure Entered', expeditions.expedition_name)
+			WHEN  expeditions.is_backcountry AND actual_departure_date IS NOT NULL THEN format('%1s - %2s', expeditions.expedition_name, to_char(actual_departure_date, 'MM/DD/YYYY'))
+			ELSE expeditions.expedition_name
 		END AS query_expedition_name,
 		expeditions.planned_departure_date,
 		expeditions.planned_return_date,
@@ -746,6 +746,7 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 	FROM expeditions
 		JOIN expedition_members ON expeditions.id = expedition_members.expedition_id
 		JOIN climbers ON expedition_members.climber_id = climbers.id
+		JOIN climber_info_view ON climbers.id = climber_info_view.id
 		JOIN expedition_member_routes ON expedition_members.id = expedition_member_routes.expedition_member_id
 		JOIN route_codes ON expedition_member_routes.route_code = route_codes.code
 		JOIN mountain_codes ON route_codes.mountain_code = mountain_codes.code
