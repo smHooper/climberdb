@@ -915,9 +915,12 @@ class AnnualSummary:
 			mountain_routes['Attempts'] = mountain_routes.sum(axis=1)
 			mountain_routes = mountain_routes.drop(columns='No')
 			mountain_routes['Success Rate'] = (
-				mountain_routes.Summits / mountain_routes.Attempts * 100
-			).round().astype(int)
-
+				(mountain_routes.Summits / mountain_routes.Attempts * 100)
+					.round(1)
+					.fillna(0)
+					.astype(str)
+					+ '%'
+			)
 			return mountain_routes.sort_values('Attempts', ascending=False)
 		
 		self.denali_routes = get_route_counts(self._DENALI_CODE)
