@@ -173,14 +173,25 @@ configure_logging(app_name, log_dir)
 ###### Initialize app #####
 app = Flask(app_name)
 
-
 @app.errorhandler(500)
 def internal_server_error(error):
 	"""
 	Capture errors in both logs and server responses. Errors get automatically 
 	logged, but send a response back to the client as well
 	"""
-	return 'ERROR: Internal Server Error.<br>' + traceback.format_exc() + '<br><br>request: ' + json.dumps(request.json)
+	try:
+		# POST
+		request_data = request.get_json(silent=True)
+	except Exception:
+		# GET
+		request_data = None#request.view_args 
+
+	return (
+		'ERROR: Internal Server Error.<br>' 
+		+ traceback.format_exc() 
+		+ '<br><br>request: ' 
+		+ json.dumps(request.json)
+	)
 
 
 ####### Load config #####
@@ -496,7 +507,7 @@ def get_url_root(url_root) -> str:
 	"""
 	prod_port = str(app.config['PROD_PORT_NUMBER'])
 	url_root = re.sub(
-		':\d{4}$', 
+		r':\d{4}$', 
 		f':{prod_port}', 
 		request.url_root.strip('/')
 	)
@@ -935,7 +946,10 @@ def query_annual_summary(year):
 		xlsx_path
 	)
 
-	return 'exports/' + xlsx_name
+	return  jsonify({
+		'url': 'exports/' + xlsx_name,
+		'warnings': summary.warnings
+	})
 
 #--------------- Reports ---------------------#
 

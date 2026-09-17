@@ -249,6 +249,21 @@ class ExcelReportRenderer:
 
 class AnnualSummary:
 
+	_COMPLETENESS_CHECKS = [
+		{'field': 'age',         'label': 'age'},
+		{'field': 'sex_code',    'label': 'gender'},
+		{'field': 'state_code',  'label': 'US state', 'where': ''}, # handled in check method
+		{'field': 'country_code','label': 'country'},
+		{'field': 'route_name',  'label': 'route name'},
+		{'field': 'summit_date', 'label': 'summit date', 
+			'where': 'AND route_was_summited', 
+			'id_field': 'expedition_id'
+		},
+		{'field': 'trip_length_days', 'label': 'actual departure/return', 
+			'id_field': 'expedition_id'
+		},
+	]
+
 	_DENALI_CODE = 1
 	_FORAKER_CODE = 2
 	
@@ -298,6 +313,9 @@ class AnnualSummary:
 		#	in cells in the template as by "{{<tag_name>}}" ) to map them to 
 		#	their values
 		self.tags = {}
+
+		# Holds warnings to pass on to user about data accuracy or completeness
+		self.warnings = []
 
 
 	def _load_reference_tables(self):
@@ -1006,12 +1024,59 @@ class AnnualSummary:
 		]).reindex(columns=['Non-Guided', 'Guided'])
 
 
+	def _find_missing(self, field, where='', id_field='climber_id'):
+		"""
+		Query the DB for missing data in a critical field
+		"""
+		sql = f'''
+			SELECT DISTINCT climber_name, {id_field}
+			FROM {self.schema}.registered_climbs_view
+			WHERE year = {self.year}
+			  AND mountain_code IN ({self.mountain_code_str})
+			  AND {field} IS NULL
+			  {where}
+		'''
+		return query_db({'sql': sql})
+
+
+	def _check_data_completeness(self):
+		"""
+		Check that the data are complete for this year for queried fields. 
+		If not, populate warnings property
+		"""
+		for check in self._COMPLETENESS_CHECKS:
+			if check['field'] == 'state_code':
+				# If somehow this method gets called before the  
+				#	_load_reference_tables() method (and therefore the 
+				#	.us_country_code property has not been assigned), 
+				#	call it
+				if not hasattr(self, 'us_country_code'):
+					self._load_reference_tables()
+
+				check['where'] = f'AND country_code = {self.us_country_code}'
+			id_field = check.get('id_field', 'climber_id')
+			missing = self._find_missing(
+				check['field'], 
+				where=check.get('where', ''),
+				id_field=id_field
+			)
+			if missing:
+
+				self.warnings.append({
+					'field': check['field'],
+					'id_field': id_field,
+					'message': f"{len(missing)} climber(s) missing {check['label']}",
+					'records': missing
+				})
+
+
 	def run_report(self) -> Self:
 		"""
 		Run all the queries
 		"""	
 
 		self._load_reference_tables()
+		self._check_data_completeness()
 		self._build_snapshot()
 		self._build_states_countries_of_origin()
 		self._build_demographics()

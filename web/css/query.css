@@ -297,6 +297,16 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 	font-weight: bold;
 }
 
+.incomplete-data-warning-button::before {
+	content: "\25BC"; /*arrow down*/
+	display: inline-block;
+  transform: rotate(0deg);
+  transition: transform 0.25s ease;
+}
+.incomplete-data-warning-button[aria-expanded="false"]::before {
+  transform: rotate(-90deg);
+}
+
 /*for datetime fields, if the operator is BETWEEN and therefore 
 2 fields are showing, make the field-container extra-wide*/
 @media (min-width: 768px) {
