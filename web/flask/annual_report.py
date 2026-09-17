@@ -945,7 +945,7 @@ class AnnualSummary:
 			{avg_select},
 			mountain_code,
 			CASE 
-				WHEN guide_company_code = -1 
+				WHEN coalesce(guide_company_code, -1) = -1 
 				THEN 'Non-Guided' 
 				ELSE 'Guided' 
 			END AS guided 
