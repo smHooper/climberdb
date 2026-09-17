@@ -206,7 +206,12 @@ class ExcelReportRenderer:
 
 		row_heights_set = []
 		for _, cell_data in logical_cells.iterrows():
-			dst_cell = ws.cell(cell_data.row, cell_data.col, cell_data.value)
+			# Some values might come in as pd.NA, which openpyxl can't handle
+			#	Guard aginst is by turning any NA value to None
+			value = cell_data.value
+			value = None if isna(value) else value
+
+			dst_cell = ws.cell(cell_data.row, cell_data.col, value)
 			src_cell = cell_data.original_cell
 			self._set_cell_style(dst_cell, src_cell)
 
@@ -790,16 +795,17 @@ class AnnualSummary:
 				.set_index('sex_code')
 				.rename(index=self._GENDER_CODES)
 			)
+
 			data['average'] = (
 				data['average']
 					.astype(float) # type might be object
 					.round()
-					.astype(int)
+					.astype('Int64')
 			)
 			total = data['count'].sum()
 			data['percent'] = (
 				data['count'] / total * 100
-			).round().astype(int).astype(str) + '%'
+			).round().astype('Int64').astype(str) + '%'
 
 			total_index_str = f'Total Number of {data_type}s'
 			data.loc[total_index_str] = total
