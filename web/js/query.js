@@ -1691,6 +1691,11 @@ class ClimberDBQuery extends ClimberDB {
 
 		if (!this.validateFields('count_climbers')) return;
 
+		if ($('.query-parameters-container .field-container.collapse.show').length === 0) {
+			this.showModal('You must select at least one query parameter.', 'Invalid Query');
+			return;
+		}
+
 		const $container = $('.query-parameters-container[data-query-name="count_climbers"]');
 		const $whereFields = $container.find(`
 				.field-container.collapse.show .where-clause-field:not(.hidden), 
