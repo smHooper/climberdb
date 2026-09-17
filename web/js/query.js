@@ -1889,7 +1889,53 @@ class ClimberDBQuery extends ClimberDB {
 			url: `/flask/reports/annual_summary/${year}`
 		}).done(response => {
 			if (!this.pythonReturnedError(response, {errorExplanation: errorMessage})) {
-				window.open(response, '_blank')	
+				if (response?.warnings?.length) {
+					const getWarning = ({message, id_field, records}, i) => `
+						<div class="w-100 d-flex justify-content-start">
+							<button 
+								role="button"
+								class="text-only-button pl-0 incomplete-data-warning-button" 
+								type="button" 
+								data-toggle="collapse" 
+								data-target="#modal-error-details-collapse-${i}" 
+								aria-expanded="false" 
+								aria-controls="modal-error-details-collapse-${i}"
+							>
+								${message}
+							</button>
+						</div>
+						<p 
+							id="modal-error-details-collapse-${i}" 
+							class="collapse modal-error-details-target modal-error-text-container pt-3"
+						>
+							${records.map(r => `
+									<a 
+										href="${id_field === 'climber_id' ? 'climbers' : 'expeditions'}.html?id=${r[id_field]}"
+										target="_blank"
+									>${r.climber_name}</a><br>
+							`).join('')}
+						</p>
+					`;
+					const message = 'The report completed but it generated the following incomplete data warnings:<br>' +
+						`
+						${response.warnings.map(getWarning).join('')}
+
+						<p class="mt-2">Would you like to open the report anyway?</p>
+						`;
+					const eventHandler = () => {
+						$('.confirm-button').click(() => window.open(response.url, '_blank'))
+					}
+					this.showModal(
+						message, 
+						'Incomplete Data Found', 
+						{
+							modalType:'yes/no', 
+							eventHandlerCallable: eventHandler
+						}
+					)
+				} else {
+					window.open(response.url, '_blank')	
+				}
 			}
 		}).fail((xhr, status, error) => {
 			this.showModal(errorMessage + `: ${error}`, 'Unexpected Error');
