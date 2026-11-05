@@ -716,6 +716,7 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 		expeditions.actual_departure_date,
 		expeditions.actual_return_date,
 		expeditions.guide_company_code,
+		expeditions.cua_company_code,
 		expeditions.air_taxi_code,
 		expeditions.reviewed_by,
 		expeditions.briefed_by,
