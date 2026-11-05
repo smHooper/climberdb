@@ -268,6 +268,7 @@
 									<option value="reservation_status_code">Expedition member status</option>
 									<option value="special_group_type_code">Special group type</option>
 									<option value="guide_company_code">Guide company</option>
+									<option value="cua_company_code">CUA company</option>
 									<option value="sex_code">Gender</option>
 									<option value="summited">Summited (yes/no)</option>
 									<option value="summit_date">Summit date</option>
@@ -295,6 +296,7 @@
 									<option value="reservation_status_code">Expedition member status</option>
 									<option value="special_group_type_code">Special group type</option>
 									<option value="guide_company_code">Guide company</option>
+									<option value="cua_company_code">CUA company</option>
 									<option value="sex_code">Gender</option>
 									<option value="summited">Summited (yes/no)</option>
 									<option value="summit_date">Summit date</option>
@@ -329,7 +331,8 @@
 								<div class="show-query-parameter-button" role="button" data-field-name="group_status_code">Group status</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="reservation_status_code">Expedition member status</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="special_group_type_code">Special group type</div>
-								<div class="show-query-parameter-button" role="button" data-field-name="guide_company_code">Guide/CUA company</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="guide_company_code">Guide company (Denali/Foraker only)</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="cua_company_code">CUA company (backcountry only)</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="is_backcountry_yes_no">Backcountry (yes/no)</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="mountain_code">Mountain</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="route_code">Route</div>
@@ -379,7 +382,15 @@
 								<button class="icon-button hide-query-parameter-button">
 									<i class="fas fa-lg fa-times"></i>
 								</button>
-								<label class="field-label" for="count_climbers-guide_company">Guide/CUA company</label>
+								<label class="field-label" for="count_climbers-guide_company">Guide company (Denali/Foraker only)</label>
+								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<select id="count_climbers-cua_company" class="input-field default climberdb-select2 is-empty where-clause-field include-dsiabled-options  has-null-option" name="cua_company_code" multiple="multiple" placeholder="Guide company filter" title="Guide company" required></select>
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-cua_company">CUA company (backcountry only)</label>
 								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 							</div>
 							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
