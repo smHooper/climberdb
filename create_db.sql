@@ -705,6 +705,7 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 		climbers.country_code,
 		climbers.dob,
 		climber_info_view.age,
+		climber_info_view.age - extract(year FROM age(now(), planned_departure_date)) AS age_while_climbing,
 		climbers.sex_code,
 		expeditions.expedition_name,
 		CASE WHEN expeditions.is_backcountry AND actual_departure_date IS NULL THEN format('%s - No Departure Entered', expeditions.expedition_name)

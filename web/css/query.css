@@ -339,6 +339,64 @@ height of the container, so make sure it aligns with the bottom of the rest of t
 	}
 }
 
+/*jquery UI slider*/
+.query-option-condition-container {
+	width: 200px;
+}
+#climberdb-main-content .slider-container .ui-slider-handle {
+	border: none;
+	border-radius: 1.2em;
+	background: var(--ui-primary-text-color);
+	margin-top: 1.5px;
+}
+#climberdb-main-content .slider-container .ui-slider-range {
+	/*the part of the slider inside the handles*/
+	background: var(--ui-primary-text-color);
+}
+#climberdb-main-content .slider-container.ui-widget-content {
+	/*the part of the slider outside the handles*/
+	border:  none;
+	background: var(--ui-desaturated-color);
+  /*margin: 0 0.6rem;*/
+  width: 100%;
+}
+#climberdb-main-content .slider-value-input-container {
+	/*width: 100%;*/
+	display: flex;
+	justify-content: space-between;
+	margin-top: 20px;
+}
+.query-slider-label-container {
+	display: flex;
+	justify-content: space-between;
+	color: var(--ui-bg-dark-blue);
+	position: relative;
+}
+.query-slider-label-container .query-slider-label {
+	color: inherit;
+	margin-top: 15px;
+	font-size: 10px;
+	text-align: center;
+}
+.query-slider-label-container input.slider-value {
+	color: inherit;
+	margin-top: 15px;
+	font-size: 10px;
+	min-width: 10px;
+	text-align: left;
+	border: none;
+	background: none;
+	transition: all 0.25s;
+}
+.query-slider-label-container input.slider-value:last-of-type {
+	text-align: right;
+}
+.query-slider-label-container input.slider-value:focus {
+	border-bottom: solid rgba(0, 0, 0, 0.5) 2px;
+	text-align: center;
+}
+
+
 /*.field-container.double-input-criterion-container {
 	margin-right: 15px;
 }
