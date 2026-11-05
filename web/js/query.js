@@ -592,7 +592,9 @@ class ClimberDBQuery extends ClimberDB {
 				$i.toggleClass('fa-arrow-right fa-arrow-from-left', isCollapsed)
 				$i.siblings('.icon-button-label').text(isCollapsed ? 'show' : 'hide')
 			}, 200);
-		})
+		});
+
+		this.inititalizeNumericFieldSliders();
 
 		// filter query options when the user searches
 		$('#query-option-search-input').keyup(e => {
@@ -743,7 +745,123 @@ class ClimberDBQuery extends ClimberDB {
 
 		$('#count_climbers-summary_or_records').change(() => {
 			this.onCountClimbersQueryByChange()
-		})
+		});
+
+	}
+
+
+	/*
+	jQuery UI sliders
+	*/
+	onNumericSliderSlide(slider) {
+		// Set the query option clause
+		const $sliderContainer = $(slider.handle).closest('.slider-container');
+		const tableName = $sliderContainer.data('table-name');
+		const fieldName = $sliderContainer.data('field-name');
+		//this.queryOptions.where[tableName][fieldName] = {value: `${slider.values[0]} AND ${slider.values[1] + 1}`, operator: 'BETWEEN', type: 'numeric'};//`${tableName}.${fieldName} BETWEEN ${slider.values[0]} AND ${slider.values[1] + 1}`;
+		
+		// Set the location of the slider handle's label
+		const $sliderRange = $sliderContainer.find('.ui-slider-range').first();
+		const handleIndex = slider.handleIndex;
+		const sliderValue = slider.values[handleIndex];
+		
+		this.setSliderHandleLabel($sliderContainer, handleIndex, sliderValue);
+
+		// Set value of the handle's input val
+		const sliderValueInput = $sliderContainer//.siblings('.slider-value-input-container')
+			.find('input.slider-value').get(handleIndex);
+		sliderValueInput.value = sliderValue;
+	}
+
+	/*
+	Set the numeric input value of the slider handle
+	*/
+	setSliderHandleLabel = function($sliderContainer, handleIndex, handleValue) {
+			
+		const $sliderRange = $sliderContainer.find('.ui-slider-range').first();
+		const rangeLeft = $sliderRange.css('left');
+		const rangeWidth = $sliderRange.css('width');
+
+		// Set the value of the slider handle's label
+		const $label = $($sliderContainer.find('.query-slider-label')[handleIndex]);
+		$label.text(handleValue);
+
+		// Set the width of the input to be just wide enough to handle the value's width
+		const $input = $($sliderContainer.find('input.slider-value')[handleIndex]);
+		$input.val(handleValue);
+		$input.css('width', (($input[0].value.length + 1) * 8) + 'px');
+	}
+
+	/*
+	Activate all 
+	*/
+	inititalizeNumericFieldSliders() {
+		const $sliderContainers = $('.where-clause-numeric-field-container');
+		for (const slider of $sliderContainers) {
+			
+			const $slider = $(slider);
+			const minVal = $slider.find('.slider-value-low').prop('min');
+			const maxVal = $slider.find('.slider-value-high').prop('max');
+			const sliderOptions = {
+				range: true,
+				min: Math.ceil(minVal / 10) * 10,
+				max: Math.ceil(maxVal / 10) * 10,
+				values: [minVal, maxVal],
+				//disabled: numericFieldRanges[tableName][fieldName].min == null, //if it's null, nothing's been entered in this field
+				slide: (_, slider) => {this.onNumericSliderSlide(slider)},
+				//stop: (e, slider) => {this.onQueryOptionChange(e)}
+			}
+
+			$slider.find('.slider-container').slider(sliderOptions);
+			$slider.find('input.slider-value')
+				.change(e => {
+					/*Set the slider values when the input changes*/
+					const $input = $(e.target);
+					const index = $input.index();
+					var value = parseInt($input.val());
+					const dbMin = parseInt($input.attr('min'));
+					const dbMax = parseInt($input.attr('max'));
+					if (index == 0 && value < dbMin) {
+						showModal(`The value entered is less than the minimum value found in the database. Try entering a value greater than ${dbMin}.`, 'Invalid value entered');
+						value = dbMin;
+						$input.val(dbMin);
+					} else if (index == 1 && value > dbMax) {
+						showModal(`The value entered is greater than the minimum value found in the database. Try entering a value less than ${dbMax}.`, 'Invalid value entered');
+						$input.val(dbMax);
+						value = dbMax;
+					}
+					const $parent = $input.closest('.query-option-condition-container');
+					$parent.find('.slider-container')
+						.slider('values', index, value);
+
+					const $sliderRange = $parent.find('.slider-container').first();
+					this.setSliderHandleLabel($sliderRange, index, value);
+
+					// Set query option
+					// const tableName = $sliderRange.data('table-name');
+					// const fieldName = $sliderRange.data('field-name');
+					// var values = $input.parent().find('input.slider-value').map((_, el) => {return el.value});
+					//_this.queryOptions.where[tableName][fieldName] = {value: `${values[0]} AND ${parseInt(values[1]) + 1}`, operator: 'BETWEEN'};
+					//this.onQueryOptionChange(e);
+				})
+				.keyup(e => {
+					/* Change the width of the input when the length of it changes*/
+					const $target = $(e.target)
+					const $sliderRange = $target.closest('.slider-container');
+					const index = $target.index();
+					const value = $target.val();
+					this.setSliderHandleLabel($sliderRange, index, value);
+				})
+				.each((_, el) => {
+					// Set the width of each slider label
+					const $input = $(el);
+					const index = $input.index();
+					const value = $input.val();
+					const $sliderRange = $input.closest('.query-option-condition-container')
+						.find('.slider-container').first();
+					this.setSliderHandleLabel($sliderRange, index, value);
+				});
+		}
 	}
 
 	/*
@@ -1153,7 +1271,11 @@ class ClimberDBQuery extends ClimberDB {
 		const $container = $button.closest('.query-parameters-container');
 
 		// Show the field
-		$container.find(`.input-field[name=${fieldName}]`).closest('.field-container.collapse').collapse('show');
+		$container.find(
+			`.input-field[name=${fieldName}], .slider-container[data-field-name=${fieldName}]`
+		)
+		.closest('.field-container.collapse')
+		.collapse('show');
 	}
 
 
@@ -1165,7 +1287,7 @@ class ClimberDBQuery extends ClimberDB {
 		
 		// since datetime fields have multuple input-fields, but only one has the name attribute,
 		//	filter for .input-fields that have a truthy name
-		const fieldName = $fieldContainer.find('.input-field')
+		const fieldName = $fieldContainer.find('.input-field, .slider-container')
 			.filter((_, el) => el.name) 
 			.attr('name');
 
@@ -1699,7 +1821,8 @@ class ClimberDBQuery extends ClimberDB {
 		const $container = $('.query-parameters-container[data-query-name="count_climbers"]');
 		const $whereFields = $container.find(`
 				.field-container.collapse.show .where-clause-field:not(.hidden), 
-				.field-container.collapse.show .where-clause-field.datetime-query-option
+				.field-container.collapse.show .where-clause-field.datetime-query-option,
+				.field-container.collapse.show .where-clause-numeric-field
 			`)
 			.filter((_, el) => !$(el).closest('.collapse:not(.show)').length)
 		let whereClauses = $whereFields.map((_, el) => {
@@ -1713,6 +1836,13 @@ class ClimberDBQuery extends ClimberDB {
 						`'${$el.val()}'`;
 					return `${el.name} ${operator} ${whereValue}`;
 				} 
+				// If this a number slider field, 
+				else if ($el.is('.where-clause-numeric-field')) {
+					const fieldName = $el.data('field-name');
+					const minValue = $el.find('.slider-value-low').val();
+					const maxValue = $el.find('.slider-value-high').val() + 1;
+					return `${fieldName} BETWEEN ${minValue} AND ${maxValue}`
+				}
 				// Otherwise, it's a normal field. In this case, multiple select values need to be gathered in an array, whereas normal fields just need 'fieldname = value'
 				else {
 					return this.whereFieldToClause(el);
@@ -1725,7 +1855,13 @@ class ClimberDBQuery extends ClimberDB {
 		
 		// Get field/value pairs to be able to get human-readable values
 		const whereFields = Object.fromEntries(
-			$whereFields.map((_, el) => [[el.name, $(el).data('validation-field-name') || $(el).siblings('.field-label').text()]]).get()
+			$whereFields.map((_, el) => 
+				[[
+					el.getAttribute('name'), 
+					$(el).data('validation-field-name') || 
+						$(el).siblings('.field-label').text()
+				]]
+			).get()
 		);
 
 		let pivotField = '',
@@ -2150,12 +2286,26 @@ class ClimberDBQuery extends ClimberDB {
 		for (const id in queryParams) {
 			let paramValue = queryParams[id];
 			const $paramInput = $('#' + id);
+			
 			// If this is a select with potentially multiple selected options,
 			//	the value from the URL will be a CSV string
 			if ($paramInput.is('[multiple]')) {
 				paramValue = paramValue.split('|').map(s => s.trim());
 			}
-			$paramInput.val(paramValue).change();
+			
+			// If it's a numeric slider field, set the low and high vals
+			if ($paramInput.is('.where-clause-numeric-field')) {
+				$paramInput.find('.slider-value-low')
+					.val(paramValue.min)
+					.change();
+				$paramInput.find('.slider-value-high')
+					.val(paramValue.max)
+					.change();
+			} 
+			// Otherwise just set the value
+			else {
+				$paramInput.val(paramValue).change();
+			}
 
 			const fieldName = (
 				$paramInput.is('.double-value-field.datetime-query-option') ? 
@@ -2196,6 +2346,16 @@ class ClimberDBQuery extends ClimberDB {
 			//	all as a CSV string
 			const paramValue = $input.is('[multiple]') ? rawValue.join('|') : rawValue;
 			queryParams[inputID] = paramValue;
+		}
+
+		for (const el of $container.find('.where-clause-numeric-field')) {
+			const $el = $(el);
+			if ($el.closest('.hidden,.collapse:not(.show),.stat-field-row').length) continue;
+
+			queryParams[el.id] = {
+				min: $el.find('.slider-value-low').val(), 
+				max: $el.find('.slider-value-high').val()
+			}
 		}
 
 		// collect stat fields as an array of objects

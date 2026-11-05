@@ -336,6 +336,8 @@
 								<div class="show-query-parameter-button" role="button" data-field-name="summited">Summited (yes/no)</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="summit_date">Summit date</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="sex_code">Gender</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="age">Current climber age</div>
+								<div class="show-query-parameter-button" role="button" data-field-name="age_while_climbing">Age while climbing</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="is_guiding_yes_no">Is guiding (Yes/No)</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="country_code">Country</div>
 								<div class="show-query-parameter-button" role="button" data-field-name="state_code">State</div>
@@ -459,6 +461,57 @@
 								<label class="field-label" for="count_climbers-sex_code">Gender</label>
 								<button class="text-only-button add-remove-all-multiselect-options-button">add all</button>
 							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<div class="where-clause-numeric-field-container d-flex">
+									<div class="query-option-condition-container">
+										<div id="count_climbers-age" class="slider-container query-option-input-field where-clause-numeric-field" data-field-name="age" name="age" data-validation-field-name="Current climber age">
+											<div class="query-slider-label-container">
+												<input id="count_climbers-age-low_value" class="slider-value slider-value-low" value="1" min="1" max="100" style="width: 16px;">
+												<input id="count_climbers-age-high_value" class="slider-value slider-value-high" type="number" value="100" min="1" max="100" style="width: 40px;">
+											</div>
+										</div>
+									</div>	
+								</div>	
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-age-low_value">Current climber age</label>
+							</div>
+							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
+								<div class="where-clause-numeric-field-container d-flex">
+									<div class="query-option-condition-container">
+										<div id="count_climbers-age_while_climbing" class="slider-container query-option-input-field where-clause-numeric-field" data-field-name="age_while_climbing" name="age_while_climbing" data-validation-field-name="Age while climbing">
+											<div class="query-slider-label-container">
+												<input id="count_climbers-age_while_climbing-low_value" class="slider-value slider-value-low" value="1" min="1" max="100" style="width: 16px;">
+												<input id="count_climbers-age_while_climbing-high_value" class="slider-value slider-value-high" type="number" value="100" min="1" max="100" style="width: 40px;">
+											</div>
+										</div>
+									</div>	
+								</div>	
+								<button class="icon-button hide-query-parameter-button">
+									<i class="fas fa-lg fa-times"></i>
+								</button>
+								<label class="field-label" for="count_climbers-age_while_climbing-low_value">Age while climbing</label>
+							</div>
+<!-- 						
+					
+							<div class="query-option-container">
+								<div class="query-option-condition-header">
+									<label class="query-option-label">Initial distance from the bear (m)</label>
+									<button class="icon-button remove-query-option-button">
+										<i class="fas fa-lg fa-times"></i>
+									</button>
+								</div>
+
+								<div class="query-option-condition-container">
+									<div id="query-option-initial_distance_m" class="slider-container query-option-input-field ui-slider ui-corner-all ui-slider-horizontal ui-widget ui-widget-content" data-field-name="initial_distance_m" data-table-name="encounters" data-display-name="Initial distance from the bear (m)">
+										<div class="query-slider-label-container">
+											<input class="slider-value slider-value-low" type="number" value="1" min="1" max="100" style="width: 16px;">
+											<input class="slider-value slider-value-high" type="number" value="100" min="1" max="100" style="width: 40px;">
+										</div>
+									<div class="ui-slider-range ui-corner-all ui-widget-header" style="left: 0%; width: 99.9379%;"></div><span tabindex="0" class="ui-slider-handle ui-corner-all ui-state-default" style="left: 0%;"></span><span tabindex="0" class="ui-slider-handle ui-corner-all ui-state-default" style="left: 99.9379%;"></span></div>
+								</div>	
+							</div> -->
 							<div class="field-container col-sm-6 col-md-4 col-lg-3 pr-3 collapse">
 								<select id="count_climbers-country" class="input-field query-option-input-field climberdb-select2 is-empty where-clause-field has-null-option" multiple="multiple" name="country_code" placeholder="Country" required></select>
 								<button class="icon-button hide-query-parameter-button">

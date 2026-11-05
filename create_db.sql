@@ -705,6 +705,7 @@ CREATE OR REPLACE VIEW all_climbs_view AS
 		climbers.country_code,
 		climbers.dob,
 		climber_info_view.age,
+		climber_info_view.age - extract(year FROM age(now(), planned_departure_date)) AS age_while_climbing,
 		climbers.sex_code,
 		expeditions.expedition_name,
 		CASE WHEN expeditions.is_backcountry AND actual_departure_date IS NULL THEN format('%s - No Departure Entered', expeditions.expedition_name)
@@ -1079,6 +1080,7 @@ $BODY$
 	DECLARE
 		view_name text;
 		record_   record;
+		create_view_sql text;
 
 	BEGIN
 
@@ -1126,7 +1128,13 @@ $BODY$
 		ORDER BY sort_order, table_name
 	LOOP
 		view_name := dest_schema || '.' || quote_ident(record_.table_name);
-		EXECUTE 'CREATE OR REPLACE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
+		create_view_sql := 'DROP VIEW IF EXISTS ' || view_name || ' CASCADE; CREATE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
+		BEGIN 
+			EXECUTE create_view_sql;
+		EXCEPTION 
+			WHEN OTHERS THEN 
+				RAISE WARNING 'CREATE failed with error % for statement %', SQLERRM, create_view_sql;
+		END;
 	END LOOP;
   
 	RETURN; 
