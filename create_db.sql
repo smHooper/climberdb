@@ -1080,6 +1080,7 @@ $BODY$
 	DECLARE
 		view_name text;
 		record_   record;
+		create_view_sql text;
 
 	BEGIN
 
@@ -1127,7 +1128,13 @@ $BODY$
 		ORDER BY sort_order, table_name
 	LOOP
 		view_name := dest_schema || '.' || quote_ident(record_.table_name);
-		EXECUTE 'CREATE OR REPLACE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
+		create_view_sql := 'DROP VIEW IF EXISTS ' || view_name || ' CASCADE; CREATE VIEW ' || view_name || ' AS ' || record_.view_def || ';' ;
+		BEGIN 
+			EXECUTE create_view_sql;
+		EXCEPTION 
+			WHEN OTHERS THEN 
+				RAISE WARNING 'CREATE failed with error % for statement %', SQLERRM, create_view_sql;
+		END;
 	END LOOP;
   
 	RETURN; 
