@@ -14,7 +14,16 @@ from pypdf import PdfReader, PdfWriter
 from datetime import datetime
 from uuid import uuid4
 
-from flask import Flask, has_request_context, json, jsonify, render_template, request, url_for
+from flask import (
+    abort,
+	Flask, 
+    has_request_context, 
+    json, 
+    jsonify, 
+    render_template, 
+    request, 
+    send_from_directory
+)
 from flask_mail import Mail, Message
 
 import logging
@@ -267,7 +276,7 @@ WriteSession = sessionmaker(write_engine)
 ######### Row-level PII access auditing ##################
 audit_schema = 'audit' if schema == 'public' else f'audit_{schema}'
 audit_engine = climberdb_utils.get_engine(access='audit', schema=audit_schema)
-audit = Audit(
+auditor = Audit(
 	app,
 	engine=audit_engine,   # plain create_engine(..., poolclass=NullPool) for audit_writer
 	app_name='climberdb',
@@ -1036,7 +1045,8 @@ def print_cache_tag():
 def run_select_query():
 	request_data = request.get_json()	
 	response_data = climberdb_utils.query_db(request_data)
-	audit.record_rows(response_data, select_source(request_data))
+	request_id = str(uuid4())
+	auditor.record_rows(response_data, select_source(request_data), request_id=request_id)
 	response = {'data': response_data}
 
 	if 'queryTime' in request_data:

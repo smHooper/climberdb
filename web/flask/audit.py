@@ -6,6 +6,7 @@ engine, its username getter, and its PII mapping through init_app().
 """
 import re
 from urllib.parse import urlparse
+from uuid import uuid4
 
 from flask import Flask, abort, current_app, has_request_context, request
 from sqlalchemy import text as sqlatext
@@ -56,11 +57,25 @@ class Audit:
         self.schema = audit_schema
 
 
-    def record(self, entity: str, ids, source: str | None = None):
-        self._insert([(entity, i) for i in ids], source)
+    def record(
+            self, 
+            entity: str, 
+            ids, 
+            source: str | None = None,
+            request_id: str | None = None
+        ):
+        if not request_id:
+            request_id = str(uuid4())
+
+        self._insert([(entity, i) for i in ids], source, request_id)
 
 
-    def record_rows(self, rows: list[dict], source: str | None = None):
+    def record_rows(
+            self, 
+            rows: list[dict], 
+            source: str | None = None,
+            request_id: str | None = None
+        ):
         """Record every PII entity found in a list of row dicts about to be returned"""
         pairs = set()
         for row in rows:
@@ -68,10 +83,14 @@ class Audit:
                 pairs.add((entity, row.get(column)))
             if source in self.id_tables:
                 pairs.add((source, row.get('id')))
-        self._insert(pairs, source)
+        
+        if not request_id:
+            request_id = str(uuid4())
+
+        self._insert(pairs, source, request_id)
 
 
-    def _insert(self, pairs, source):
+    def _insert(self, pairs, source, request_id):
         pairs = {(entity, int(i)) for entity, i in pairs if i is not None}
         if not pairs:
             return
@@ -83,8 +102,14 @@ class Audit:
         page = urlparse(referrer).path[:200] if referrer else None
         params = [
             {
-                'app': self.app_name, 'user': username, 'entity': entity, 'id': i,
-                'endpoint': request.path, 'source': source, 'page': page,
+                'request_id': request_id,
+                'app': self.app_name, 
+                'user': username, 
+                'entity': entity, 
+                'id': i,
+                'endpoint': request.path, 
+                'source': source, 
+                'page': page,
             }
             for entity, i in pairs
         ]
@@ -93,8 +118,8 @@ class Audit:
         with self.engine.begin() as conn:
             conn.execute(sqlatext(f'''
                 INSERT INTO {self.schema}.record_access
-                    (app_name, ad_username, entity, entity_id, endpoint, source, page)
-                VALUES (:app, :user, :entity, :id, :endpoint, :source, :page)
+                    (request_id, app_name, ad_username, entity, entity_id, endpoint, source, page)
+                VALUES (:request_id, :app, :user, :entity, :id, :endpoint, :source, :page)
                 ON CONFLICT DO NOTHING
             '''), params)
 
