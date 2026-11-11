@@ -34,6 +34,7 @@ from typing import Any
 from werkzeug.datastructures import FileStorage
 
 # climberdb modules
+from audit import Audit
 from cache_tag import CacheTag, print_zpl
 #from climberdb_logging import configure_logging
 from annual_report import AnnualSummary
@@ -193,7 +194,6 @@ def internal_server_error(error):
 		+ json.dumps(request.json)
 	)
 
-
 ####### Load config #####
 if not os.path.isfile(climberdb_utils.CONFIG_FILE):
 	raise IOError(f'CONFIG_FILE does not exists: {climberdb_utils.CONFIG_FILE}')
@@ -263,6 +263,25 @@ read_engine = climberdb_utils.get_engine(access='read', schema=schema)
 write_engine = climberdb_utils.get_engine(access='write', schema=schema)
 ReadSession = sessionmaker(read_engine)
 WriteSession = sessionmaker(write_engine)
+
+######### Row-level PII access auditing ##################
+audit_schema = 'audit' if schema == 'public' else f'audit_{schema}'
+audit_engine = climberdb_utils.get_engine(access='audit', schema=audit_schema)
+audit = Audit(
+	app,
+	engine=audit_engine,   # plain create_engine(..., poolclass=NullPool) for audit_writer
+	app_name='climberdb',
+	key_columns={'climber_id': 'climbers', 'expedition_member_id': 'expedition_members'},
+	id_tables={'climbers', 'expedition_members', 'emergency_contacts', 'communication_devices'},
+	audit_schema=audit_schema
+)
+
+def select_source(request_data):
+	if request_data.get('sql'):
+		return 'sql'
+	names = request_data.get('tables') or {*(request_data.get('where') or {}), *(request_data.get('select') or {})}
+	return ','.join(sorted(names))
+
 
 ##### Get DB model in app's global scope ####
 tables = climberdb_utils.db_tables
@@ -1017,6 +1036,7 @@ def print_cache_tag():
 def run_select_query():
 	request_data = request.get_json()	
 	response_data = climberdb_utils.query_db(request_data)
+	audit.record_rows(response_data, select_source(request_data))
 	response = {'data': response_data}
 
 	if 'queryTime' in request_data:
