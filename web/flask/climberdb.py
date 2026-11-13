@@ -7,7 +7,7 @@ import string
 import shutil
 
 import bcrypt
-import smtplib
+from io import BytesIO
 from pandas import concat, DataFrame, ExcelWriter, read_sql, Series
 from zipfile import ZipFile, ZIP_DEFLATED
 from pypdf import PdfReader, PdfWriter
@@ -15,14 +15,15 @@ from datetime import datetime
 from uuid import uuid4
 
 from flask import (
-    abort,
+	abort,
 	Flask, 
-    has_request_context, 
-    json, 
-    jsonify, 
-    render_template, 
-    request, 
-    send_from_directory
+	has_request_context, 
+	json, 
+	jsonify, 
+	render_template, 
+	request, 
+	Response,
+	send_from_directory,
 )
 from flask_mail import Mail, Message
 
@@ -49,12 +50,18 @@ from cache_tag import CacheTag, print_zpl
 from annual_report import AnnualSummary
 from annual_report import ExcelReportRenderer
 import climberdb_utils
-from export_briefings import briefings_to_excel
+from export_briefings import (
+	briefings_to_excel, 
+	get_briefing_excel_name
+)
 
 # Asynchronously load weasyprint because it takes forever and it should only block when it's needed (exporting PDFs)
 import threading
 import importlib
 
+# File extensions that the browser can open (rather than just provide 
+#   a download)
+IN_BROWSER_EXTENSIONS = {'.pdf'}
 
 def load_weasyprint():
     global weasyprint
@@ -196,6 +203,7 @@ def internal_server_error(error):
 		# GET
 		request_data = None#request.view_args 
 
+	#TODO: wrap request.json in try/except
 	return (
 		'ERROR: Internal Server Error.<br>' 
 		+ traceback.format_exc() 
@@ -296,7 +304,8 @@ def select_source(request_data):
 tables = climberdb_utils.db_tables
 
 def get_content_dir(dirname='exports'):
-	return os.path.join(os.path.dirname(__file__), '..', dirname)
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.normpath(os.path.join(app_dir, '..', dirname))
 
 
 def get_random_string(length=8):
@@ -601,42 +610,115 @@ def send_reset_password_request():
 #--------------- Email notifications ---------------------#
 
 
+#--------------- File downloads ---------------#
+def serve_local_file(
+		directory: str, 
+		server_filename: str, 
+		display_name: str, 
+		as_attachment: bool
+	) -> Response:
+	"""
+	Serve a file as binary data but tell the browser to trust the file type and 
+	not infer it
+	"""
+	response = send_from_directory(
+		directory,
+		server_filename,
+		download_name=display_name,
+		as_attachment=as_attachment
+	)
+	# Tell the browser to trust the content type from the header and not guess
+	response.headers['X-Content-Type-Options'] = 'nosniff'
+
+	return response
+
+# To log access to files, all requests for files stored on the server come 
+#   through flask
+@app.route('/flask/files/<token>', methods=['GET'])
+def download_file(token):
+	info = auditor.record_download(token)
+	directory = get_content_dir(
+		'exports' 
+		if info['file_type'] == 'export' 
+		else 'attachments'
+	)
+	ext = os.path.splitext(info['stored_name'])[1].lower()
+	
+	return serve_local_file(
+		directory, 
+		info['stored_name'],
+		info['display_name'],
+		as_attachment=ext not in IN_BROWSER_EXTENSIONS, 
+	)
+
+#--------------- File downloads ---------------#
+
 
 #--------------- Reports ---------------------#
-@app.route('/flask/reports/confirmation_letter/<expedition_id>.pdf', methods=['POST'])
-def get_confirmation_letter(expedition_id):
-	data = dict(request.form)
-
-	# For some stupid reason, the array comes in as a single value, so I encode it as a 
-	#	JSON string client side and it needs to be decoded here
-	data['climbers'] = json.loads(data['climbers'])
-	# Reformat date to be more human-readable
-	data['planned_departure_date'] = datetime.strptime(
-			data['planned_departure_date'], '%Y-%m-%d %H:%M'
-		).strftime('%B %#d, %Y')
+def create_export(ext, display_name, contains_pii, entities=None):
+	"""
+	Helper to log the file access
+	"""
+	token, stored_name = auditor.register_file(
+		display_name, 
+		ext, 
+		contains_pii, 
+		entities=entities
+	)
 	
+	return token, os.path.join(get_content_dir('exports'), stored_name)
+
+
+def render_pdf(template_name: str, data: dict):
+	"""
+
+	"""
 	# Get HTML string
-	html = render_template('confirmation_letter.html', **data)
+	html = render_template(f'{template_name}.html', **data)
 
 	cleaned_expedition_name = re.sub(r'\W', '_', data['expedition_name'])
-	pdf_filename = f'confirmation_letter_{cleaned_expedition_name}.pdf'
+	display_name = f'{template_name}_{cleaned_expedition_name}.pdf'
 
 	# wait until the last moment to block for weasyprint to load
 	wait_for_weasyprint()
 
 	# return HTML as PDF binary data
 	html = weasyprint.HTML(string=html)
-	#pdf_data = weasyprint.render_pdf(html, download_filename=pdf_filename)
-	
+
+	# Log the export
+	token, server_file_path = create_export(
+		'.pdf', 
+		display_name, 
+		True, # all html reports have PII
+		entities=json.loads(data['pii_entity_ids'])
+	)
+
 	# write to disk as PDF
-	pdf_path = os.path.join(get_content_dir('exports'), pdf_filename)
-	html.write_pdf(pdf_path)
+	html.write_pdf(server_file_path)
 
-	return 'exports/' + pdf_filename #pdf_data
+	# return the flask download endpoint for the file to funnel access 
+	#	through flask
+	return f'flask/files/{token}'
 
 
-@app.route('/flask/reports/registration_card/<expedition_id>.pdf', methods=['POST'])
-def get_registration_card(expedition_id):
+@app.route('/flask/reports/confirmation_letter', methods=['POST'])
+def get_confirmation_letter():
+	data = dict(request.form)
+
+	# For some stupid reason, the array comes in as a single value, so I encode it as a 
+	#	JSON string client side and it needs to be decoded here
+	data['climbers'] = json.loads(data['climbers'])
+	
+	# Reformat date to be more human-readable
+	data['planned_departure_date'] = datetime.strptime(
+			data['planned_departure_date'], '%Y-%m-%d %H:%M'
+		).strftime('%B %#d, %Y')
+	
+	return render_pdf('confirmation_letter', data)
+
+
+@app.route('/flask/reports/registration_card', methods=['POST'])
+def get_registration_card():
 	data = dict(request.form)
 
 	# For some stupid reason, the array comes in as a single value, so I encode it as a 
@@ -650,55 +732,16 @@ def get_registration_card(expedition_id):
 				).strftime('%#m/%#d/%Y')
 	data['checkmark_character'] = '\u2714';
 
-	# Get HTML string
-	html = render_template('registration_card.html', **data)
-
-	cleaned_expedition_name = re.sub(r'\W', '_', data['expedition_name'])
-	pdf_filename = f'registration_card_{cleaned_expedition_name}.pdf'
-
-	# render html
-	wait_for_weasyprint()
-	html = weasyprint.HTML(string=html)
-	
-	# write to disk as PDF
-	pdf_path = os.path.join(get_content_dir('exports'), pdf_filename)
-	html.write_pdf(pdf_path)
-	#pdf_data = weasyprint.render_pdf()
-	
-	return 'exports/' + pdf_filename #pdf_data
+	return render_pdf('registration_card', data)
 
 
-@app.route('/flask/reports/transaction_history/<expedition_id>.pdf', methods=['POST'])
-def get_transaction_history(expedition_id):
+@app.route('/flask/reports/transaction_history', methods=['POST'])
+def get_transaction_history():
 	data = dict(request.form)
 
 	data['transaction_history'] = json.loads(data['transaction_history']);
 
-	# Get HTML string
-	html = render_template('transaction_history.html', **data)
-
-	cleaned_expedition_name = re.sub(r'\W', '_', data['expedition_name'])
-	pdf_filename = f'transaction_history_{cleaned_expedition_name}.pdf'
-
-	# render html
-	wait_for_weasyprint()
-	html = weasyprint.HTML(string=html)
-	
-	# write to disk as PDF
-	pdf_path = os.path.join(get_content_dir('exports'), pdf_filename)
-	html.write_pdf(pdf_path)
-
-	return 'exports/' + pdf_filename #pdf_data
-
-
-@app.route('/flask/reports/transaction_history/<expedition_id>', methods=['GET', 'POST'])
-def get_transaction_history_html(expedition_id):
-	data = dict(request.form)
-
-	data['transaction_history'] = json.loads(data['transaction_history']);
-
-	# Get HTML string
-	return render_template('transaction_history.html', **data)
+	return render_pdf('transaction_history', data)
 
 
 @app.route('/flask/reports/briefing_schedule', methods=['POST'])
@@ -707,9 +750,20 @@ def get_briefing_schedule():
 	data['time_slots'] = json.loads(data['time_slots'])
 	data['sheets'] = json.loads(data['sheets'])
 
-	excel_filename = briefings_to_excel(data, get_content_dir('exports'))
+	workbook, min_date, max_date = briefings_to_excel(data)
+	display_name = get_briefing_excel_name(min_date, max_date)
 	
-	return 'exports/' + excel_filename
+	token, server_file_path = create_export(
+		os.path.splitext(display_name)[1].lower(), 
+		display_name, 
+		False # briefing export doens't have PII
+	)
+
+	workbook.save(server_file_path)
+
+	return f'flask/files/{token}'
+
+
 
 
 @app.route('/flask/reports/special_use_permit', methods=['POST'])
@@ -719,9 +773,9 @@ def export_special_use_permit():
 	
 	Request data parameters include:
 	permit_data: per exp. member info that's easier to get client-side
-	export_type: value is either 'merged' or 'multiple' which indicates whether a single
-		merged PDF should be created or a zip file of multiple individual PDFs should be
-		returned
+	export_type: value is either 'merged' or 'multiple' which indicates whether 
+		a single merged PDF should be created or a zip file of multiple 
+		individual PDFs should be returned
 	expedition_id: The expedition database ID. This is only required so thatPDFs
 		for can include the ID in the filename in case this multiple files for 
 		climbers/expeditions with the same name exist in the exports directory
@@ -747,83 +801,79 @@ def export_special_use_permit():
 					view.expedition_member_id.in_(expedition_member_ids)
 				)
 		)
-		sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
-		pdf_path = os.path.join(os.path.dirname(__file__), 'assets', sup_permit_filename)
 
-		output_pdfs = []	
-		for row in result:
-			member_id = str(row.expedition_member_id)
-			form_prefix = f'id_{member_id}'
+	# Get PDF template
+	sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
+	template_path = os.path.join(
+		os.path.dirname(__file__), 'assets', sup_permit_filename
+	)
+	with open(template_path, 'rb') as f:       
+		template_bytes = f.read()
 
-			# Combine the client-side and DB data
-			member_data = dict(**permit_data[member_id], **climberdb_utils.orm_to_dict(row))
-			
-			if not row.country:
-				climbers_missing_country.append({
-					'climber_name': row.climber_name, 
-					'climber_id': row.climber_id
-				})
-			reader = PdfReader(pdf_path)
-			writer = PdfWriter()
 
-			# Get the index of the first page of this permit. This is the 0th page of the permit
-			#	so it will always be the number of pages before pages for this permit are added
-			data_page_index = len(writer.pages)
-			
-			# Add pages for this permit. clone_document_from_reader is the only method that 
-			#	copies the form and all other PDF structural components such that 
-			writer.clone_document_from_reader(reader)
-
-			writer.update_page_form_field_values(writer.pages[data_page_index], member_data)
-			
-			# If each permit is a separate PDF or if there's only one to write, write this one to disk
-			climber_name = re.sub(r'\W+', '_', member_data['climber_name']).lower()
-			pdf_filename = f'special_use_permit_{expedition_id}_{climber_name}.pdf'
-			output_pdf = os.path.join(get_content_dir('exports'), pdf_filename)
-			with open(output_pdf, 'wb') as f:
-				writer.write(f)
-			
-			# If there's only one PDF to create, just return that path
-			if len(expedition_member_ids) == 1:
-				return jsonify({
-					'missing_country': climbers_missing_country,
-					'path': 'exports/' + pdf_filename
-				})
-			else:
-				output_pdfs.append(output_pdf)
-
-	if len(output_pdfs) == 0:
-		expedition_member_id_string = ', '.join(expedition_member_ids)
-		raise RuntimeError('PDFs could not be created because no expediton_member_ids matched ' + expedition_member_id_string)
-
-	output_basename = f'special_use_permit_{expedition_id}_' + re.sub(r'\W+', '_', expedition_name)	
-	
-	# write a single merged PDF
-	if export_type == 'merged':
-		letters = [chr(item) for item in range(ord("a"), ord("z") + 1)] # a-z as list
+	def fill_permit(member_data: dict) -> bytes:
 		writer = PdfWriter()
-		for i, pdf_path in enumerate(output_pdfs):
-			reader = PdfReader(pdf_path)
-			reader.add_form_topname(letters[i])
+		writer.clone_document_from_reader(PdfReader(BytesIO(template_bytes)))
+		writer.update_page_form_field_values(writer.pages[0], member_data)
+		buf = BytesIO()
+		writer.write(buf)
+
+		return buf.getvalue()
+
+	permits = []
+	climber_ids = set()
+	for row in result:
+		member_id = str(row.expedition_member_id)
+		member_data = dict(
+			**permit_data[member_id], 
+			**climberdb_utils.orm_to_dict(row)
+		)
+		name = re.sub(r'\W+', '_', member_data['climber_name']).lower()
+		permits.append((
+			member_id, 
+			f'special_use_permit_{name}_{member_id}.pdf',
+			fill_permit(member_data)
+		))
+		climber_ids.add(row.climber_id)
+
+	if len(permits) == 0:
+		expedition_member_id_string = ', '.join(expedition_member_ids)
+		raise RuntimeError(
+			'PDFs could not be created because no expediton_member_ids' 
+			' matched ' + expedition_member_id_string
+		)
+	
+	as_zip = export_type != 'merged' and len(permits) > 1
+	ext = '.zip' if as_zip else '.pdf'
+	display_name = (
+		permits[0][1] if len(permits) == 1
+		else f'special_use_permit_{expedition_id}_{re.sub(r"\W+", "_", expedition_name)}{ext}'
+	)
+	token, out_path = create_export(
+		ext, 
+		display_name, 
+		True,
+		entities={'climbers': climber_ids}
+	)
+
+	if len(permits) == 1:
+		with open(out_path, 'wb') as f:
+			f.write(permits[0][2])
+	elif export_type == 'merged':
+		writer = PdfWriter()
+		for i, (_, _, pdf) in enumerate(permits):
+			reader = PdfReader(BytesIO(pdf))
+			reader.add_form_topname(f'p{i}')   # unique field names per permit
 			writer.append(reader)
-			del reader
-
-		output_filename = output_basename + '.pdf'
-		output_path = os.path.join(get_content_dir('exports'), output_filename)
-		with open(output_path, 'wb') as f:
+		with open(out_path, 'wb') as f:
 			writer.write(f)
-	# it's a zipped collection of individual PDFs
-	else: 
-		output_filename = output_basename + '.zip'
-		output_path = os.path.join(get_content_dir('exports'), output_filename)
-		with ZipFile(output_path, 'w', ZIP_DEFLATED) as z:
-			for pdf_path in output_pdfs:
-				z.write(pdf_path, arcname=os.path.basename(pdf_path))
+	else:
+		with ZipFile(out_path, 'w', ZIP_DEFLATED) as z:
+			for _, filename, pdf in permits:
+				z.writestr(filename, pdf)
 
-	return jsonify({
-				'missing_country': climbers_missing_country,
-				'path': 'exports/' + output_filename
-			})
+	return jsonify({'missing_country': climbers_missing_country,
+					'path': f'/flask/files/{token}'})
 
 
 # Default 

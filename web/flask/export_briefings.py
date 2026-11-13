@@ -365,9 +365,9 @@ def create_sheet(
 	sheet.print_title_cols = 'A:A'
 
 
-def briefings_to_excel(data: Dict, output_dir: str) -> str:
+def briefings_to_excel(data: Dict) -> str:
 	"""
-	Create an Excel doc of briefing appointments per day from a dictionary of 
+	Create Workbook of briefing appointments per day from a dictionary of 
 	appointment details. Each day will be a separate sheet in the doc.
 
 	Parameters
@@ -386,12 +386,10 @@ def briefings_to_excel(data: Dict, output_dir: str) -> str:
 					...
 				]
 			}
-	output_dir: Path to write the Excel doc to. The filename will be generated
-		from the min and max dates specified in data['sheets']
 	
 	Returns
 	__________
-	str: filename of the Excel doc
+	tuple: briefings Workbook, minimum date, max date
 
 	"""
 	workbook = Workbook()
@@ -402,9 +400,6 @@ def briefings_to_excel(data: Dict, output_dir: str) -> str:
 
 	if not 'sheets' in data:
 		raise KeyError('"briefings" not given in data')
-
-	if not os.path.isdir(output_dir):
-		raise IOError(f'Cannot write output to output_dir "{output_dir}" because it does not exist')
 
 	time_slots = data['time_slots']
 	sheets = data['sheets']
@@ -418,9 +413,18 @@ def briefings_to_excel(data: Dict, output_dir: str) -> str:
 		min_date = min(*briefing_dates, min_date)
 		max_date = max(*briefing_dates, max_date)
 
-	# Write the Excel file
-	briefing_dates = briefings.keys()
-	filename = f'''briefing_schedule_{min_date}_to_{max_date}.xlsx'''
+	return workbook, min_date, max_date
+
+
+def get_briefing_excel_name(min_date, max_date):
+	return f'''briefing_schedule_{min_date}_to_{max_date}.xlsx'''
+
+
+def write_briefings_excel(workbook, min_date, max_date, output_dir):
+	if not os.path.isdir(output_dir):
+		raise IOError(f'Cannot write output to output_dir "{output_dir}" because it does not exist')
+	
+	filename = get_briefing_excel_name(min_date, max_date)
 	excel_path = os.path.join(output_dir, filename)
 	workbook.save(excel_path)
 
