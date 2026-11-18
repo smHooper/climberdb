@@ -88,6 +88,22 @@ class Audit:
         self._insert([(entity, i) for i in ids], source, request_id)
 
 
+    def inspect_rows(
+            self, 
+            rows: list[dict], 
+            source: str | None = None,
+        ) -> set[tuple]:
+
+        pairs = set()
+        for row in rows:
+            for column, entity in self.key_columns.items():
+                pairs.add((entity, row.get(column)))
+            if source in self.id_tables:
+                pairs.add((source, row.get('id')))
+        
+        return pairs
+
+
     def record_rows(
             self, 
             rows: list[dict], 
@@ -95,12 +111,8 @@ class Audit:
             request_id: str | None = None
         ):
         """Record every PII entity found in a list of row dicts about to be returned"""
-        pairs = set()
-        for row in rows:
-            for column, entity in self.key_columns.items():
-                pairs.add((entity, row.get(column)))
-            if source in self.id_tables:
-                pairs.add((source, row.get('id')))
+
+        pairs = self.inspect_rows(rows, source)
         
         if not request_id:
             request_id = str(uuid4())
@@ -244,6 +256,37 @@ class Audit:
             '''), {'token': token}).first()
         
         return dict(row._mapping) if row else None
+
+
+    def lookup_entity_ids(self, request_id: str) -> dict[str, list[int]]:
+        """
+        Lookup the entity IDs associated with a particular request
+        """
+        entity_ids = {}
+        with self.engine.connect() as conn:
+            conn.execute(sqlatext(f'''
+                    SELECT count(*) FROM {self.schema}.record_access 
+                    WHERE request_id=:request_id'
+                '''), 
+                {request_id: request_id}
+            ).first()
+
+            rows = conn.execute(sqlatext(f'''
+                    SELECT 
+                        entity, 
+                        entity_id 
+                    FROM {self.schema}.record_access 
+                    WHERE request_id=:request_id'
+                '''), 
+                {request_id: request_id}
+            )
+            for row_ in rows:
+                table_name = row_.entity
+                if not entity_ids[table_name]:
+                    entity_ids[table_name] = []
+                entity_ids[table_name].append(row_.entiry_id)
+
+        return entity_ids
 
 
     def record_download(self, token: str) -> dict:

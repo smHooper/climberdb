@@ -203,12 +203,11 @@ def internal_server_error(error):
         # GET
         request_data = None#request.view_args 
 
-    #TODO: wrap request.json in try/except
     return (
         'ERROR: Internal Server Error.<br>' 
         + traceback.format_exc() 
-        + '<br><br>request: ' 
-        + json.dumps(request.json)
+        # + '<br><br>request: ' 
+        # + request_data
     )
 
 ####### Load config #####
@@ -286,7 +285,7 @@ audit_schema = 'audit' if schema == 'public' else f'audit_{schema}'
 audit_engine = climberdb_utils.get_engine(access='audit', schema=audit_schema)
 auditor = Audit(
     app,
-    engine=audit_engine,   # plain create_engine(..., poolclass=NullPool) for audit_writer
+    engine=audit_engine,  
     app_name='climberdb',
     key_columns={'climber_id': 'climbers', 'expedition_member_id': 'expedition_members'},
     id_tables={'climbers', 'expedition_members', 'emergency_contacts', 'communication_devices'},
@@ -655,7 +654,7 @@ def download_file(token):
 
 
 #--------------- Reports ---------------------#
-def create_export(ext, display_name, contains_pii, entities=None):
+def create_export_record(ext, display_name, contains_pii, entities=None):
     """
     Helper to log the file access
     """
@@ -686,7 +685,7 @@ def render_pdf(template_name: str, data: dict):
     html = weasyprint.HTML(string=html)
 
     # Log the export
-    token, server_file_path = create_export(
+    token, server_file_path = create_export_record(
         '.pdf', 
         display_name, 
         True, # all html reports have PII
@@ -753,7 +752,7 @@ def get_briefing_schedule():
     workbook, min_date, max_date = briefings_to_excel(data)
     display_name = get_briefing_excel_name(min_date, max_date)
     
-    token, server_file_path = create_export(
+    token, server_file_path = create_export_record(
         os.path.splitext(display_name)[1].lower(), 
         display_name, 
         False # briefing export doens't have PII
@@ -762,8 +761,6 @@ def get_briefing_schedule():
     workbook.save(server_file_path)
 
     return f'flask/files/{token}'
-
-
 
 
 @app.route('/flask/reports/special_use_permit', methods=['POST'])
@@ -804,9 +801,7 @@ def export_special_use_permit():
 
     # Get PDF template
     sup_permit_filename = app.config['SUP_PERMIT_FILENAME']
-    template_path = os.path.join(
-        os.path.dirname(__file__), 'assets', sup_permit_filename
-    )
+    template_path = os.path.join(get_content_dir('assets'), sup_permit_filename)
     with open(template_path, 'rb') as f:       
         template_bytes = f.read()
 
@@ -848,7 +843,7 @@ def export_special_use_permit():
         permits[0][1] if len(permits) == 1
         else f'special_use_permit_{expedition_id}_{re.sub(r"\W+", "_", expedition_name)}{ext}'
     )
-    token, out_path = create_export(
+    token, out_path = create_export_record(
         ext, 
         display_name, 
         True,
@@ -875,20 +870,20 @@ def export_special_use_permit():
                     'path': f'/flask/files/{token}'})
 
 
-# Default 
+# Default excel query exporter
 def write_query_to_excel(
         query_data, 
-        query_name, 
         excel_path, 
+        template_buffer=BytesIO(),
         excel_start_row=0, 
         write_columns=True, 
-        write_mode='a', 
+        write_mode='a',
         query_url=''
     ):
 
-    # Write to the excel file
+    # Write to an in-memory BytesIO buffer
     if_sheet_exists = 'overlay' if write_mode == 'a' else None
-    with ExcelWriter(excel_path, engine='openpyxl', mode=write_mode, if_sheet_exists=if_sheet_exists) as writer:
+    with ExcelWriter(template_buffer, engine='openpyxl', mode=write_mode, if_sheet_exists=if_sheet_exists) as writer:
         query_data.to_excel(writer, sheet_name='data', startrow=excel_start_row, header=write_columns, index=False)
 
         # Microsoft doesn't support URLs longer than 255 in the HYPERLINK function so 
@@ -900,23 +895,26 @@ def write_query_to_excel(
         # 	sheet = workbook.create_sheet('Query URL')
         # 	sheet['A1'] = f'=HYPERLINK("{query_url}", "Click to open query")'
 
+    # Write the buffer to disk
+    with open(excel_path, 'wb') as f:
+        f.write(template_buffer.getvalue())
+
 
 # Handle guide_company_client_status and guide_company_briefings queries
-def write_guided_company_query_to_excel(client_status, briefings, excel_path, title_text, query_url):
+def write_guided_company_query_to_excel(client_status, briefings, excel_path, title_text, query_url, template_buffer):
 
-    with ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+    # write to an in-memory BytesIO buffer
+    with ExcelWriter(template_buffer, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
         workbook = writer.book #openpyxl Workbook
 
         if len(client_status):
             client_status.to_excel(writer, sheet_name='Client Status', startrow=2, header=False, index=False)
+            workbook['Client Status']['A1'] = title_text
         else:
-            workbook.remove('Client Status')
-            workbook.save()
+            workbook.remove(workbook['Client Status'])
 
         if len(briefings):
             briefings.to_excel(writer, sheet_name='Briefings', startrow=1, header=False, index=False)
-
-        workbook['Client Status']['A1'] = title_text
 
         # Microsoft doesn't support URLs longer than 255 in the HYPERLINK function so 
         #	just don't include them at all
@@ -924,15 +922,16 @@ def write_guided_company_query_to_excel(client_status, briefings, excel_path, ti
         # 	sheet = workbook.create_sheet('Query URL')
         # 	sheet['A1'] = f'=HYPERLINK("{query_url}", "Click to open query")'
 
+    # Write the buffer to disk
+    with open(excel_path, 'wb') as f:
+        f.write(template_buffer.getvalue())
+
 
 # Export results of predefined queries
 @app.route('/flask/reports/export_query', methods=['POST'])
 def export_query():
     
     data = dict(request.form)
-
-    # with open(os.path.join(get_content_dir('exports'), 'export_data.json'), 'w') as f:
-    # 	json.dump(data, f)
 
     # Make sure any filename is unique
     random_string = get_random_string()
@@ -951,39 +950,63 @@ def export_query():
     
     if data['export_type'] == 'excel':
         
-        # If a template Excel file exists, make a copy in the exports directory to make a new file to write to
-        excel_filename =  data['base_filename'] + '.xlsx' if 'base_filename' in data else f'{query_name}_{random_string}.xlsx'
-        excel_path = os.path.join(get_content_dir('exports'), excel_filename)
-        excel_template_path = os.path.join(os.path.dirname(__file__), 'templates', f'{query_name}.xlsx')
+        # Required args for create_export_record()
+        ext = '.xlsx'
+        display_filename =  (
+            data['base_filename'] + ext 
+            if 'base_filename' in data  
+            else f'{query_name}_{random_string}{ext}'
+        )
+        
         excel_write_mode = 'w' # default to write a new file
-        if os.path.isfile(excel_template_path):
-            shutil.copy(excel_template_path, excel_path)
-            excel_write_mode = 'a' # to keep style in template, write in append mode
+        
+        # If there's a template, load it in memory as a writeable buffer
+        template_path = os.path.join(
+            get_content_dir('assets'), f'{query_name}.xlsx'
+        )
+        template_bytes = b''
+        if os.path.isfile(template_path):
+            with open(template_path, 'rb') as f:       
+                template_bytes = f.read()
+            excel_write_mode = 'a' # keep template style, write in append mode
+        template_buffer = BytesIO(template_bytes)
 
         if query_name == 'guide_company_client_status' or query_name == 'guide_company_briefings':
             query_data = data['query_data']
-            client_status = DataFrame(query_data['client_status']).reindex(columns=data['client_status_columns'])
+
+            # Check which PII records are included (only status data has it)
+            client_status = query_data['client_status']
+            entity_ids = auditor.inspect_rows(client_status, 'sql')
+
+            client_status = DataFrame(client_status).reindex(columns=data['client_status_columns'])
             briefings = DataFrame(query_data['briefings']).reindex(columns=data['briefing_columns'])
-            write_guided_company_query_to_excel(
+            
+            # Store writer function to call later once we have server filename
+            writer = lambda path: write_guided_company_query_to_excel(
                 client_status, 
                 briefings, 
-                excel_path,
+                path,
                 data['title_text'],
-                data['query_url']
+                data['query_url'],
+                template_buffer
             )
         else:
-            query_data = DataFrame(data['query_data']).reindex(columns=data['columns'])
-            write_query_to_excel(
+            # Check which PII records are included
+            query_data = data['query_data']
+            entity_ids = auditor.inspect_rows(query_data, 'sql')
+
+            query_data = DataFrame(query_data).reindex(columns=data['columns'])
+
+            # Store writer function to call later once we have server filename
+            writer = lambda path: write_query_to_excel(
                 query_data, 
-                query_name, 
-                excel_path, 
+                path, 
+                template_buffer=template_buffer,
                 excel_start_row=int(data.get('excel_start_row') or 0),
                 write_columns=data['excel_write_columns'],
                 query_url=data.get('query_url') or '',
-                write_mode=excel_write_mode
+                write_mode=excel_write_mode,
             )
-
-        return 'exports/' + excel_filename
 
     else:
         template_name = f'{query_name}.html'
@@ -991,8 +1014,16 @@ def export_query():
             template_name = 'export_query.html'
             
         if query_name == 'guide_company_client_status':
+            # Check which PII records are included
+            entity_ids = auditor.inspect_rows(
+                data['query_data']['client_status'],
+                'sql'
+            )
             data['briefing_title_text'] = data['title_text'].replace('Client Status', 'Scheduled Briefings')
-            
+        else:
+             entity_ids = auditor.inspect_rows(data['query_data'], 'sql')
+
+        # Store writer function to call later once we have the server filename
         html = render_template(template_name, **data) 
 
         # render html
@@ -1000,11 +1031,31 @@ def export_query():
         html = weasyprint.HTML(string=html)
 
         # write to disk
-        pdf_filename = f'{query_name}.pdf' #f'{query_name}_{random_string}.pdf'
-        pdf_path = os.path.join(get_content_dir('exports'), pdf_filename)
-        html.write_pdf(pdf_path)
+        ext = '.pdf'
+        display_filename = f'{query_name}{ext}'
 
-        return 'exports/' + pdf_filename
+        writer = html.write_pdf
+
+    # Each branch of the control flow defines ext, display_filename, 
+    #   entity_ids, and writer (a callable function to write the file) 
+    # Entity IDs are a list of (entity, id) tuples, but register_file() needs a 
+    #   dictionary of {entity: [id1, id2...]}
+    entities = {}
+    for entity, id_ in entity_ids:
+        if entity not in entities:
+            entities[entity] = []
+        entities[entity].append(id_)
+    # Register the file
+    token, server_filename = create_export_record(
+        ext, 
+        display_filename, 
+        bool(entity_ids),
+        entities=entities
+    )
+    # call the writer function to write the file to disk
+    writer(server_filename)
+
+    return f'flask/files/{token}'
 
 
 @app.route('/flask/reports/annual_summary/<year>')
