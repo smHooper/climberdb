@@ -1054,7 +1054,7 @@ def export_query():
     )
     # call the writer function to write the file to disk
     writer(server_filename)
-
+    
     return f'flask/files/{token}'
 
 
@@ -1146,8 +1146,15 @@ def run_select_query():
     request_data = request.get_json()	
     response_data = climberdb_utils.query_db(request_data)
     request_id = str(uuid4())
-    auditor.record_rows(response_data, select_source(request_data), request_id=request_id)
-    response = {'data': response_data}
+    auditor.record_rows(
+        response_data, 
+        select_source(request_data), 
+        request_id=request_id
+    )
+    response = {
+        'data': response_data,
+        'audit_request_id': request_id
+    }
 
     if 'queryTime' in request_data:
         response['queryTime'] = request_data['queryTime']

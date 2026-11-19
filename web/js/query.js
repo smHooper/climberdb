@@ -7,6 +7,7 @@ class ClimberDBQuery extends ClimberDB {
 		this.guideCompanies = {};
 		this.result = [];
 		this.ancillaryResult = []; // for things like briefings that go along with 
+		this.auditRequestID = '';
 		this.countClimbersBySelectMap = { // mapping #count_climbers-count_field values to SELECT statements for readability
 			climbers: `SELECT DISTINCT ON (climber_id) * FROM {schema}.all_climbs_view`,
 			expeditions: `SELECT DISTINCT ON (expedition_id) * FROM {schema}.all_climbs_view`,
@@ -1458,6 +1459,8 @@ class ClimberDBQuery extends ClimberDB {
 					} else {
 						this.showResult(this.result, queryName);
 					}
+
+					this.auditRequestID = response.audit_request_id
 				}
 			}).always(() => {
 				this.toggleQueryLooadingIndicator({hide: true})
@@ -2040,7 +2043,8 @@ class ClimberDBQuery extends ClimberDB {
 				ancillary_data: JSON.stringify(this.ancillaryResult),
 				excel_start_row: queryInfo.excelStartRow || 0,
 				excel_write_columns: queryInfo.excelWriteColumns || false,
-				query_url: this.queryToURL()
+				query_url: this.queryToURL(),
+				request_id: this.audit_request_id
 			}
 		})
 	}
@@ -2088,7 +2092,8 @@ class ClimberDBQuery extends ClimberDB {
 				briefing_columns: JSON.stringify(this.queries.guided_company_briefings.columns),
 				title_text: `Client Status for ${guideCompanyName} as of ${dateString}`,
 				columns: JSON.stringify(this.queries.guide_company_client_status.columns),
-				query_url: this.queryToURL()
+				query_url: this.queryToURL(),
+				request_id: this.audit_request_id
 			}
 		})
 	}
