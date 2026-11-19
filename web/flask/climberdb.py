@@ -1548,10 +1548,12 @@ def save_db_edits(request_data):
         # Save attachments to server
         for filename, html_id in attachments.items():
             # Save the file
-            file_path = save_attachment_to_file(filename, request.files.get(filename))
+            token, file_path = save_attachment_to_file(filename, request.files.get(filename))
 
             # Set the value of the ORM attachment 
-            inserted_rows[html_id].file_path = file_path
+            row = inserted_rows[html_id]
+            row.token = token
+            row.file_path = file_path
 
         # Save an updates to existing records
         updates = request_data.get('updates') or {}
@@ -1864,16 +1866,31 @@ def request_next_permit_number():
 
 
 
-def save_attachment_to_file(client_filename: str, uploaded_file: FileStorage) -> str:
+def save_attachment_to_file(
+        client_filename: str, 
+        uploaded_file: FileStorage | None = None,
+        contains_pii: bool = True
+    ) -> str:
     """
     Save a file passed to the server
     """
     client_basename, extension = os.path.splitext(client_filename)
     server_filename = str(uuid4()) + extension	
-    file_path = os.path.join(get_content_dir('attachments'), server_filename)
-    request.files[client_filename].save(file_path)
+    
+    # Add file to audit manifest
+    token, server_filename = auditor.register_file(
+        client_filename,
+        extension,
+        contains_pii,
+        file_type='attachment',
+        ttl_hours=None #never expires
+    )
 
-    return os.path.abspath(file_path)
+    # Save file using secure token filename
+    file_path = os.path.join(get_content_dir('attachments'), server_filename)
+    (uploaded_file or request.files[client_filename]).save(file_path)
+
+    return token, file_path
 
 
 @app.route('/flask/attachments/add_expedition_member_files', methods=['POST'])

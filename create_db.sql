@@ -181,7 +181,8 @@ CREATE TABLE IF NOT EXISTS attachments (
 	attachment_notes TEXT, 
 	client_filename VARCHAR(255),
 	mime_type varchar(50),
-	file_path VARCHAR(255), 
+	token uuid NOT NULL,
+	file_path VARCHAR(255),
 	file_size_kb INTEGER,  
 	entry_time TIMESTAMP, 
 	entered_by VARCHAR(50), 
@@ -555,6 +556,7 @@ CREATE OR REPLACE VIEW expedition_info_view AS
 		attachments.client_filename,
 		attachments.mime_type,
 		(regexp_match(attachments.file_path, '\w+\\[\w-]+\.\w{3,4}$'))[1] AS file_path, --'get jsut folder\file.ext
+		attachments.token,
 		attachments.file_size_kb,
 		cmc_checkout.id AS cmc_checkout_id,
 		cmc_checkout.cmc_id,

@@ -3510,10 +3510,11 @@ class ClimberDBExpeditions extends ClimberDB {
 				this.setAttachmentFileInput($item, thisAttachment.client_filename);
 				
 				// Add the attachment information for previewing the file
+				const url = `flask/files/${thisAttachment.token}`;//thisAttachment.file_path
 				this.attachments[$item.find('input[type=file]').attr('id')] = {
 					mime_type: thisAttachment.mime_type,
-					src: thisAttachment.file_path,
-					url: thisAttachment.file_path
+					src: url,
+					url: url
 				}
 
 				// Fill metadata field, which is only shown in the modal view
