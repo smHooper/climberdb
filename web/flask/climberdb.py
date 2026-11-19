@@ -1064,18 +1064,24 @@ def query_annual_summary(year):
     summary = AnnualSummary(int(year), schema).run_report()
     renderer = ExcelReportRenderer(app.config['ANUUAL_REPORT_TEMPLATE'])
 
-    exports_dir = get_content_dir('exports')
-    xlsx_name = f'general_statistics_{year}.xlsx'
-    xlsx_path = os.path.join(exports_dir, xlsx_name)
+    #exports_dir = get_content_dir('exports')
+    ext = '.xlsx'
+    display_name = f'annual_climbing_summary_{year}{ext}'
+
+    token, server_file_path = create_export_record(
+        ext, 
+        display_name,
+        False
+    )
     
     renderer.render_report(
         summary.tags['tables'], 
         summary.tags['values'], 
-        xlsx_path
+        server_file_path
     )
 
     return  jsonify({
-        'url': 'exports/' + xlsx_name,
+        'url': f'flask/files/{token}',
         'warnings': summary.warnings
     })
 
@@ -1118,10 +1124,21 @@ def preview_cache_tag():
     
     preview_img = tag.get_preview()
     exports_dir = get_content_dir('exports')
-    preview_filename = f'cache_tag_preview_{expedition_id}.jpg'
-    preview_img.save(os.path.join(exports_dir, preview_filename))
+    ext = '.jpg'
+    preview_filename = f'cache_tag_preview_{expedition_id}{ext}'
 
-    return {'preview_src': 'exports/' + preview_filename, 'zpl': tag.label.code}
+    token, server_file_path = create_export_record(
+        ext,
+        preview_filename,
+        False
+    )
+
+    preview_img.save(server_file_path)
+
+    return {
+        'preview_src': f'flask/files/{token}', 
+        'zpl': tag.label.code
+    }
 
 
 @app.route('/flask/cache_tag/print', methods=['POST'])
