@@ -3654,6 +3654,7 @@ class ClimberDBExpeditions extends ClimberDB {
 		}
 
 		// routes
+		let invalidElevations = {}
 		const routes = this.expeditionInfo.expedition_member_routes;
 		for (const routeCode of routes.order) {
 			const thisRoute = routes.data[routeCode];
@@ -3681,6 +3682,7 @@ class ClimberDBExpeditions extends ClimberDB {
 			$routeMemberList.attr('id', $routeMemberList.attr('id') + '-' + routeCode);
 			// List items should be in alphabetical order, so add them in order of the members
 			let nRouteMembers = 0;
+			
 			for (const memberID of members.order) {
 				// Not all expedition members necessarily climb all routes
 				if (memberID in thisRoute) {
@@ -3704,7 +3706,23 @@ class ClimberDBExpeditions extends ClimberDB {
 						const inputData = {'foreign-ids': {expedition_member_id: memberID}}
 						for (const el of $listItem.find('.input-field')) {
 							// trigger change for dependent collpases
-							this.setInputFieldValue(el, memberRouteRecord, {dbID: memberRouteID, triggerChange: true, elementData: inputData});
+							this.setInputFieldValue(
+								el, 
+								memberRouteRecord, 
+								{
+									dbID: memberRouteID, 
+									// trigger change for everything but highest elevation
+									triggerChange: el.name != 'highest_elevation_ft', 
+									elementData: inputData
+								}
+							);
+						}
+						const highestElevation = memberRouteRecord.highest_elevation_ft;
+						if (!this.checkHighestElevation(mountainCode, highestElevation)) {
+							const climberName = thisMember.first_name + ' ' +  thisMember.last_name;
+							const routeCode = memberRouteRecord.route_code;
+							invalidElevations[routeCode] = 
+								[...(invalidElevations[routeCode] || []), climberName];
 						}
 					}
 					nRouteMembers ++;
@@ -3736,6 +3754,17 @@ class ClimberDBExpeditions extends ClimberDB {
 				'hidden',
 				$('#expedition-members-accordion .card').length !== nRouteMembers
 			)
+		}
+		// If any of the elevations were higher than the highest elevation for 
+		if (Object.keys(invalidElevations).length > 0) {
+			const html = Object.entries(invalidElevations).map(([routeCode, climbers]) => 
+				`<h5>${this.routeCodes[routeCode].name}</h5>` +
+				`<ul>
+					<li>${climbers.join('</li><li>')}</li>
+				</>`
+			).join('');
+			const message = `<p>One or more highest elevations entered is greater than the summit elevation. Check to verify these elevations are correct in the Routes section:</p>` + html;
+			this.showModal(message, 'Invalid Highest Elevation');
 		}
 
 		const cmcs = this.expeditionInfo.cmc_checkout;
@@ -4722,6 +4751,20 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	getSummitElevation(mountainCode) {
+		return this.mountainCodes[mountainCode]?.elevation_ft;
+	}
+
+	/*
+	Helper to check that the elvation entered is not greater than the summit elevation
+	*/
+	checkHighestElevation(mountainCode, highestElevation) {
+		
+		const summitElevation = parseInt(this.getSummitElevation(mountainCode));
+		return parseInt(highestElevation) <= summitElevation;
+	}
+
+
 	/*
 	Make separate event handler method so it can be easily triggered, while controlling presence of e.originalEvent
 	*/
@@ -4730,20 +4773,20 @@ class ClimberDBExpeditions extends ClimberDB {
 		const highestElevation = $highestElevationInput.val();
 		const $card = $highestElevationInput.closest('.card');
 		const mountainCode = $card.find('.input-field[name=mountain_code]').val();
-		const summitElevation = this.mountainCodes[mountainCode]?.elevation_ft;
+		const summitElevation = this.getSummitElevation(mountainCode);
 		const $checkbox = $highestElevationInput.closest('.data-list-item').find('[name=route_was_summited]');
 
 		if (isNull(summitElevation)) return;
 
 		// Check to make sure the elvation entered is not greater than the summit elevation
-		if (parseInt(highestElevation) > parseInt(summitElevation)){
+		if (!this.checkHighestElevation(mountainCode, highestElevation)) {
 			const message = `You entered a <em>Highest elevation</em> of <strong>${highestElevation}</strong>,` + 
 				` which is greater than the summit elevation of <strong>${summitElevation}</strong>. If the elevation you entered` + 
 				` is correct, you will have to manually check the <em>Summited?</em> checkbox. Otherwise,` +
 				` correct the <em>Highest elevation</em>`;
-			this.showModal(message, 'Invalid Highest Elevation')
+			this.showModal(message, 'Invalid Highest Elevation');
 			return;
-		}
+		} 
 
 		// Set the summitted checkbox based on whether the highest elev. value matches the
 		//	summit elev. Only do this if highest elevation is truthy
