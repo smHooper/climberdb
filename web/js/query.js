@@ -7,6 +7,7 @@ class ClimberDBQuery extends ClimberDB {
 		this.guideCompanies = {};
 		this.result = [];
 		this.ancillaryResult = []; // for things like briefings that go along with 
+		this.auditRequestID = '';
 		this.countClimbersBySelectMap = { // mapping #count_climbers-count_field values to SELECT statements for readability
 			climbers: `SELECT DISTINCT ON (climber_id) * FROM {schema}.all_climbs_view`,
 			expeditions: `SELECT DISTINCT ON (expedition_id) * FROM {schema}.all_climbs_view`,
@@ -20,6 +21,7 @@ class ClimberDBQuery extends ClimberDB {
 					`
 					SELECT DISTINCT
 						expedition_id,
+						climber_id,
 						expedition_name AS "Group Name",
 						first_name AS "First Name",
 						last_name AS "Last Name",
@@ -492,6 +494,7 @@ class ClimberDBQuery extends ClimberDB {
 					SELECT 
 						expedition_members.expedition_id,
 						expedition_members.climber_id,
+						expedition_members.id AS expedition_member_id,
 						climbers.first_name || ' ' || climbers.last_name AS "Climber Name",
 						expeditions.expedition_name AS "Expedition Name",
 						CASE WHEN expedition_members.had_ams THEN 'Yes' ELSE 'No' END AS "AMS",
@@ -537,6 +540,7 @@ class ClimberDBQuery extends ClimberDB {
 					SELECT 
 						expedition_members.expedition_id,
 						expedition_members.climber_id,
+						expedition_members.id AS expedition_member_id,
 						climbers.first_name || ' ' || climbers.last_name AS "Climber Name",
 						expeditions.expedition_name AS "Expedition Name",
 						sar_incident_number AS "Case Incident Number",
@@ -1438,7 +1442,6 @@ class ClimberDBQuery extends ClimberDB {
 	submitQuery(sql, {sqlParameters={}, queryName=$('.query-option.selected').data('query-name'), showResult=true}={}) {
 
 		this.toggleQueryLooadingIndicator({hide: false})
-
 		return this.queryDB({sql: sql.replace(/\{schema\}/g, this.dbSchema), sqlParameters: sqlParameters})
 			.done(response => {
 				const queryDisplayName = $('.query-option.selected').text();
@@ -1456,6 +1459,8 @@ class ClimberDBQuery extends ClimberDB {
 					} else {
 						this.showResult(this.result, queryName);
 					}
+
+					this.auditRequestID = response.audit_request_id
 				}
 			}).always(() => {
 				this.toggleQueryLooadingIndicator({hide: true})
@@ -2038,7 +2043,8 @@ class ClimberDBQuery extends ClimberDB {
 				ancillary_data: JSON.stringify(this.ancillaryResult),
 				excel_start_row: queryInfo.excelStartRow || 0,
 				excel_write_columns: queryInfo.excelWriteColumns || false,
-				query_url: this.queryToURL()
+				query_url: this.queryToURL(),
+				request_id: this.audit_request_id
 			}
 		})
 	}
@@ -2047,10 +2053,16 @@ class ClimberDBQuery extends ClimberDB {
 	Handle exports for 
 	*/
 	guideCompanyExportHandler(queryName) {
-
+		const queryIsClientStatus = queryName === 'guide_company_client_status';
 		const queryData = {
-			client_status: queryName === 'guide_company_client_status' ? this.result : this.ancillaryResult,
-			briefings: queryName === 'guide_company_client_status' ? this.ancillaryResult : this.result
+			client_status: 
+				queryIsClientStatus ? 
+				this.result : 
+				this.ancillaryResult,
+			briefings: 
+				queryIsClientStatus ? 
+				this.ancillaryResult : 
+				this.result
 		}
 		const $guideCompanySelect = $(`#${queryName}-guide_company`);
 		const guideCompanyShortName = this.guideCompanies[$guideCompanySelect.val()].short_name;
@@ -2062,18 +2074,26 @@ class ClimberDBQuery extends ClimberDB {
 							.trim()
 		const now = new Date();
 		const dateString = now.toLocaleDateString('en-us', {year: 'numeric', month: 'short', day: 'numeric'});
+		
+		const basenameDate = getFormattedTimestamp(now, {format: 'date'});
+		const filenameSuffix = `${guideCompanyShortName}_${basenameDate}`;
+		const baseFilename = queryIsClientStatus ?
+			`guided_client_status_${filenameSuffix}` :
+			`guided_company_briefings_${filenameSuffix}` 
+
 		return $.post({
 			url: 'flask/reports/export_query',
 			data: {
-				query_name: queryName,
+				query_name: 'guide_company_client_status', //briefings always ship with client status
 				export_type: $('#input-export_type').val(),
-				base_filename: `guided_client_status_${guideCompanyShortName}_${getFormattedTimestamp(now, {format: 'date'})}`,
+				base_filename: baseFilename,
 				query_data: JSON.stringify(queryData),
 				client_status_columns: JSON.stringify(this.queries.guide_company_client_status.columns),
 				briefing_columns: JSON.stringify(this.queries.guided_company_briefings.columns),
 				title_text: `Client Status for ${guideCompanyName} as of ${dateString}`,
 				columns: JSON.stringify(this.queries.guide_company_client_status.columns),
-				query_url: this.queryToURL()
+				query_url: this.queryToURL(),
+				request_id: this.audit_request_id
 			}
 		})
 	}

@@ -2558,11 +2558,17 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		if (!exportType) exportType = $('#input-export_type').val();
 		
+		const climberIDs = Object.values(
+				climberDB.expeditionInfo.expedition_members.data
+			).map(({climber_id}) => climber_id);
 		// Most of the necessary data will be in these two objects
+
 		var pdfData = {
 			...this.expeditionInfo.expeditions, 
 			...this.config,
-			expedition_id: this.expeditionInfo.expeditions.id
+			expedition_id: this.expeditionInfo.expeditions.id,
+			// all reports access PII from the climbers table but no others
+			pii_entity_ids: JSON.stringify({climbers: climberIDs}) 
 		};
 		
 		// Get human-readable values from selects
@@ -2694,13 +2700,13 @@ class ClimberDBExpeditions extends ClimberDB {
 		this.showLoadingIndicator('makePDF');
 
 		return $.post({
-			url: `flask/reports/${exportType}/${this.expeditionInfo.expeditions.id}.pdf`,
+			url: `flask/reports/${exportType}`,
 			data: pdfData,
 			cache: false
-		}).done(responseData => {
-			if (!this.pythonReturnedError(responseData, {errorExplanation: 'Your PDF could not be exported because of an unexpected error.'})) {
-				window.open(responseData, '_blank');
-			}
+		}).done(response => {
+			if (!this.pythonReturnedError(response, {errorExplanation: 'Your PDF could not be exported because of an unexpected error.'})) {
+				window.open(response, '_blank')
+			}	
         }).always(() => {
         	this.hideLoadingIndicator()
         });
@@ -3504,10 +3510,11 @@ class ClimberDBExpeditions extends ClimberDB {
 				this.setAttachmentFileInput($item, thisAttachment.client_filename);
 				
 				// Add the attachment information for previewing the file
+				const url = `flask/files/${thisAttachment.token}`;//thisAttachment.file_path
 				this.attachments[$item.find('input[type=file]').attr('id')] = {
 					mime_type: thisAttachment.mime_type,
-					src: thisAttachment.file_path,
-					url: thisAttachment.file_path
+					src: url,
+					url: url
 				}
 
 				// Fill metadata field, which is only shown in the modal view
