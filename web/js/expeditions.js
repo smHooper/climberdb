@@ -732,6 +732,15 @@ class ClimberDBExpeditions extends ClimberDB {
 	}
 
 
+	checkYearIsCurrent(departureDatetimeStr) {
+		const departureDate = new Date(departureDatetimeStr);
+		const departureYear = departureDate.getFullYear();
+		const currentYear = new Date().getFullYear();
+		
+		return departureYear >= currentYear;
+	}
+
+
 	/*
 	Before toggling edits, check if this is legacy data. If so, warn the user in case they think 
 	they're editing a group of the same name from the current or a future year
@@ -743,12 +752,13 @@ class ClimberDBExpeditions extends ClimberDB {
 		const turnEditingOn = $('.expedition-content.uneditable').length;
 		
 		// If the group is from a previous year, warn the user
-		const plannedDeparture = $('#input-planned_departure_date').val() || $('#input-actual_departure_date').val();
+		const plannedDeparture = (
+				$('#input-planned_departure_date').val() || 
+				$('#input-actual_departure_date').val()
+			) + ' 00:00';
 		if (turnEditingOn && plannedDeparture) {
-			const departureDate = new Date(plannedDeparture + ' 00:00')
-			const departureYear = departureDate.getFullYear();
-			const currentYear = new Date().getFullYear();
-			if (departureYear < currentYear) {
+			const departureDate = new Date(plannedDeparture);
+			if (!this.checkYearIsCurrent(plannedDeparture)) {
 				const formattedDeparture = departureDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
 				this.showModal(
 					`This expedition was scheduled to depart on <strong>${formattedDeparture}</strong>.` + 
@@ -1336,7 +1346,7 @@ class ClimberDBExpeditions extends ClimberDB {
 	/*
 	Helper function to use in this.saveEdits() and ClimberDBBackcountry.saveEdits()
 	*/
-	validateEdits() {
+	validateEdits({showInvalidWarning=true}={}) {
 
 		const $editParents = $(`
 				.data-list-item:not(.cloneable), 
@@ -1355,7 +1365,8 @@ class ClimberDBExpeditions extends ClimberDB {
 
 		var errorFieldList;
 		const isValid = this.validateFields($editParents);
-		if (!isValid) {
+		
+		if (!isValid && showInvalidWarning) {
 			errorFieldList = $('.input-field.error').map((_, el) => {
 				const $el = $(el);
 				let fieldName = '';
@@ -1389,7 +1400,17 @@ class ClimberDBExpeditions extends ClimberDB {
 		// Make a shallow reference to dbInserts. On the server, database objects are inserted/updated heirarchically so that foreign column values can be populated automatically. With this mutable reference, we can point to whatever the top-level 
 		var parentTable = dbInserts;
 
-		if (!this.validateEdits()) return; // Error message already shown in validateEdits()
+		const departureDate = (
+			$('#input-planned_departure_date').val() || 
+			$('#input-actual_departure_date').val()
+		) + ' 00:00';
+		// Only show warning and prevent saving edits if the user is editing 
+		// 	current (or future) year
+		const yearIsCurrent = this.checkYearIsCurrent(departureDate)
+		if (
+				!this.validateEdits({showInvalidWarning: yearIsCurrent}) && 	
+				yearIsCurrent
+			) return; 
 
 		const now = getFormattedTimestamp(new Date(), {format: 'datetime'});
 		const username = this.userInfo.ad_username;
